@@ -27,7 +27,7 @@ XLSX 파일
 
 | Stage | 입력 | 출력 | 핵심 기술 |
 |-------|------|------|-----------|
-| Capture | .xlsx 파일 | 시트별 이미지 세트 (원본/개요/분할) | LibreOffice headless, PyMuPDF, Pillow |
+| Capture | .xlsx 파일 | 시트별 이미지 세트 (원본/개요/분할) | Excel COM CopyPicture, Pillow |
 | Vision | 이미지 세트 | 구조화된 텍스트 + 서브 이미지 후보 | Claude Opus Vision API (AWS Bedrock) |
 | Parse | .xlsx 파일 | 셀 데이터, 수식, 숨겨진 행/열 | openpyxl |
 | Synthesize | Vision 결과 + Parse 결과 | content.md + images/ | 텍스트 병합, 중복 제거 |
@@ -71,39 +71,36 @@ VISION_MODEL=claude-opus
 
 ## 4. Stage 1: Capture (이미지 생성)
 
-### 4.0 왜 LibreOffice인가
+### 4.0 왜 Excel COM인가
 
-- **서버 headless 구동 필수**: 이 파이프라인은 향후 백엔드 서버에서 자동 실행된다. GUI 없는 Linux 서버 환경에서도 동작해야 하므로 **LibreOffice headless**를 사용한다.
-- Excel COM API(win32com)는 Windows + Excel 설치 필수이므로 서버 배포에 부적합.
+- **도형/커넥터 렌더링 정확도**: LibreOffice는 Excel 도형의 화살표 방향, 커넥터 연결을 다르게 렌더링하여 플로우차트 해석에 치명적 오류를 유발한다. Excel COM은 원본과 100% 동일하게 렌더링.
+- **셀 구분자 보존**: LO 렌더링에서 셀 내 줄바꿈/쉼표가 사라져 "변신,스킬,UI"가 "변신스킬UI"로 합쳐지는 문제. Excel COM은 원본 그대로 보존.
+- **PDF 중간 단계 불필요**: CopyPicture는 시트를 직접 비트맵으로 캡처하므로 페이지 나눔 문제가 원천적으로 없음.
+- **안정성**: LO는 병렬 실행 시 프로세스 충돌이 잦았으나, Excel COM은 단일 프로세스에서 안정적으로 동작.
+- **제약**: Windows + Excel 설치 필수. 향후 서버 배포 시 별도 방안 필요.
 
 ### 4.1 시트별 이미지 생성 프로세스
 
-내부 변환 경로: **XLSX → PDF → PNG**
+내부 변환 경로: **XLSX → PNG (직접)**
 
 ```
-XLSX -> [LibreOffice headless] -> 시트별 PDF (중간 산출물)
-     -> [PyMuPDF] -> 시트별 고해상도 PNG (300 DPI)
+XLSX -> [Excel COM CopyPicture] -> 시트별 전체 PNG (페이지 나눔 없음)
      -> [Pillow] -> 개요 이미지 + 분할 상세 이미지
 ```
 
-LibreOffice는 직접 PNG를 출력하지 못하므로, **PDF를 중간 포맷으로 거친 후** PyMuPDF로 PNG 변환한다.
+Excel COM의 `UsedRange.CopyPicture(xlScreen, xlBitmap)`로 시트 전체를 한 장의 연속 이미지로 캡처한다. PDF 중간 단계가 없으므로 페이지 나눔, 여백, 스케일링 문제가 발생하지 않는다.
 
-1. LibreOffice headless로 각 시트를 개별 PDF로 내보내기
-2. PyMuPDF로 PDF → PNG 변환 (300 DPI, 고해상도)
-3. 빈 페이지 감지 및 건너뛰기 (98% 백색 임계값)
-4. 콘텐츠 영역 자동 크롭
+1. Excel COM으로 워크북을 열고 각 시트의 UsedRange를 CopyPicture
+2. 클립보드에서 PIL ImageGrab으로 비트맵 획득
+3. 시트별 full_original.png 저장
+4. 빈 시트 감지 (1셀, 빈 값)
 
-### 4.1.1 PDF 단일 페이지 제약사항 (필수)
+### 4.1.1 Excel COM 주의사항
 
-> **절대 규칙: 한 시트의 PDF는 반드시 1페이지여야 한다.**
-
-PDF가 여러 페이지로 나뉘면 PNG 변환 시 시트 내용이 분리되어 연속성이 깨진다. 따라서:
-
-- **A4/용지 크기에 의한 페이지 분할 금지**: LibreOffice의 기본 인쇄 설정(A4 등)으로 인해 시트 내용이 여러 PDF 페이지로 나뉘면 안 된다. 시트의 사용 영역(used area) 전체가 **PDF 1페이지**에 담겨야 한다.
-- **구현 방법**: 페이지 크기를 시트의 사용 영역에 맞게 동적으로 설정하거나, ScaleToPagesX=1 + ScaleToPagesY=1로 전체를 1페이지에 강제 피팅. PDF 페이지 크기가 매우 커지는 것은 허용한다.
-- **검증**: 생성된 PDF의 페이지 수를 확인. **2페이지 이상이면 FAIL** → 페이지 설정을 조정하여 재시도
-- **글자/이미지 잘림 금지**: 시트 내 모든 텍스트, 도형, 이미지가 잘리지 않고 완전히 포함되어야 한다
-- 시트가 매우 크더라도(수백 행/열) 하나의 큰 PDF 페이지 → 하나의 큰 PNG로 출력. 이미지 해상도가 높아지는 것은 허용 (Vision AI 크기 분할은 이후 단계에서 처리)
+- `Visible=False`: Excel 창을 표시하지 않음
+- `ScreenUpdating`은 반드시 **True**: False로 설정하면 CopyPicture가 빈 이미지를 반환함
+- `Interactive=False`, `DisplayAlerts=False`, `AskToUpdateLinks=False`: 팝업 억제
+- 해상도는 화면 DPI에 의존 (96~120 DPI 기준 약 1400~1800px 너비). Vision AI에 충분한 수준.
 
 ### 4.2 Vision AI 이미지 크기 제한
 
@@ -174,11 +171,11 @@ rows = ceil(H / (DETAIL_MAX * 0.9))    # 세로 분할 수
 
 | 파일명 | 설명 | 크기 |
 |--------|------|------|
-| `full_original.png` | 시트 전체 고해상도 원본 | 300 DPI 원본 그대로 |
+| `full_original.png` | 시트 전체 원본 (Excel COM CopyPicture) | 화면 DPI 기준 |
 | `overview.png` | 전체 시트를 Vision AI 크기로 축소 | 최대 1568px 너비 |
-| `detail_r{row}_c{col}.png` | 분할된 상세 이미지 (그리드) | 각 최대 1568x1568px |
+| `detail_r{N}.png` | 세로 분할된 상세 이미지 | 각 최대 1568px 높이 |
 
-작은 시트(1568x1568 이내)는 분할하지 않고 `detail_r0_c0.png` = `overview.png`로 동일.
+작은 시트(높이 1568px 이내)는 분할하지 않고 `detail_r0.png` = `overview.png`로 동일.
 
 ---
 
@@ -257,7 +254,36 @@ Vision AI가 시각 요소를 해석할 때의 우선순위:
 
 **핵심 원칙**: 1~4는 반드시 텍스트로 변환. 5~6만 서브 이미지로 분리.
 
-### 5.5 서브 이미지 분리 기준
+### 5.5 플로우차트 크롭 재분석 파이프라인
+
+전체 타일 이미지에서 플로우차트 영역은 상대적으로 작아, 긴 커넥터(수평/수직 연결선) 추적이 실패할 수 있다.
+이를 해결하기 위해 **3단계 크롭 재분석 파이프라인**을 적용한다:
+
+```
+[1st pass] 메인 프롬프트로 전체 타일 해석
+    ↓ ```mermaid 블록 감지?
+    ↓ Yes
+[Locate] 전용 경량 Vision 호출 → 플로우차트 영역 bbox (JSON)
+    ↓
+[Crop] PIL로 해당 영역 크롭 (높이 50% / 너비 20% 패딩 추가)
+    ↓
+[2nd pass] FLOWCHART_PROMPT (전용 프롬프트)로 크롭 이미지 재분석
+    ↓
+[Replace] 1st pass 결과의 mermaid 블록을 2nd pass 결과로 교체
+```
+
+**전용 FLOWCHART_PROMPT의 핵심 규칙:**
+1. 모든 도형(노드)을 테이블로 나열: | 번호 | 텍스트 | 모양 | 위치 |
+2. 각 도형에서 나가는 선의 **개수와 방향**(→↑↓←)을 먼저 파악
+3. 각 선을 **끝까지** 추적하여 도착 도형 확인 (꺾임/합류 포함)
+4. 출발-도착 쌍을 테이블로 정리 후 Mermaid 변환
+5. "긴 수평선/수직선이 이미지 끝까지 이어지는 경우를 놓치지 마세요" 경고
+
+**검증 결과 (변신 시트 합성 플로우차트):**
+- 크롭 없이(전체 타일): "합성 진행 불가 → 종료" 연결 실패 (v2~v9, v11)
+- 크롭 + 전용 프롬프트: 성공 (v10) — 17.8s, 1,460 tokens
+
+### 5.6 서브 이미지 분리 기준
 
 Vision AI가 `[IMAGE: ...]` 마커를 출력한 요소에 대해:
 
@@ -277,9 +303,54 @@ Vision AI가 `[IMAGE: ...]` 마커를 출력한 요소에 대해:
 
 ---
 
-## 6. Stage 3: Parse (데이터 보강)
+## 6. Stage 3: Parse (데이터 보강 + 커넥터 검증)
 
-openpyxl로 Vision AI가 약한 부분을 보강:
+### 6.0 Stage 3의 목표
+
+Stage 3는 Vision AI의 결과를 **신뢰하되 검증**하는 단계다.
+
+**핵심 원칙: Vision AI 기본 신뢰 + OOXML 데이터로 교정**
+- Vision AI의 텍스트 해석, 레이아웃 인식, 테이블 구조화를 기본으로 신뢰한다
+- 다만 Vision AI가 **구조적으로 약한 영역**에 한해 OOXML 파싱 데이터로 교정한다:
+  1. **커넥터/화살표 연결 관계**: Vision AI는 긴 수평/수직 연결선을 추적하지 못하는 경우가 있음 → OOXML drawing XML에서 커넥터의 start/end shape ID를 추출하여 Mermaid 다이어그램 검증/보정
+  2. **도형 내 텍스트 오독**: 해상도 제한으로 "적용 스탯 수"를 "적용 스펙 수"로 읽는 등 오타 발생 → openpyxl/OOXML에서 도형 텍스트를 추출하여 대조/교정
+  3. **정밀 수치**: Vision이 읽기 어려운 작은 숫자, 소수점 등 → openpyxl 셀 데이터로 보강
+
+### 6.1 OOXML 커넥터 추출 (핵심 신규 기능)
+
+Excel OOXML의 `xl/drawings/drawingN.xml`에서 도형과 커넥터 데이터를 추출한다.
+
+**구조**:
+```xml
+<!-- 도형 (sp) -->
+<xdr:sp>
+  <xdr:nvSpPr><xdr:cNvPr id="39" name="합성 진행 불가"/></xdr:nvSpPr>
+  <a:prstGeom prst="roundRect"/>
+  <a:t>합성 진행 불가</a:t>
+</xdr:sp>
+
+<!-- 커넥터 (cxnSp) -->
+<xdr:cxnSp>
+  <a:stCxn id="39"/>  <!-- 출발: 합성 진행 불가 -->
+  <a:endCxn id="34"/> <!-- 도착: 종료 -->
+</xdr:cxnSp>
+```
+
+**추출 결과 예시** (변신 시트 합성 플로우차트):
+```
+시작(id=11) → "합성"버튼클릭(id=9)
+"합성"버튼클릭 → 동일 등급 4장의 재료 등록 완료?(id=18)
+(조건=Yes) → 합성 진행(id=19)
+합성 진행 → 등급별 리스트중 1종 결정(id=26)
+등급별 리스트중 1종 결정 → 결과 화면 출력(id=30)
+결과 화면 출력 → 종료(id=34)
+(조건=No) → 합성 진행 불가(id=39)
+합성 진행 불가 → 종료(id=34)          ← Vision AI가 3회 실패한 연결
+```
+
+**검증 시나리오**: Vision AI의 Mermaid에서 "합성 진행불가"가 종료와 연결되지 않았으나, OOXML 커넥터 데이터에 `39→34` 연결이 존재 → 자동 보정.
+
+### 6.2 openpyxl 데이터 보강
 
 | 항목 | 설명 |
 |------|------|
@@ -290,6 +361,17 @@ openpyxl로 Vision AI가 약한 부분을 보강:
 | 데이터 유효성 검사 | 드롭다운 목록, 허용 값 범위 |
 | 조건부 서식 | 색상 코딩 규칙 (텍스트로 설명) |
 | 시트 간 참조 | 다른 시트 데이터를 참조하는 수식 |
+
+### 6.3 Vision AI vs OOXML 충돌 시 규칙
+
+| 데이터 유형 | 우선 소스 | 이유 |
+|-------------|-----------|------|
+| 레이아웃/구조 | Vision AI | 시각적 배치를 AI가 가장 잘 이해 |
+| 테이블 내용 | Vision AI (openpyxl 검증) | Vision이 주, 수치 오류만 보정 |
+| 커넥터/화살표 연결 | **OOXML** | Vision AI의 구조적 약점 (긴 선 추적 실패) |
+| 도형 내 텍스트 | **OOXML** | 해상도 제한으로 오독 가능성 |
+| 숨겨진 데이터 | **openpyxl** | Vision이 볼 수 없는 정보 |
+| 수식/참조 | **openpyxl** | Vision이 결과값만 보고 수식은 못 읽음 |
 
 ---
 
@@ -425,9 +507,10 @@ output/
 
 | 기존 코드 | 재사용 대상 | 변경 사항 |
 |-----------|------------|-----------|
-| `lo_sheet_export.py` | Stage 1 (Capture) | 모듈화하여 import 가능하게 |
 | `convert_xlsx.py` Tier 1+1.5 | Stage 3 (Parse) | OOXML 도형 파싱 로직 분리 |
 | `vision_first_convert.py` | Stage 2 (Vision) 참조 | 2-이미지 전략으로 재설계 |
+
+> `lo_sheet_export.py`는 더 이상 사용하지 않음 (LibreOffice → Excel COM으로 전환)
 
 ---
 
@@ -435,7 +518,9 @@ output/
 
 | 이슈 | 영향 | 완화 방법 |
 |------|------|-----------|
-| LibreOffice 3번째 연속 프로세스 크래시 | Stage 1 실패 | 프로세스 격리 + 재시도 (최대 2회) |
+| Excel COM은 Windows+Excel 필수 | 서버/Linux 배포 불가 | 현재 로컬 개발 환경 전용. 서버 배포 시 별도 방안 |
+| ScreenUpdating=False 시 빈 이미지 | CopyPicture가 빈 비트맵 반환 | ScreenUpdating는 반드시 True 유지 |
+| 화면 DPI 의존 | 모니터 해상도에 따라 출력 크기 변동 | 96~120 DPI에서 1400~1800px 너비, Vision AI에 충분 |
 | Vision API 비용 | 대량 변환 시 비용 증가 | 빈 시트 건너뛰기, 캐싱 |
 | 매우 큰 시트 (50+ 타일) | 합성 복잡도 증가 | 타일 수 상한 설정 + 경고 |
 | 한글/특수문자 파일명 | Windows cp949 인코딩 | safe_filename() 변환 |

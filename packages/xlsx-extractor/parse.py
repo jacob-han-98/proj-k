@@ -1,0 +1,582 @@
+#!/usr/bin/env python3
+"""
+parse.py - Stage 3: OOXML 커넥터 검증 + Vision AI Mermaid 보정
+
+Vision AI가 생성한 Mermaid 플로우차트를 OOXML drawing XML의 커넥터 데이터로
+검증하고 보정한다.
+
+사용법:
+    python parse.py <xlsx_path> <vision_output_dir>
+    python parse.py <xlsx_path> <vision_output_dir> --sheet "시트이름"
+"""
+
+import sys
+import os
+import re
+import json
+import zipfile
+import xml.etree.ElementTree as ET
+from pathlib import Path
+
+
+# ── OOXML 네임스페이스 ──
+
+NS = {
+    'xdr': 'http://schemas.openxmlformats.org/drawingml/2006/spreadsheetDrawing',
+    'a': 'http://schemas.openxmlformats.org/drawingml/2006/main',
+    'r': 'http://schemas.openxmlformats.org/officeDocument/2006/relationships',
+    's': 'http://schemas.openxmlformats.org/spreadsheetml/2006/main',
+}
+
+
+# ── OOXML 파싱 ──
+
+def get_sheet_drawing_map(xlsx_path):
+    """시트명 -> drawing XML 파일명 매핑을 반환한다."""
+    mapping = {}
+    with zipfile.ZipFile(xlsx_path, 'r') as z:
+        # workbook.xml에서 시트 목록
+        wb = ET.fromstring(z.read('xl/workbook.xml'))
+        sheets = []
+        for s in wb.findall('.//s:sheet', NS):
+            rid = s.get('{http://schemas.openxmlformats.org/officeDocument/2006/relationships}id')
+            sheets.append({'name': s.get('name'), 'rId': rid})
+
+        # workbook.xml.rels에서 rId -> sheet 파일
+        rels = ET.fromstring(z.read('xl/_rels/workbook.xml.rels'))
+        rid_to_target = {rel.get('Id'): rel.get('Target') for rel in rels}
+
+        for s in sheets:
+            sheet_file = rid_to_target.get(s['rId'], '')
+            sheet_filename = sheet_file.split('/')[-1]
+            sheet_rels_path = f'xl/worksheets/_rels/{sheet_filename}.rels'
+            try:
+                srels = ET.fromstring(z.read(sheet_rels_path))
+                for rel in srels:
+                    if 'drawing' in rel.get('Type', ''):
+                        drawing_target = rel.get('Target', '')
+                        # ../drawings/drawing1.xml -> xl/drawings/drawing1.xml
+                        drawing_path = 'xl/drawings/' + drawing_target.split('/')[-1]
+                        mapping[s['name']] = drawing_path
+            except (KeyError, ET.ParseError):
+                pass
+
+    return mapping
+
+
+def extract_shapes_and_connectors(xlsx_path, drawing_path):
+    """drawing XML에서 도형과 커넥터를 추출한다."""
+    with zipfile.ZipFile(xlsx_path, 'r') as z:
+        tree = ET.fromstring(z.read(drawing_path))
+
+    xdr_ns = NS['xdr']
+    a_ns = NS['a']
+
+    # 도형(sp) 수집
+    shapes = {}
+    for sp in tree.iter(f'{{{xdr_ns}}}sp'):
+        cNvPr = sp.find(f'.//{{{xdr_ns}}}nvSpPr/{{{xdr_ns}}}cNvPr')
+        if cNvPr is None:
+            continue
+        sid = cNvPr.get('id')
+        # 텍스트 추출
+        texts = []
+        for t in sp.iter(f'{{{a_ns}}}t'):
+            if t.text:
+                texts.append(t.text)
+        text = ''.join(texts).strip()
+        # 줄바꿈 정규화
+        text = re.sub(r'\s+', ' ', text)
+        # 도형 타입
+        geom = sp.find(f'.//{{{a_ns}}}prstGeom')
+        geom_type = geom.get('prst', '?') if geom is not None else '?'
+
+        shapes[sid] = {
+            'id': sid,
+            'text': text,
+            'geom': geom_type,
+        }
+
+    # 커넥터(cxnSp) 수집
+    connectors = []
+    for cxn in tree.iter(f'{{{xdr_ns}}}cxnSp'):
+        cNvPr = cxn.find(f'.//{{{xdr_ns}}}nvCxnSpPr/{{{xdr_ns}}}cNvPr')
+        cNvCxnSpPr = cxn.find(f'.//{{{xdr_ns}}}nvCxnSpPr/{{{xdr_ns}}}cNvCxnSpPr')
+
+        stCxn = cNvCxnSpPr.find(f'{{{a_ns}}}stCxn') if cNvCxnSpPr is not None else None
+        endCxn = cNvCxnSpPr.find(f'{{{a_ns}}}endCxn') if cNvCxnSpPr is not None else None
+
+        st_id = stCxn.get('id') if stCxn is not None else None
+        end_id = endCxn.get('id') if endCxn is not None else None
+
+        if st_id and end_id:
+            connectors.append({
+                'start_id': st_id,
+                'end_id': end_id,
+                'start_text': shapes.get(st_id, {}).get('text', ''),
+                'end_text': shapes.get(end_id, {}).get('text', ''),
+            })
+
+    return shapes, connectors
+
+
+# ── 플로우차트 그룹핑 ──
+
+def group_flowcharts(shapes, connectors):
+    """커넥터로 연결된 도형들을 플로우차트 그룹으로 묶는다.
+    하나의 drawing에 여러 플로우차트가 있을 수 있다."""
+    # 커넥터에 참여하는 도형 ID 수집
+    connected_ids = set()
+    adj = {}  # adjacency list (undirected)
+    for c in connectors:
+        sid, eid = c['start_id'], c['end_id']
+        connected_ids.add(sid)
+        connected_ids.add(eid)
+        adj.setdefault(sid, set()).add(eid)
+        adj.setdefault(eid, set()).add(sid)
+
+    # BFS로 연결 컴포넌트 찾기
+    visited = set()
+    groups = []
+    for start_id in connected_ids:
+        if start_id in visited:
+            continue
+        group = set()
+        queue = [start_id]
+        while queue:
+            nid = queue.pop(0)
+            if nid in visited:
+                continue
+            visited.add(nid)
+            group.add(nid)
+            for neighbor in adj.get(nid, []):
+                if neighbor not in visited:
+                    queue.append(neighbor)
+        groups.append(group)
+
+    # 주석/라벨 도형 필터링: 플로우차트 노드가 아닌 텍스트 전용 도형은 제외
+    # (커넥터에 참여하는 도형만 남김)
+    result = []
+    for group_ids in groups:
+        group_shapes = {sid: shapes[sid] for sid in group_ids if sid in shapes}
+        group_connectors = [
+            c for c in connectors
+            if c['start_id'] in group_ids and c['end_id'] in group_ids
+        ]
+        if len(group_connectors) >= 2:  # 최소 2개 커넥터가 있어야 플로우차트
+            result.append({
+                'shapes': group_shapes,
+                'connectors': group_connectors,
+            })
+
+    # 크기 순 정렬 (가장 큰 그룹부터)
+    result.sort(key=lambda g: len(g['connectors']), reverse=True)
+    return result
+
+
+# ── Mermaid 파싱 ──
+
+def extract_mermaid_blocks(md_text):
+    """Markdown에서 mermaid 코드 블록을 추출한다."""
+    pattern = re.compile(r'```mermaid\n(.*?)```', re.DOTALL)
+    blocks = []
+    for m in pattern.finditer(md_text):
+        blocks.append({
+            'code': m.group(1).strip(),
+            'start': m.start(),
+            'end': m.end(),
+            'full_match': m.group(0),
+        })
+    return blocks
+
+
+def parse_mermaid_edges(mermaid_code):
+    """Mermaid 코드에서 엣지(연결)를 추출한다."""
+    edges = []
+    # 노드 정의 부분(괄호+텍스트)을 건너뛰고 화살표만 추적
+    # A((시작)) --> B["텍스트"], C -->|No| D 등
+    edge_pattern = re.compile(
+        r'(\w+)'                                    # source node id
+        r'(?:\s*[\[\(\{][^\n]*?[\]\)\}])*'          # skip node definition
+        r'\s*(?:-->|---|-\.->|==>)'                  # arrow types
+        r'\s*(?:\|([^|]*)\|)?'                       # optional |label|
+        r'\s*(\w+)'                                  # target node id
+    )
+    # -- label --> 패턴
+    label_arrow_pattern = re.compile(
+        r'(\w+)'
+        r'(?:\s*[\[\(\{][^\n]*?[\]\)\}])*'
+        r'\s+--\s+([^-]+?)\s+-->\s*'
+        r'(\w+)'
+    )
+    for line in mermaid_code.split('\n'):
+        line = line.strip()
+        if line.startswith('%') or line.startswith('flowchart') or not line:
+            continue
+        # -- label --> 먼저 시도
+        for m in label_arrow_pattern.finditer(line):
+            edges.append({
+                'source': m.group(1),
+                'target': m.group(3),
+                'label': m.group(2).strip(),
+            })
+        # 일반 화살표
+        for m in edge_pattern.finditer(line):
+            src, lbl, tgt = m.group(1), (m.group(2) or '').strip(), m.group(3)
+            # 중복 방지
+            if not any(e['source'] == src and e['target'] == tgt for e in edges):
+                edges.append({'source': src, 'target': tgt, 'label': lbl})
+    return edges
+
+
+def parse_mermaid_nodes(mermaid_code):
+    """Mermaid 코드에서 노드 ID와 텍스트를 추출한다."""
+    nodes = {}
+    # 다양한 괄호 패턴: A["text"], A(["text"]), A{{"text"}}, A((text)) 등
+    # 내부 따옴표/특수문자가 있을 수 있으므로 가장 바깥 괄호 기준으로 추출
+    node_pattern = re.compile(
+        r'(\w+)\s*'                               # node id
+        r'([\[\(\{]{1,3})\s*'                     # opening brackets (1-3개)
+        r'(.*?)\s*'                               # text (greedy하지 않게)
+        r'[\]\)\}]{1,3}'                          # closing brackets
+    )
+    for line in mermaid_code.split('\n'):
+        line = line.strip()
+        if line.startswith('%') or line.startswith('flowchart') or not line:
+            continue
+        for m in node_pattern.finditer(line):
+            nid = m.group(1)
+            text = m.group(3).strip()
+            # 따옴표 제거
+            text = re.sub(r'^["\']|["\']$', '', text)
+            # HTML <br> 태그 제거
+            text = re.sub(r'<br\s*/?>', ' ', text)
+            text = re.sub(r'&quot;', '"', text)
+            text = re.sub(r'\s+', ' ', text).strip()
+            if nid not in nodes and text:
+                nodes[nid] = text
+    return nodes
+
+
+# ── 텍스트 매칭 ──
+
+def normalize_text(text):
+    """텍스트를 정규화하여 비교 가능하게 만든다."""
+    text = re.sub(r'[\s\n\r]+', '', text)  # 모든 공백 제거
+    text = re.sub(r'["\'""]', '', text)     # 따옴표 제거
+    return text.lower()
+
+
+def find_best_match(mermaid_text, ooxml_shapes):
+    """Mermaid 노드 텍스트와 가장 잘 매칭되는 OOXML 도형을 찾는다."""
+    norm_m = normalize_text(mermaid_text)
+    if not norm_m:
+        return None
+
+    best_match = None
+    best_score = 0
+
+    for sid, shape in ooxml_shapes.items():
+        norm_s = normalize_text(shape['text'])
+        if not norm_s:
+            continue
+        # 정확 일치
+        if norm_m == norm_s:
+            return sid
+        # 부분 일치 (짧은 쪽이 긴 쪽에 포함)
+        if norm_m in norm_s or norm_s in norm_m:
+            score = min(len(norm_m), len(norm_s)) / max(len(norm_m), len(norm_s))
+            if score > best_score:
+                best_score = score
+                best_match = sid
+
+    if best_score > 0.5:
+        return best_match
+    return None
+
+
+# ── 핵심: Mermaid 보정 ──
+
+def verify_and_correct_mermaid(mermaid_code, ooxml_group):
+    """OOXML 커넥터로 Mermaid 엣지를 검증하고 보정한다.
+
+    Returns: dict with corrections, missing_edges, extra_edges
+    """
+    ooxml_shapes = ooxml_group['shapes']
+    ooxml_connectors = ooxml_group['connectors']
+
+    # Mermaid 노드/엣지 파싱
+    m_nodes = parse_mermaid_nodes(mermaid_code)
+    m_edges = parse_mermaid_edges(mermaid_code)
+
+    # Mermaid 노드 ID -> OOXML shape ID 매핑
+    mermaid_to_ooxml = {}
+    for mid, mtext in m_nodes.items():
+        ooxml_id = find_best_match(mtext, ooxml_shapes)
+        if ooxml_id:
+            mermaid_to_ooxml[mid] = ooxml_id
+
+    # 역매핑: OOXML ID -> Mermaid ID
+    ooxml_to_mermaid = {v: k for k, v in mermaid_to_ooxml.items()}
+
+    # OOXML 커넥터를 엣지 셋으로 변환
+    ooxml_edges = set()
+    for c in ooxml_connectors:
+        ooxml_edges.add((c['start_id'], c['end_id']))
+
+    # Mermaid 엣지를 OOXML ID 기준으로 변환
+    mermaid_edges_ooxml = set()
+    for e in m_edges:
+        s_ooxml = mermaid_to_ooxml.get(e['source'])
+        t_ooxml = mermaid_to_ooxml.get(e['target'])
+        if s_ooxml and t_ooxml:
+            mermaid_edges_ooxml.add((s_ooxml, t_ooxml))
+
+    # 비교
+    missing = ooxml_edges - mermaid_edges_ooxml  # OOXML에는 있지만 Mermaid에 없음
+    extra = mermaid_edges_ooxml - ooxml_edges     # Mermaid에는 있지만 OOXML에 없음
+
+    # 누락된 엣지를 Mermaid에 추가할 수 있는 형태로 변환
+    missing_edges = []
+    for st, en in missing:
+        st_text = ooxml_shapes.get(st, {}).get('text', f'id={st}')
+        en_text = ooxml_shapes.get(en, {}).get('text', f'id={en}')
+        st_mid = ooxml_to_mermaid.get(st)
+        en_mid = ooxml_to_mermaid.get(en)
+        missing_edges.append({
+            'ooxml_start': st, 'ooxml_end': en,
+            'start_text': st_text, 'end_text': en_text,
+            'mermaid_start': st_mid, 'mermaid_end': en_mid,
+        })
+
+    extra_edges = []
+    for st, en in extra:
+        st_text = ooxml_shapes.get(st, {}).get('text', f'id={st}')
+        en_text = ooxml_shapes.get(en, {}).get('text', f'id={en}')
+        extra_edges.append({
+            'ooxml_start': st, 'ooxml_end': en,
+            'start_text': st_text, 'end_text': en_text,
+        })
+
+    return {
+        'node_mapping': {mid: {'ooxml_id': oid, 'mermaid_text': m_nodes.get(mid, ''),
+                                'ooxml_text': ooxml_shapes.get(oid, {}).get('text', '')}
+                         for mid, oid in mermaid_to_ooxml.items()},
+        'missing_edges': missing_edges,
+        'extra_edges': extra_edges,
+        'ooxml_edge_count': len(ooxml_edges),
+        'mermaid_edge_count': len(m_edges),
+        'match_count': len(ooxml_edges & mermaid_edges_ooxml),
+    }
+
+
+def apply_corrections(mermaid_code, corrections):
+    """누락된 엣지를 Mermaid 코드에 추가한다."""
+    if not corrections['missing_edges']:
+        return mermaid_code, []
+
+    lines = mermaid_code.split('\n')
+    added = []
+
+    for edge in corrections['missing_edges']:
+        st_mid = edge['mermaid_start']
+        en_mid = edge['mermaid_end']
+        if st_mid and en_mid:
+            new_line = f'    {st_mid} --> {en_mid}'
+            lines.append(new_line)
+            added.append(f"{edge['start_text']} -> {edge['end_text']}")
+
+    return '\n'.join(lines), added
+
+
+# ── 전체 매칭: Mermaid 블록 ↔ OOXML 그룹 ──
+
+def match_mermaid_to_ooxml(mermaid_blocks, ooxml_groups, all_shapes):
+    """각 Mermaid 블록을 가장 적합한 OOXML 플로우차트 그룹에 매칭한다."""
+    matches = []
+
+    for block in mermaid_blocks:
+        m_nodes = parse_mermaid_nodes(block['code'])
+        best_group = None
+        best_overlap = 0
+
+        for gi, group in enumerate(ooxml_groups):
+            overlap = 0
+            for mtext in m_nodes.values():
+                if find_best_match(mtext, group['shapes']):
+                    overlap += 1
+            if overlap > best_overlap:
+                best_overlap = overlap
+                best_group = gi
+
+        if best_group is not None and best_overlap >= 2:
+            matches.append({
+                'block': block,
+                'group_index': best_group,
+                'overlap': best_overlap,
+            })
+
+    return matches
+
+
+# ── MD 파일 보정 ──
+
+def correct_md_file(md_path, ooxml_groups, all_shapes):
+    """MD 파일의 Mermaid 블록들을 OOXML 데이터로 보정한다."""
+    with open(md_path, 'r', encoding='utf-8') as f:
+        md_text = f.read()
+
+    mermaid_blocks = extract_mermaid_blocks(md_text)
+    if not mermaid_blocks:
+        return {'path': md_path, 'corrections': [], 'message': 'No mermaid blocks found'}
+
+    matches = match_mermaid_to_ooxml(mermaid_blocks, ooxml_groups, all_shapes)
+
+    all_corrections = []
+    corrected_text = md_text
+
+    # 뒤에서부터 교체 (offset 유지)
+    for match in sorted(matches, key=lambda m: m['block']['start'], reverse=True):
+        block = match['block']
+        group = ooxml_groups[match['group_index']]
+
+        result = verify_and_correct_mermaid(block['code'], group)
+
+        if result['missing_edges']:
+            corrected_code, added = apply_corrections(block['code'], result)
+            new_block = f"```mermaid\n{corrected_code}\n```"
+            corrected_text = (
+                corrected_text[:block['start']] +
+                new_block +
+                corrected_text[block['end']:]
+            )
+            all_corrections.append({
+                'group_index': match['group_index'],
+                'overlap': match['overlap'],
+                'added_edges': added,
+                'result': result,
+            })
+        else:
+            all_corrections.append({
+                'group_index': match['group_index'],
+                'overlap': match['overlap'],
+                'added_edges': [],
+                'result': result,
+                'message': 'All edges verified -no corrections needed',
+            })
+
+    # 보정된 파일 저장
+    if any(c.get('added_edges') for c in all_corrections):
+        with open(md_path, 'w', encoding='utf-8') as f:
+            f.write(corrected_text)
+
+    return {
+        'path': md_path,
+        'corrections': all_corrections,
+    }
+
+
+# ── 메인 ──
+
+def process_sheet_parse(xlsx_path, vision_output_dir, sheet_name):
+    """한 시트의 Vision 결과를 OOXML로 검증/보정한다."""
+    # 1. 시트 -> drawing 매핑
+    sheet_drawing_map = get_sheet_drawing_map(xlsx_path)
+    drawing_path = sheet_drawing_map.get(sheet_name)
+    if not drawing_path:
+        print(f"  [parse] {sheet_name}: no drawing XML found -skip")
+        return None
+
+    # 2. OOXML 도형/커넥터 추출
+    shapes, connectors = extract_shapes_and_connectors(xlsx_path, drawing_path)
+    print(f"  [parse] {sheet_name}: {len(shapes)} shapes, {len(connectors)} connectors from {drawing_path}")
+
+    if not connectors:
+        print(f"  [parse] {sheet_name}: no connectors -skip verification")
+        return None
+
+    # 3. 플로우차트 그룹핑
+    groups = group_flowcharts(shapes, connectors)
+    print(f"  [parse] {sheet_name}: {len(groups)} flowchart groups detected")
+    for gi, g in enumerate(groups):
+        node_texts = [s['text'] for s in g['shapes'].values() if s['text']][:5]
+        print(f"    group[{gi}]: {len(g['shapes'])} shapes, {len(g['connectors'])} connectors -{node_texts}")
+
+    # 4. Vision output MD 파일 찾기
+    merged_path = os.path.join(vision_output_dir, 'merged.md')
+    if not os.path.exists(merged_path):
+        print(f"  [parse] {sheet_name}: merged.md not found")
+        return None
+
+    # 5. Mermaid 보정
+    result = correct_md_file(merged_path, groups, shapes)
+
+    # 6. 결과 보고
+    for ci, corr in enumerate(result.get('corrections', [])):
+        res = corr.get('result', {})
+        added = corr.get('added_edges', [])
+        msg = corr.get('message', '')
+        print(f"    mermaid[{ci}]: match={res.get('match_count', 0)}/{res.get('ooxml_edge_count', 0)} ooxml edges, "
+              f"missing={len(res.get('missing_edges', []))}, extra={len(res.get('extra_edges', []))}")
+        if added:
+            for a in added:
+                print(f"      + ADDED: {a}")
+        if msg:
+            print(f"      {msg}")
+
+    # 7. 메타데이터 저장
+    meta = {
+        'sheet_name': sheet_name,
+        'drawing_path': drawing_path,
+        'shapes_count': len(shapes),
+        'connectors_count': len(connectors),
+        'flowchart_groups': len(groups),
+        'corrections': result.get('corrections', []),
+    }
+    meta_path = os.path.join(vision_output_dir, 'parse_meta.json')
+    with open(meta_path, 'w', encoding='utf-8') as f:
+        json.dump(meta, f, ensure_ascii=False, indent=2, default=str)
+
+    return result
+
+
+def main():
+    if len(sys.argv) < 3:
+        print("Usage: python parse.py <xlsx_path> <vision_output_base_dir> [--sheet <name>]")
+        print("Example: python parse.py ../../7_System/PK_변신.xlsx output/PK_변신/ --sheet 변신")
+        sys.exit(1)
+
+    xlsx_path = sys.argv[1]
+    vision_base = sys.argv[2]
+    target_sheet = None
+    if '--sheet' in sys.argv:
+        idx = sys.argv.index('--sheet')
+        target_sheet = sys.argv[idx + 1]
+
+    if not os.path.exists(xlsx_path):
+        print(f"ERROR: {xlsx_path} not found")
+        sys.exit(1)
+
+    if target_sheet:
+        safe_name = target_sheet
+        for ch in '/\\:*?"<>|':
+            safe_name = safe_name.replace(ch, '_')
+        vision_output_dir = os.path.join(vision_base, safe_name, '_vision_output')
+        if not os.path.isdir(vision_output_dir):
+            print(f"ERROR: {vision_output_dir} not found")
+            sys.exit(1)
+        process_sheet_parse(xlsx_path, vision_output_dir, target_sheet)
+    else:
+        # 모든 시트 처리
+        sheet_map = get_sheet_drawing_map(xlsx_path)
+        for sheet_name in sheet_map:
+            safe_name = sheet_name
+            for ch in '/\\:*?"<>|':
+                safe_name = safe_name.replace(ch, '_')
+            vision_output_dir = os.path.join(vision_base, safe_name, '_vision_output')
+            if os.path.isdir(vision_output_dir):
+                process_sheet_parse(xlsx_path, vision_output_dir, sheet_name)
+
+
+if __name__ == '__main__':
+    main()

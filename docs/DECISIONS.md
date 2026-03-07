@@ -90,3 +90,25 @@
 - **파일**:
   - `ConvertProgram/_tools/lo_sheet_export.py` - 시트별 PDF 내보내기
   - `ConvertProgram/_tools/vision_first_convert.py` - 메인 파이프라인
+
+## ADR-007: Stage 3 — Vision AI 기본 신뢰 + OOXML 커넥터 검증 전략
+
+- **날짜**: 2026-03-08
+- **결정**: Vision AI 결과를 기본으로 신뢰하되, OOXML 파싱 데이터로 교정하는 하이브리드 전략 채택
+- **근거 (실험 결과)**:
+  - Vision AI가 플로우차트의 긴 수평 연결선을 추적하지 못하는 구조적 약점 발견
+  - 변신 시트 합성 플로차트: "합성 진행불가 → 종료" 연결을 3회 프롬프트 반복으로도 실패
+  - OOXML `xl/drawings/drawingN.xml`에서 커넥터 start/end shape ID를 추출 → 해당 연결(id=39→id=34) 100% 정확 추출
+  - 도형 내 텍스트도 OOXML에서 직접 추출 가능 (Vision 오독 "적용 스펙 수" ← 실제 "적용 스탯 수")
+- **우선 소스 규칙**:
+  | 데이터 유형 | 우선 소스 | 이유 |
+  |-------------|-----------|------|
+  | 레이아웃/구조 | Vision AI | 시각적 배치를 AI가 가장 잘 이해 |
+  | 커넥터/화살표 | OOXML | Vision의 구조적 약점 |
+  | 도형 텍스트 | OOXML | 해상도 제한으로 오독 가능성 |
+  | 숨겨진 데이터/수식 | openpyxl | Vision이 볼 수 없는 정보 |
+- **대안 검토**:
+  - 프롬프트만으로 해결: 3회 반복 실패, 구조적 한계
+  - OOXML만으로: 레이아웃/맥락 해석은 Vision이 월등
+  - 2-pass Vision: 추가 API 비용 + 여전히 불확실
+- **결과**: SPEC.md 6장 Stage 3에 상세 스펙 반영

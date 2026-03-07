@@ -18,6 +18,7 @@ capture.py가 생성한 이미지(overview + detail tiles)를 Claude Opus Vision
 
 import sys
 import os
+import io
 import json
 import time
 import base64
@@ -63,9 +64,21 @@ def call_vision(prompt, image_paths, max_tokens=VISION_MAX_TOKENS):
     t_encode_start = time.time()
     content = []
     image_sizes_bytes = []
+    MAX_IMAGE_DIM = 8000  # Claude Vision API 최대 이미지 차원
     for img_path in image_paths:
         with open(img_path, "rb") as f:
             raw = f.read()
+        # 이미지 크기 체크 → 8000px 초과 시 자동 리사이즈
+        img_check = Image.open(img_path)
+        w, h = img_check.size
+        if w > MAX_IMAGE_DIM or h > MAX_IMAGE_DIM:
+            scale = min(MAX_IMAGE_DIM / w, MAX_IMAGE_DIM / h)
+            new_w, new_h = int(w * scale), int(h * scale)
+            img_resized = img_check.resize((new_w, new_h), Image.LANCZOS)
+            buf = io.BytesIO()
+            img_resized.save(buf, format="PNG")
+            raw = buf.getvalue()
+            print(f"  [resize] {os.path.basename(img_path)}: {w}x{h} -> {new_w}x{new_h}")
         image_sizes_bytes.append(len(raw))
         img_data = base64.standard_b64encode(raw).decode("utf-8")
         content.append({
@@ -424,7 +437,7 @@ def extract_sub_images(tile_text, tile_image_path, output_dir, tile_id, sheet_sa
     w, h = img.size
 
     # 타일 이미지 전체를 fallback으로 미리 저장
-    import shutil
+    import shutil  # noqa: used once for tile fallback copy
     tile_fallback_name = f"{sheet_safe_name}_{tile_id}.png"
     tile_fallback_path = os.path.join(images_dir, tile_fallback_name)
     if not os.path.exists(tile_fallback_path):

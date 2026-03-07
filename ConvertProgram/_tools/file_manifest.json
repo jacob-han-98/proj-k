@@ -1,0 +1,2094 @@
+{
+  "summary": {
+    "xlsx": 104,
+    "pdf": 296,
+    "pptx": 11,
+    "docx": 4
+  },
+  "total": 415,
+  "files": {
+    "xlsx": [
+      {
+        "path": "2_Development/PK_리니지M_데이터구조.xlsx",
+        "size_kb": 11888.4,
+        "folder": "2_Development"
+      },
+      {
+        "path": "2_Development/PK_시스템리스트.xlsx",
+        "size_kb": 104668.3,
+        "folder": "2_Development"
+      },
+      {
+        "path": "3_Base/PK_Npc설정.xlsx",
+        "size_kb": 27889.5,
+        "folder": "3_Base"
+      },
+      {
+        "path": "3_Base/PK_기타설정.xlsx",
+        "size_kb": 150106.3,
+        "folder": "3_Base"
+      },
+      {
+        "path": "3_Base/PK_몬스터설정.xlsx",
+        "size_kb": 380385.1,
+        "folder": "3_Base"
+      },
+      {
+        "path": "3_Base/PK_세계관.xlsx",
+        "size_kb": 12365.4,
+        "folder": "3_Base"
+      },
+      {
+        "path": "3_Base/PK_월드맵.xlsx",
+        "size_kb": 149289.6,
+        "folder": "3_Base"
+      },
+      {
+        "path": "3_Base/PK_인물설정.xlsx",
+        "size_kb": 211764.8,
+        "folder": "3_Base"
+      },
+      {
+        "path": "7_System/PK_HUD 시스템.xlsx",
+        "size_kb": 24904.1,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_NPC 시스템.xlsx",
+        "size_kb": 214699.0,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_NPC퀵이동.xlsx",
+        "size_kb": 9873.1,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_골드 밸런스.xlsx",
+        "size_kb": 23.4,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_기본 전투 시스템.xlsx",
+        "size_kb": 1442.9,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_네임드 몬스터 타입추가.xlsx",
+        "size_kb": 1346.4,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_단축키 시스템.xlsx",
+        "size_kb": 24967.7,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_대미지 명중률 계산기.xlsx",
+        "size_kb": 123.3,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_레벨업 시스템.xlsx",
+        "size_kb": 32440.3,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_레벨업 연출 1차.xlsx",
+        "size_kb": 31347.2,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_로그인 플로우.xlsx",
+        "size_kb": 60774.6,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_리니지라이크 Stat 구조 분석.xlsx",
+        "size_kb": 56.2,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_리니지라이크 컨텐츠 분석.xlsx",
+        "size_kb": 45.9,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_마우스 이벤트 처리.xlsx",
+        "size_kb": 14.9,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_몬스터 사망 랙돌 시스템.xlsx",
+        "size_kb": 230480.3,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_몬스터 시스템.xlsx",
+        "size_kb": 26508.4,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_몬스터 어그로 시스템.xlsx",
+        "size_kb": 45.3,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_몬스터 전투 시스템.xlsx",
+        "size_kb": 109.5,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_물약 자동 사용 시스템.xlsx",
+        "size_kb": 232.6,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_미니맵 시스템.xlsx",
+        "size_kb": 23424.5,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_버프 시스템.xlsx",
+        "size_kb": 29268.4,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_변신 및 스킬 시스템.xlsx",
+        "size_kb": 33732.3,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_보상 시스템.xlsx",
+        "size_kb": 4484.5,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_보스 레이드 시스템.xlsx",
+        "size_kb": 27933.8,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_볼륨 시퀀스_시스템.xlsx",
+        "size_kb": 29956.1,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_분해 시스템.xlsx",
+        "size_kb": 4560.7,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_사망 및 부활 시스템.xlsx",
+        "size_kb": 14490.1,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_설정 시스템.xlsx",
+        "size_kb": 13259.1,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_스킬 대미지 밸런스.xlsx",
+        "size_kb": 18.2,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_스킬 표준 데이터.xlsx",
+        "size_kb": 15.1,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_스탯 및 공식.xlsx",
+        "size_kb": 2345.4,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_스폰 개선.xlsx",
+        "size_kb": 46661.7,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_스폰 시스템.xlsx",
+        "size_kb": 19683.4,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_시네마틱_시스템.xlsx",
+        "size_kb": 39774.0,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_시스템 메시지.xlsx",
+        "size_kb": 36851.0,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_아이템 시스템.xlsx",
+        "size_kb": 1802.7,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_월드 시스템.xlsx",
+        "size_kb": 366.6,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_월드맵 시스템.xlsx",
+        "size_kb": 134407.7,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_인벤토리 시스템.xlsx",
+        "size_kb": 16143.2,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_인스턴스 시스템.xlsx",
+        "size_kb": 38441.8,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_인트로 시스템.xlsx",
+        "size_kb": 66643.1,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_자동 전투 시스템.xlsx",
+        "size_kb": 714922.2,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_전문기술_시스템.xlsx",
+        "size_kb": 38205.6,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_전투력 시스템.xlsx",
+        "size_kb": 16537.2,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_종족 및 클래스.xlsx",
+        "size_kb": 180.6,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_주변 탐지 시스템.xlsx",
+        "size_kb": 13516.4,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_채팅 시스템.xlsx",
+        "size_kb": 19925.1,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_카메라2차_시스템.xlsx",
+        "size_kb": 170859.0,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_카메라_시스템.xlsx",
+        "size_kb": 43874.3,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_캐릭터 생성 연출.xlsx",
+        "size_kb": 221032.7,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_캐릭터 선택창&변신.xlsx",
+        "size_kb": 21146.6,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_캐릭터 성장 밸런스.xlsx",
+        "size_kb": 89.3,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_퀘스트 오브젝트.xlsx",
+        "size_kb": 20904.8,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_퀘스트 인스턴스.xlsx",
+        "size_kb": 61621.9,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_퀘스트.xlsx",
+        "size_kb": 72983.8,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_타게팅 시스템.xlsx",
+        "size_kb": 3373.6,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_테리토리 시스템.xlsx",
+        "size_kb": 6056.0,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_텍스트 이펙트 시스템.xlsx",
+        "size_kb": 7677.8,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_텔레포트 시스템.xlsx",
+        "size_kb": 6264.8,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_튜토리얼, 도움말_시스템.xlsx",
+        "size_kb": 21841.2,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_트리거 시스템.xlsx",
+        "size_kb": 2068.3,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_파티 시스템.xlsx",
+        "size_kb": 75316.6,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_펫 시스템.xlsx",
+        "size_kb": 42988.9,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/PK_피아 식별.xlsx",
+        "size_kb": 93998.5,
+        "folder": "7_System"
+      },
+      {
+        "path": "7_System/경제밸런스/PK_골드 밸런스.xlsx",
+        "size_kb": 23.4,
+        "folder": "7_System/경제밸런스"
+      },
+      {
+        "path": "7_System/경제밸런스/PK_장비 밸런스 및 데이터.xlsx",
+        "size_kb": 350.1,
+        "folder": "7_System/경제밸런스"
+      },
+      {
+        "path": "9_MileStone/PK_MileStone_Proto.xlsx",
+        "size_kb": 45.6,
+        "folder": "9_MileStone"
+      },
+      {
+        "path": "9_MileStone/PK_기획서 리스트.xlsx",
+        "size_kb": 11.4,
+        "folder": "9_MileStone"
+      },
+      {
+        "path": "9_MileStone/M1/PK_게임플로우_시스템.xlsx",
+        "size_kb": 40774.3,
+        "folder": "9_MileStone/M1"
+      },
+      {
+        "path": "9_MileStone/M1/PK_기본전투_시스템.xlsx",
+        "size_kb": 54938.0,
+        "folder": "9_MileStone/M1"
+      },
+      {
+        "path": "9_MileStone/M1/PK_몬스터 기본 시스템.xlsx",
+        "size_kb": 21391.0,
+        "folder": "9_MileStone/M1"
+      },
+      {
+        "path": "9_MileStone/M1/PK_문자출력_시스템.xlsx",
+        "size_kb": 1200.2,
+        "folder": "9_MileStone/M1"
+      },
+      {
+        "path": "9_MileStone/M1/PK_바리울 리소스.xlsx",
+        "size_kb": 17374.0,
+        "folder": "9_MileStone/M1"
+      },
+      {
+        "path": "9_MileStone/M1/PK_바리울_레벨.xlsx",
+        "size_kb": 84764.8,
+        "folder": "9_MileStone/M1"
+      },
+      {
+        "path": "9_MileStone/M1/PK_발동 액션 시스템.xlsx",
+        "size_kb": 622.6,
+        "folder": "9_MileStone/M1"
+      },
+      {
+        "path": "9_MileStone/M1/PK_월드_시스템.xlsx",
+        "size_kb": 229.2,
+        "folder": "9_MileStone/M1"
+      },
+      {
+        "path": "9_MileStone/M1/PK_카메라 차폐.xlsx",
+        "size_kb": 13017.1,
+        "folder": "9_MileStone/M1"
+      },
+      {
+        "path": "9_MileStone/M1/PK_카메라_시스템.xlsx",
+        "size_kb": 16221.8,
+        "folder": "9_MileStone/M1"
+      },
+      {
+        "path": "9_MileStone/M1/아트발주/PK_게임플로우_발주.xlsx",
+        "size_kb": 1641.5,
+        "folder": "9_MileStone/M1/아트발주"
+      },
+      {
+        "path": "9_MileStone/M1/아트발주/PK_기본전투_발주.xlsx",
+        "size_kb": 3535.9,
+        "folder": "9_MileStone/M1/아트발주"
+      },
+      {
+        "path": "9_MileStone/M1/아트발주/PK_몬스터_기본행동_발주.xlsx",
+        "size_kb": 1223.4,
+        "folder": "9_MileStone/M1/아트발주"
+      },
+      {
+        "path": "9_MileStone/M2/PK_비대면 지문.xlsx",
+        "size_kb": 6892.6,
+        "folder": "9_MileStone/M2"
+      },
+      {
+        "path": "9_MileStone/M2/PK_스킬 시스템.xlsx",
+        "size_kb": 125023.0,
+        "folder": "9_MileStone/M2"
+      },
+      {
+        "path": "9_MileStone/M2/PK_전투AI시스템.xlsx",
+        "size_kb": 3038.6,
+        "folder": "9_MileStone/M2"
+      },
+      {
+        "path": "9_MileStone/M2/PK_텍스트 이펙트 시스템.xlsx",
+        "size_kb": 30034.8,
+        "folder": "9_MileStone/M2"
+      },
+      {
+        "path": "9_MileStone/M2/PK_프로토 플레이 콘티.xlsx",
+        "size_kb": 842.4,
+        "folder": "9_MileStone/M2"
+      },
+      {
+        "path": "9_MileStone/M2/PK_피격_이펙트_시스템.xlsx",
+        "size_kb": 29997.0,
+        "folder": "9_MileStone/M2"
+      },
+      {
+        "path": "9_MileStone/M3/PK_보스 몬스터.xlsx",
+        "size_kb": 158761.9,
+        "folder": "9_MileStone/M3"
+      },
+      {
+        "path": "9_MileStone/M3/PK_복식 시스템.xlsx",
+        "size_kb": 271735.1,
+        "folder": "9_MileStone/M3"
+      },
+      {
+        "path": "9_MileStone/M3/PK_프로토 서사 전달.xlsx",
+        "size_kb": 5549.3,
+        "folder": "9_MileStone/M3"
+      },
+      {
+        "path": "9_MileStone/M3/PK_프로토 타입 연출 시스템.xlsx",
+        "size_kb": 46871.8,
+        "folder": "9_MileStone/M3"
+      },
+      {
+        "path": "9_MileStone/M4/PK_발동액션 표현 개선.xlsx",
+        "size_kb": 7158.7,
+        "folder": "9_MileStone/M4"
+      },
+      {
+        "path": "9_MileStone/Prototype2/PK_PvP단체전.xlsx",
+        "size_kb": 52778.0,
+        "folder": "9_MileStone/Prototype2"
+      },
+      {
+        "path": "9_MileStone/Prototype2/PK_바리울 개선 사항.xlsx",
+        "size_kb": 73255.9,
+        "folder": "9_MileStone/Prototype2"
+      },
+      {
+        "path": "9_MileStone/Prototype2/PK_복식_궁사.xlsx",
+        "size_kb": 64060.0,
+        "folder": "9_MileStone/Prototype2"
+      },
+      {
+        "path": "9_MileStone/Prototype2/PK_해양컨텐츠.xlsx",
+        "size_kb": 80596.1,
+        "folder": "9_MileStone/Prototype2"
+      }
+    ],
+    "pdf": [
+      {
+        "path": "PK_변신 시스템 기획서.pdf",
+        "size_kb": 219.5,
+        "folder": "(root)"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch1/계층 구조 설계 ( 내비게이션형 팝업 시스템 ) [5506007232].pdf",
+        "size_kb": 1069.9,
+        "folder": "Confluence PDF Sync/Batch1"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch1/골드 밸런스 [5007376476].pdf",
+        "size_kb": 1354.4,
+        "folder": "Confluence PDF Sync/Batch1"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch1/공격 보조 대쉬 시스템 [5498481155].pdf",
+        "size_kb": 196.8,
+        "folder": "Confluence PDF Sync/Batch1"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch1/공성전 [5097619868].pdf",
+        "size_kb": 687.7,
+        "folder": "Confluence PDF Sync/Batch1"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch1/공성전 시스템 [5252645786].pdf",
+        "size_kb": 10368.0,
+        "folder": "Confluence PDF Sync/Batch1"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch1/공용 FX 리스트 [5692623776].pdf",
+        "size_kb": 198.9,
+        "folder": "Confluence PDF Sync/Batch1"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch1/공용 장비 [3958309993].pdf",
+        "size_kb": 198.1,
+        "folder": "Confluence PDF Sync/Batch1"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch1/공통 팝업 및 모달 UI 시스템 가이드 [5513019426].pdf",
+        "size_kb": 463.6,
+        "folder": "Confluence PDF Sync/Batch1"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch1/군중 제어 정보 [4432594886].pdf",
+        "size_kb": 881.7,
+        "folder": "Confluence PDF Sync/Batch1"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch1/궁극기 시스템 [4471717923].pdf",
+        "size_kb": 3590.1,
+        "folder": "Confluence PDF Sync/Batch1"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch1/근거리_도깨비 리소스 리스트 [4864376835].pdf",
+        "size_kb": 531.2,
+        "folder": "Confluence PDF Sync/Batch1"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch1/기여도 시스템 [4705222657].pdf",
+        "size_kb": 3055.7,
+        "folder": "Confluence PDF Sync/Batch1"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch1/기획서 템플릿 [4848943277].pdf",
+        "size_kb": 145.0,
+        "folder": "Confluence PDF Sync/Batch1"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch1/기획자 개발 팁 [4089250122].pdf",
+        "size_kb": 179.2,
+        "folder": "Confluence PDF Sync/Batch1"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch1/길드 금고 시스템 [5567709196].pdf",
+        "size_kb": 2378.6,
+        "folder": "Confluence PDF Sync/Batch1"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch1/길드 레이드 시스템 [4898816019].pdf",
+        "size_kb": 5444.3,
+        "folder": "Confluence PDF Sync/Batch1"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch1/길드 스킬 시스템 [4880072709].pdf",
+        "size_kb": 2937.5,
+        "folder": "Confluence PDF Sync/Batch1"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch1/길드 의뢰 시스템 [4953768009].pdf",
+        "size_kb": 1803.6,
+        "folder": "Confluence PDF Sync/Batch1"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch1/길드 임무 시스템 [4895866889].pdf",
+        "size_kb": 792.9,
+        "folder": "Confluence PDF Sync/Batch1"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch1/길드 컨텐츠 [4700143713].pdf",
+        "size_kb": 1770.3,
+        "folder": "Confluence PDF Sync/Batch1"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch1/네임플레이트 적용 규칙 (캐릭터, 몬스터 공통) [4842356957].pdf",
+        "size_kb": 743.9,
+        "folder": "Confluence PDF Sync/Batch1"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch1/다른 시스템_컨텐츠에서 우편 연결 [5137302779].pdf",
+        "size_kb": 418.5,
+        "folder": "Confluence PDF Sync/Batch1"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch1/다이얼로 팝업 UI 컴포넌트 기능 구현 [5572952156].pdf",
+        "size_kb": 787.7,
+        "folder": "Confluence PDF Sync/Batch1"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch1/대륙 간 이동 시스템 [5201625092].pdf",
+        "size_kb": 4547.6,
+        "folder": "Confluence PDF Sync/Batch1"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch1/대미지 0일 때 판정 처리 개선 [4430398358].pdf",
+        "size_kb": 718.9,
+        "folder": "Confluence PDF Sync/Batch1"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch1/대미지 공식 개편 [5172265806].pdf",
+        "size_kb": 276.2,
+        "folder": "Confluence PDF Sync/Batch1"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch1/대미지 공식 및 공격_방어 스탯 [4437999745].pdf",
+        "size_kb": 439.7,
+        "folder": "Confluence PDF Sync/Batch1"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch1/대상 상태에 따른 추가 효과 [4432696966].pdf",
+        "size_kb": 547.6,
+        "folder": "Confluence PDF Sync/Batch1"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch1/대상의 상태에 따른 조건부 효과 [4919656617].pdf",
+        "size_kb": 929.9,
+        "folder": "Confluence PDF Sync/Batch1"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch1/던전 종류 및 리소스 제작 방향성 [4657938505].pdf",
+        "size_kb": 317.3,
+        "folder": "Confluence PDF Sync/Batch1"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch1/던전 컨텐츠 개발 계획 [4710924739].pdf",
+        "size_kb": 222.2,
+        "folder": "Confluence PDF Sync/Batch1"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch1/돌진 공격 기능 [4634542697].pdf",
+        "size_kb": 2352.1,
+        "folder": "Confluence PDF Sync/Batch1"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch1/등급 표시 규칙 [5509382576].pdf",
+        "size_kb": 280.6,
+        "folder": "Confluence PDF Sync/Batch1"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch1/레드닷 시스템 [4426467941].pdf",
+        "size_kb": 309.5,
+        "folder": "Confluence PDF Sync/Batch1"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch1/레드닷 시스템_스탯 [4432660722].pdf",
+        "size_kb": 1532.9,
+        "folder": "Confluence PDF Sync/Batch1"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch1/레드닷 시스템_인벤토리 [4432660687].pdf",
+        "size_kb": 1559.9,
+        "folder": "Confluence PDF Sync/Batch1"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch1/레벨 - 제작 가이드 [4367779320].pdf",
+        "size_kb": 124.3,
+        "folder": "Confluence PDF Sync/Batch1"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch1/레벨당 스탯 증감 [4663574596].pdf",
+        "size_kb": 427.8,
+        "folder": "Confluence PDF Sync/Batch1"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch1/로그인 및 캐릭터 생성과 선택 [5281808698].pdf",
+        "size_kb": 113.8,
+        "folder": "Confluence PDF Sync/Batch1"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch1/로그인 프로세스 [5294129200].pdf",
+        "size_kb": 8171.7,
+        "folder": "Confluence PDF Sync/Batch1"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch1/마법_도깨비 리소스 리스트 [4894720011].pdf",
+        "size_kb": 264.8,
+        "folder": "Confluence PDF Sync/Batch1"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch1/마법_정령 리소스 리스트 [4861101051].pdf",
+        "size_kb": 16355.1,
+        "folder": "Confluence PDF Sync/Batch1"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch1/마을 전투 HUD 처리 [4542332985].pdf",
+        "size_kb": 6986.9,
+        "folder": "Confluence PDF Sync/Batch1"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch1/멀티 캐릭터 시스템 [5553065245].pdf",
+        "size_kb": 2310.3,
+        "folder": "Confluence PDF Sync/Batch1"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch1/명중률 공식 개선 [4477583624].pdf",
+        "size_kb": 4838.4,
+        "folder": "Confluence PDF Sync/Batch1"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch1/몬스터 - 제작 가이드 [4367647291].pdf",
+        "size_kb": 116.3,
+        "folder": "Confluence PDF Sync/Batch1"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch1/몬스터 그로기 시스템 [5511447340].pdf",
+        "size_kb": 717.5,
+        "folder": "Confluence PDF Sync/Batch1"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch1/몬스터 랙돌 시스템 [4510613744].pdf",
+        "size_kb": 2056.7,
+        "folder": "Confluence PDF Sync/Batch1"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch2/스킬 리스트 - 도깨비 전체 [4871946254].pdf",
+        "size_kb": 1082.4,
+        "folder": "Confluence PDF Sync/Batch2"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch2/스킬 리스트 - 매지션 [4421977711].pdf",
+        "size_kb": 470.3,
+        "folder": "Confluence PDF Sync/Batch2"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch2/스킬 리스트 - 샤먼 [4572905485].pdf",
+        "size_kb": 501.1,
+        "folder": "Confluence PDF Sync/Batch2"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch2/스킬 리스트 - 아발리스터 [4421977685].pdf",
+        "size_kb": 1121.0,
+        "folder": "Confluence PDF Sync/Batch2"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch2/스킬 리스트 - 아처 [4421943639].pdf",
+        "size_kb": 590.4,
+        "folder": "Confluence PDF Sync/Batch2"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch2/스킬 리스트 - 워리어 [4422042699].pdf",
+        "size_kb": 299.6,
+        "folder": "Confluence PDF Sync/Batch2"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch2/스킬 발동 순서 설정 [4568350721].pdf",
+        "size_kb": 713.9,
+        "folder": "Confluence PDF Sync/Batch2"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch2/스킬 슬롯 시스템 [4432593837].pdf",
+        "size_kb": 621.0,
+        "folder": "Confluence PDF Sync/Batch2"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch2/스킬 자동 사용 및 주기 설정 [4568285201].pdf",
+        "size_kb": 2883.2,
+        "folder": "Confluence PDF Sync/Batch2"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch2/스킬 자체의 명중 및 크리티컬 확률 제어 [4437868604].pdf",
+        "size_kb": 275.7,
+        "folder": "Confluence PDF Sync/Batch2"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch2/스킬 쿨타임 감소 [4432594669].pdf",
+        "size_kb": 289.6,
+        "folder": "Confluence PDF Sync/Batch2"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch2/스킬 회복량_사용량 표시 [4568317953].pdf",
+        "size_kb": 722.8,
+        "folder": "Confluence PDF Sync/Batch2"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch2/스킬북 시스템 [4415260809].pdf",
+        "size_kb": 855.8,
+        "folder": "Confluence PDF Sync/Batch2"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch2/스탯 리스트 [5118197849].pdf",
+        "size_kb": 209.9,
+        "folder": "Confluence PDF Sync/Batch2"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch2/스탯 및 대미지 공식 개편 [5266276415].pdf",
+        "size_kb": 506.1,
+        "folder": "Confluence PDF Sync/Batch2"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch2/스탯 분류 및 추가 스탯 디자인 [5084119049].pdf",
+        "size_kb": 453.7,
+        "folder": "Confluence PDF Sync/Batch2"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch2/스탯 비례 보너스 [4594860082].pdf",
+        "size_kb": 282.8,
+        "folder": "Confluence PDF Sync/Batch2"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch2/스탯 비율 증감 [4589617153].pdf",
+        "size_kb": 338.5,
+        "folder": "Confluence PDF Sync/Batch2"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch2/스탯 상승 효과 상한치 설정 [4649779570].pdf",
+        "size_kb": 226.9,
+        "folder": "Confluence PDF Sync/Batch2"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch2/스탯 증가 단위 입력 시스템 개선 [4722230845].pdf",
+        "size_kb": 141.9,
+        "folder": "Confluence PDF Sync/Batch2"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch2/시간 던전 UI [4741267497].pdf",
+        "size_kb": 12116.3,
+        "folder": "Confluence PDF Sync/Batch2"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch2/시간 던전 시스템 [4677435419].pdf",
+        "size_kb": 654.9,
+        "folder": "Confluence PDF Sync/Batch2"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch2/시스템 디자인 [4404381739].pdf",
+        "size_kb": 173.0,
+        "folder": "Confluence PDF Sync/Batch2"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch2/시아 보주 무기 컨셉 설정 [4432300768].pdf",
+        "size_kb": 555.1,
+        "folder": "Confluence PDF Sync/Batch2"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch2/시아 애니메이션 리뉴얼 목록 정리 [4569825287].pdf",
+        "size_kb": 154.7,
+        "folder": "Confluence PDF Sync/Batch2"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch2/아이콘 - 발주 가이드 [5247434914].pdf",
+        "size_kb": 277.7,
+        "folder": "Confluence PDF Sync/Batch2"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch2/아이템 ID 그룹화 기능 [4618715180].pdf",
+        "size_kb": 269.2,
+        "folder": "Confluence PDF Sync/Batch2"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch2/아이템 등급 차별화 기조 [4734419052].pdf",
+        "size_kb": 214.4,
+        "folder": "Confluence PDF Sync/Batch2"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch2/아이템 분해_UI [4688740353].pdf",
+        "size_kb": 1312.4,
+        "folder": "Confluence PDF Sync/Batch2"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch2/아이템 분해_규칙 [4686612363].pdf",
+        "size_kb": 1057.6,
+        "folder": "Confluence PDF Sync/Batch2"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch2/아이템 아이콘 정보 구조 [5519807656].pdf",
+        "size_kb": 1410.9,
+        "folder": "Confluence PDF Sync/Batch2"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch2/아이템 아이콘 클릭&홀드 조작 [4758437902].pdf",
+        "size_kb": 1298.3,
+        "folder": "Confluence PDF Sync/Batch2"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch2/아이템 자동 정렬 [4928536613].pdf",
+        "size_kb": 822.1,
+        "folder": "Confluence PDF Sync/Batch2"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch2/아이템 제작 시스템 [5240061953].pdf",
+        "size_kb": 917.3,
+        "folder": "Confluence PDF Sync/Batch2"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch2/아이템 툴팁 정보 [5675549264].pdf",
+        "size_kb": 1800.9,
+        "folder": "Confluence PDF Sync/Batch2"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch2/아이템 티어 기능 [5166170116].pdf",
+        "size_kb": 467.4,
+        "folder": "Confluence PDF Sync/Batch2"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch2/액션 예약 시스템 [5178097742].pdf",
+        "size_kb": 997.6,
+        "folder": "Confluence PDF Sync/Batch2"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch2/에디터에서 탑뷰시 화면 안보일 때 해결 [4194205729].pdf",
+        "size_kb": 1052.0,
+        "folder": "Confluence PDF Sync/Batch2"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch2/연대기 시스템 [5137370348].pdf",
+        "size_kb": 2483.5,
+        "folder": "Confluence PDF Sync/Batch2"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch2/오프라인 오토 플레이 시스템 [5534286268].pdf",
+        "size_kb": 6298.6,
+        "folder": "Confluence PDF Sync/Batch2"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch2/외곽선 처리 규칙 [4636934145].pdf",
+        "size_kb": 288.1,
+        "folder": "Confluence PDF Sync/Batch2"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch2/우편 시스템 UI 관련 [4673110025].pdf",
+        "size_kb": 3125.2,
+        "folder": "Confluence PDF Sync/Batch2"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch2/우편 시스템 [4667113473].pdf",
+        "size_kb": 1110.4,
+        "folder": "Confluence PDF Sync/Batch2"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch2/원거리_도깨비 리소스 리스트 [4895506510].pdf",
+        "size_kb": 514.5,
+        "folder": "Confluence PDF Sync/Batch2"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch2/원거리_정령 리소스 리스트 [4862541839].pdf",
+        "size_kb": 15761.2,
+        "folder": "Confluence PDF Sync/Batch2"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch2/월드 수정 시 작업(수정중 임시) [4082368859].pdf",
+        "size_kb": 126.8,
+        "folder": "Confluence PDF Sync/Batch2"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch2/월드 이동 로딩 화면 기획 [5248090121].pdf",
+        "size_kb": 2569.7,
+        "folder": "Confluence PDF Sync/Batch2"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch2/월드 이벤트 시스템 UI [5184323585].pdf",
+        "size_kb": 12257.9,
+        "folder": "Confluence PDF Sync/Batch2"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch2/월드 이벤트 시스템 [4981391403].pdf",
+        "size_kb": 2007.8,
+        "folder": "Confluence PDF Sync/Batch2"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch2/월드 이벤트 컨셉 디자인 [4732617210].pdf",
+        "size_kb": 3265.2,
+        "folder": "Confluence PDF Sync/Batch2"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch3/치트 매크로 작성_사용 방법 [4778000388].pdf",
+        "size_kb": 614.6,
+        "folder": "Confluence PDF Sync/Batch3"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch3/카메라 모드 설정 [4375053982].pdf",
+        "size_kb": 617.9,
+        "folder": "Confluence PDF Sync/Batch3"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch3/캐릭터 삭제 및 잠금_개방 [5679939778].pdf",
+        "size_kb": 2647.9,
+        "folder": "Confluence PDF Sync/Batch3"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch3/캐릭터 생성 _ 선택 [5285707880].pdf",
+        "size_kb": 3407.6,
+        "folder": "Confluence PDF Sync/Batch3"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch3/캐릭터 생성 플로우 정리 [5656446278].pdf",
+        "size_kb": 1544.7,
+        "folder": "Confluence PDF Sync/Batch3"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch3/캐릭터 행동 우선순위 [4976803841].pdf",
+        "size_kb": 242.9,
+        "folder": "Confluence PDF Sync/Batch3"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch3/컨텐츠 디자인 [4386326708].pdf",
+        "size_kb": 185.7,
+        "folder": "Confluence PDF Sync/Batch3"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch3/컨텐츠 디자인 방향 [4724883462].pdf",
+        "size_kb": 325.5,
+        "folder": "Confluence PDF Sync/Batch3"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch3/컨텐츠 오픈 조건 [4929945617].pdf",
+        "size_kb": 370.7,
+        "folder": "Confluence PDF Sync/Batch3"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch3/컬렉션 UI [4498554915].pdf",
+        "size_kb": 5703.0,
+        "folder": "Confluence PDF Sync/Batch3"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch3/컬렉션 시스템 [4432397950].pdf",
+        "size_kb": 632.2,
+        "folder": "Confluence PDF Sync/Batch3"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch3/컬렉션_거래소 연계 기능 [5221646369].pdf",
+        "size_kb": 1138.9,
+        "folder": "Confluence PDF Sync/Batch3"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch3/코어 컨텐츠 컨셉 [4771087441].pdf",
+        "size_kb": 999.5,
+        "folder": "Confluence PDF Sync/Batch3"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch3/퀘스트 인스턴스 제작 [4344480500].pdf",
+        "size_kb": 548.5,
+        "folder": "Confluence PDF Sync/Batch3"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch3/크론 표현식 (cron expression) [4072145269].pdf",
+        "size_kb": 259.0,
+        "folder": "Confluence PDF Sync/Batch3"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch3/클래스 기반으로 스킬 구조 변경 [4426858590].pdf",
+        "size_kb": 4206.9,
+        "folder": "Confluence PDF Sync/Batch3"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch3/클래스 기본 정보 [4410540261].pdf",
+        "size_kb": 159.2,
+        "folder": "Confluence PDF Sync/Batch3"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch3/클래스 디자인 - 가디언 [4420304991].pdf",
+        "size_kb": 630.9,
+        "folder": "Confluence PDF Sync/Batch3"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch3/클래스 디자인 - 매지션 [4420273005].pdf",
+        "size_kb": 3141.7,
+        "folder": "Confluence PDF Sync/Batch3"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch3/클래스 디자인 - 샤먼 [4530372612].pdf",
+        "size_kb": 5069.4,
+        "folder": "Confluence PDF Sync/Batch3"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch3/클래스 디자인 - 아발리스터 [4420308488].pdf",
+        "size_kb": 627.2,
+        "folder": "Confluence PDF Sync/Batch3"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch3/클래스 디자인 - 아처 [4415455902].pdf",
+        "size_kb": 1785.8,
+        "folder": "Confluence PDF Sync/Batch3"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch3/클래스 디자인 - 워리어 [4412048689].pdf",
+        "size_kb": 1765.6,
+        "folder": "Confluence PDF Sync/Batch3"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch3/클래스(PC) 데이터 어셋 등록 [4590010810].pdf",
+        "size_kb": 678.8,
+        "folder": "Confluence PDF Sync/Batch3"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch3/테리토리 시스템 [4758765991].pdf",
+        "size_kb": 1658.3,
+        "folder": "Confluence PDF Sync/Batch3"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch3/테리토리(영역) 설정 [4367844540].pdf",
+        "size_kb": 3688.9,
+        "folder": "Confluence PDF Sync/Batch3"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch3/테이블 문법 [4652597800].pdf",
+        "size_kb": 213.8,
+        "folder": "Confluence PDF Sync/Batch3"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch3/텔레포트 불가 효과 [4921786402].pdf",
+        "size_kb": 305.8,
+        "folder": "Confluence PDF Sync/Batch3"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch3/툴팁 기능 [5302387332].pdf",
+        "size_kb": 649.4,
+        "folder": "Confluence PDF Sync/Batch3"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch3/트리거 기능 추가 [5572296742].pdf",
+        "size_kb": 318.0,
+        "folder": "Confluence PDF Sync/Batch3"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch3/패시브 스킬 시스템 [4526243903].pdf",
+        "size_kb": 972.7,
+        "folder": "Confluence PDF Sync/Batch3"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch3/평타 치명타에 경직 효과 추가 [4962484903].pdf",
+        "size_kb": 141.4,
+        "folder": "Confluence PDF Sync/Batch3"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch3/프로젝트 중간 검토 [5327978745].pdf",
+        "size_kb": 350.7,
+        "folder": "Confluence PDF Sync/Batch3"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch3/플레이어 성장 컨텐츠 맵 [4584079381].pdf",
+        "size_kb": 2091.1,
+        "folder": "Confluence PDF Sync/Batch3"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch3/플레이어 캐릭터 무기 MeshComponent 분리 [4656529467].pdf",
+        "size_kb": 286.1,
+        "folder": "Confluence PDF Sync/Batch3"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch3/플레이어가 무기를 착용하지 않았을 때 처리 개선 [4926373910].pdf",
+        "size_kb": 271.8,
+        "folder": "Confluence PDF Sync/Batch3"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch3/피격 시 대상의 메쉬 이미시브 효과 [4399071347].pdf",
+        "size_kb": 308.7,
+        "folder": "Confluence PDF Sync/Batch3"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch3/피격 시 뒤로 밀리는 연출 [4946526492].pdf",
+        "size_kb": 676.2,
+        "folder": "Confluence PDF Sync/Batch3"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch3/피직 어셋 시스템 [4617311523].pdf",
+        "size_kb": 749.0,
+        "folder": "Confluence PDF Sync/Batch3"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch3/화살 연출 시스템 [4437967055].pdf",
+        "size_kb": 1764.1,
+        "folder": "Confluence PDF Sync/Batch3"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch3/화폐 밸런스 [5229576307].pdf",
+        "size_kb": 179.2,
+        "folder": "Confluence PDF Sync/Batch3"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch3/환경 설정 리스트 조사 [5187668438].pdf",
+        "size_kb": 1311.5,
+        "folder": "Confluence PDF Sync/Batch3"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch3/환경 설정(전투_그래픽) [5249433634].pdf",
+        "size_kb": 953.7,
+        "folder": "Confluence PDF Sync/Batch3"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch3/회피 무시 명중 효과 [4437540870].pdf",
+        "size_kb": 334.5,
+        "folder": "Confluence PDF Sync/Batch3"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch3/횡적 성장 방향 [4729274384].pdf",
+        "size_kb": 267.2,
+        "folder": "Confluence PDF Sync/Batch3"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch3/효과 발동 조건 추가 (막기, 처치 시) [4602822706].pdf",
+        "size_kb": 402.9,
+        "folder": "Confluence PDF Sync/Batch3"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch4/(가칭) 무한의 탑 - 정령 주차장 시스템 [5647892549].pdf",
+        "size_kb": 412.1,
+        "folder": "Confluence PDF Sync/Batch4"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch4/(가칭) 무한의 탑 - 정령 주차장 컨셉 [5627347817].pdf",
+        "size_kb": 4431.0,
+        "folder": "Confluence PDF Sync/Batch4"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch4/(임시) 캐릭터 스폰디스폰_텔레포트 연출 설정 [4176347666].pdf",
+        "size_kb": 155.8,
+        "folder": "Confluence PDF Sync/Batch4"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch4/Art [3666446435].pdf",
+        "size_kb": 169.7,
+        "folder": "Confluence PDF Sync/Batch4"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch4/Beta2 대미지 방향성 정리 [4933288159].pdf",
+        "size_kb": 175.7,
+        "folder": "Confluence PDF Sync/Batch4"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch4/DOF (Depth of Field) 임시 변경방법 [4193388133].pdf",
+        "size_kb": 186.7,
+        "folder": "Confluence PDF Sync/Batch4"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch4/Design [3666773573].pdf",
+        "size_kb": 169.8,
+        "folder": "Confluence PDF Sync/Batch4"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch4/HP 물약 밸런스 [5607752159].pdf",
+        "size_kb": 270.8,
+        "folder": "Confluence PDF Sync/Batch4"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch4/HUD 기능적 레이아웃 구성 [5402493079].pdf",
+        "size_kb": 680.5,
+        "folder": "Confluence PDF Sync/Batch4"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch4/ID 대역대 정리 [4317545335].pdf",
+        "size_kb": 251.9,
+        "folder": "Confluence PDF Sync/Batch4"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch4/K스튜디오 [3666871190].pdf",
+        "size_kb": 158.9,
+        "folder": "Confluence PDF Sync/Batch4"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch4/K정령 아트 리소스 제작 방향 [4616913799].pdf",
+        "size_kb": 3868.9,
+        "folder": "Confluence PDF Sync/Batch4"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch4/K정령 컨셉 디자인 [4410376802].pdf",
+        "size_kb": 5428.2,
+        "folder": "Confluence PDF Sync/Batch4"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch4/PC FX 연출 정책 [4848091275].pdf",
+        "size_kb": 6615.1,
+        "folder": "Confluence PDF Sync/Batch4"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch4/PvE _ PvP 스킬 효과 분리 [4555505677].pdf",
+        "size_kb": 632.2,
+        "folder": "Confluence PDF Sync/Batch4"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch4/RegenHP 스탯의 현재 상태 검토 및 신규 방향성 제안 [4998496625].pdf",
+        "size_kb": 313.8,
+        "folder": "Confluence PDF Sync/Batch4"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch4/Sound [4430235499].pdf",
+        "size_kb": 100.4,
+        "folder": "Confluence PDF Sync/Batch4"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch4/UI LayerType 규칙 [4991779022].pdf",
+        "size_kb": 530.3,
+        "folder": "Confluence PDF Sync/Batch4"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch4/UI 구현 기획서- 정보 표현 방식 [5675746166].pdf",
+        "size_kb": 294.6,
+        "folder": "Confluence PDF Sync/Batch4"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch4/UI 딤드 관리 규칙 구현 [5526323262].pdf",
+        "size_kb": 633.4,
+        "folder": "Confluence PDF Sync/Batch4"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch4/UX 규칙 문서 [5073272918].pdf",
+        "size_kb": 394.9,
+        "folder": "Confluence PDF Sync/Batch4"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch4/UX_UI 디자인 방향 [4975821031].pdf",
+        "size_kb": 645.8,
+        "folder": "Confluence PDF Sync/Batch4"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch4/_Beta1_ 스킬 이펙트 구현 사항 취합 [4432396420].pdf",
+        "size_kb": 926.8,
+        "folder": "Confluence PDF Sync/Batch4"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch4/_개발참고용_ 전투력 시스템 [4425023509].pdf",
+        "size_kb": 2417.4,
+        "folder": "Confluence PDF Sync/Batch4"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch4/_버프_ 경직 상태 [4443799665].pdf",
+        "size_kb": 444.5,
+        "folder": "Confluence PDF Sync/Batch4"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch4/_버프_ 빈사 상태 [4438491206].pdf",
+        "size_kb": 479.0,
+        "folder": "Confluence PDF Sync/Batch4"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch4/_스킬_ EffectCategoryEnum 설명서 [4652826702].pdf",
+        "size_kb": 151.0,
+        "folder": "Confluence PDF Sync/Batch4"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch4/_스킬_ InvokeConditionEnum [4652990576].pdf",
+        "size_kb": 148.9,
+        "folder": "Confluence PDF Sync/Batch4"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch4/_양식_ 스킬 효과 문서 [4458610875].pdf",
+        "size_kb": 851.4,
+        "folder": "Confluence PDF Sync/Batch4"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch4/_예외처리_ 인벤토리 공간 가득 참 [5698258030].pdf",
+        "size_kb": 999.8,
+        "folder": "Confluence PDF Sync/Batch4"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch4/_컨셉_ 길드 디자인 [4377772067].pdf",
+        "size_kb": 279.0,
+        "folder": "Confluence PDF Sync/Batch4"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch4/_컴포넌트_ UI 버튼 규칙 [5494276140].pdf",
+        "size_kb": 1230.3,
+        "folder": "Confluence PDF Sync/Batch4"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch4/_컴포넌트_ 범용 수량 조절 슬라이더 [5644615697].pdf",
+        "size_kb": 897.6,
+        "folder": "Confluence PDF Sync/Batch4"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch4/_컴포넌트_ 아이템 아이콘 위젯 컴포넌트 구조 설계 [5517312443].pdf",
+        "size_kb": 828.7,
+        "folder": "Confluence PDF Sync/Batch4"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch4/가까운 마을로 귀환 기능 [4623728695].pdf",
+        "size_kb": 1108.3,
+        "folder": "Confluence PDF Sync/Batch4"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch4/가레벨 세팅 방법 (Landscape Pre Mapping) [4253319484].pdf",
+        "size_kb": 7030.8,
+        "folder": "Confluence PDF Sync/Batch4"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch4/강화 실패 재료 환원 [5148704793].pdf",
+        "size_kb": 341.2,
+        "folder": "Confluence PDF Sync/Batch4"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch4/개발 가이드 문서 [3913581210].pdf",
+        "size_kb": 124.3,
+        "folder": "Confluence PDF Sync/Batch4"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch4/개발 환경 [4710662619].pdf",
+        "size_kb": 63.5,
+        "folder": "Confluence PDF Sync/Batch4"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch4/개발내용 테스트 팁 [4011229223].pdf",
+        "size_kb": 207.8,
+        "folder": "Confluence PDF Sync/Batch4"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch4/거래소 UI [4936892417].pdf",
+        "size_kb": 6548.3,
+        "folder": "Confluence PDF Sync/Batch4"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch4/거래소 시스템 [4927520787].pdf",
+        "size_kb": 1902.9,
+        "folder": "Confluence PDF Sync/Batch4"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch4/게임 플레이 루프 [4559831152].pdf",
+        "size_kb": 5398.8,
+        "folder": "Confluence PDF Sync/Batch4"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch4/경비병 피아 식별 및 몬스터 말풍선 시스템 [5634266924].pdf",
+        "size_kb": 1234.8,
+        "folder": "Confluence PDF Sync/Batch4"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch4/경제 디자인 방향 [4619010710].pdf",
+        "size_kb": 342.0,
+        "folder": "Confluence PDF Sync/Batch4"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch4/경직 발생 빈도 조절 기능 [4412015960].pdf",
+        "size_kb": 183.4,
+        "folder": "Confluence PDF Sync/Batch4"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch4/경험치 테이블 구성 [5248811015].pdf",
+        "size_kb": 244.2,
+        "folder": "Confluence PDF Sync/Batch4"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch4/근거리_정령 리소스 리스트 [4850155591].pdf",
+        "size_kb": 15245.4,
+        "folder": "Confluence PDF Sync/Batch4"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch4/길드 스킬 시스템 UI [5140840678].pdf",
+        "size_kb": 5867.8,
+        "folder": "Confluence PDF Sync/Batch4"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch4/길드 시스템 [4629889029].pdf",
+        "size_kb": 3474.1,
+        "folder": "Confluence PDF Sync/Batch4"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch5/몬스터 보상 [4921982977].pdf",
+        "size_kb": 744.2,
+        "folder": "Confluence PDF Sync/Batch5"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch5/몬스터 생성 및 레벨 배치 [3962438336].pdf",
+        "size_kb": 451.0,
+        "folder": "Confluence PDF Sync/Batch5"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch5/몬스터 소환 [5218435326].pdf",
+        "size_kb": 379.2,
+        "folder": "Confluence PDF Sync/Batch5"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch5/몬스터 스킬에 카메라 쉐이킹 연결 방법 [3837624460].pdf",
+        "size_kb": 904.2,
+        "folder": "Confluence PDF Sync/Batch5"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch5/몬스터 어그로 시스템 [4509993685].pdf",
+        "size_kb": 595.0,
+        "folder": "Confluence PDF Sync/Batch5"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch5/몬스터 크기 규격 [4375053751].pdf",
+        "size_kb": 1615.1,
+        "folder": "Confluence PDF Sync/Batch5"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch5/무기 대미지를 최대로 적용 [4437540996].pdf",
+        "size_kb": 251.4,
+        "folder": "Confluence PDF Sync/Batch5"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch5/무기 랜덤 대미지 선택 시점 변경 [4877648152].pdf",
+        "size_kb": 182.2,
+        "folder": "Confluence PDF Sync/Batch5"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch5/무작위 버프 지속 시간 [4558913549].pdf",
+        "size_kb": 335.8,
+        "folder": "Confluence PDF Sync/Batch5"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch5/무한의 탑 UI [4921655694].pdf",
+        "size_kb": 11895.0,
+        "folder": "Confluence PDF Sync/Batch5"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch5/무한의 탑 시스템 [4903436318].pdf",
+        "size_kb": 8357.5,
+        "folder": "Confluence PDF Sync/Batch5"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch5/물약 사용 불가 효과 (봉쇄) [5002625080].pdf",
+        "size_kb": 1077.5,
+        "folder": "Confluence PDF Sync/Batch5"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch5/바리울 지역 제작 중 셀레탄 지역 밸런스 처리 방안 논의 [4676878690].pdf",
+        "size_kb": 183.9,
+        "folder": "Confluence PDF Sync/Batch5"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch5/발자국 시스템 [4693591033].pdf",
+        "size_kb": 153.2,
+        "folder": "Confluence PDF Sync/Batch5"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch5/백 대쉬 어택 [4432298771].pdf",
+        "size_kb": 694.6,
+        "folder": "Confluence PDF Sync/Batch5"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch5/버프 (Buff) 만들기 [4072145042].pdf",
+        "size_kb": 184.4,
+        "folder": "Confluence PDF Sync/Batch5"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch5/버프 강화 효과 [4528177942].pdf",
+        "size_kb": 319.1,
+        "folder": "Confluence PDF Sync/Batch5"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch5/버프 스택 비례 [4432694695].pdf",
+        "size_kb": 718.4,
+        "folder": "Confluence PDF Sync/Batch5"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch5/버프 스택 조건 [4529389569].pdf",
+        "size_kb": 667.4,
+        "folder": "Confluence PDF Sync/Batch5"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch5/버프 스택 증감 [4432694906].pdf",
+        "size_kb": 403.8,
+        "folder": "Confluence PDF Sync/Batch5"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch5/버프 스택_ 최대 스택 달성 시 발동 [4672651265].pdf",
+        "size_kb": 745.9,
+        "folder": "Confluence PDF Sync/Batch5"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch5/버프 종료 후 효과 부여(연쇄 버프) [4437934081].pdf",
+        "size_kb": 315.4,
+        "folder": "Confluence PDF Sync/Batch5"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch5/변신 개선 컨셉 기획 [5675581571].pdf",
+        "size_kb": 326.8,
+        "folder": "Confluence PDF Sync/Batch5"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch5/변신 기본 정보 [4410540662].pdf",
+        "size_kb": 1222.7,
+        "folder": "Confluence PDF Sync/Batch5"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch5/변신창 조작 및 기능 대응 [5410619601].pdf",
+        "size_kb": 10414.2,
+        "folder": "Confluence PDF Sync/Batch5"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch5/보상 공통 [4921065875].pdf",
+        "size_kb": 1715.1,
+        "folder": "Confluence PDF Sync/Batch5"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch5/보스 스케쥴 시스템 UI [5335122022].pdf",
+        "size_kb": 13034.7,
+        "folder": "Confluence PDF Sync/Batch5"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch5/보스 스케쥴 시스템 [5187275893].pdf",
+        "size_kb": 2868.6,
+        "folder": "Confluence PDF Sync/Batch5"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch5/사망 시스템 개선 [4634574853].pdf",
+        "size_kb": 5925.6,
+        "folder": "Confluence PDF Sync/Batch5"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch5/사전 스킬 버프 [4527194113].pdf",
+        "size_kb": 268.9,
+        "folder": "Confluence PDF Sync/Batch5"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch5/서버 그룹 & 매칭 규칙 정의 [5007769847].pdf",
+        "size_kb": 1360.5,
+        "folder": "Confluence PDF Sync/Batch5"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch5/서버 이동 컨텐츠 [4761911317].pdf",
+        "size_kb": 5844.3,
+        "folder": "Confluence PDF Sync/Batch5"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch5/서버 이동 컨텐츠 테스트를 위한 서버 세팅 방법 [5391057622].pdf",
+        "size_kb": 1269.6,
+        "folder": "Confluence PDF Sync/Batch5"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch5/서버 침공 상세 기획 [5100503080].pdf",
+        "size_kb": 1579.4,
+        "folder": "Confluence PDF Sync/Batch5"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch5/서버 탐험 상세 기획 [5137302098].pdf",
+        "size_kb": 829.5,
+        "folder": "Confluence PDF Sync/Batch5"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch5/서포트 모드 시스템 [5599461441].pdf",
+        "size_kb": 7773.4,
+        "folder": "Confluence PDF Sync/Batch5"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch5/성장 밸런스 기본 정보 [4436623798].pdf",
+        "size_kb": 162.0,
+        "folder": "Confluence PDF Sync/Batch5"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch5/성장 밸런스 통합 문서 설명 [4580901284].pdf",
+        "size_kb": 1562.5,
+        "folder": "Confluence PDF Sync/Batch5"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch5/성장 체감 강화를 위한 스탯 구조 검토 [5016715385].pdf",
+        "size_kb": 211.1,
+        "folder": "Confluence PDF Sync/Batch5"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch5/성향 시스템 [4665409538].pdf",
+        "size_kb": 3676.0,
+        "folder": "Confluence PDF Sync/Batch5"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch5/세이프 영역 설정 규칙 [5433229630].pdf",
+        "size_kb": 688.1,
+        "folder": "Confluence PDF Sync/Batch5"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch5/소모성 아이템 사용 우선 순위 및 그룹핑 [5007376628].pdf",
+        "size_kb": 277.9,
+        "folder": "Confluence PDF Sync/Batch5"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch5/순간 이동 주문서 시스템 [5677973969].pdf",
+        "size_kb": 607.0,
+        "folder": "Confluence PDF Sync/Batch5"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch5/스킬 Hit 시 역경직 주는 기능 (Hit Freeze) [4902322177].pdf",
+        "size_kb": 1507.0,
+        "folder": "Confluence PDF Sync/Batch5"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch5/스킬 강화 시스템 [4419814822].pdf",
+        "size_kb": 385.8,
+        "folder": "Confluence PDF Sync/Batch5"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch5/스킬 기본 정보 [4410540628].pdf",
+        "size_kb": 191.1,
+        "folder": "Confluence PDF Sync/Batch5"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch5/스킬 대미지 기조 [4608524888].pdf",
+        "size_kb": 793.0,
+        "folder": "Confluence PDF Sync/Batch5"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch5/스킬 대미지 및 효과 설계 [4869521588].pdf",
+        "size_kb": 621.4,
+        "folder": "Confluence PDF Sync/Batch5"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch5/스킬 대미지 배율 추가 [5674369072].pdf",
+        "size_kb": 197.3,
+        "folder": "Confluence PDF Sync/Batch5"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch5/스킬 리스트 - 가디언 [4421977659].pdf",
+        "size_kb": 270.9,
+        "folder": "Confluence PDF Sync/Batch5"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch6/월드 이벤트 플로우 [5067768815].pdf",
+        "size_kb": 345.2,
+        "folder": "Confluence PDF Sync/Batch6"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch6/위치 기억 시스템 [5668243238].pdf",
+        "size_kb": 4581.3,
+        "folder": "Confluence PDF Sync/Batch6"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch6/위클리 [4321904140].pdf",
+        "size_kb": 100.8,
+        "folder": "Confluence PDF Sync/Batch6"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch6/은신 시스템 [4619010546].pdf",
+        "size_kb": 470.8,
+        "folder": "Confluence PDF Sync/Batch6"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch6/이동 명령 처리 관련 개선 [4537909267].pdf",
+        "size_kb": 7567.3,
+        "folder": "Confluence PDF Sync/Batch6"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch6/이벤트 스케줄러 시스템 [5058724397].pdf",
+        "size_kb": 400.8,
+        "folder": "Confluence PDF Sync/Batch6"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch6/인게임 카메라 시스템 [4525883415].pdf",
+        "size_kb": 464.9,
+        "folder": "Confluence PDF Sync/Batch6"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch6/인스턴스 트리거 기능 추가 개발 [5230460981].pdf",
+        "size_kb": 344.8,
+        "folder": "Confluence PDF Sync/Batch6"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch6/인터서버 던전 시스템 [5060395972].pdf",
+        "size_kb": 1464.8,
+        "folder": "Confluence PDF Sync/Batch6"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch6/자동 물약 사용 시스템 [5613453572].pdf",
+        "size_kb": 739.1,
+        "folder": "Confluence PDF Sync/Batch6"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch6/자동 전투 시스템 [5613289565].pdf",
+        "size_kb": 6299.0,
+        "folder": "Confluence PDF Sync/Batch6"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch6/자폭 효과 [5363171648].pdf",
+        "size_kb": 351.8,
+        "folder": "Confluence PDF Sync/Batch6"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch6/장비 강화 시스템 [4513726729].pdf",
+        "size_kb": 1530.3,
+        "folder": "Confluence PDF Sync/Batch6"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch6/장비 강화_UI [4559568929].pdf",
+        "size_kb": 7936.9,
+        "folder": "Confluence PDF Sync/Batch6"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch6/장비 다중 강화 [4552360033].pdf",
+        "size_kb": 276.2,
+        "folder": "Confluence PDF Sync/Batch6"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch6/장비 다중 강화_UI [5656478918].pdf",
+        "size_kb": 8625.3,
+        "folder": "Confluence PDF Sync/Batch6"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch6/장비 드랍 및 제작 밸런스 [5090050051].pdf",
+        "size_kb": 808.0,
+        "folder": "Confluence PDF Sync/Batch6"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch6/장비 아이템 발주 계획 [5385093282].pdf",
+        "size_kb": 275.3,
+        "folder": "Confluence PDF Sync/Batch6"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch6/장비 아이템 위상 및 재료 획득처 [4799004788].pdf",
+        "size_kb": 437.1,
+        "folder": "Confluence PDF Sync/Batch6"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch6/장비 제작과, 재료 획득처 [4572479489].pdf",
+        "size_kb": 976.9,
+        "folder": "Confluence PDF Sync/Batch6"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch6/장비 파츠 별 스탯 분야 정의 [5199953989].pdf",
+        "size_kb": 293.0,
+        "folder": "Confluence PDF Sync/Batch6"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch6/장판 효과 (시전자 위치&상태 영향) [4623925384].pdf",
+        "size_kb": 554.0,
+        "folder": "Confluence PDF Sync/Batch6"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch6/재화 및 컨텐츠 성장 내역 귀속 정보 [4617110096].pdf",
+        "size_kb": 240.8,
+        "folder": "Confluence PDF Sync/Batch6"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch6/재화 시스템 [4919689308].pdf",
+        "size_kb": 1540.1,
+        "folder": "Confluence PDF Sync/Batch6"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch6/재화 정보 UI [5002199041].pdf",
+        "size_kb": 783.9,
+        "folder": "Confluence PDF Sync/Batch6"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch6/재화 종류 및 흐름 [4851204105].pdf",
+        "size_kb": 572.5,
+        "folder": "Confluence PDF Sync/Batch6"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch6/저주받은 강화주문서 [4552851495].pdf",
+        "size_kb": 229.8,
+        "folder": "Confluence PDF Sync/Batch6"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch6/적 대상의 스탯 비례 보너스 [4921982995].pdf",
+        "size_kb": 645.9,
+        "folder": "Confluence PDF Sync/Batch6"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch6/전문기술 시스템 [4759126527].pdf",
+        "size_kb": 2029.4,
+        "folder": "Confluence PDF Sync/Batch6"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch6/전투 - 제작 가이드 [4368008132].pdf",
+        "size_kb": 115.6,
+        "folder": "Confluence PDF Sync/Batch6"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch6/전투 관련 사운드 제작_사용 규칙 [3847160168].pdf",
+        "size_kb": 181.6,
+        "folder": "Confluence PDF Sync/Batch6"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch6/전투 디자인 방향 [4426564060].pdf",
+        "size_kb": 708.2,
+        "folder": "Confluence PDF Sync/Batch6"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch6/전투 시뮬레이터 [4392650700].pdf",
+        "size_kb": 662.5,
+        "folder": "Confluence PDF Sync/Batch6"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch6/전투력 시스템 [4419880546].pdf",
+        "size_kb": 305.7,
+        "folder": "Confluence PDF Sync/Batch6"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch6/전환 UI FLOW 규칙 설정 [5508333748].pdf",
+        "size_kb": 427.5,
+        "folder": "Confluence PDF Sync/Batch6"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch6/절전 모드 시스템 [5663752662].pdf",
+        "size_kb": 2429.9,
+        "folder": "Confluence PDF Sync/Batch6"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch6/정령 기본 정보 [4556161876].pdf",
+        "size_kb": 820.5,
+        "folder": "Confluence PDF Sync/Batch6"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch6/정령 시스템_UI [4754604968].pdf",
+        "size_kb": 5574.9,
+        "folder": "Confluence PDF Sync/Batch6"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch6/정령 시스템_합성 [4838359071].pdf",
+        "size_kb": 782.3,
+        "folder": "Confluence PDF Sync/Batch6"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch6/정령 아트리소스 등급별 생산계획 [5165056022].pdf",
+        "size_kb": 144.3,
+        "folder": "Confluence PDF Sync/Batch6"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch6/정령&도깨비 시스템_기본 및 강화 [4733927460].pdf",
+        "size_kb": 2843.6,
+        "folder": "Confluence PDF Sync/Batch6"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch6/정령&도깨비 아트 리소스 정보 [4850843649].pdf",
+        "size_kb": 10661.6,
+        "folder": "Confluence PDF Sync/Batch6"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch6/정령의 탑 구성 기획 [5576589339].pdf",
+        "size_kb": 1358.0,
+        "folder": "Confluence PDF Sync/Batch6"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch6/정령의 탑 기믹전 기획 [5553751445].pdf",
+        "size_kb": 2002.4,
+        "folder": "Confluence PDF Sync/Batch6"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch6/제스처 기능 [5293441189].pdf",
+        "size_kb": 526.9,
+        "folder": "Confluence PDF Sync/Batch6"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch6/제작 가이드 [4367942534].pdf",
+        "size_kb": 167.2,
+        "folder": "Confluence PDF Sync/Batch6"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch6/조건부 발동 효과의 쿨타임 [4432660521].pdf",
+        "size_kb": 404.1,
+        "folder": "Confluence PDF Sync/Batch6"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch6/조건부 효과 [4432659940].pdf",
+        "size_kb": 457.9,
+        "folder": "Confluence PDF Sync/Batch6"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch6/조건부 효과(특정 스킬 사용 시) [4923917444].pdf",
+        "size_kb": 443.3,
+        "folder": "Confluence PDF Sync/Batch6"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch6/중간맵_미니맵 개선 [5608604178].pdf",
+        "size_kb": 11663.1,
+        "folder": "Confluence PDF Sync/Batch6"
+      },
+      {
+        "path": "Confluence PDF Sync/Batch6/치트 매크로 [4712267834].pdf",
+        "size_kb": 228.0,
+        "folder": "Confluence PDF Sync/Batch6"
+      }
+    ],
+    "pptx": [
+      {
+        "path": "1_High_Concept/PK_시나리오_컨셉트.pptx",
+        "size_kb": 32467.6,
+        "folder": "1_High_Concept"
+      },
+      {
+        "path": "1_High_Concept/PK_전투컨셉트.pptx",
+        "size_kb": 96500.5,
+        "folder": "1_High_Concept"
+      },
+      {
+        "path": "1_High_Concept/PK_프로덕트_제안서.pptx",
+        "size_kb": 9174.2,
+        "folder": "1_High_Concept"
+      },
+      {
+        "path": "1_High_Concept/PK_프로토플레이_컨셉트.pptx",
+        "size_kb": 13767.8,
+        "folder": "1_High_Concept"
+      },
+      {
+        "path": "2_Development/PK_리니지W_개발구조.pptx",
+        "size_kb": 11647.1,
+        "folder": "2_Development"
+      },
+      {
+        "path": "3_Base/PK_세계관_리뉴얼.pptx",
+        "size_kb": 54105.2,
+        "folder": "3_Base"
+      },
+      {
+        "path": "3_Base/PK_세계관월드_방향.pptx",
+        "size_kb": 36143.4,
+        "folder": "3_Base"
+      },
+      {
+        "path": "3_Base/PK_시놉시스.pptx",
+        "size_kb": 4627.7,
+        "folder": "3_Base"
+      },
+      {
+        "path": "7_System/PK_몬스터 스폰 관련 개선안.pptx",
+        "size_kb": 27135.8,
+        "folder": "7_System"
+      },
+      {
+        "path": "9_MileStone/M2/PK_M2_레벨 변경 사항.pptx",
+        "size_kb": 2773.4,
+        "folder": "9_MileStone/M2"
+      },
+      {
+        "path": "9_MileStone/M4/PK_M3 레벨 변경안.pptx",
+        "size_kb": 8744.0,
+        "folder": "9_MileStone/M4"
+      }
+    ],
+    "docx": [
+      {
+        "path": "PK_변신 개선 시스템 기획서_v2.docx",
+        "size_kb": 18.3,
+        "folder": "(root)"
+      },
+      {
+        "path": "PK_변신 개선 시스템 기획서_v3.docx",
+        "size_kb": 65.8,
+        "folder": "(root)"
+      },
+      {
+        "path": "PK_변신 개선 시스템 기획서_v4.docx",
+        "size_kb": 68.2,
+        "folder": "(root)"
+      },
+      {
+        "path": "PK_변신 시스템 기획서.docx",
+        "size_kb": 10.7,
+        "folder": "(root)"
+      }
+    ]
+  }
+}

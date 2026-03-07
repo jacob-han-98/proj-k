@@ -1,0 +1,51 @@
+# 환경변수 (API 키 포함)
+.env
+ConvertProgram/.env
+packages/*/.env
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.eggs/
+*.egg
+
+# LibreOffice 임시 파일
+.~lock.*
+~$*
+
+# OS
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 변환 중간 산출물 (대용량 이미지)
+packages/xlsx-extractor/output/
+
+# 원본 기획서 (대용량, Perforce/별도 관리)
+1_High_Concept/
+2_Development/
+3_Base/
+7_System/
+9_MileStone/
+Confluence PDF Sync/
+
+# 변환 결과물 (대용량)
+_knowledge_base/
+
+# 테스트/임시 파일
+_test_log.txt
+변환테스트/
+shapeﻊ/
+
+# Claude Code 로컬 설정
+.claude/

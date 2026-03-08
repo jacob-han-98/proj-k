@@ -335,14 +335,16 @@ OVERLAP_RATIO = 0.10    # 인접 타일 오버랩
 
 ```
 packages/xlsx-extractor/
-├── capture.py          # Stage 1 구현 (완료)
-├── vision.py           # Stage 2 구현 (완료 - 크롭 재분석 포함)
-├── parse.py            # Stage 3 구현 (OOXML 커넥터 검증)
-├── synthesize.py       # Stage 4 구현 (완료 - 합성 + 중복제거)
-├── MEMORY.md           # 이 파일 - 작업 기록
-├── README.md           # 서브 프로젝트 개요
-├── SPEC.md             # 상세 스펙
-├── VERIFICATION.md     # 검증 프로토콜
+├── src/
+│   ├── capture.py      # Stage 1 (Excel COM 캡처)
+│   ├── vision.py       # Stage 2 (Vision AI 분석)
+│   ├── parse.py        # Stage 3 (OOXML 보정)
+│   └── synthesize.py   # Stage 4 (합성 + dedup + OCR 교정)
+├── docs/
+│   ├── MEMORY.md       # 이 파일 - 작업 기록
+│   ├── README.md       # 서브 프로젝트 개요
+│   ├── SPEC.md         # 상세 스펙
+│   └── VERIFICATION.md # 검증 프로토콜
 ├── .env.example        # 환경변수 템플릿
 └── output/             # 변환 결과물 (.gitignore)
 ```

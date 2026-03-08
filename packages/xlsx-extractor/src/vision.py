@@ -28,8 +28,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from dotenv import load_dotenv
 
-# .env 로드 (이 파일과 같은 디렉토리)
-load_dotenv(Path(__file__).parent / ".env")
+# .env 로드 (패키지 루트)
+load_dotenv(Path(__file__).parent.parent / ".env")
 
 # ── 설정 ──
 VISION_MODEL = os.environ.get("VISION_MODEL", "claude-opus")

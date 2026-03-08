@@ -33,8 +33,8 @@ from datetime import datetime
 
 from dotenv import load_dotenv
 
-# .env 로드 (이 파일과 같은 디렉토리)
-load_dotenv(Path(__file__).parent / ".env")
+# .env 로드 (패키지 루트)
+load_dotenv(Path(__file__).parent.parent / ".env")
 
 # ── 설정 ──
 OCR_MODEL = os.environ.get("OCR_MODEL", "claude-sonnet-4-5")

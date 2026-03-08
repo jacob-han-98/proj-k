@@ -161,7 +161,7 @@ python ConvertProgram/_tools/run_all.py --skip-existing  # 일괄 변환
 ### 진행 기록 (필수)
 - **`docs/MEMORY.md`**에 프로젝트 전체 진행 과정을 기록한다
 - **서브 프로젝트는 각자의 `MEMORY.md`에 상세 기록한다**:
-  - `packages/xlsx-extractor/MEMORY.md` — Excel 변환 서브 프로젝트
+  - `packages/xlsx-extractor/docs/MEMORY.md` — Excel 변환 서브 프로젝트
 - 세션 시작 시 현재 작업 중인 서브 프로젝트의 MEMORY.md를 먼저 읽고 이전 상태를 파악한다
 - 작업 단계 완료 시 즉시 업데이트한다
 - 주요 의사결정은 `docs/DECISIONS.md`에 별도 기록한다

@@ -3,9 +3,9 @@
 > 세션 간 항상성을 유지하기 위한 작업 상태 기록.
 > 세션 시작 시 반드시 이 파일을 먼저 읽는다.
 
-## 최종 업데이트: 2026-03-08
+## 최종 업데이트: 2026-03-09
 
-## 현재 단계: 1단계 (지식화) 완료 → 2단계 (QnA PoC) 착수
+## 현재 단계: 2단계 (QnA PoC) 평가 완료 — 48/48 (100%)
 
 ---
 
@@ -32,12 +32,22 @@
 | PPTX | 11개 | 1/11 완료 (레거시) | 후순위 |
 | 추가 XLSX | xlsm 등 | 미착수 | 필요 시 |
 
-### 2단계: QnA PoC — 착수 예정 (ADR-008)
+### 2단계: QnA PoC — 평가 완료 (ADR-008)
 
 - **결정**: Excel 데이터만으로 QnA PoC 먼저 진행
 - **근거**: 핵심 데이터 98.1% 확보, 가치 증명 우선
-- **아키텍처**: RAG (ChromaDB + Titan Embeddings + Sonnet) + knowledge_graph.json
-- **위치**: `packages/qna-poc/` (신규)
+- **아키텍처**: Hybrid Retrieval (KG-first + Vector complement) + Bedrock Claude Sonnet
+- **위치**: `packages/qna-poc/`
+- **인덱싱**: 629개 content.md → 1,783 청크, ChromaDB 저장
+- **평가 결과**: **48/48 (100%)** — 6 카테고리 × 4 직군 모두 통과
+  - 평균 21.9초 응답, 쿼리당 ~$0.05
+- **다음**: 데모 UI/API 실행 테스트, 응답 시간 최적화
+
+### 3단계: 데이터 확장 & 동기화 — 미착수 (ADR-009)
+
+- **결정**: QnA PoC와 기획 리뷰 사이에 데이터 완전성 확보 단계 삽입
+- **근거**: 기획 리뷰(4단계)가 최신·완전한 데이터셋 필요
+- **범위**: Confluence PDF 296개 + PPTX 11개 + Perforce 동기화
 
 ---
 
@@ -51,11 +61,13 @@
 - **API**: AWS Bedrock (Claude Opus Vision + Sonnet OCR)
 - **검증**: Human-in-the-Loop + Claude Code 반복 검증 (7 사이클)
 
-### qna-poc (착수 예정)
+### qna-poc (진행중)
 
-- **위치**: `packages/qna-poc/` (생성 예정)
-- **상세 기록**: `packages/qna-poc/docs/MEMORY.md` (생성 예정)
+- **위치**: `packages/qna-poc/`
+- **상세 기록**: `packages/qna-poc/docs/MEMORY.md`
 - **구성**: FastAPI + ChromaDB + Gradio + Bedrock Claude Sonnet
+- **코드**: indexer.py, retriever.py (hybrid KG+vector), generator.py, api.py, demo_ui.py
+- **데이터**: eval/questions.json (48개 평가 질문)
 
 ---
 
@@ -85,6 +97,7 @@
 | ADR-006 | Vision-First 파이프라인 v1 완성 | 2026-03-07 |
 | ADR-007 | Vision AI + OOXML 하이브리드 전략 | 2026-03-08 |
 | ADR-008 | QnA PoC 우선, 데이터 확장은 병행 | 2026-03-08 |
+| ADR-009 | 데이터 확장 & 동기화를 독립 단계로 분리 (2→3단계) | 2026-03-08 |
 
 상세: `docs/DECISIONS.md`
 

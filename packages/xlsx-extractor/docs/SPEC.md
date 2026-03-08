@@ -1,326 +1,238 @@
-# xlsx-extractor 스펙 문서
+# xlsx-extractor 기술 스펙
 
-> Excel 기획서 -> AI 지식 베이스 변환 파이프라인의 방법론, 기술 스펙, 출력 구조를 정의한다.
+> 4단계 파이프라인의 구현 상세. 각 Stage의 입출력, 알고리즘, API 사양을 정의한다.
 
 ---
 
-## 1. 변환 파이프라인 개요
+## 1. 파이프라인 개요
 
 ```
 XLSX 파일
-  |
-  v
-[Stage 1: Capture]  Excel -> 시트별 이미지 세트 생성
-  |
-  v
-[Stage 2: Vision]   2-이미지 전략으로 Vision AI 해석
-  |
-  v
-[Stage 3: Parse]    openpyxl로 데이터 보강
-  |
-  v
-[Stage 4: Synthesize] 최종 Markdown + 서브 이미지 합성
-  |
-  v
-[Verify]            Vision AI 랜덤 질의 검증
+  │
+  ├─ [Stage 1: Capture]      Excel COM → PNG → 세로 분할 타일
+  ├─ [Stage 2: Vision]       Claude Opus Vision API → 구조화 Markdown
+  ├─ [Stage 3: Parse OOXML]  OOXML drawing XML → Mermaid 보정 + 텍스트 코퍼스
+  └─ [Stage 4: Synthesize]   중복 제거 + OCR 교정 → 최종 content.md
 ```
 
 | Stage | 입력 | 출력 | 핵심 기술 |
 |-------|------|------|-----------|
-| Capture | .xlsx 파일 | 시트별 이미지 세트 (원본/개요/분할) | Excel COM CopyPicture, Pillow |
-| Vision | 이미지 세트 | 구조화된 텍스트 + 서브 이미지 후보 | Claude Opus Vision API (AWS Bedrock) |
-| Parse | .xlsx 파일 | 셀 데이터, 수식, 숨겨진 행/열 | openpyxl |
-| Synthesize | Vision 결과 + Parse 결과 | content.md + images/ | 텍스트 병합, 중복 제거 |
-| Verify | content.md + 원본 이미지 | verification.json | Vision AI 랜덤 질의 |
+| Capture | .xlsx 파일 | 시트별 이미지 세트 | Excel COM CopyPicture, Pillow, numpy |
+| Vision | 이미지 세트 | 타일별 MD + 서브 이미지 | Claude Opus Vision API (Bedrock) |
+| Parse OOXML | .xlsx (ZIP) | Mermaid 보정 + 색상 + 텍스트 코퍼스 | OOXML XML 파싱 (ElementTree) |
+| Synthesize | Vision + Parse 결과 | content.md + images/ | 14단계 dedup + Sonnet OCR 교정 |
 
 ---
 
-## 2. AI 모델 정책
+## 2. 환경 설정
 
-- **기본 모델**: Claude Opus (AWS Bedrock)
-- Opus가 아닌 모델 사용 시 **WARNING 로그**를 출력한다
-  - 예: `[WARNING] 현재 모델이 Claude Opus가 아닙니다 (model=claude-sonnet). 품질 저하 가능.`
-- 모델 설정은 `.env` 파일 또는 CLI 인자로 지정
-- Opus 미사용 시에도 실행은 차단하지 않으나, 검증 기준이 더 엄격해질 수 있음
+### API 모델
 
-## 3. 환경 변수 및 API 키 관리
+| 용도 | 모델 | Bedrock 모델 ID |
+|------|------|-----------------|
+| Vision 해석 | Claude Opus | `global.anthropic.claude-opus-4-5-20251101-v1:0` |
+| OCR 교정 | Claude Sonnet | `global.anthropic.claude-sonnet-4-5-20250929-v1:0` |
 
-API 키는 **서브 프로젝트 내 `.env` 파일**에서 관리한다.
-
-```
-packages/xlsx-extractor/.env
-```
-
-### .env 파일 형식
+### .env 변수
 
 ```env
-# AWS Bedrock 인증
-AWS_BEARER_TOKEN_BEDROCK=your-token-here
-AWS_REGION=us-east-1
-
-# AI 모델 설정 (기본값: claude-opus)
-VISION_MODEL=claude-opus
+AWS_BEARER_TOKEN_BEDROCK=<bearer-token>
+AWS_REGION=ap-northeast-2
 ```
 
-### 로드 규칙
-1. `packages/xlsx-extractor/.env`를 최우선으로 로드 (python-dotenv)
-2. 환경변수가 이미 설정되어 있으면 .env 값보다 환경변수 우선
-3. `.env` 파일은 `.gitignore`에 포함하되, `.env.example`을 함께 제공
+`.env` 파일 위치: `packages/xlsx-extractor/.env`
 
 ---
 
-## 4. Stage 1: Capture (이미지 생성)
+## 3. Stage 1: Capture
 
-### 4.0 왜 Excel COM인가
+### 3.1 왜 Excel COM인가
 
-- **도형/커넥터 렌더링 정확도**: LibreOffice는 Excel 도형의 화살표 방향, 커넥터 연결을 다르게 렌더링하여 플로우차트 해석에 치명적 오류를 유발한다. Excel COM은 원본과 100% 동일하게 렌더링.
-- **셀 구분자 보존**: LO 렌더링에서 셀 내 줄바꿈/쉼표가 사라져 "변신,스킬,UI"가 "변신스킬UI"로 합쳐지는 문제. Excel COM은 원본 그대로 보존.
-- **PDF 중간 단계 불필요**: CopyPicture는 시트를 직접 비트맵으로 캡처하므로 페이지 나눔 문제가 원천적으로 없음.
-- **안정성**: LO는 병렬 실행 시 프로세스 충돌이 잦았으나, Excel COM은 단일 프로세스에서 안정적으로 동작.
-- **제약**: Windows + Excel 설치 필수. 향후 서버 배포 시 별도 방안 필요.
+| 비교 | Excel COM | LibreOffice headless |
+|------|-----------|---------------------|
+| 도형/화살표 방향 | 원본 100% 동일 | 방향 변경됨 (치명적) |
+| 셀 내 구분자 | 보존 (줄바꿈, 쉼표) | 사라짐 ("변신,스킬,UI" → "변신스킬UI") |
+| 페이지 나눔 | 없음 (연속 이미지) | PDF 경유 → 나눔 발생 |
+| 안정성 | 단일 프로세스 안정 | 병렬 시 충돌 빈번 |
+| 제약 | Windows + Excel 필수 | 크로스 플랫폼 |
 
-### 4.1 시트별 이미지 생성 프로세스
+### 3.2 2단계 캡처 프로세스
 
-내부 변환 경로: **XLSX → PNG (직접)**
+**Phase 1: Excel COM CopyPicture (순차)**
+1. `win32com.client.Dispatch("Excel.Application")` — Excel 인스턴스 생성
+2. 워크북 열기 → 각 시트의 `UsedRange.CopyPicture(xlScreen, xlBitmap)`
+3. 클립보드 → `PIL.ImageGrab.grabclipboard()` → `full_original.png`
+4. 빈 시트 감지 (1셀, 빈 값) → skip
 
-```
-XLSX -> [Excel COM CopyPicture] -> 시트별 전체 PNG (페이지 나눔 없음)
-     -> [Pillow] -> 개요 이미지 + 분할 상세 이미지
-```
+**Phase 2: 이미지 분할 (병렬, ProcessPoolExecutor)**
+1. `full_original.png` → `overview.png` (max 1568px 너비, 8000px 높이, LANCZOS)
+2. 세로 전용 분할 → `detail_r0.png`, `detail_r1.png`, ...
+3. `tile_manifest.json` 생성
 
-Excel COM의 `UsedRange.CopyPicture(xlScreen, xlBitmap)`로 시트 전체를 한 장의 연속 이미지로 캡처한다. PDF 중간 단계가 없으므로 페이지 나눔, 여백, 스케일링 문제가 발생하지 않는다.
+### 3.3 분할 알고리즘
 
-1. Excel COM으로 워크북을 열고 각 시트의 UsedRange를 CopyPicture
-2. 클립보드에서 PIL ImageGrab으로 비트맵 획득
-3. 시트별 full_original.png 저장
-4. 빈 시트 감지 (1셀, 빈 값)
-
-### 4.1.1 Excel COM 주의사항
-
-- `Visible=False`: Excel 창을 표시하지 않음
-- `ScreenUpdating`은 반드시 **True**: False로 설정하면 CopyPicture가 빈 이미지를 반환함
-- `Interactive=False`, `DisplayAlerts=False`, `AskToUpdateLinks=False`: 팝업 억제
-- 해상도는 화면 DPI에 의존 (96~120 DPI 기준 약 1400~1800px 너비). Vision AI에 충분한 수준.
-
-### 4.2 Vision AI 이미지 크기 제한
-
-Claude Vision API의 이미지 처리 특성에 따른 크기 기준:
-
-| 구분 | 크기 | 용도 |
-|------|------|------|
-| 상세 이미지 (detail) | **최대 1568 x 1568 px** | 정밀 해석용, 텍스트/숫자 정확도 극대화 |
-| 개요 이미지 (overview) | **최대 1568 px 너비** (비율 유지 축소) | 전체 레이아웃/위치 맥락 파악용 |
-| 원본 이미지 (full) | 제한 없음 (300 DPI 원본 보존) | 아카이브, 향후 재처리용 |
-
-> Claude Vision은 1568x1568 이내에서 최적 성능. 이를 초과하면 내부적으로 리사이즈되어 정보 손실 가능.
-
-### 4.3 시트 이미지 분할 전략
-
-하나의 시트가 1568x1568px을 초과할 경우, 그리드 방식으로 분할한다.
-
-#### 분할 시 잘림 방지 제약사항 (필수)
-
-> **절대 규칙: 분할 시 글자, 이미지, 도형이 잘리면 안 된다.**
-
-- 단순 픽셀 기반 그리드 분할만으로는 테이블 행, 텍스트 블록, 이미지가 중간에서 잘릴 수 있다
-- **스마트 분할**: 가능한 경우 행/열 경계, 빈 영역, 시각적 구분선을 감지하여 자연스러운 분할점을 찾는다
-- **안전 오버랩**: 분할 경계에서 최소 10% 오버랩을 적용하여, 경계에 걸친 요소가 양쪽 타일 모두에 완전히 포함되도록 보장
-- **검증**: 분할 후 각 타일의 경계 영역을 검사하여 텍스트/이미지가 잘린 부분이 없는지 확인
-
-#### 분할 알고리즘
+**세로 전용 분할** (가로 유지):
+- 기획서는 가로 폭이 한정적 (보통 1400~1800px)
+- 가로로 자르면 테이블 열이 분리되어 해석 불가
 
 ```
-원본 이미지 크기: W x H
+분할 기준: DETAIL_MAX = 1568px (높이)
+오버랩: OVERLAP_RATIO = 0.10 (10%)
 
-분할 기준 크기: 1568 x 1568 px (DETAIL_MAX)
-오버랩 비율: 10% (각 방향)
-
-cols = ceil(W / (DETAIL_MAX * 0.9))    # 가로 분할 수
-rows = ceil(H / (DETAIL_MAX * 0.9))    # 세로 분할 수
-
-각 타일:
-  tile_w = W / cols + overlap_px
-  tile_h = H / rows + overlap_px
-  위치: (col * stride_x, row * stride_y)
+이미지 높이 H:
+  H <= 1568px → 분할 없음 (detail_r0 = overview)
+  H > 1568px  → 세로 분할, 각 타일 최대 1568px + 10% overlap
 ```
 
-#### 오버랩 (10-15%)
+**콘텐츠 밀도 기반 분할점 탐색**:
+- numpy로 행별 백색 비율 계산
+- 공백 행(>95% 백색)을 분할 경계로 우선 선택
+- 콘텐츠 중간을 자르는 것 방지
 
-- 인접 타일과 10-15% 겹침 영역을 두어 경계에서의 정보 손실 방지
-- 테이블 행이나 플로우차트 연결선이 잘리지 않도록 보장
-- 합성 단계에서 오버랩 영역의 중복 텍스트 제거
+### 3.4 Excel COM 주의사항
 
-#### 분할 시 위치 컨텍스트
+| 설정 | 값 | 이유 |
+|------|-----|------|
+| `Visible` | False | UI 표시 불필요 |
+| `ScreenUpdating` | **True** | False 시 CopyPicture가 빈 이미지 반환 |
+| `Interactive` | False | 팝업 억제 |
+| `DisplayAlerts` | False | 경고 억제 |
+| `AskToUpdateLinks` | False | 외부 링크 갱신 팝업 억제 |
 
-각 분할 이미지에 다음 메타데이터를 부여:
+### 3.5 출력
 
-```json
-{
-  "tile_id": "detail_r0_c1",
-  "grid_position": {"row": 0, "col": 1},
-  "grid_total": {"rows": 2, "cols": 3},
-  "pixel_region": {"x": 1411, "y": 0, "w": 1568, "h": 1568},
-  "position_description": "상단 중앙",
-  "overlap": {"left": 157, "right": 157, "top": 0, "bottom": 157}
-}
 ```
-
-### 4.4 시트별 출력 이미지 세트
-
-각 시트에 대해 3종류의 이미지를 생성:
-
-| 파일명 | 설명 | 크기 |
-|--------|------|------|
-| `full_original.png` | 시트 전체 원본 (Excel COM CopyPicture) | 화면 DPI 기준 |
-| `overview.png` | 전체 시트를 Vision AI 크기로 축소 | 최대 1568px 너비 |
-| `detail_r{N}.png` | 세로 분할된 상세 이미지 | 각 최대 1568px 높이 |
-
-작은 시트(높이 1568px 이내)는 분할하지 않고 `detail_r0.png` = `overview.png`로 동일.
+{sheet_name}/_vision_input/
+├── full_original.png       # 시트 전체 (화면 DPI 해상도)
+├── overview.png            # 축소본 (max 1568px W, 8000px H)
+├── detail_r0.png ~ rN.png  # 세로 분할 타일 (max 1568px H, 10% overlap)
+└── tile_manifest.json      # 타일 위치/크기 메타데이터
+```
 
 ---
 
-## 5. Stage 2: Vision (AI 해석)
+## 4. Stage 2: Vision
 
-### 5.1 2-이미지 Vision 전략 (핵심)
+### 4.1 2-이미지 전략
 
-Vision API 호출 시 **항상 2장의 이미지를 동시 전달**:
-
-```
-[API Call]
-  Image 1: overview.png (전체 시트 축소본)  -> 위치/맥락 파악
-  Image 2: detail_rN_cM.png (해당 영역)    -> 정밀 해석
-  Prompt: "Image 1은 전체 시트이며, Image 2는 그 중 {위치} 영역의 상세입니다."
-```
-
-**왜 2장인가?**
-- 상세 이미지만으로는 해당 영역이 시트 전체에서 어디에 위치하는지 알 수 없음
-- 개요 이미지가 "큰 그림"을 제공하여 컨텍스트 보존
-- 예: 테이블의 헤더가 상단 타일에만 있어도, 하단 타일 해석 시 개요에서 헤더를 참조 가능
-
-### 5.2 Vision 프롬프트 구조
+Vision API 호출 시 **overview + detail** 2장 동시 전달:
 
 ```
-당신은 게임 기획 문서 해석 전문가입니다.
-
-[Image 1]은 Excel 시트 '{시트명}'의 전체 축소 이미지입니다.
-[Image 2]는 해당 시트의 {위치 설명} 영역 상세 이미지입니다.
-(그리드 위치: row {r}/{total_rows}, col {c}/{total_cols})
-
-다음 규칙에 따라 Image 2의 내용을 구조화된 Markdown으로 변환하세요:
-
-1. 테이블은 Markdown 테이블로 정확히 변환
-2. 플로우차트/흐름도는 Mermaid 다이어그램으로 변환
-3. 수학적/개념 도형은 텍스트로 최대한 설명
-4. 텍스트로 표현 불가능한 시각 요소(게임 UI 스크린샷, 일러스트 등)는
-   [IMAGE: 요소에 대한 설명]으로 마킹
-5. Image 1을 참고하여 이 영역이 전체 시트에서 어떤 맥락인지 고려
-6. 이전 영역과의 연속성을 유지 (테이블이 이어지면 헤더 반복 없이 행만 추가)
+Image 1: overview.png  → 전체 시트에서 현재 영역의 위치/맥락 파악
+Image 2: detail_rN.png → 해당 영역의 정밀 해석
 ```
 
-### 5.3 시트 내 이미지 연속성 보장
+- 타일이 1개인 경우: detail만 전달 (overview = detail이므로 중복 불필요)
+- overview의 역할: 개요에서 텍스트를 읽지 않고 **구조와 맥락만** 파악
 
-한 시트의 분할 이미지들은 **순서대로** 처리하며 연속성을 유지:
+### 4.2 프롬프트 구조
 
-1. **처리 순서**: 좌->우, 상->하 (reading order)
-   ```
-   r0_c0 -> r0_c1 -> r0_c2
-   r1_c0 -> r1_c1 -> r1_c2
-   ```
+**System Context**:
+```
+원본 이미지에 없는 내용을 절대 생성하지 마세요.
+이미지에 실제로 보이는 텍스트와 요소만 해석하세요.
+```
 
-2. **이전 컨텍스트 전달**: 각 Vision 호출 시 이전 타일의 해석 결과 요약을 프롬프트에 포함
-   ```
-   이전 영역({이전 위치})에서 추출된 내용 요약:
-   - 테이블 "단축키 매핑"이 진행 중 (현재 12번 행까지)
-   - 플로우차트 "전투 흐름"이 시작됨
-   ```
+**해석 우선순위**:
 
-3. **합성 시 병합 규칙**:
-   - 오버랩 영역의 중복 텍스트 제거
-   - 이어지는 테이블은 하나로 병합
-   - 플로우차트 노드가 여러 타일에 걸치면 하나로 통합
+| 우선순위 | 요소 유형 | 변환 대상 |
+|----------|-----------|-----------|
+| 1 | 테이블/표 | Markdown 테이블 |
+| 2 | 플로우차트/흐름도 | Mermaid 다이어그램 |
+| 3 | 수학적/개념 도형 | 텍스트 설명, 의사코드 |
+| 4 | 주석/화살표 | 텍스트 참조 |
+| 5 | 게임 UI 스크린샷 | `[SUB_IMAGE: 설명]` 마커 + 크롭 |
+| 6 | 일러스트/아트 | `[SUB_IMAGE: 설명]` 마커 + 크롭 |
 
-### 5.4 텍스트 우선 해석 원칙
+### 4.3 누적 컨텍스트
 
-Vision AI가 시각 요소를 해석할 때의 우선순위:
-
-| 우선순위 | 요소 유형 | 변환 대상 | 예시 |
-|----------|-----------|-----------|------|
-| 1 | 테이블/표 | Markdown 테이블 | `\| 번호 \| 기능 \| 단축키 \|` |
-| 2 | 플로우차트/흐름도 | Mermaid 다이어그램 | `graph TD; A-->B` |
-| 3 | 수학적/개념 도형 | 텍스트 설명 + 구조화 | `조건: HP < 30% -> 행동: 회복 물약 사용` |
-| 4 | 어노테이션/화살표 | 텍스트 참조 | `(주석) 이 값은 서버 설정에서 변경 가능` |
-| 5 | 게임 UI 스크린샷 | **서브 이미지** + 텍스트 설명 | `![HUD 상단 영역](./images/figure_01.png)` |
-| 6 | 복잡한 일러스트 | **서브 이미지** + 캡션 | `![캐릭터 변신 컨셉](./images/figure_02.png)` |
-
-**핵심 원칙**: 1~4는 반드시 텍스트로 변환. 5~6만 서브 이미지로 분리.
-
-### 5.5 플로우차트 크롭 재분석 파이프라인
-
-전체 타일 이미지에서 플로우차트 영역은 상대적으로 작아, 긴 커넥터(수평/수직 연결선) 추적이 실패할 수 있다.
-이를 해결하기 위해 **3단계 크롭 재분석 파이프라인**을 적용한다:
+타일은 순서대로(r0 → r1 → r2 ...) 처리하며, 이전 타일의 결과를 다음 타일 프롬프트에 포함:
 
 ```
-[1st pass] 메인 프롬프트로 전체 타일 해석
-    ↓ ```mermaid 블록 감지?
-    ↓ Yes
-[Locate] 전용 경량 Vision 호출 → 플로우차트 영역 bbox (JSON)
+[이전 섹션 요약 (참고용, 반복 금지)]
+{마지막 2개 헤딩 블록, 최대 3000자}
+```
+
+- 전체 결과가 아닌 **마지막 2개 heading section만** 전달
+- 과도한 컨텍스트 → 할루시네이션 유발 (이전 내용을 새로 생성)
+- "참고용일 뿐, 절대 반복하지 마세요" 경고 포함
+
+### 4.4 빈 타일 감지
+
+`is_blank_tile()`: PIL/numpy로 비백색 픽셀 비율 분석
+- 비백색 비율 < 0.5% → 빈 타일 → Vision API 호출 스킵
+- 방지: 빈 이미지에 대해 "⑤ 외부 참조" 등 할루시네이션 생성
+
+### 4.5 플로우차트 크롭 재분석
+
+전체 타일에서 플로우차트가 감지되면 3단계 추가 처리:
+
+```
+[1st pass] 메인 프롬프트로 전체 타일 해석 → mermaid 블록 감지
     ↓
-[Crop] PIL로 해당 영역 크롭 (높이 50% / 너비 20% 패딩 추가)
+[Locate] 경량 Vision 호출 → 플로우차트 영역 bbox (JSON: top/bottom/left/right %)
     ↓
-[2nd pass] FLOWCHART_PROMPT (전용 프롬프트)로 크롭 이미지 재분석
+[Crop] PIL로 해당 영역 크롭 (50% 높이 / 20% 너비 패딩)
     ↓
-[Replace] 1st pass 결과의 mermaid 블록을 2nd pass 결과로 교체
+[2nd pass] FLOWCHART_PROMPT로 크롭 이미지 재분석
+    ↓
+[Replace] 1st pass의 mermaid 블록을 2nd pass 결과로 교체
 ```
 
-**전용 FLOWCHART_PROMPT의 핵심 규칙:**
-1. 모든 도형(노드)을 테이블로 나열: | 번호 | 텍스트 | 모양 | 위치 |
+**FLOWCHART_PROMPT 핵심 규칙**:
+1. 모든 도형을 테이블로 나열: `| 번호 | 텍스트 | 모양 | 위치 |`
 2. 각 도형에서 나가는 선의 **개수와 방향**(→↑↓←)을 먼저 파악
-3. 각 선을 **끝까지** 추적하여 도착 도형 확인 (꺾임/합류 포함)
+3. 각 선을 **끝까지** 추적 (꺾임/합류 포함)
 4. 출발-도착 쌍을 테이블로 정리 후 Mermaid 변환
-5. "긴 수평선/수직선이 이미지 끝까지 이어지는 경우를 놓치지 마세요" 경고
+5. "긴 수평선/수직선이 이미지 끝까지 이어지는 경우를 놓치지 마세요"
 
-**검증 결과 (변신 시트 합성 플로우차트):**
-- 크롭 없이(전체 타일): "합성 진행 불가 → 종료" 연결 실패 (v2~v9, v11)
-- 크롭 + 전용 프롬프트: 성공 (v10) — 17.8s, 1,460 tokens
+### 4.6 서브 이미지 추출
 
-### 5.6 서브 이미지 분리 기준
+Vision AI가 `[SUB_IMAGE: 설명]` 마커를 출력하면:
 
-Vision AI가 `[IMAGE: ...]` 마커를 출력한 요소에 대해:
+```
+[Locate] 전용 Vision 호출 → 해당 요소의 bbox (JSON)
+    ↓
+[Crop] 원본 타일 이미지에서 정밀 크롭
+    ↓
+[Save] {sheet}_{tile}_fig{N}.png → _vision_output/images/
+    ↓
+[Replace] 마커를 ![설명](./images/{filename}) 으로 교체
+```
 
-1. 원본 고해상도 이미지에서 해당 영역을 크롭하여 서브 이미지로 저장
-2. 파일명: `figure_{순번:02d}.png` (시트 내 등장 순서)
-3. Markdown에서 참조: `![{AI가 생성한 설명}](./images/figure_{순번:02d}.png)`
-4. 서브 이미지 메타데이터 기록:
-   ```json
-   {
-     "figure_id": "figure_01",
-     "source_tile": "detail_r1_c0",
-     "pixel_region": {"x": 200, "y": 500, "w": 400, "h": 300},
-     "description": "HUD 상단 영역 - 캐릭터 정보 및 미니맵",
-     "reason": "게임 UI 스크린샷으로 텍스트 변환 불가"
-   }
-   ```
+- locate 실패 시: 타일 전체 이미지를 fallback으로 저장
+- `_normalize_sub_image_markers()`: Vision이 `![desc](./images/...)` 직접 출력 시 정규화
+
+### 4.7 출력
+
+```
+{sheet_name}/_vision_output/
+├── detail_r0.md ~ rN.md         # 타일별 Vision 결과
+├── merged.md                     # 전체 타일 병합
+├── images/                       # 서브 이미지
+│   ├── {sheet}_detail_r0_fig1.png  # 정밀 크롭
+│   ├── {sheet}_detail_r0_fig2.png
+│   └── {sheet}_detail_r0.png       # fallback (타일 전체)
+├── detail_rN_flowchart.md        # 플로우차트 재분석 결과 (있을 때)
+├── detail_rN_flowchart_crop.png  # 크롭 이미지 (있을 때)
+└── vision_meta.json              # 타일별 토큰/타이밍/throughput
+```
 
 ---
 
-## 6. Stage 3: Parse (데이터 보강 + 커넥터 검증)
+## 5. Stage 3: Parse OOXML
 
-### 6.0 Stage 3의 목표
+### 5.1 목표
 
-Stage 3는 Vision AI의 결과를 **신뢰하되 검증**하는 단계다.
+Vision AI의 결과를 **기본 신뢰하되**, OOXML 데이터로 **구조적 약점을 보정**:
+- 커넥터 연결 관계 (긴 수평/수직선 추적 실패)
+- 등급 색상 정확도 (Vision의 근사 색상 → 정확한 hex)
+- OCR 교정용 텍스트 코퍼스 (Stage 4에서 사용)
 
-**핵심 원칙: Vision AI 기본 신뢰 + OOXML 데이터로 교정**
-- Vision AI의 텍스트 해석, 레이아웃 인식, 테이블 구조화를 기본으로 신뢰한다
-- 다만 Vision AI가 **구조적으로 약한 영역**에 한해 OOXML 파싱 데이터로 교정한다:
-  1. **커넥터/화살표 연결 관계**: Vision AI는 긴 수평/수직 연결선을 추적하지 못하는 경우가 있음 → OOXML drawing XML에서 커넥터의 start/end shape ID를 추출하여 Mermaid 다이어그램 검증/보정
-  2. **도형 내 텍스트 오독**: 해상도 제한으로 "적용 스탯 수"를 "적용 스펙 수"로 읽는 등 오타 발생 → openpyxl/OOXML에서 도형 텍스트를 추출하여 대조/교정
-  3. **정밀 수치**: Vision이 읽기 어려운 작은 숫자, 소수점 등 → openpyxl 셀 데이터로 보강
+### 5.2 OOXML 도형/커넥터 추출
 
-### 6.1 OOXML 커넥터 추출 (핵심 신규 기능)
+Excel의 `xl/drawings/drawingN.xml`에서:
 
-Excel OOXML의 `xl/drawings/drawingN.xml`에서 도형과 커넥터 데이터를 추출한다.
-
-**구조**:
 ```xml
 <!-- 도형 (sp) -->
 <xdr:sp>
@@ -331,196 +243,188 @@ Excel OOXML의 `xl/drawings/drawingN.xml`에서 도형과 커넥터 데이터를
 
 <!-- 커넥터 (cxnSp) -->
 <xdr:cxnSp>
-  <a:stCxn id="39"/>  <!-- 출발: 합성 진행 불가 -->
-  <a:endCxn id="34"/> <!-- 도착: 종료 -->
+  <a:stCxn id="39"/>  <!-- 출발 -->
+  <a:endCxn id="34"/> <!-- 도착 -->
 </xdr:cxnSp>
 ```
 
-**추출 결과 예시** (변신 시트 합성 플로우차트):
+**추출 항목**:
+- 도형: id, 이름, 텍스트, 프리셋(roundRect/diamond/ellipse 등)
+- 커넥터: 출발 id, 도착 id
+
+### 5.3 Mermaid 검증/보정
+
 ```
-시작(id=11) → "합성"버튼클릭(id=9)
-"합성"버튼클릭 → 동일 등급 4장의 재료 등록 완료?(id=18)
-(조건=Yes) → 합성 진행(id=19)
-합성 진행 → 등급별 리스트중 1종 결정(id=26)
-등급별 리스트중 1종 결정 → 결과 화면 출력(id=30)
-결과 화면 출력 → 종료(id=34)
-(조건=No) → 합성 진행 불가(id=39)
-합성 진행 불가 → 종료(id=34)          ← Vision AI가 3회 실패한 연결
+1. Vision merged.md에서 mermaid 코드 블록 추출
+2. OOXML 도형/커넥터 추출 → BFS로 플로우차트 그룹 분리
+3. 텍스트 유사도 기반 노드 매핑 (정규화: 공백/구두점 제거)
+4. Diamond(마름모) 구조적 매칭: 이웃 노드 ≥2개 공통이면 매핑
+5. OOXML 엣지 vs Mermaid 엣지 비교 → 누락/오판 감지
+6. 누락 엣지 추가, 오판 엣지 제거 → 보정된 merged.md 출력
 ```
 
-**검증 시나리오**: Vision AI의 Mermaid에서 "합성 진행불가"가 종료와 연결되지 않았으나, OOXML 커넥터 데이터에 `39→34` 연결이 존재 → 자동 보정.
+### 5.4 등급 색상 추출
 
-### 6.2 openpyxl 데이터 보강
+`extract_grade_colors()`:
+- OOXML 셀에서 등급 키워드(에픽, 신화, 레전드 등) 탐색
+- 셀 배경색 추출: theme color + tint → RGB hex 계산
+- Stage 4에서 Vision의 근사 색상명을 정확한 hex로 교체
 
-| 항목 | 설명 |
-|------|------|
-| 정확한 수치 | Vision이 읽기 어려운 작은 숫자, 소수점 등 |
-| 숨겨진 행/열 | `hidden=True`인 행/열 데이터 추출 |
-| 수식 | `=SUM(A1:A10)` 등 원본 수식 보존 |
-| 셀 병합 정보 | merged_cells 범위 및 값 |
-| 데이터 유효성 검사 | 드롭다운 목록, 허용 값 범위 |
-| 조건부 서식 | 색상 코딩 규칙 (텍스트로 설명) |
-| 시트 간 참조 | 다른 시트 데이터를 참조하는 수식 |
+### 5.5 텍스트 코퍼스
 
-### 6.3 Vision AI vs OOXML 충돌 시 규칙
+`extract_ooxml_text_corpus()`:
+- 셀 텍스트 + 도형 내 텍스트 전체 수집
+- Stage 4의 LLM OCR 교정에서 ground truth 참고 자료로 사용
 
-| 데이터 유형 | 우선 소스 | 이유 |
-|-------------|-----------|------|
-| 레이아웃/구조 | Vision AI | 시각적 배치를 AI가 가장 잘 이해 |
-| 테이블 내용 | Vision AI (openpyxl 검증) | Vision이 주, 수치 오류만 보정 |
-| 커넥터/화살표 연결 | **OOXML** | Vision AI의 구조적 약점 (긴 선 추적 실패) |
-| 도형 내 텍스트 | **OOXML** | 해상도 제한으로 오독 가능성 |
-| 숨겨진 데이터 | **openpyxl** | Vision이 볼 수 없는 정보 |
-| 수식/참조 | **openpyxl** | Vision이 결과값만 보고 수식은 못 읽음 |
+### 5.6 출력
+
+```
+{sheet_name}/_parse_ooxml_output/
+├── merged.md           # Mermaid 보정 적용 시만 생성
+├── parse_meta.json     # 도형/커넥터 수, 보정 엣지, 타이밍
+├── grade_colors.json   # {"신화": "#C00000", "에픽": "#7030A0", ...}
+└── text_corpus.json    # ["텍스트1", "텍스트2", ...] (OCR 참조)
+```
 
 ---
 
-## 7. Stage 4: Synthesize (합성)
+## 6. Stage 4: Synthesize
 
-### 7.1 합성 프로세스
+### 6.1 입력 선택
 
 ```
-Vision 결과 (타일별 MD)
-  |
-  +-- 시트 내 타일 병합 (오버랩 중복 제거)
-  |
-  +-- openpyxl 데이터 보강 적용
-  |     - Vision 테이블의 수치를 openpyxl 값으로 교차 검증/교체
-  |     - 숨겨진 행/열 데이터 추가 (별도 섹션)
-  |     - 수식 정보 각주로 추가
-  |
-  +-- 서브 이미지 추출 및 저장
-  |     - [IMAGE: ...] 마커 -> 원본에서 크롭 -> images/ 폴더
-  |     - 마커를 Markdown 이미지 링크로 교체
-  |
-  v
-최종 출력: content.md + images/
+_parse_ooxml_output/merged.md 존재? → 사용 (Mermaid 보정 포함)
+없으면 → _vision_output/merged.md (Vision 원본)
 ```
 
-### 7.2 최종 Markdown 구조
+### 6.2 Dedup 파이프라인 (14단계)
 
+| # | 단계 | 설명 |
+|---|------|------|
+| 1 | 타일 섹션 헤더 제거 | `# SheetName - Section N/M` 패턴 |
+| 2 | 분석 메타데이터 제거 | Step blocks, HTML comments, 시트 요약, self-commentary |
+| 3 | `(계속)`/`(이어서)` 접미사 제거 | 모든 헤딩에서 |
+| 3.5 | 등급 색상 보정 | Vision 근사 색상 → OOXML 정확 hex |
+| 3.6 | OCR 교정 | Sonnet API로 OOXML 텍스트 대조 교정 |
+| 4 | 연속 중복 헤딩 정리 | 부모 컨텍스트 반복 제거 |
+| 5 | 반복 부모 헤딩 축소 | 타일 경계 반복 컨테이너 제거 |
+| 6 | 분할 테이블 병합 | 동일 헤딩+헤더 → 행 합치기 (set-based) |
+| 7 | 원거리 중복 섹션 제거 | 동일 제목 leaf 섹션 → 긴 것 유지 |
+| 7.5 | 동일 콘텐츠 연속 섹션 제거 | 다른 제목 + 같은 내용 → 뒤쪽 유지 |
+| 7.6 | orphan 레벨 헤딩 제거 | overlap ≥40% 검사 후 제거 |
+| 7.65 | 동일 제목 continuation 병합 | (계속) 제거 후 인접 섹션 합치기 |
+| 7.7 | bold-heading 중복 제거 | `**Title**` 존재 시 `## Title` 제거 |
+| 8 | 불완전 잘림 섹션 제거 | <5줄 짧은 중복 |
+| 8.5 | 중복 blockquote 제거 | 동일 key의 `> **[key]**` 반복 |
+| 8.6 | Meta-commentary 제거 | Vision AI self-reference 텍스트 |
+| 9 | 최종 정리 | # SheetName 중복 + 빈 줄 정리 |
+
+### 6.3 OCR 교정 (Step 3.6)
+
+Sonnet API 1회 호출로 Vision의 OCR 오류를 교정:
+
+```
+입력:
+  - 참고 자료 A: Vision 해석 텍스트 (교정 대상)
+  - 참고 자료 B: OOXML 텍스트 코퍼스 (ground truth)
+
+규칙:
+  - B에 정확한 표기가 있으면 교정
+  - changed_chars ≤ 5 (SequenceMatcher) — 과교정 방지
+  - 구조 불변: 라인 수, 헤딩, 테이블, mermaid 블록 유지
+
+출력: JSON 배열 [{original, corrected, reason}, ...]
+```
+
+**교정 예시**:
+- `알파>` → `알파2` (특수문자 오인식)
+- `가체` → `개체` (한글 유사 글자)
+- `펑타` → `평타` (한글 유사 글자)
+- `봉현탑` → `봉헌탑` (OOXML에 정확한 표기 있음)
+
+### 6.4 등급 색상 보정 (Step 3.5)
+
+Vision이 "보라색", "빨간색" 등으로 근사 인식한 등급 색상을:
+OOXML에서 추출한 정확한 hex 코드로 교체.
+
+```
+Vision: "에픽 (보라색)"  →  교정: "에픽 (#7030A0)"
+Vision: "신화 (빨간색)"  →  교정: "신화 (#C00000)"
+```
+
+### 6.5 서브 이미지 정리
+
+- `_vision_output/images/` → `_final/images/`
+- 참조되는 `_fig{N}.png` 크롭 이미지만 복사
+- fallback 타일 전체 이미지 (`_detail_r0.png`)는 제외
+- Dedup 제거된 섹션의 이미지 참조 → 텍스트 설명으로 교체
+
+### 6.6 출력
+
+```
+{sheet_name}/_final/
+├── content.md    # 최종 Markdown (메타 헤더 + 본문)
+└── images/       # 참조되는 서브 이미지만
+```
+
+**content.md 메타 헤더**:
 ```markdown
-# {시트명}
-
-> 원본: {엑셀파일명}.xlsx / 시트: {시트명}
-> 변환일: {날짜}
-> 검증: {PASS/FAIL} ({정답률}%)
-
 ---
-
-## 섹션 1: {Vision이 인식한 첫 번째 논리 블록}
-
-{텍스트 변환 결과}
-
-| 열1 | 열2 | 열3 |
-|-----|-----|-----|
-| ... | ... | ... |
-
-![{설명}](./images/figure_01.png)
-
-## 섹션 2: ...
-
+source_file: PK_변신_및_스킬_시스템.xlsx
+sheet_name: 변신
+processed_date: 2026-03-08
+stage_versions:
+  capture: 2.0
+  vision: 4.5
+  parse_ooxml: 3.0
+  synthesize: 2.5
 ---
-
-## 부록: 숨겨진 데이터 (openpyxl 보강)
-
-### 숨겨진 행/열
-...
-
-### 수식 목록
-...
 ```
 
 ---
 
-## 8. 출력 구조
+## 7. 실행 구조 (run.py)
 
-### 8.1 Vision AI 입력용 (중간 산출물)
-
-```
-output/{ExcelFileName}/{SheetName}/_vision_input/
-  ├── full_original.png       # 시트 전체 고해상도 (300 DPI)
-  ├── overview.png            # 스케일다운 (max 1568px 너비)
-  ├── detail_r0_c0.png        # 분할 상세 이미지
-  ├── detail_r0_c1.png
-  ├── detail_r1_c0.png
-  ├── detail_r1_c1.png
-  └── tile_manifest.json      # 분할 메타데이터 (그리드, 위치, 오버랩)
-```
-
-### 8.2 최종 출력
+### 7.1 2단계 실행
 
 ```
-output/{ExcelFileName}/{SheetName}/_final/
-  ├── content.md              # 구조화된 텍스트 (Markdown)
-  └── images/                 # 텍스트로 해석 불가한 서브 이미지
-      ├── figure_01.png
-      ├── figure_02.png
-      └── image_manifest.json # 서브 이미지 메타데이터
+Phase A (순차):  run_capture_batch()
+  - 단일 Excel COM 인스턴스 생성
+  - 104개 파일을 순차 캡처 (이미 캡처된 파일 skip)
+  - Excel COM STA 제약으로 병렬화 불가
+
+Phase B (병렬):  run_parallel_pipeline()
+  - ThreadPoolExecutor(max_workers=N)
+  - 각 워커: _sheet_worker() → Vision → Parse → Synthesize 순차
+  - 완료된 시트 (_final/content.md 존재) 자동 skip
 ```
 
-### 8.3 메타데이터
+### 7.2 워크 큐
 
-```
-output/{ExcelFileName}/{SheetName}/_meta/
-  ├── extraction_log.json     # 변환 과정 로그 (각 Stage 소요시간, 에러)
-  └── verification.json       # 검증 결과 (질의/응답/판정)
-```
+`build_work_queue()`:
+- 모든 대상 파일의 `_capture_manifest.json` 읽기
+- 시트별 work_item 생성 (xlsx_path, sheet_dir, sheet_name, tiles)
+- skip-done: `_final/content.md` 있으면 제외 (`--force`로 override)
 
-### 8.4 전체 구조 예시
+### 7.3 성능 로깅
 
+각 시트 완료 시 1줄 요약:
 ```
-output/
-├── PK_단축키_시스템/
-│   ├── 히스토리/
-│   │   ├── _vision_input/
-│   │   │   ├── full_original.png
-│   │   │   ├── overview.png
-│   │   │   └── detail_r0_c0.png
-│   │   ├── _final/
-│   │   │   ├── content.md
-│   │   │   └── images/
-│   │   └── _meta/
-│   │       ├── extraction_log.json
-│   │       └── verification.json
-│   ├── HUD/
-│   │   ├── _vision_input/
-│   │   │   ├── full_original.png
-│   │   │   ├── overview.png
-│   │   │   ├── detail_r0_c0.png
-│   │   │   ├── detail_r0_c1.png
-│   │   │   └── detail_r1_c0.png
-│   │   ├── _final/
-│   │   │   ├── content.md
-│   │   │   └── images/
-│   │   │       ├── figure_01.png    # HUD 상단 스크린샷
-│   │   │       └── figure_02.png    # HUD 하단 스크린샷
-│   │   └── _meta/
-│   │       └── ...
-│   └── 변신/
-│       └── ...
+[1234.5s] [ 123/635] PK_HUD 시스템/HUD_기본 -- vis(OK,175s,45,846tok) > parse(OK,1.2s) > synth(OK,4.7s,434lines)  [OK]
 ```
 
 ---
 
-## 9. 기존 레거시 코드 재사용
+## 8. 기술 제약 및 알려진 이슈
 
-| 기존 코드 | 재사용 대상 | 변경 사항 |
-|-----------|------------|-----------|
-| `convert_xlsx.py` Tier 1+1.5 | Stage 3 (Parse) | OOXML 도형 파싱 로직 분리 |
-| `vision_first_convert.py` | Stage 2 (Vision) 참조 | 2-이미지 전략으로 재설계 |
-
-> `lo_sheet_export.py`는 더 이상 사용하지 않음 (LibreOffice → Excel COM으로 전환)
-
----
-
-## 10. 기술 제약 및 알려진 이슈
-
-| 이슈 | 영향 | 완화 방법 |
-|------|------|-----------|
-| Excel COM은 Windows+Excel 필수 | 서버/Linux 배포 불가 | 현재 로컬 개발 환경 전용. 서버 배포 시 별도 방안 |
-| ScreenUpdating=False 시 빈 이미지 | CopyPicture가 빈 비트맵 반환 | ScreenUpdating는 반드시 True 유지 |
-| 화면 DPI 의존 | 모니터 해상도에 따라 출력 크기 변동 | 96~120 DPI에서 1400~1800px 너비, Vision AI에 충분 |
-| Vision API 비용 | 대량 변환 시 비용 증가 | 빈 시트 건너뛰기, 캐싱 |
-| 매우 큰 시트 (50+ 타일) | 합성 복잡도 증가 | 타일 수 상한 설정 + 경고 |
-| 한글/특수문자 파일명 | Windows cp949 인코딩 | safe_filename() 변환 |
+| 이슈 | 영향 | 현황 |
+|------|------|------|
+| Windows + Excel 필수 | 서버/Linux 배포 불가 | 로컬 개발 환경 전용 |
+| ScreenUpdating=True 필수 | CopyPicture 빈 이미지 | True 유지로 해결 |
+| CopyPicture 실패 (12건) | 빈/특수 시트 캡처 불가 | 전체 98.1% 성공 |
+| 타일 경계 중복/잘림 | 오버랩 구간 콘텐츠 중복 | Dedup 14단계로 대부분 해결 |
+| Vision 할루시네이션 | 빈 이미지에 가짜 콘텐츠 | 빈 타일 감지 + anti-hallucination 프롬프트 |
+| 회색 오버레이 텍스트 | 비활성 기능의 겹친 텍스트 | 미해결 |
+| OCR false positive | 글자 모양 비유사 교정 | changed_chars≤5로 제한, 튜닝 여지 |
+| 한글/특수문자 파일명 | 경로 인코딩 문제 | safe_filename() 변환 |
+| overview 8000px 초과 | Vision API 리사이즈 왜곡 | LANCZOS 자동 리사이즈 |

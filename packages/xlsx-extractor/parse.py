@@ -316,6 +316,54 @@ def verify_and_correct_mermaid(mermaid_code, ooxml_group):
         if ooxml_id:
             mermaid_to_ooxml[mid] = ooxml_id
 
+    # 텍스트 없는 diamond 노드 매핑 (구조 기반)
+    # OOXML에서 텍스트가 없는 diamond가 있고, Mermaid에서 {decision} 노드가 미매핑이면
+    # 연결 구조(이웃 노드)를 비교하여 매칭
+    unmapped_diamonds = [
+        sid for sid, s in ooxml_shapes.items()
+        if s.get('geom') == 'diamond' and not s.get('text')
+        and sid not in mermaid_to_ooxml.values()
+    ]
+    unmapped_mermaid_decisions = [
+        mid for mid, mtext in m_nodes.items()
+        if mid not in mermaid_to_ooxml
+    ]
+    # Mermaid에서 {} 구문으로 정의된 decision 노드 찾기
+    decision_re = re.compile(r'(\w+)\s*\{')
+    mermaid_decision_ids = set(m.group(1) for m in decision_re.finditer(mermaid_code))
+    unmapped_decisions = [mid for mid in unmapped_mermaid_decisions if mid in mermaid_decision_ids]
+
+    if unmapped_diamonds and unmapped_decisions:
+        # 각 diamond의 OOXML 이웃 노드 vs 각 decision의 Mermaid 이웃 노드 비교
+        for diamond_id in unmapped_diamonds:
+            diamond_neighbors = set()
+            for c in ooxml_connectors:
+                if c['start_id'] == diamond_id:
+                    diamond_neighbors.add(c['end_id'])
+                elif c['end_id'] == diamond_id:
+                    diamond_neighbors.add(c['start_id'])
+
+            best_mid = None
+            best_overlap = 0
+            for mid in unmapped_decisions:
+                # Mermaid에서 이 decision 노드의 이웃
+                m_neighbors_ooxml = set()
+                for e in m_edges:
+                    if e['source'] == mid:
+                        oid = mermaid_to_ooxml.get(e['target'])
+                        if oid:
+                            m_neighbors_ooxml.add(oid)
+                    elif e['target'] == mid:
+                        oid = mermaid_to_ooxml.get(e['source'])
+                        if oid:
+                            m_neighbors_ooxml.add(oid)
+                overlap = len(diamond_neighbors & m_neighbors_ooxml)
+                if overlap > best_overlap:
+                    best_overlap = overlap
+                    best_mid = mid
+            if best_mid and best_overlap >= 2:
+                mermaid_to_ooxml[best_mid] = diamond_id
+
     # 역매핑: OOXML ID -> Mermaid ID
     ooxml_to_mermaid = {v: k for k, v in mermaid_to_ooxml.items()}
 
@@ -371,14 +419,53 @@ def verify_and_correct_mermaid(mermaid_code, ooxml_group):
 
 
 def apply_corrections(mermaid_code, corrections):
-    """누락된 엣지를 Mermaid 코드에 추가한다."""
-    if not corrections['missing_edges']:
-        return mermaid_code, []
+    """누락된 엣지를 추가하고, 오판된(extra) 엣지를 제거한다.
 
-    lines = mermaid_code.split('\n')
+    Returns: (corrected_code, added_list, removed_list)
+    """
     added = []
+    removed = []
+    lines = mermaid_code.split('\n')
 
-    for edge in corrections['missing_edges']:
+    # 1. 오판된 엣지 제거 (OOXML에 없지만 Mermaid에 있는 엣지)
+    # extra_edges의 mermaid ID를 알아야 함 → node_mapping 역참조
+    if corrections.get('extra_edges'):
+        node_map = corrections.get('node_mapping', {})
+        # ooxml_id -> mermaid_id 역매핑
+        ooxml_to_mid = {}
+        for mid, info in node_map.items():
+            ooxml_to_mid[info['ooxml_id']] = mid
+
+        for extra in corrections['extra_edges']:
+            st_ooxml = extra['ooxml_start']
+            en_ooxml = extra['ooxml_end']
+            st_mid = ooxml_to_mid.get(st_ooxml)
+            en_mid = ooxml_to_mid.get(en_ooxml)
+            if not st_mid or not en_mid:
+                continue
+
+            # 해당 엣지를 포함하는 Mermaid 줄을 찾아 제거
+            new_lines = []
+            edge_removed = False
+            for line in lines:
+                stripped = line.strip()
+                # 엣지 패턴: "A --> B" 또는 "A -->|label| B"
+                edge_re = re.compile(
+                    rf'^{re.escape(st_mid)}\b'
+                    r'(?:\s*[\[\(\{].*?[\]\)\}])*'
+                    r'\s*(?:-->|---|-\.->|==>)'
+                    r'(?:\s*\|[^|]*\|)?'
+                    rf'\s*{re.escape(en_mid)}\b'
+                )
+                if edge_re.search(stripped) and not edge_removed:
+                    edge_removed = True
+                    removed.append(f"{extra['start_text']} -> {extra['end_text']}")
+                    continue  # 이 줄 제거
+                new_lines.append(line)
+            lines = new_lines
+
+    # 2. 누락된 엣지 추가
+    for edge in corrections.get('missing_edges', []):
         st_mid = edge['mermaid_start']
         en_mid = edge['mermaid_end']
         if st_mid and en_mid:
@@ -386,7 +473,7 @@ def apply_corrections(mermaid_code, corrections):
             lines.append(new_line)
             added.append(f"{edge['start_text']} -> {edge['end_text']}")
 
-    return '\n'.join(lines), added
+    return '\n'.join(lines), added, removed
 
 
 # ── 전체 매칭: Mermaid 블록 ↔ OOXML 그룹 ──
@@ -442,8 +529,8 @@ def correct_md_file(md_path, ooxml_groups, all_shapes):
 
         result = verify_and_correct_mermaid(block['code'], group)
 
-        if result['missing_edges']:
-            corrected_code, added = apply_corrections(block['code'], result)
+        if result['missing_edges'] or result['extra_edges']:
+            corrected_code, added, removed = apply_corrections(block['code'], result)
             new_block = f"```mermaid\n{corrected_code}\n```"
             corrected_text = (
                 corrected_text[:block['start']] +
@@ -454,6 +541,7 @@ def correct_md_file(md_path, ooxml_groups, all_shapes):
                 'group_index': match['group_index'],
                 'overlap': match['overlap'],
                 'added_edges': added,
+                'removed_edges': removed,
                 'result': result,
             })
         else:
@@ -461,12 +549,13 @@ def correct_md_file(md_path, ooxml_groups, all_shapes):
                 'group_index': match['group_index'],
                 'overlap': match['overlap'],
                 'added_edges': [],
+                'removed_edges': [],
                 'result': result,
-                'message': 'All edges verified -no corrections needed',
+                'message': 'All edges verified - no corrections needed',
             })
 
     # 보정된 파일 저장
-    if any(c.get('added_edges') for c in all_corrections):
+    if any(c.get('added_edges') or c.get('removed_edges') for c in all_corrections):
         with open(md_path, 'w', encoding='utf-8') as f:
             f.write(corrected_text)
 

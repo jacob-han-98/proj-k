@@ -1311,8 +1311,8 @@ def apply_parse_corrections(md_text, xlsx_path, sheet_name):
             group = groups[match['group_index']]
             result = verify_and_correct_mermaid(block['code'], group)
 
-            if result['missing_edges']:
-                corrected_code, added = apply_corrections(block['code'], result)
+            if result['missing_edges'] or result['extra_edges']:
+                corrected_code, added, removed = apply_corrections(block['code'], result)
                 new_block = f"```mermaid\n{corrected_code}\n```"
                 corrected = (
                     corrected[:block['start']] +
@@ -1321,12 +1321,14 @@ def apply_parse_corrections(md_text, xlsx_path, sheet_name):
                 )
                 corrections_log.append({
                     'added_edges': added,
+                    'removed_edges': removed,
                     'match_count': result['match_count'],
                     'ooxml_edge_count': result['ooxml_edge_count'],
                 })
             else:
                 corrections_log.append({
                     'added_edges': [],
+                    'removed_edges': [],
                     'match_count': result['match_count'],
                     'ooxml_edge_count': result['ooxml_edge_count'],
                     'message': 'All edges verified',

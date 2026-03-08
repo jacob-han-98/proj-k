@@ -322,6 +322,29 @@ Step 2의 테이블을 **그대로** Mermaid flowchart 코드로 변환
 
 import re
 from PIL import Image
+import numpy as np
+
+
+def is_blank_tile(image_path, threshold=252, min_content_ratio=0.005):
+    """타일 이미지가 거의 빈(흰색) 이미지인지 판별.
+
+    Args:
+        image_path: PNG 이미지 경로
+        threshold: 이 값 이상의 픽셀을 '흰색'으로 간주 (0-255)
+        min_content_ratio: 비흰색 픽셀이 이 비율 미만이면 빈 이미지로 판정
+
+    Returns:
+        True if blank, False if has content
+    """
+    try:
+        img = Image.open(image_path).convert('L')  # grayscale
+        arr = np.array(img)
+        non_white = np.sum(arr < threshold)
+        total = arr.size
+        content_ratio = non_white / total if total > 0 else 0
+        return content_ratio < min_content_ratio
+    except Exception:
+        return False  # 판별 실패 시 skip하지 않음
 
 
 LOCATE_FLOWCHART_PROMPT = """이 이미지에서 플로우차트/흐름도가 있는 영역의 위치를 알려주세요.
@@ -590,6 +613,13 @@ def process_sheet(sheet_dir, sheet_name):
 
         if not os.path.exists(tile_path):
             results.append({"tile_id": tile_id, "success": False, "error": "file not found"})
+            continue
+
+        # 빈 타일 감지: 거의 흰색인 이미지는 Vision API 호출 없이 skip
+        if is_blank_tile(tile_path):
+            print(f"  ⚪ {tile_id}: blank tile (skipped)")
+            results.append({"tile_id": tile_id, "success": True, "skipped": True,
+                            "reason": "blank_tile", "md": ""})
             continue
 
         # 2-이미지 전략: overview + detail (단일 타일이면 detail만)

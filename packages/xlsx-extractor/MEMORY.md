@@ -9,7 +9,7 @@
 
 **PK_변신 및 스킬 시스템.xlsx** — 13시트, 사용자가 가장 익숙한 파일로 개발/검증 진행 중
 
-## 현재 상태: Stage 1-4 구현 완료 + Dedup 2.5 (변신 시트 95점 검증 완료), Verification 미착수
+## 현재 상태: Stage 1-4 구현 완료 + Dedup 2.5 + OOXML 보정 (색상/플로우차트/OCR), Verification 미착수
 
 ---
 
@@ -298,9 +298,33 @@ OVERLAP_RATIO = 0.10    # 인접 타일 오버랩
 - **UI_변신_합성 (93)**: 섹션 순서가 타일 캡처 순서 반영. 콘텐츠는 완전함
 - **UI_스킬 (92)**: 타일 경계 테이블 분절 + 일부 garbled annotation
 
-**미해결 (OOXML 개선 필요)**:
-- 등급 색상값: Vision이 "(빨강)", "(노랑)", "(파랑)"으로 근사 → OOXML에서 정확한 hex 추출 필요
-- 회색 오버레이 패턴: 비활성 기능의 겹친 텍스트 처리 → OOXML 텍스트 추출 필요
+**OOXML 보정 추가 기능 (2026-03-08)**:
+
+*vision.py*:
+- `is_blank_tile()`: PIL/numpy 분석으로 빈 타일 감지 → Vision API 호출 스킵
+  - 변신 r6 (빈 흰색 이미지)에서 "⑤ 외부 참조" 할루시네이션 방지
+
+*parse.py*:
+- `extract_grade_colors()`: OOXML 셀 배경색 추출 (theme color + tint 해석)
+- `rgb_to_color_name()`: RGB hex → 한국어 색상명 매핑
+- `extract_ooxml_text_corpus()`: 셀 + 도형 텍스트 전체 수집
+- Diamond 노드 구조적 매칭: 텍스트 없는 마름모를 이웃 노드 기반으로 매핑 (≥2 공통 이웃)
+- `apply_corrections()`: 오판 엣지 제거 기능 추가 (3-tuple 반환: code, added, removed)
+
+*synthesize.py*:
+- **Step 3.5** `correct_grade_colors()`: Vision AI 근사 색상을 OOXML 정확한 hex로 교정
+- **Step 3.6** `correct_ocr_typos()`: LLM(Sonnet) 기반 OCR 오타 교정
+  - OOXML 텍스트 코퍼스를 ground truth 참고로 제공
+  - 구조 보존 검증: 라인 수/헤딩/테이블/mermaid 불변
+  - 변경 글자 수 검증 (SequenceMatcher, changed_chars ≤ 5)
+  - temperature=0, JSON 파싱 견고화
+  - 변신 시트: 10건 교정 (알파>→알파2, 가체→개체, 펑타→평타 등)
+  - 시트당 ~15K input tokens, 23초 (Sonnet API 1회)
+- `call_text_api()`: Bedrock 텍스트 전용 API 호출 (OCR_MODEL 환경변수)
+
+**미해결**:
+- 회색 오버레이 패턴: 비활성 기능의 겹친 텍스트 처리
+- OCR 교정 false positive: "세션→패시브" 등 글자 모양 비유사 교정 — 프롬프트 튜닝 여지
 
 ### Verification (미착수)
 - Vision AI 랜덤 질의 검증

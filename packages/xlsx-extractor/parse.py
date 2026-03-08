@@ -540,6 +540,179 @@ def process_sheet_parse(xlsx_path, vision_output_dir, sheet_name):
     return result
 
 
+# ── OOXML 셀 색상 추출 ──
+
+# 표준 Office 테마 색상 (기본 테마 기준, theme1.xml 없으면 이 값 사용)
+_DEFAULT_THEME_COLORS = {
+    0: 'FFFFFF',  # lt1 (배경1)
+    1: '000000',  # dk1 (텍스트1)
+    2: 'E7E6E6',  # lt2 (배경2)
+    3: '44546A',  # dk2 (텍스트2)
+    4: '4472C4',  # accent1
+    5: 'ED7D31',  # accent2
+    6: 'A5A5A5',  # accent3
+    7: 'FFC000',  # accent4
+    8: '5B9BD5',  # accent5
+    9: '70AD47',  # accent6
+}
+
+
+def _resolve_theme_color(theme_idx, tint=0.0, theme_colors=None):
+    """테마 색상 인덱스 + tint를 RGB hex 문자열로 변환한다."""
+    colors = theme_colors or _DEFAULT_THEME_COLORS
+    base_hex = colors.get(theme_idx, 'FFFFFF')
+    r = int(base_hex[0:2], 16)
+    g = int(base_hex[2:4], 16)
+    b = int(base_hex[4:6], 16)
+    if tint > 0:
+        r = int(r + (255 - r) * tint)
+        g = int(g + (255 - g) * tint)
+        b = int(b + (255 - b) * tint)
+    elif tint < 0:
+        r = int(r * (1 + tint))
+        g = int(g * (1 + tint))
+        b = int(b * (1 + tint))
+    r, g, b = min(255, max(0, r)), min(255, max(0, g)), min(255, max(0, b))
+    return f'{r:02X}{g:02X}{b:02X}'
+
+
+def extract_cell_colors(xlsx_path, sheet_name):
+    """시트에서 셀 배경색(fill)이 있는 셀들의 좌표-RGB 매핑을 반환한다.
+
+    Returns:
+        dict: {(row, col): '#RRGGBB', ...}  (1-based row/col)
+    """
+    import openpyxl
+    wb = openpyxl.load_workbook(xlsx_path, data_only=True)
+    if sheet_name not in wb.sheetnames:
+        return {}
+    ws = wb[sheet_name]
+
+    result = {}
+    for row in ws.iter_rows():
+        for cell in row:
+            fill = cell.fill
+            if fill is None or fill.patternType is None or fill.patternType == 'none':
+                continue
+            fg = fill.fgColor
+            if fg is None:
+                continue
+            rgb = None
+            try:
+                if fg.rgb and isinstance(fg.rgb, str) and fg.rgb != '00000000':
+                    rgb = fg.rgb[-6:]  # strip 'FF' alpha prefix
+            except (TypeError, AttributeError):
+                pass
+            if rgb is None and fg.theme is not None and isinstance(fg.theme, int):
+                tint = fg.tint if fg.tint else 0.0
+                rgb = _resolve_theme_color(fg.theme, tint)
+            if rgb:
+                result[(cell.row, cell.column)] = f'#{rgb}'
+    wb.close()
+    return result
+
+
+def extract_grade_colors(xlsx_path, sheet_name):
+    """등급 테이블에서 등급명 → 색상 hex 매핑을 추출한다.
+
+    등급 테이블의 패턴: 한글명 열 + 고유 색상 열 (배경색으로 표시)
+
+    Returns:
+        dict: {'신화': '#C00000', '전설': '#FFFF00', ...}
+    """
+    import openpyxl
+    wb = openpyxl.load_workbook(xlsx_path, data_only=True)
+    if sheet_name not in wb.sheetnames:
+        return {}
+    ws = wb[sheet_name]
+
+    grade_names = {'에픽', '신화', '전설', '영웅', '희귀', '고급', '일반',
+                   'Epic', 'Myth', 'Legendary', 'Unique', 'Rare', 'Uncommon', 'Common'}
+    result = {}
+
+    def _get_cell_rgb(cell):
+        """셀의 배경색 RGB를 추출. 없으면 None."""
+        fill = cell.fill
+        if fill is None or fill.patternType is None or fill.patternType == 'none':
+            return None
+        fg = fill.fgColor
+        if fg is None:
+            return None
+        rgb = None
+        try:
+            if fg.rgb and isinstance(fg.rgb, str) and fg.rgb != '00000000':
+                rgb = fg.rgb[-6:]
+        except (TypeError, AttributeError):
+            pass
+        if rgb is None and fg.theme is not None and isinstance(fg.theme, int):
+            tint = fg.tint if fg.tint else 0.0
+            rgb = _resolve_theme_color(fg.theme, tint)
+        if rgb:
+            r, g, b = int(rgb[0:2], 16), int(rgb[2:4], 16), int(rgb[4:6], 16)
+            if r > 200 and g > 200 and b > 200:
+                return None  # 너무 밝으면 skip
+            if r < 30 and g < 30 and b < 30:
+                return None  # 너무 어두우면 skip
+            return rgb
+        return None
+
+    for row in ws.iter_rows(max_row=100, max_col=15):
+        for cell in row:
+            if cell.value and str(cell.value).strip() in grade_names:
+                grade = str(cell.value).strip()
+                if grade in result:
+                    continue  # 첫 번째 발견된 매핑을 유지
+                # 먼저 셀 자체의 배경색 확인 (등급명이 색상 셀인 경우)
+                own_rgb = _get_cell_rgb(cell)
+                if own_rgb:
+                    result[grade] = f'#{own_rgb}'
+                    continue
+                # 인접 셀 탐색 (색상 전용 열, 보통 1~3칸 뒤)
+                for offset in range(1, 6):
+                    col = cell.column + offset
+                    if col > ws.max_column:
+                        break
+                    color_cell = ws.cell(row=cell.row, column=col)
+                    # 인접 셀이 다른 등급명이면 중단 (다른 테이블 레이아웃)
+                    if color_cell.value and str(color_cell.value).strip() in grade_names:
+                        break
+                    rgb = _get_cell_rgb(color_cell)
+                    if rgb:
+                        result[grade] = f'#{rgb}'
+                        break
+    wb.close()
+    return result
+
+
+_RGB_TO_COLOR_NAME = {
+    'C00000': '적색',   'FF0000': '빨간색',
+    'FFFF00': '노란색', 'FFC000': '주황색',
+    '7030A0': '보라색',
+    '00B0F0': '파란색', '0070C0': '파란색',
+    '92D050': '초록색', '00B050': '초록색',
+    'BFBFBF': '회색',   'A5A5A5': '회색',   '808080': '회색',
+    'FFFFFF': '흰색',
+}
+
+
+def rgb_to_color_name(hex_rgb):
+    """#RRGGBB → 한글 색상명 (근사 매칭)"""
+    hex6 = hex_rgb.lstrip('#').upper()
+    if hex6 in _RGB_TO_COLOR_NAME:
+        return _RGB_TO_COLOR_NAME[hex6]
+    # 근사 매칭: 가장 가까운 색상
+    r, g, b = int(hex6[0:2], 16), int(hex6[2:4], 16), int(hex6[4:6], 16)
+    best_name = hex_rgb
+    best_dist = float('inf')
+    for ref_hex, name in _RGB_TO_COLOR_NAME.items():
+        rr, gg, bb = int(ref_hex[0:2], 16), int(ref_hex[2:4], 16), int(ref_hex[4:6], 16)
+        dist = (r - rr) ** 2 + (g - gg) ** 2 + (b - bb) ** 2
+        if dist < best_dist:
+            best_dist = dist
+            best_name = name
+    return best_name
+
+
 def main():
     if len(sys.argv) < 3:
         print("Usage: python parse.py <xlsx_path> <vision_output_base_dir> [--sheet <name>]")

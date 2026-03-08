@@ -39,6 +39,8 @@ from parse import (
     match_mermaid_to_ooxml,
     verify_and_correct_mermaid,
     apply_corrections,
+    extract_grade_colors,
+    rgb_to_color_name,
 )
 
 
@@ -1233,6 +1235,49 @@ def _remove_incomplete_boundary_sections(text):
 
 # ── Parse 보정 ──
 
+def correct_grade_colors(md_text, xlsx_path, sheet_name):
+    """OOXML 셀 배경색 데이터로 Vision AI의 근사 색상 표기를 보정한다.
+
+    Vision AI는 등급 색상을 "(보라색)", "(빨간색)" 등 근사값으로 출력하지만
+    실제 OOXML 데이터와 다를 수 있다. 이 함수는 OOXML에서 정확한 RGB를
+    추출하여 테이블 내 색상 표기를 교정한다.
+
+    Returns: (corrected_text, correction_count)
+    """
+    try:
+        grade_colors = extract_grade_colors(xlsx_path, sheet_name)
+    except Exception:
+        return md_text, 0
+
+    if not grade_colors:
+        return md_text, 0
+
+    corrections = 0
+    lines = md_text.split('\n')
+    result = []
+
+    for line in lines:
+        if '|' in line and any(g in line for g in grade_colors):
+            # 테이블 행에서 등급명 찾기
+            for grade, hex_color in grade_colors.items():
+                if grade in line:
+                    color_name = rgb_to_color_name(hex_color)
+                    # (근사색상명) → 정확한 색상명 (hex) 로 교체
+                    # 패턴: (보라색), (빨간색), (노란색), etc.
+                    new_line = re.sub(
+                        r'\((?:보라색|빨간색|빨강색|적색|노란색|노랑색|파란색|파랑색|초록색|녹색|흰색|흰 색|회색)\)',
+                        f'{color_name} ({hex_color})',
+                        line
+                    )
+                    if new_line != line:
+                        corrections += 1
+                        line = new_line
+                        break
+        result.append(line)
+
+    return '\n'.join(result), corrections
+
+
 def apply_parse_corrections(md_text, xlsx_path, sheet_name):
     """Parse(OOXML) 보정을 MD 텍스트에 적용한다.
     Returns: (corrected_text, correction_log)
@@ -1396,6 +1441,11 @@ def synthesize_sheet(sheet_dir, sheet_name, xlsx_path=None, source_name=""):
     parse_result = None
     if xlsx_path and os.path.exists(xlsx_path):
         md_text, parse_result = apply_parse_corrections(md_text, xlsx_path, sheet_name)
+
+    # 3.5. 등급 색상 보정 (OOXML 셀 배경색 → Vision AI 근사값 교정)
+    color_corrections = 0
+    if xlsx_path and os.path.exists(xlsx_path):
+        md_text, color_corrections = correct_grade_colors(md_text, xlsx_path, sheet_name)
 
     # 4. 메타데이터 헤더 추가
     md_text = add_metadata_header(md_text, sheet_name, source_name)

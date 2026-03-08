@@ -14,8 +14,8 @@ Claude LLM API와 결합된 에이전트가 Project K의 기획 내용을 가장
 
 | 단계 | 목표 | 상태 |
 |------|------|------|
-| **1단계: 지식화** | 엑셀/PDF/PPT 기획서 → 구조화된 지식 베이스 | 진행중 |
-| **2단계: QnA API** (PoC) | Backend API로 기획 QnA | 미착수 |
+| **1단계: 지식화** | 엑셀/PDF/PPT 기획서 → 구조화된 지식 베이스 | Excel 완료 (98.1%) |
+| **2단계: QnA API** (PoC) | Backend API로 기획 QnA | **착수 예정** |
 | **3단계: 기획 리뷰** (PoC) | 기존 기획 충돌/누락 감지, 신규 기획서 리뷰 API | 미착수 |
 | **4단계: 실시간 어시스턴트** (PoC) | 맥락 인식 실시간 피드백 API | 미착수 |
 | **피칭** | 경영진/이해관계자 시연 → 승인 | - |
@@ -47,10 +47,18 @@ proj-k 기획/
 │       ├── run_all.py          # 전체 일괄 변환
 │       └── file_manifest.json  # 변환 대상 파일 목록
 │
+├── packages/                    # 서브 프로젝트
+│   ├── xlsx-extractor/          # ★ Excel 변환 파이프라인 (완료)
+│   │   ├── src/                 # capture.py, vision.py, parse_ooxml.py, synthesize.py
+│   │   ├── run.py               # 통합 실행 스크립트
+│   │   ├── output/              # 변환 결과 (629개 content.md)
+│   │   └── docs/                # README, SPEC, VERIFICATION, MEMORY
+│   └── qna-poc/                 # ★ QnA PoC (착수 예정)
+│
 ├── _knowledge_base/            # 변환 결과물 (AI가 읽을 지식)
 │   ├── PROJECT_K_KNOWLEDGE_BASE.md  # 통합 지식 베이스
-│   ├── knowledge_graph.json    # 시스템 간 관계 그래프
-│   ├── sheets/                 # XLSX 변환 결과 (시트별)
+│   ├── knowledge_graph.json    # 시스템 간 관계 그래프 (405시스템, 627관계)
+│   ├── sheets/                 # XLSX 변환 결과 (레거시)
 │   ├── pptx/                   # PPTX 변환 결과
 │   └── images/                 # XLSX 내장 이미지 추출
 │
@@ -66,9 +74,9 @@ proj-k 기획/
 
 | 유형 | 개수 | 변환 완료 | 비고 |
 |------|------|-----------|------|
-| XLSX | 104개 | 2/104 | 7_System 67개가 핵심 |
-| PDF  | 296개 | 0/296 | Confluence 내보내기 |
-| PPTX | 11개  | 1/11 | 컨셉/방향성 문서 |
+| XLSX | 104개 | **623/635 시트 (98.1%)** | xlsx-extractor로 완료 |
+| PDF  | 296개 | 0/296 | 확장 트랙 (QnA 결과에 따라) |
+| PPTX | 11개  | 1/11 | 후순위 |
 
 ## 변환 파이프라인 (1단계 도구)
 

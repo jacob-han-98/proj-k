@@ -5,119 +5,95 @@
 
 ## 최종 업데이트: 2026-03-08
 
-## 현재 단계: 1단계 (지식화)
+## 현재 단계: 1단계 (지식화) 완료 → 2단계 (QnA PoC) 착수
 
 ---
 
-## 1. 전체 변환 현황
+## 1. 프로젝트 현황
 
-| 유형 | 총 개수 | 완료 | 우선순위 |
-|------|---------|------|----------|
-| XLSX | 104 | 2/104 (레거시) + 1 VF 테스트 | 7_System 64개 최우선 |
-| PDF  | 296 | 0/296 | Confluence 배치 변환 |
-| PPTX | 11  | 1/11  | 컨셉 문서 |
+### 1단계: 지식화 — Excel 변환 완료
 
-### 완료된 변환 (레거시 방식)
-- `PK_변신_및_스킬_시스템.xlsx` - 13시트 전체 (프로토타입, 검증 완료)
-- `PK_버프_시스템.xlsx` - 변환 완료
-- `PK_전투컨셉트.pptx` - 변환 완료
+| 항목 | 값 |
+|------|-----|
+| 대상 | 104 XLSX 파일, 635 시트 |
+| 성공 | **623 시트 (98.1%)** |
+| 실패 | 12 시트 (모두 Excel COM CopyPicture 오류) |
+| 소요 시간 | 109분 (parallel=10) |
+| 토큰 사용 | 12.3M |
+| 출력 | 629개 content.md, ~462KB 텍스트, 2,009 서브 이미지 |
 
-### Vision-First 테스트 완료
-- `PK_단축키 시스템.xlsx` - 2/3 시트 변환 성공 (히스토리, HUD)
-  - 변신 시트: LibreOffice 3번째 프로세스 크래시 (재시도 로직 추가)
-  - 품질: 매우 우수 (게임 UI 스크린샷 내 모든 텍스트/숫자 정확히 인식)
+**핵심 도구**: `packages/xlsx-extractor/` — 4단계 파이프라인 (Capture → Vision → Parse OOXML → Synthesize)
 
-## 2. Vision-First 파이프라인 (신규, 세션 11)
+### 추가 데이터 소스 (미변환, 확장 트랙)
 
-### 아키텍처
-```
-XLSX → [LibreOffice headless] → 시트별 PDF
-     → [PyMuPDF] → 페이지별 PNG (자동 크롭, 빈 페이지 건너뛰기)
-     → [Claude Opus via Bedrock] → 구조화된 Markdown
-     → [openpyxl] → 숨겨진 행/열, 수식 데이터 보강
-     → 합성 → 최종 Markdown
-```
+| 유형 | 개수 | 상태 | 우선순위 |
+|------|------|------|----------|
+| Confluence PDF | 296개 | 미착수 | QnA 결과에 따라 결정 |
+| PPTX | 11개 | 1/11 완료 (레거시) | 후순위 |
+| 추가 XLSX | xlsm 등 | 미착수 | 필요 시 |
 
-### 스크립트 현황
+### 2단계: QnA PoC — 착수 예정 (ADR-008)
 
-| 스크립트 | 상태 | 설명 |
-|---------|------|------|
-| lo_sheet_export.py | v1 완성 | LibreOffice UNO 시트별 PDF 내보내기 (프로세스 격리, 재시도) |
-| vision_first_convert.py | v1 완성 | 메인 파이프라인 (캡처→Vision→보강→합성) |
+- **결정**: Excel 데이터만으로 QnA PoC 먼저 진행
+- **근거**: 핵심 데이터 98.1% 확보, 가치 증명 우선
+- **아키텍처**: RAG (ChromaDB + Titan Embeddings + Sonnet) + knowledge_graph.json
+- **위치**: `packages/qna-poc/` (신규)
 
-### 기술 결정사항
-- **스크린샷**: LibreOffice 26.2.0 headless (사용자 선택, 서버 호환)
-- **Vision API**: AWS Bedrock Claude Opus (사용자 선택, 최고 품질)
-- **환경변수**: `ConvertProgram/.env` 파일에서 로드 (python-dotenv)
-- **시트 격리**: 시트당 별도 LibreOffice 프로세스 (안정성 확보)
-- **fit-to-page**: ScaleToPagesX=1 + Selection 기반 개별 시트 내보내기
+---
 
-### 알려진 이슈
-- LibreOffice 3번째 연속 프로세스에서 간헐적 크래시 → 재시도 로직으로 완화
-- 시트당 약 7-10초 소요 (soffice 시작/종료 포함)
-- 전체 파이프라인 약 120초/파일 (3시트 기준, Vision API 응답 포함)
+## 2. 서브 프로젝트 현황
 
-## 3. 레거시 변환 스크립트
+### xlsx-extractor (완료)
 
-| 스크립트 | 버전 | 주요 기능 |
-|---------|------|----------|
-| convert_xlsx.py | v5 | Tier1(셀)+Tier1.5(도형) 변환 |
-| vision_reinforce.py | v3 | Bedrock Vision 보정, idempotent |
-| tier2_vision.py | v1 | 스크린샷 vs MD 비교 보강 |
-| tier2_verify.py | v1 | 품질 검증 루프 (9/10 PASS 기준) |
-| capture_screenshots.py | v2 | Excel COM→PDF→PNG, 시맨틱 분할 |
-| run_all.py | v2 | 레거시 일괄 오케스트레이션 |
+- **위치**: `packages/xlsx-extractor/`
+- **상세 기록**: `packages/xlsx-extractor/docs/MEMORY.md`
+- **파이프라인**: Excel COM 캡처 → Claude Opus Vision → OOXML 보정 → 14단계 Dedup + OCR 교정
+- **API**: AWS Bedrock (Claude Opus Vision + Sonnet OCR)
+- **검증**: Human-in-the-Loop + Claude Code 반복 검증 (7 사이클)
 
-## 4. 서브 프로젝트: xlsx-extractor
+### qna-poc (착수 예정)
 
-### 전략 변경 (세션 12)
-- 한 번에 큰 시스템 → 작은 단위 서브 프로젝트로 분리
-- 첫 번째 서브 프로젝트: `packages/xlsx-extractor/`
+- **위치**: `packages/qna-poc/` (생성 예정)
+- **상세 기록**: `packages/qna-poc/docs/MEMORY.md` (생성 예정)
+- **구성**: FastAPI + ChromaDB + Gradio + Bedrock Claude Sonnet
 
-### 문서 현황
-| 문서 | 상태 | 설명 |
-|------|------|------|
-| README.md | 완성 | 개요, 목표, 출력 구조 |
-| SPEC.md | 완성 | 방법론, 4단계 파이프라인, 이미지 전략, 출력 구조 |
-| VERIFICATION.md | 완성 | 검증 프로토콜, Vision AI 랜덤 질의 검증, 품질 기준 |
-| .env.example | 완성 | 환경변수 템플릿 |
+---
 
-### 핵심 방법론
-- 2-이미지 Vision 전략: 개요(전체 축소) + 상세(영역 고해상도)
-- 텍스트 우선 해석: 테이블/플로우차트/도형 -> 텍스트, 불가 시만 서브 이미지
-- Vision AI 랜덤 질의 검증: 추출 결과를 원본 이미지로 자동 검증
-- API 키: 서브 프로젝트 내 `.env` 파일에서 관리
+## 3. 기존 자산
 
-### 다음 할 일
-1. xlsx-extractor 코드 구현 시작 (Stage 1: Capture부터)
-2. PK_단축키_시스템.xlsx로 프로토타입 테스트
-3. 레거시 결과와 품질 비교
+### 레거시 변환 도구 (ConvertProgram/)
+- `convert_xlsx.py` — Tier 1+1.5 변환 (xlsx-extractor로 대체됨)
+- `vision_reinforce.py` — Vision 보정 (xlsx-extractor에 통합됨)
+- `run_all.py` — 레거시 오케스트레이션
 
-### 이후 (상위 프로젝트)
-1. pdf-extractor, pptx-extractor 서브 프로젝트
-2. RAG 파이프라인 설계
-3. QnA API (2단계)
+### 지식 베이스 (_knowledge_base/)
+- `knowledge_graph.json` — 405 시스템, 627 관계 (QnA PoC에서 활용)
+- `PROJECT_K_KNOWLEDGE_BASE.md` — 통합 요약 (레거시)
+- xlsx-extractor 출력: `packages/xlsx-extractor/output/` (629개 content.md)
 
-## 5. 프로젝트 전환 기록
+---
 
-- **2026-03-06**: 프로젝트 방향 전환 (ADR-004)
-  - 변환 도구 프로젝트 → AI 기획 어시스턴트 프로젝트
-  - CLAUDE.md 전면 개편, docs/ 폴더 신설
-- **2026-03-06**: 변환 순서 전환 (ADR-005)
-  - Vision API 먼저 → Excel 데이터 보강 (신규)
-- **2026-03-07**: Vision-First 파이프라인 v1 완성 (세션 11)
-  - LibreOffice headless + Claude Opus Bedrock + openpyxl 보강
-  - PK_단축키 시스템 프로토타입 테스트 성공 (2/3 시트)
-  - 환경변수 관리: ConvertProgram/.env 방침 확립
-- **2026-03-08**: 전략 변경 - 서브 프로젝트 분리 (세션 12)
-  - 큰 시스템 → 작은 단위 서브 프로젝트로 전환
-  - packages/xlsx-extractor/ 문서화 완료 (README, SPEC, VERIFICATION)
-  - API 키 관리: 서브 프로젝트 내 .env로 변경
+## 4. 의사결정 히스토리 요약
 
-## 6. 사용자 선호
+| ADR | 결정 | 날짜 |
+|-----|------|------|
+| ADR-001 | 3단계 Tier 구조 채택 | 2026-02 |
+| ADR-002 | YAML + Mermaid 하이브리드 | 2026-02 |
+| ADR-003 | Vision 보강 시스템 도입 | 2026-03 |
+| ADR-004 | 변환 도구 → AI 에이전트로 전환 | 2026-03-06 |
+| ADR-005 | Vision-First 방식 채택 | 2026-03-06 |
+| ADR-006 | Vision-First 파이프라인 v1 완성 | 2026-03-07 |
+| ADR-007 | Vision AI + OOXML 하이브리드 전략 | 2026-03-08 |
+| ADR-008 | QnA PoC 우선, 데이터 확장은 병행 | 2026-03-08 |
 
-- 진행 과정을 docs/MEMORY.md에 반드시 기록
-- 검증 절차 포함하여 진행
-- Opus 모델 사용 필수 (아니면 WARNING)
+상세: `docs/DECISIONS.md`
+
+---
+
+## 5. 사용자 선호
+
+- 진행 과정을 MEMORY.md에 반드시 기록
+- 작은 데이터부터 검증하며 진행 (1시트 → 1파일 → 전체)
+- Opus 모델 사용 필수 (Vision), Sonnet은 텍스트용
 - AI 가독성 우선
-- API 키는 서브 프로젝트 내 `.env`에서 관리 (방침 변경)
+- API 키는 서브 프로젝트 내 `.env`에서 관리

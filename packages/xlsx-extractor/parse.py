@@ -701,6 +701,66 @@ def extract_cell_colors(xlsx_path, sheet_name):
     return result
 
 
+def extract_ooxml_text_corpus(xlsx_path, sheet_name):
+    """시트의 모든 텍스트를 OOXML에서 추출한다 (셀 + 도형).
+
+    Vision AI OCR 오타 교정의 ground truth로 사용.
+
+    Returns:
+        list[str]: 줄 단위로 분리된 텍스트 조각 목록
+    """
+    fragments = set()
+
+    # 1. 셀 텍스트 (openpyxl)
+    try:
+        import openpyxl
+        wb = openpyxl.load_workbook(xlsx_path, data_only=True)
+        if sheet_name in wb.sheetnames:
+            ws = wb[sheet_name]
+            for row in ws.iter_rows():
+                for cell in row:
+                    if cell.value and isinstance(cell.value, str):
+                        val = cell.value.strip()
+                        if val:
+                            # 멀티라인 셀은 줄 단위로 분리
+                            for line in val.split('\n'):
+                                line = line.strip()
+                                if len(line) >= 3:  # 너무 짧은 건 제외
+                                    fragments.add(line)
+        wb.close()
+    except Exception:
+        pass
+
+    # 2. 도형 텍스트 (drawing XML)
+    try:
+        sheet_drawing = get_sheet_drawing_map(xlsx_path)
+        drawing_path = sheet_drawing.get(sheet_name)
+        if drawing_path:
+            with zipfile.ZipFile(xlsx_path, 'r') as z:
+                tree = ET.fromstring(z.read(drawing_path))
+            a_ns = NS['a']
+            xdr_ns = NS['xdr']
+            for sp in tree.iter(f'{{{xdr_ns}}}sp'):
+                texts = []
+                for t in sp.iter(f'{{{a_ns}}}t'):
+                    if t.text:
+                        texts.append(t.text)
+                joined = ''.join(texts).strip()
+                if joined:
+                    # 도형 텍스트도 줄 단위 분리
+                    for line in joined.split('\n'):
+                        line = line.strip()
+                        if len(line) >= 3:
+                            fragments.add(line)
+                    # 전체 텍스트도 추가 (긴 구절 매칭용)
+                    if len(joined) >= 5:
+                        fragments.add(joined)
+    except Exception:
+        pass
+
+    return list(fragments)
+
+
 def extract_grade_colors(xlsx_path, sheet_name):
     """등급 테이블에서 등급명 → 색상 hex 매핑을 추출한다.
 

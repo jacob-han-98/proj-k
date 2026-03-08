@@ -27,8 +27,17 @@ import re
 import json
 import shutil
 import time
+import requests
 from pathlib import Path
 from datetime import datetime
+
+from dotenv import load_dotenv
+
+# .env 로드 (이 파일과 같은 디렉토리)
+load_dotenv(Path(__file__).parent / ".env")
+
+# ── 설정 ──
+OCR_MODEL = os.environ.get("OCR_MODEL", "claude-sonnet-4-5")
 
 # parse.py에서 OOXML 보정 함수 import
 from parse import (
@@ -41,7 +50,9 @@ from parse import (
     apply_corrections,
     extract_grade_colors,
     rgb_to_color_name,
+    extract_ooxml_text_corpus,
 )
+from difflib import SequenceMatcher
 
 
 # ── 타일 경계 중복 제거 (Dedup 2.0) ──
@@ -1235,6 +1246,213 @@ def _remove_incomplete_boundary_sections(text):
 
 # ── Parse 보정 ──
 
+def call_text_api(prompt, max_tokens=4096):
+    """Bedrock Claude API 텍스트 전용 호출 (OCR 교정용)."""
+    token = os.environ.get("AWS_BEARER_TOKEN_BEDROCK")
+    if not token:
+        raise RuntimeError("AWS_BEARER_TOKEN_BEDROCK 환경변수 미설정")
+    region = os.environ.get("AWS_REGION", "us-east-1")
+
+    model_mapping = {
+        "claude-opus": "global.anthropic.claude-opus-4-5-20251101-v1:0",
+        "claude-opus-4-5": "global.anthropic.claude-opus-4-5-20251101-v1:0",
+        "claude-sonnet-4-5": "global.anthropic.claude-sonnet-4-5-20250929-v1:0",
+        "claude-haiku-4-5": "global.anthropic.claude-haiku-4-5-20251001-v1:0",
+    }
+    model_id = model_mapping.get(OCR_MODEL, f"global.anthropic.{OCR_MODEL}-v1:0")
+
+    url = f"https://bedrock-runtime.{region}.amazonaws.com/model/{model_id}/invoke"
+
+    body = {
+        "anthropic_version": "bedrock-2023-05-31",
+        "max_tokens": max_tokens,
+        "temperature": 0,
+        "messages": [{"role": "user", "content": [{"type": "text", "text": prompt}]}],
+    }
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {token}",
+    }
+
+    t_start = time.time()
+    resp = requests.post(url, json=body, headers=headers, timeout=120)
+    t_api = time.time() - t_start
+
+    if resp.status_code != 200:
+        raise RuntimeError(f"API error {resp.status_code}: {resp.text[:500]}")
+
+    result = resp.json()
+    text = result["content"][0]["text"]
+    usage = result.get("usage", {})
+
+    return {
+        "text": text.strip(),
+        "input_tokens": usage.get("input_tokens", 0),
+        "output_tokens": usage.get("output_tokens", 0),
+        "api_s": round(t_api, 1),
+    }
+
+
+def correct_ocr_typos(md_text, xlsx_path, sheet_name):
+    """LLM 기반 OCR 오타 교정.
+
+    OOXML 원본 텍스트를 참고 자료로 제공하고,
+    Vision AI 출력에서 1~2자 수준의 OCR 인식 오류만 교정한다.
+    구조(헤딩, 마크다운, mermaid, 테이블 구조)는 절대 변경하지 않는다.
+
+    Returns: (corrected_text, corrections_list)
+    """
+    try:
+        corpus = extract_ooxml_text_corpus(xlsx_path, sheet_name)
+    except Exception:
+        return md_text, []
+
+    if not corpus:
+        return md_text, []
+
+    # OOXML 코퍼스 (4자 이상만)
+    corpus_lines = [c for c in corpus if len(c) >= 4]
+    corpus_text = '\n'.join(corpus_lines)
+
+    prompt = f"""아래에 두 가지 텍스트가 있습니다.
+
+[문서 A]: Vision AI가 Excel 기획서 스크린샷에서 OCR로 인식하여 마크다운으로 변환한 결과물
+[참고 자료 B]: 같은 Excel 파일의 OOXML(XML) 원본에서 프로그래밍으로 추출한 텍스트 조각들
+
+참고 자료 B는 문서 A와 순서나 구조가 다를 수 있습니다. 오타 교정을 위한 ground truth 참고용입니다.
+
+## 임무
+
+문서 A에서 **Vision AI OCR 글자 인식 오류로 인한 1~2자 수준의 오타**만 찾아주세요.
+참고 자료 B에 동일한 맥락의 올바른 텍스트가 있는 경우에만 교정 대상입니다.
+
+OCR 오타 예시:
+- ">" 가 실제로는 "2" (모양이 비슷한 글자 혼동)
+- "l"(소문자 L)이 실제로는 "1"
+- "O"(대문자 O)가 실제로는 "0"
+- 받침 누락/오인식 (한글 1자 단위)
+
+## 엄격한 규칙
+
+1. **구조 변경 절대 금지**: 헤딩(#), 테이블(|) 구조, mermaid 코드블록, 마크다운 문법, 줄 바꿈, 섹션 순서 등을 절대 변경하지 마세요
+2. **1~2자 OCR 오타만**: 단어 추가/삭제, 문장 재구성, 의미 변경은 모두 금지
+3. **할루시네이션 금지**: 참고 자료 B에서 확인할 수 없는 교정은 하지 마세요
+4. **확실한 것만**: 오타인지 불확실하면 교정하지 마세요
+
+## 출력 형식
+
+순수 JSON 배열만 출력하세요. 교정할 것이 없으면 `[]`을 출력하세요.
+다른 설명이나 텍스트는 일절 포함하지 마세요.
+
+```json
+[
+  {{"before": "오타 포함 원문 (전후 맥락 포함, 10~30자)", "after": "교정된 동일 구간", "reason": "간단한 이유"}}
+]
+```
+
+---
+
+## [문서 A] Vision AI OCR 결과
+
+{md_text}
+
+---
+
+## [참고 자료 B] OOXML 원본 텍스트
+
+{corpus_text}"""
+
+    try:
+        print(f"    OCR correction: calling {OCR_MODEL}...")
+        response = call_text_api(prompt)
+
+        # JSON 파싱 (LLM 응답이 깨질 수 있으므로 견고하게)
+        resp_text = response["text"]
+        json_match = re.search(r'\[.*\]', resp_text, re.DOTALL)
+        if not json_match:
+            print(f"    OCR correction: no JSON in response ({response['input_tokens']} in, {response['output_tokens']} out, {response['api_s']}s)")
+            return md_text, []
+
+        json_str = json_match.group()
+        try:
+            corrections = json.loads(json_str)
+        except json.JSONDecodeError:
+            # LLM이 JSON 내부에 이스케이프 안 된 개행/따옴표 포함 시 개별 객체 추출
+            corrections = []
+            for obj_match in re.finditer(
+                r'\{\s*"before"\s*:\s*"([^"]*?)"\s*,\s*"after"\s*:\s*"([^"]*?)"\s*,\s*"reason"\s*:\s*"([^"]*?)"\s*\}',
+                json_str
+            ):
+                corrections.append({
+                    "before": obj_match.group(1),
+                    "after": obj_match.group(2),
+                    "reason": obj_match.group(3),
+                })
+            if not corrections:
+                print(f"    OCR correction: JSON parse failed ({response['input_tokens']} in, {response['output_tokens']} out, {response['api_s']}s)")
+                return md_text, []
+
+        if not corrections:
+            print(f"    OCR correction: no typos found ({response['input_tokens']} in, {response['output_tokens']} out, {response['api_s']}s)")
+            return md_text, []
+
+        # 교정 적용 (건별 검증)
+        corrected = md_text
+        applied = []
+        original_line_count = len(md_text.split('\n'))
+
+        for c in corrections:
+            before = c.get("before", "")
+            after = c.get("after", "")
+            reason = c.get("reason", "")
+
+            if not before or not after or before == after:
+                continue
+
+            # 구조 보존 검증
+            if before.count('\n') != after.count('\n'):
+                continue
+            if before.count('#') != after.count('#'):
+                continue
+            if before.count('|') != after.count('|'):
+                continue
+            if before.count('```') != after.count('```'):
+                continue
+
+            # 변경 크기 검증 (실제 변경 글자 수 기준)
+            len_diff = abs(len(before) - len(after))
+            if len_diff > 3:
+                continue
+            # SequenceMatcher로 실제 변경 글자 수 계산
+            sm = SequenceMatcher(None, before, after)
+            changed_chars = sum(
+                max(i2 - i1, j2 - j1)
+                for op, i1, i2, j1, j2 in sm.get_opcodes()
+                if op != 'equal'
+            )
+            if changed_chars > 5:
+                print(f"      REJECTED (changed {changed_chars} chars): '{before[:30]}' → '{after[:30]}'")
+                continue
+
+            if before in corrected:
+                candidate = corrected.replace(before, after, 1)
+                # 라인 수 변경 검증
+                if len(candidate.split('\n')) != original_line_count:
+                    continue
+                corrected = candidate
+                applied.append(c)
+
+        print(f"    OCR correction: {len(applied)} fixes ({response['input_tokens']} in, {response['output_tokens']} out, {response['api_s']}s)")
+        for a in applied:
+            print(f"      '{a['before'][:40]}' → '{a['after'][:40]}' ({a.get('reason', '')})")
+
+        return corrected, applied
+
+    except Exception as e:
+        print(f"    OCR correction error: {e}")
+        return md_text, []
+
+
 def correct_grade_colors(md_text, xlsx_path, sheet_name):
     """OOXML 셀 배경색 데이터로 Vision AI의 근사 색상 표기를 보정한다.
 
@@ -1448,6 +1666,11 @@ def synthesize_sheet(sheet_dir, sheet_name, xlsx_path=None, source_name=""):
     color_corrections = 0
     if xlsx_path and os.path.exists(xlsx_path):
         md_text, color_corrections = correct_grade_colors(md_text, xlsx_path, sheet_name)
+
+    # 3.6. OCR 오타 교정 (OOXML 원본 텍스트 대조)
+    ocr_corrections = []
+    if xlsx_path and os.path.exists(xlsx_path):
+        md_text, ocr_corrections = correct_ocr_typos(md_text, xlsx_path, sheet_name)
 
     # 4. 메타데이터 헤더 추가
     md_text = add_metadata_header(md_text, sheet_name, source_name)

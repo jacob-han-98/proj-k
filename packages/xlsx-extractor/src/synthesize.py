@@ -39,19 +39,8 @@ load_dotenv(Path(__file__).parent.parent / ".env")
 # ── 설정 ──
 OCR_MODEL = os.environ.get("OCR_MODEL", "claude-sonnet-4-5")
 
-# parse.py에서 OOXML 보정 함수 import
-from parse import (
-    get_sheet_drawing_map,
-    extract_shapes_and_connectors,
-    group_flowcharts,
-    extract_mermaid_blocks,
-    match_mermaid_to_ooxml,
-    verify_and_correct_mermaid,
-    apply_corrections,
-    extract_grade_colors,
-    rgb_to_color_name,
-    extract_ooxml_text_corpus,
-)
+# parse_ooxml.py에서 유틸리티 import
+from parse_ooxml import rgb_to_color_name
 from difflib import SequenceMatcher
 
 
@@ -208,8 +197,14 @@ def _remove_analysis_metadata(text):
         line = lines[i]
         stripped = line.strip()
 
-        # skip 모드에서 mermaid 코드 블록 보존 체크
+        # skip 모드에서 mermaid/blockquote 보존 체크
         if skip_until_heading_level > 0:
+            # blockquote 주석 보존 (Step 4: 주석 정보 내의 > 라인은 원본 콘텐츠)
+            if stripped.startswith('> ') or stripped.startswith('>**'):
+                result_lines.append(line)
+                i += 1
+                continue
+
             # mermaid 코드 블록 시작 감지
             if stripped == '```mermaid':
                 preserving_mermaid = True
@@ -230,16 +225,32 @@ def _remove_analysis_metadata(text):
                 i += 1
                 continue
 
-            # 종료 조건: 같은 레벨 이하의 헤딩이 나올 때
-            heading_match = re.match(r'^(#{1,6})\s+', line)
+            # 종료 조건: 헤딩이 나올 때 메타데이터 헤딩인지 콘텐츠 헤딩인지 판별
+            heading_match = re.match(r'^(#{1,6})\s+(.+?)\s*$', line)
             if heading_match:
                 heading_level = len(heading_match.group(1))
-                if heading_level <= skip_until_heading_level:
-                    skip_until_heading_level = 0
-                    # 이 라인은 다시 일반 처리
-                else:
+                heading_title = heading_match.group(2).strip()
+
+                # 메타데이터 헤딩은 skip을 이어감 (새 skip으로 재진입)
+                is_meta_heading = (
+                    (heading_level == 2 and re.match(r'^Step\s+\d+', heading_title)) or
+                    (heading_level == 2 and heading_title == '주석 정보') or
+                    (heading_level == 2 and heading_title.startswith('시트 요약')) or
+                    (heading_level == 2 and re.match(r'^분석 결과\s*\(', heading_title)) or
+                    (heading_level == 1 and heading_title.startswith('플로우차트 분석'))
+                )
+
+                if is_meta_heading:
+                    # 메타데이터 헤딩 → skip 유지 (이 라인도 skip)
                     i += 1
                     continue
+                elif heading_level <= skip_until_heading_level:
+                    # 같은 레벨 이하의 콘텐츠 헤딩 → skip 종료 후 일반 처리
+                    skip_until_heading_level = 0
+                else:
+                    # 하위 레벨의 콘텐츠 헤딩 (예: Step 2 skip 중 ### 제목)
+                    # → 원본 콘텐츠이므로 skip 종료 후 일반 처리
+                    skip_until_heading_level = 0
             else:
                 i += 1
                 continue
@@ -1293,25 +1304,25 @@ def call_text_api(prompt, max_tokens=4096):
     }
 
 
-def correct_ocr_typos(md_text, xlsx_path, sheet_name):
+def correct_ocr_typos(md_text, text_corpus, sheet_name):
     """LLM 기반 OCR 오타 교정.
 
     OOXML 원본 텍스트를 참고 자료로 제공하고,
     Vision AI 출력에서 1~2자 수준의 OCR 인식 오류만 교정한다.
     구조(헤딩, 마크다운, mermaid, 테이블 구조)는 절대 변경하지 않는다.
 
+    Args:
+        md_text: 보정할 마크다운 텍스트
+        text_corpus: list[str] — OOXML 텍스트 조각들 (_parse_ooxml_output/text_corpus.json)
+        sheet_name: 시트 이름 (로그용)
+
     Returns: (corrected_text, corrections_list)
     """
-    try:
-        corpus = extract_ooxml_text_corpus(xlsx_path, sheet_name)
-    except Exception:
-        return md_text, []
-
-    if not corpus:
+    if not text_corpus:
         return md_text, []
 
     # OOXML 코퍼스 (4자 이상만)
-    corpus_lines = [c for c in corpus if len(c) >= 4]
+    corpus_lines = [c for c in text_corpus if len(c) >= 4]
     corpus_text = '\n'.join(corpus_lines)
 
     prompt = f"""아래에 두 가지 텍스트가 있습니다.
@@ -1453,20 +1464,15 @@ OCR 오타 예시:
         return md_text, []
 
 
-def correct_grade_colors(md_text, xlsx_path, sheet_name):
-    """OOXML 셀 배경색 데이터로 Vision AI의 근사 색상 표기를 보정한다.
+def correct_grade_colors(md_text, grade_colors):
+    """등급 색상 데이터로 Vision AI의 근사 색상 표기를 보정한다.
 
-    Vision AI는 등급 색상을 "(보라색)", "(빨간색)" 등 근사값으로 출력하지만
-    실제 OOXML 데이터와 다를 수 있다. 이 함수는 OOXML에서 정확한 RGB를
-    추출하여 테이블 내 색상 표기를 교정한다.
+    Args:
+        md_text: 보정할 마크다운 텍스트
+        grade_colors: dict {'등급명': '#RRGGBB', ...} (_parse_ooxml_output/grade_colors.json)
 
     Returns: (corrected_text, correction_count)
     """
-    try:
-        grade_colors = extract_grade_colors(xlsx_path, sheet_name)
-    except Exception:
-        return md_text, 0
-
     if not grade_colors:
         return md_text, 0
 
@@ -1496,65 +1502,9 @@ def correct_grade_colors(md_text, xlsx_path, sheet_name):
     return '\n'.join(result), corrections
 
 
-def apply_parse_corrections(md_text, xlsx_path, sheet_name):
-    """Parse(OOXML) 보정을 MD 텍스트에 적용한다.
-    Returns: (corrected_text, correction_log)
-    """
-    try:
-        sheet_drawing_map = get_sheet_drawing_map(xlsx_path)
-        drawing_path = sheet_drawing_map.get(sheet_name)
-        if not drawing_path:
-            return md_text, None
-
-        shapes, connectors = extract_shapes_and_connectors(xlsx_path, drawing_path)
-        if not connectors:
-            return md_text, None
-
-        groups = group_flowcharts(shapes, connectors)
-        if not groups:
-            return md_text, None
-
-        mermaid_blocks = extract_mermaid_blocks(md_text)
-        if not mermaid_blocks:
-            return md_text, {'message': 'No mermaid blocks'}
-
-        matches = match_mermaid_to_ooxml(mermaid_blocks, groups, shapes)
-
-        corrections_log = []
-        corrected = md_text
-
-        # 뒤에서부터 교체 (offset 유지)
-        for match in sorted(matches, key=lambda m: m['block']['start'], reverse=True):
-            block = match['block']
-            group = groups[match['group_index']]
-            result = verify_and_correct_mermaid(block['code'], group)
-
-            if result['missing_edges'] or result['extra_edges']:
-                corrected_code, added, removed = apply_corrections(block['code'], result)
-                new_block = f"```mermaid\n{corrected_code}\n```"
-                corrected = (
-                    corrected[:block['start']] +
-                    new_block +
-                    corrected[block['end']:]
-                )
-                corrections_log.append({
-                    'added_edges': added,
-                    'removed_edges': removed,
-                    'match_count': result['match_count'],
-                    'ooxml_edge_count': result['ooxml_edge_count'],
-                })
-            else:
-                corrections_log.append({
-                    'added_edges': [],
-                    'removed_edges': [],
-                    'match_count': result['match_count'],
-                    'ooxml_edge_count': result['ooxml_edge_count'],
-                    'message': 'All edges verified',
-                })
-
-        return corrected, {'corrections': corrections_log}
-    except Exception as e:
-        return md_text, {'error': str(e)}
+## apply_parse_corrections() 제거됨 — Stage 3 (parse_ooxml.py)에서
+## Mermaid 보정을 처리하고 _parse_ooxml_output/merged.md에 저장.
+## Stage 4는 이 보정본을 직접 읽는다.
 
 
 # ── 메타데이터 헤더 ──
@@ -1566,7 +1516,7 @@ def add_metadata_header(md_text, sheet_name, source_file):
     header = f"# {sheet_name}\n\n"
     header += f"> 원본: {source_file} / 시트: {sheet_name}\n"
     header += f"> 변환일: {today}\n"
-    header += f"> 파이프라인: xlsx-extractor v1 (Capture -> Vision -> Parse -> Synthesize)\n"
+    header += f"> 파이프라인: xlsx-extractor v1 (Capture → Vision → Parse OOXML → Synthesize)\n"
     header += "\n---\n\n"
 
     # 기존 첫 줄의 # SheetName 제거
@@ -1637,40 +1587,65 @@ def remove_dangling_image_refs(md_text, available_images):
 # ── 시트별 합성 ──
 
 def synthesize_sheet(sheet_dir, sheet_name, xlsx_path=None, source_name=""):
-    """한 시트의 Vision + Parse 결과를 합성하여 _final/ 출력을 생성한다."""
+    """한 시트의 Vision + Parse OOXML 결과를 합성하여 _final/ 출력을 생성한다."""
     vision_output_dir = os.path.join(sheet_dir, "_vision_output")
-    merged_path = os.path.join(vision_output_dir, "merged.md")
+    parse_ooxml_dir = os.path.join(sheet_dir, "_parse_ooxml_output")
 
-    if not os.path.exists(merged_path):
+    # 입력 소스 결정: _parse_ooxml_output/merged.md (보정본) > _vision_output/merged.md (원본)
+    parse_merged = os.path.join(parse_ooxml_dir, "merged.md")
+    vision_merged = os.path.join(vision_output_dir, "merged.md")
+
+    if os.path.exists(parse_merged):
+        merged_path = parse_merged
+        input_source = "parse_ooxml (corrected)"
+    elif os.path.exists(vision_merged):
+        merged_path = vision_merged
+        input_source = "vision (original)"
+    else:
         return {"success": False, "error": "merged.md not found", "sheet_name": sheet_name}
 
     t_start = time.time()
 
-    # 1. Vision 출력 읽기
+    # 1. 입력 읽기
+    print(f"    input: {input_source}")
     with open(merged_path, "r", encoding="utf-8") as f:
         md_text = f.read()
 
     original_lines = len(md_text.split('\n'))
 
     # 2. 타일 경계 중복 제거
+    t_dedup = time.time()
     md_text = deduplicate_tile_boundaries(md_text, sheet_name)
+    t_dedup_done = time.time()
     deduped_lines = len(md_text.split('\n'))
     lines_removed = original_lines - deduped_lines
 
-    # 3. Parse 보정 적용 (OOXML Mermaid 검증)
+    # 3. Parse OOXML 보정 데이터 로드 (Stage 3에서 이미 Mermaid 보정 완료)
     parse_result = None
-    if xlsx_path and os.path.exists(xlsx_path):
-        md_text, parse_result = apply_parse_corrections(md_text, xlsx_path, sheet_name)
+    parse_meta_path = os.path.join(parse_ooxml_dir, "parse_meta.json")
+    if os.path.exists(parse_meta_path):
+        with open(parse_meta_path, "r", encoding="utf-8") as f:
+            parse_result = json.load(f)
 
-    # 3.5. 등급 색상 보정 (OOXML 셀 배경색 → Vision AI 근사값 교정)
+    # 3.5. 등급 색상 보정 (_parse_ooxml_output/grade_colors.json 참조)
+    t_colors = time.time()
     color_corrections = 0
-    if xlsx_path and os.path.exists(xlsx_path):
-        md_text, color_corrections = correct_grade_colors(md_text, xlsx_path, sheet_name)
+    grade_colors_path = os.path.join(parse_ooxml_dir, "grade_colors.json")
+    if os.path.exists(grade_colors_path):
+        with open(grade_colors_path, "r", encoding="utf-8") as f:
+            grade_colors = json.load(f)
+        md_text, color_corrections = correct_grade_colors(md_text, grade_colors)
+    t_colors_done = time.time()
 
-    # 3.6. OCR 오타 교정 (OOXML 원본 텍스트 대조)
+    # 3.6. OCR 오타 교정 (_parse_ooxml_output/text_corpus.json 참조)
+    t_ocr = time.time()
     ocr_corrections = []
-    if xlsx_path and os.path.exists(xlsx_path):
-        md_text, ocr_corrections = correct_ocr_typos(md_text, xlsx_path, sheet_name)
+    text_corpus_path = os.path.join(parse_ooxml_dir, "text_corpus.json")
+    if os.path.exists(text_corpus_path):
+        with open(text_corpus_path, "r", encoding="utf-8") as f:
+            text_corpus = json.load(f)
+        md_text, ocr_corrections = correct_ocr_typos(md_text, text_corpus, sheet_name)
+    t_ocr_done = time.time()
 
     # 4. 메타데이터 헤더 추가
     md_text = add_metadata_header(md_text, sheet_name, source_name)
@@ -1679,6 +1654,7 @@ def synthesize_sheet(sheet_dir, sheet_name, xlsx_path=None, source_name=""):
     referenced_images = collect_referenced_images(md_text)
 
     # 6. _final/ 디렉토리 생성 및 서브 이미지 복사
+    t_images = time.time()
     final_dir = os.path.join(sheet_dir, "_final")
     final_images_dir = os.path.join(final_dir, "images")
     os.makedirs(final_dir, exist_ok=True)
@@ -1690,6 +1666,7 @@ def synthesize_sheet(sheet_dir, sheet_name, xlsx_path=None, source_name=""):
 
     # 7. Dangling 이미지 참조 처리 (dedup으로 제거된 섹션의 이미지 등)
     md_text = remove_dangling_image_refs(md_text, set(img_files))
+    t_images_done = time.time()
 
     # 8. content.md 출력
     content_path = os.path.join(final_dir, "content.md")
@@ -1697,6 +1674,20 @@ def synthesize_sheet(sheet_dir, sheet_name, xlsx_path=None, source_name=""):
         f.write(md_text)
 
     elapsed = time.time() - t_start
+
+    # 타이밍 로그
+    timing = {
+        'total_s': round(elapsed, 2),
+        'dedup_s': round(t_dedup_done - t_dedup, 2),
+        'color_correction_s': round(t_colors_done - t_colors, 2),
+        'ocr_correction_s': round(t_ocr_done - t_ocr, 2),
+        'images_s': round(t_images_done - t_images, 2),
+    }
+    print(f"    => {len(md_text.split(chr(10)))} lines, {len(md_text.encode('utf-8')):,} bytes, "
+          f"dedup=-{lines_removed} lines, {img_copied} images ({img_skipped} skipped)  "
+          f"parse={'corrected' if input_source.startswith('parse') else 'n/a'}  "
+          f"({elapsed:.2f}s: dedup={timing['dedup_s']}s colors={timing['color_correction_s']}s "
+          f"ocr={timing['ocr_correction_s']}s images={timing['images_s']}s)")
 
     return {
         "success": True,
@@ -1709,6 +1700,7 @@ def synthesize_sheet(sheet_dir, sheet_name, xlsx_path=None, source_name=""):
         "images_skipped": img_skipped,
         "parse_corrections": parse_result,
         "elapsed_s": round(elapsed, 2),
+        "timing": timing,
     }
 
 
@@ -1736,7 +1728,8 @@ def process_all(output_dir, xlsx_path=None, target_sheet=None):
             sheets.append({"name": real_name, "dir_name": entry, "dir": entry_path})
 
     if target_sheet:
-        sheets = [s for s in sheets if s["name"] == target_sheet or s["dir_name"] == target_sheet]
+        target_names = {t.strip() for t in target_sheet.split(",")}
+        sheets = [s for s in sheets if s["name"] in target_names or s["dir_name"] in target_names]
 
     total = len(sheets)
     print(f"[Synthesize] Processing {total} sheets from {source_name}")
@@ -1755,24 +1748,7 @@ def process_all(output_dir, xlsx_path=None, target_sheet=None):
         result = synthesize_sheet(sheet_dir, name, xlsx_path, source_name)
         all_results.append(result)
 
-        if result["success"]:
-            parse_info = ""
-            if result["parse_corrections"]:
-                corrs = result["parse_corrections"].get("corrections", [])
-                total_added = sum(len(c.get("added_edges", [])) for c in corrs)
-                if total_added > 0:
-                    parse_info = f"  parse=+{total_added} edges"
-                elif corrs:
-                    parse_info = "  parse=verified"
-
-            print(f"    => {result['content_lines']} lines, "
-                  f"{result['content_bytes']:,} bytes, "
-                  f"dedup=-{result['lines_deduped']} lines, "
-                  f"{result['images_copied']} images "
-                  f"({result['images_skipped']} skipped)"
-                  f"{parse_info}  "
-                  f"({result['elapsed_s']:.2f}s)")
-        else:
+        if not result["success"]:
             print(f"    => FAILED: {result.get('error', '?')}")
 
     elapsed = time.time() - t_start

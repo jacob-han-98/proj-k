@@ -1,13 +1,20 @@
 #!/usr/bin/env python3
 """
-parse.py - Stage 3: OOXML 커넥터 검증 + Vision AI Mermaid 보정
+parse_ooxml.py - Stage 3: OOXML 커넥터 검증 + Vision AI Mermaid 보정
 
 Vision AI가 생성한 Mermaid 플로우차트를 OOXML drawing XML의 커넥터 데이터로
-검증하고 보정한다.
+검증하고 보정한다. 결과는 _parse_ooxml_output/ 에 저장한다.
+
+입력: _vision_output/merged.md + 원본 XLSX
+출력: _parse_ooxml_output/
+  - merged.md         (Mermaid 보정이 있을 때만 생성)
+  - parse_meta.json   (검증 결과 메타데이터, 항상 생성)
+  - grade_colors.json (등급 색상 매핑, 데이터 있을 때만)
+  - text_corpus.json  (OOXML 텍스트 코퍼스, OCR 교정용)
 
 사용법:
-    python parse.py <xlsx_path> <vision_output_dir>
-    python parse.py <xlsx_path> <vision_output_dir> --sheet "시트이름"
+    python parse_ooxml.py <xlsx_path> <output_base_dir>
+    python parse_ooxml.py <xlsx_path> <output_base_dir> --sheet "시트이름"
 """
 
 import sys
@@ -554,79 +561,153 @@ def correct_md_file(md_path, ooxml_groups, all_shapes):
                 'message': 'All edges verified - no corrections needed',
             })
 
-    # 보정된 파일 저장
-    if any(c.get('added_edges') or c.get('removed_edges') for c in all_corrections):
-        with open(md_path, 'w', encoding='utf-8') as f:
-            f.write(corrected_text)
+    has_corrections = any(c.get('added_edges') or c.get('removed_edges') for c in all_corrections)
 
     return {
-        'path': md_path,
+        'original_text': md_text,
+        'corrected_text': corrected_text if has_corrections else None,
+        'has_corrections': has_corrections,
         'corrections': all_corrections,
     }
 
 
 # ── 메인 ──
 
-def process_sheet_parse(xlsx_path, vision_output_dir, sheet_name):
-    """한 시트의 Vision 결과를 OOXML로 검증/보정한다."""
-    # 1. 시트 -> drawing 매핑
-    sheet_drawing_map = get_sheet_drawing_map(xlsx_path)
-    drawing_path = sheet_drawing_map.get(sheet_name)
-    if not drawing_path:
-        print(f"  [parse] {sheet_name}: no drawing XML found -skip")
-        return None
+def process_sheet(xlsx_path, sheet_dir, sheet_name):
+    """한 시트의 Vision 결과를 OOXML로 검증/보정한다.
 
-    # 2. OOXML 도형/커넥터 추출
-    shapes, connectors = extract_shapes_and_connectors(xlsx_path, drawing_path)
-    print(f"  [parse] {sheet_name}: {len(shapes)} shapes, {len(connectors)} connectors from {drawing_path}")
+    입력: sheet_dir/_vision_output/merged.md + 원본 XLSX
+    출력: sheet_dir/_parse_ooxml_output/ (중간 결과)
+    """
+    vision_output_dir = os.path.join(sheet_dir, '_vision_output')
+    parse_output_dir = os.path.join(sheet_dir, '_parse_ooxml_output')
 
-    if not connectors:
-        print(f"  [parse] {sheet_name}: no connectors -skip verification")
-        return None
-
-    # 3. 플로우차트 그룹핑
-    groups = group_flowcharts(shapes, connectors)
-    print(f"  [parse] {sheet_name}: {len(groups)} flowchart groups detected")
-    for gi, g in enumerate(groups):
-        node_texts = [s['text'] for s in g['shapes'].values() if s['text']][:5]
-        print(f"    group[{gi}]: {len(g['shapes'])} shapes, {len(g['connectors'])} connectors -{node_texts}")
-
-    # 4. Vision output MD 파일 찾기
+    # 1. Vision merged.md 확인
     merged_path = os.path.join(vision_output_dir, 'merged.md')
     if not os.path.exists(merged_path):
-        print(f"  [parse] {sheet_name}: merged.md not found")
+        print(f"  [parse_ooxml] {sheet_name}: merged.md not found - skip")
         return None
 
-    # 5. Mermaid 보정
-    result = correct_md_file(merged_path, groups, shapes)
+    import time as _time
+    t_total = _time.time()
 
-    # 6. 결과 보고
-    for ci, corr in enumerate(result.get('corrections', [])):
-        res = corr.get('result', {})
-        added = corr.get('added_edges', [])
-        msg = corr.get('message', '')
-        print(f"    mermaid[{ci}]: match={res.get('match_count', 0)}/{res.get('ooxml_edge_count', 0)} ooxml edges, "
-              f"missing={len(res.get('missing_edges', []))}, extra={len(res.get('extra_edges', []))}")
-        if added:
-            for a in added:
-                print(f"      + ADDED: {a}")
-        if msg:
-            print(f"      {msg}")
+    # 2. 출력 디렉토리 생성
+    os.makedirs(parse_output_dir, exist_ok=True)
 
-    # 7. 메타데이터 저장
+    # 3. 시트 -> drawing 매핑
+    sheet_drawing_map = get_sheet_drawing_map(xlsx_path)
+    drawing_path = sheet_drawing_map.get(sheet_name)
+
+    has_mermaid_corrections = False
+    mermaid_result = None
+    shapes_count = 0
+    connectors_count = 0
+    groups_count = 0
+
+    t_ooxml = _time.time()
+    if drawing_path:
+        # 4. OOXML 도형/커넥터 추출
+        shapes, connectors = extract_shapes_and_connectors(xlsx_path, drawing_path)
+        shapes_count = len(shapes)
+        connectors_count = len(connectors)
+        print(f"  [parse_ooxml] {sheet_name}: {shapes_count} shapes, {connectors_count} connectors from {drawing_path}")
+
+        if connectors:
+            # 5. 플로우차트 그룹핑
+            groups = group_flowcharts(shapes, connectors)
+            groups_count = len(groups)
+            print(f"  [parse_ooxml] {sheet_name}: {groups_count} flowchart groups detected")
+            for gi, g in enumerate(groups):
+                node_texts = [s['text'] for s in g['shapes'].values() if s['text']][:5]
+                print(f"    group[{gi}]: {len(g['shapes'])} shapes, {len(g['connectors'])} connectors - {node_texts}")
+
+            # 6. Mermaid 보정 (in-memory, 원본 수정 안 함)
+            mermaid_result = correct_md_file(merged_path, groups, shapes)
+
+            # 7. 결과 보고
+            for ci, corr in enumerate(mermaid_result.get('corrections', [])):
+                res = corr.get('result', {})
+                added = corr.get('added_edges', [])
+                msg = corr.get('message', '')
+                print(f"    mermaid[{ci}]: match={res.get('match_count', 0)}/{res.get('ooxml_edge_count', 0)} ooxml edges, "
+                      f"missing={len(res.get('missing_edges', []))}, extra={len(res.get('extra_edges', []))}")
+                if added:
+                    for a in added:
+                        print(f"      + ADDED: {a}")
+                if msg:
+                    print(f"      {msg}")
+
+            # 8. 보정된 merged.md 저장 (변경이 있을 때만)
+            has_mermaid_corrections = mermaid_result.get('has_corrections', False)
+            if has_mermaid_corrections:
+                corrected_md_path = os.path.join(parse_output_dir, 'merged.md')
+                with open(corrected_md_path, 'w', encoding='utf-8') as f:
+                    f.write(mermaid_result['corrected_text'])
+                print(f"  [parse_ooxml] {sheet_name}: corrected merged.md saved → _parse_ooxml_output/")
+            else:
+                print(f"  [parse_ooxml] {sheet_name}: no mermaid corrections needed")
+        else:
+            print(f"  [parse_ooxml] {sheet_name}: no connectors - skip mermaid verification")
+    else:
+        print(f"  [parse_ooxml] {sheet_name}: no drawing XML found - skip mermaid verification")
+    t_ooxml_done = _time.time()
+
+    # 9. 등급 색상 추출
+    t_colors = _time.time()
+    grade_colors = extract_grade_colors(xlsx_path, sheet_name)
+    if grade_colors:
+        gc_path = os.path.join(parse_output_dir, 'grade_colors.json')
+        with open(gc_path, 'w', encoding='utf-8') as f:
+            json.dump(grade_colors, f, ensure_ascii=False, indent=2)
+        print(f"  [parse_ooxml] {sheet_name}: {len(grade_colors)} grade colors extracted")
+
+    t_colors_done = _time.time()
+
+    # 10. OOXML 텍스트 코퍼스 추출 (OCR 교정용)
+    t_corpus = _time.time()
+    text_corpus = extract_ooxml_text_corpus(xlsx_path, sheet_name)
+    if text_corpus:
+        tc_path = os.path.join(parse_output_dir, 'text_corpus.json')
+        with open(tc_path, 'w', encoding='utf-8') as f:
+            json.dump(text_corpus, f, ensure_ascii=False, indent=2)
+        print(f"  [parse_ooxml] {sheet_name}: {len(text_corpus)} text fragments extracted")
+
+    t_corpus_done = _time.time()
+    t_elapsed = t_corpus_done - t_total
+
+    # 타이밍 로그
+    timing = {
+        'total_s': round(t_elapsed, 2),
+        'ooxml_mermaid_s': round(t_ooxml_done - t_ooxml, 2),
+        'grade_colors_s': round(t_colors_done - t_colors, 2),
+        'text_corpus_s': round(t_corpus_done - t_corpus, 2),
+    }
+    print(f"  [parse_ooxml] {sheet_name}: {t_elapsed:.1f}s total "
+          f"(ooxml={timing['ooxml_mermaid_s']:.1f}s, colors={timing['grade_colors_s']:.1f}s, corpus={timing['text_corpus_s']:.1f}s)")
+
+    # 11. 메타데이터 저장 (항상)
     meta = {
         'sheet_name': sheet_name,
         'drawing_path': drawing_path,
-        'shapes_count': len(shapes),
-        'connectors_count': len(connectors),
-        'flowchart_groups': len(groups),
-        'corrections': result.get('corrections', []),
+        'shapes_count': shapes_count,
+        'connectors_count': connectors_count,
+        'flowchart_groups': groups_count,
+        'has_mermaid_corrections': has_mermaid_corrections,
+        'has_grade_colors': bool(grade_colors),
+        'has_text_corpus': bool(text_corpus),
+        'corrections': mermaid_result.get('corrections', []) if mermaid_result else [],
+        'timing': timing,
     }
-    meta_path = os.path.join(vision_output_dir, 'parse_meta.json')
+    meta_path = os.path.join(parse_output_dir, 'parse_meta.json')
     with open(meta_path, 'w', encoding='utf-8') as f:
         json.dump(meta, f, ensure_ascii=False, indent=2, default=str)
 
-    return result
+    return {
+        'has_mermaid_corrections': has_mermaid_corrections,
+        'has_grade_colors': bool(grade_colors),
+        'has_text_corpus': bool(text_corpus),
+        'corrections': mermaid_result.get('corrections', []) if mermaid_result else [],
+    }
 
 
 # ── OOXML 셀 색상 추출 ──
@@ -864,12 +945,12 @@ def rgb_to_color_name(hex_rgb):
 
 def main():
     if len(sys.argv) < 3:
-        print("Usage: python parse.py <xlsx_path> <vision_output_base_dir> [--sheet <name>]")
-        print("Example: python parse.py ../../7_System/PK_변신.xlsx output/PK_변신/ --sheet 변신")
+        print("Usage: python parse_ooxml.py <xlsx_path> <output_base_dir> [--sheet <name>]")
+        print("Example: python parse_ooxml.py ../../7_System/PK_변신.xlsx output/PK_변신/ --sheet 변신")
         sys.exit(1)
 
     xlsx_path = sys.argv[1]
-    vision_base = sys.argv[2]
+    output_base = sys.argv[2]
     target_sheet = None
     if '--sheet' in sys.argv:
         idx = sys.argv.index('--sheet')
@@ -880,24 +961,30 @@ def main():
         sys.exit(1)
 
     if target_sheet:
-        safe_name = target_sheet
+        sname = target_sheet
         for ch in '/\\:*?"<>|':
-            safe_name = safe_name.replace(ch, '_')
-        vision_output_dir = os.path.join(vision_base, safe_name, '_vision_output')
-        if not os.path.isdir(vision_output_dir):
-            print(f"ERROR: {vision_output_dir} not found")
+            sname = sname.replace(ch, '_')
+        sheet_dir = os.path.join(output_base, sname)
+        if not os.path.isdir(sheet_dir):
+            print(f"ERROR: {sheet_dir} not found")
             sys.exit(1)
-        process_sheet_parse(xlsx_path, vision_output_dir, target_sheet)
+        process_sheet(xlsx_path, sheet_dir, target_sheet)
     else:
         # 모든 시트 처리
-        sheet_map = get_sheet_drawing_map(xlsx_path)
-        for sheet_name in sheet_map:
-            safe_name = sheet_name
-            for ch in '/\\:*?"<>|':
-                safe_name = safe_name.replace(ch, '_')
-            vision_output_dir = os.path.join(vision_base, safe_name, '_vision_output')
-            if os.path.isdir(vision_output_dir):
-                process_sheet_parse(xlsx_path, vision_output_dir, sheet_name)
+        for entry in sorted(os.listdir(output_base)):
+            sheet_dir = os.path.join(output_base, entry)
+            if not os.path.isdir(sheet_dir) or entry.startswith('_'):
+                continue
+            vision_dir = os.path.join(sheet_dir, '_vision_output')
+            if os.path.isdir(vision_dir):
+                # tile_manifest에서 실제 시트 이름 가져오기
+                tm_path = os.path.join(sheet_dir, '_vision_input', 'tile_manifest.json')
+                real_name = entry
+                if os.path.exists(tm_path):
+                    with open(tm_path, 'r', encoding='utf-8') as f:
+                        tm = json.load(f)
+                    real_name = tm.get('sheet_name', entry)
+                process_sheet(xlsx_path, sheet_dir, real_name)
 
 
 if __name__ == '__main__':

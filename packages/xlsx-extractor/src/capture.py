@@ -56,22 +56,31 @@ def get_sheet_names(xlsx_path):
 # Phase 1: Excel COM CopyPicture → 시트별 전체 PNG
 # ══════════════════════════════════════════════════════════════
 
-def phase1_capture_images(xlsx_path, output_base, sheet_indices, sheet_names):
-    """Phase 1: Excel COM으로 시트별 전체 PNG 캡처 (페이지 나눔 없음)"""
+def phase1_capture_images(xlsx_path, output_base, sheet_indices, sheet_names, excel_app=None):
+    """Phase 1: Excel COM으로 시트별 전체 PNG 캡처 (페이지 나눔 없음)
+
+    Args:
+        excel_app: 기존 Excel.Application COM 객체. None이면 새로 생성.
+    """
     import win32com.client
     from PIL import ImageGrab
 
     xlsx_path = os.path.abspath(xlsx_path)
     total = len(sheet_indices)
 
+    own_excel = excel_app is None
+
     print(f"[Phase 1] Excel COM CopyPicture ({total} sheets)")
     t_start = time.time()
 
-    excel = win32com.client.Dispatch("Excel.Application")
-    excel.Visible = False
-    excel.DisplayAlerts = False
-    excel.Interactive = False
-    excel.AskToUpdateLinks = False
+    if own_excel:
+        excel = win32com.client.Dispatch("Excel.Application")
+        excel.Visible = False
+        excel.DisplayAlerts = False
+        excel.Interactive = False
+        excel.AskToUpdateLinks = False
+    else:
+        excel = excel_app
     # NOTE: ScreenUpdating는 반드시 True여야 CopyPicture(xlScreen)이 작동함
     # Visible=False + Interactive=False로 팝업 억제
 
@@ -138,10 +147,11 @@ def phase1_capture_images(xlsx_path, output_base, sheet_indices, sheet_names):
     except Exception as e:
         print(f"[Phase 1] Excel open error: {e}")
     finally:
-        try:
-            excel.Quit()
-        except Exception:
-            pass
+        if own_excel:
+            try:
+                excel.Quit()
+            except Exception:
+                pass
 
     results.sort(key=lambda r: r["sheet_index"])
 
@@ -368,7 +378,8 @@ def phase2_split_images(capture_results):
 # 메인
 # ══════════════════════════════════════════════════════════════
 
-def capture_all(xlsx_path, output_dir, target_sheet=None):
+def capture_all(xlsx_path, output_dir, target_sheet=None, excel_app=None):
+    """전체 캡처 파이프라인. excel_app을 전달하면 기존 Excel 인스턴스를 재사용한다."""
     xlsx_path = os.path.abspath(xlsx_path)
     output_dir = os.path.abspath(output_dir)
 
@@ -378,10 +389,16 @@ def capture_all(xlsx_path, output_dir, target_sheet=None):
     os.makedirs(output_base, exist_ok=True)
 
     if target_sheet:
-        if target_sheet in sheet_names:
-            indices = [sheet_names.index(target_sheet)]
-        else:
-            print(f"ERROR: sheet '{target_sheet}' not found. Available: {sheet_names}")
+        # 콤마 구분 멀티 시트 지원
+        target_names = [t.strip() for t in target_sheet.split(",")]
+        indices = []
+        for tn in target_names:
+            if tn in sheet_names:
+                indices.append(sheet_names.index(tn))
+            else:
+                print(f"WARNING: sheet '{tn}' not found. Available: {sheet_names}")
+        if not indices:
+            print(f"ERROR: no matching sheets found")
             return []
     else:
         indices = list(range(len(sheet_names)))
@@ -392,7 +409,7 @@ def capture_all(xlsx_path, output_dir, target_sheet=None):
     print()
 
     # Phase 1: Excel COM CopyPicture → 시트별 전체 PNG
-    capture_results = phase1_capture_images(xlsx_path, output_base, indices, sheet_names)
+    capture_results = phase1_capture_images(xlsx_path, output_base, indices, sheet_names, excel_app=excel_app)
 
     # Phase 2: 전체 PNG → 개요 + 분할 타일 (병렬)
     split_results = phase2_split_images(capture_results)

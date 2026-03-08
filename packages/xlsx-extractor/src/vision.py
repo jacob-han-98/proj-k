@@ -617,7 +617,7 @@ def process_sheet(sheet_dir, sheet_name):
 
         # 빈 타일 감지: 거의 흰색인 이미지는 Vision API 호출 없이 skip
         if is_blank_tile(tile_path):
-            print(f"  ⚪ {tile_id}: blank tile (skipped)")
+            print(f"  [BLANK] {tile_id}: blank tile (skipped)")
             results.append({"tile_id": tile_id, "success": True, "skipped": True,
                             "reason": "blank_tile", "md": ""})
             continue

@@ -9,7 +9,7 @@
 
 **PK_변신 및 스킬 시스템.xlsx** — 13시트, 사용자가 가장 익숙한 파일로 개발/검증 진행 중
 
-## 현재 상태: Stage 1-4 구현 완료 + Dedup 2.5 + OOXML 보정 (색상/플로우차트/OCR), Verification 미착수
+## 현재 상태: 전체 104파일 일괄 변환 완료 (623/635 시트 OK, 98.1%)
 
 ---
 
@@ -173,9 +173,69 @@ OVERLAP_RATIO = 0.10    # 인접 타일 오버랩
 | 테이블 정보 | 1 | OK | 0 |
 | 히스토리 | 4 | OK | 0 |
 
-### Stage 3: Parse (OOXML 커넥터 검증 구현 완료, 2026-03-08)
+### run.py v2 — 시트별 병렬 워크플로우 (2026-03-08)
 
-**구현**: `parse.py` — OOXML drawing XML에서 도형/커넥터를 추출하여 Vision AI Mermaid 보정
+**구현**: `run.py` — 배치 입력 + 시트별 독립 파이프라인
+
+**v1 → v2 아키텍처 변경**:
+- v1: Stage별로 모든 시트 처리 (Capture ALL → Vision ALL → Parse ALL → Synth ALL)
+- **v2: 시트별 독립 워크플로우** (각 시트가 Vision→Parse→Synth 순차, N개 병렬)
+
+**2단계 실행 구조**:
+- Phase A (순차): Capture — 단일 Excel COM 인스턴스로 모든 파일/시트 캡처
+  - `capture.py`에 `excel_app` 파라미터 추가 → 104개 파일을 1개 Excel로 처리
+- Phase B (병렬 N): Vision → Parse → Synthesize — 시트별 독립 워크플로우
+  - ThreadPoolExecutor로 N개 워커, 각각 1시트씩 전 Stage 순차 처리
+
+**CLI**:
+- 다중 입력: `run.py file1.xlsx folder/ --parallel 10`
+- `--all`: 모든 알려진 폴더 (7_System, 2_Development, 3_Base, 9_MileStone)
+- `--parallel N`: 시트별 병렬 워커 수 (default: 1)
+- `--force`: 이미 완료된 시트도 재처리 (기본: `_final/content.md` 있으면 skip)
+- `--sheet`, `--stage`, `--clean`, `--dry-run` 기존 호환
+
+**검증**: PK_단축키 시스템.xlsx (3시트, parallel=3) — 58초, 3/3 OK
+
+**전체 실행 결과 (2026-03-08)**:
+
+| 항목 | 값 |
+|---|---|
+| 입력 | 104 files, 635 sheets (16 skipped as already done) |
+| 설정 | `--all --parallel 10` |
+| **총 소요 시간** | **109.2분 (1시간 49분)** |
+| Phase A (Capture) | 99/104 파일 캡처 (5파일은 이미 완료) |
+| Phase B (Pipeline) | **623/635 시트 OK, 12 실패** |
+| 총 토큰 | 12,318,975 (약 1,230만) |
+| 성공률 | **98.1%** |
+
+**실패 12건 (모두 Capture 단계 CopyPicture 오류 → tile_manifest.json 없음)**:
+- PK_레벨업 시스템/개요, PK_인스턴스 시스템/temp, PK_전투력 시스템/전투력 시스템
+- PK_캐릭터 성장 밸런스/장비 밸런스, PK_텔레포트 시스템/텔레포트
+- PK_튜토리얼,도움말_시스템/개요, PK_장비 밸런스 및 데이터/장비 분해 밸런스+장비 제작
+- PK_리니지M_데이터구조/데이터 구조 추출, PK_바리울_레벨/!!숨기기 있음!!
+- PK_비대면 지문/목표 및 개요, PK_프로토 플레이 콘티/맵과 씬 연결
+- 원인: Excel COM `CopyPicture` 메서드 오류 (빈 시트, 차트 전용, 숨겨진 시트 등)
+
+### synthesize.py dedup 버그 수정 (2026-03-08)
+
+**증상**: 변신 시트 content.md에서 (5)~(8) 섹션 전체 누락
+**원인**: `_remove_analysis_metadata()`에서 `## Step 4: 주석 정보`가 `skip_until_heading_level = 2` 설정 → 이후 `### (5) 성장&강화` 등 level 3 헤딩이 모두 스킵됨
+**수정**: 스킵 종료 로직을 메타데이터 헤딩(Step, 주석 정보 등)과 콘텐츠 헤딩 구분으로 변경. 콘텐츠 헤딩이면 레벨 무관하게 스킵 즉시 종료. blockquote 보존도 추가.
+
+### Stage 3: Parse OOXML (리팩토링 완료, 2026-03-08)
+
+**구현**: `parse_ooxml.py` (구 parse.py에서 이름 변경)
+**변경**: Vision 출력 in-place 수정 → `_parse_ooxml_output/` 중간 결과 디렉토리로 분리
+
+**입출력**:
+- 입력: 원본 XLSX + `_vision_output/merged.md`
+- 출력: `_parse_ooxml_output/`
+  - `merged.md` — Mermaid 보정이 있을 때만 생성
+  - `parse_meta.json` — 검증 결과 메타데이터 (항상)
+  - `grade_colors.json` — 등급 색상 매핑 (데이터 있을 때)
+  - `text_corpus.json` — OOXML 텍스트 코퍼스 (OCR 교정용)
+
+**Stage 4 연동**: synthesize.py가 `_parse_ooxml_output/merged.md` 존재 시 사용, 없으면 `_vision_output/merged.md` fallback
 
 **핵심 기능 (구현됨)**:
 1. **OOXML 도형/커넥터 추출**: `xl/drawings/drawingN.xml`에서 sp(도형) + cxnSp(커넥터) 파싱
@@ -338,13 +398,14 @@ packages/xlsx-extractor/
 ├── src/
 │   ├── capture.py      # Stage 1 (Excel COM 캡처)
 │   ├── vision.py       # Stage 2 (Vision AI 분석)
-│   ├── parse.py        # Stage 3 (OOXML 보정)
+│   ├── parse_ooxml.py  # Stage 3 (Parse OOXML)
 │   └── synthesize.py   # Stage 4 (합성 + dedup + OCR 교정)
 ├── docs/
 │   ├── MEMORY.md       # 이 파일 - 작업 기록
 │   ├── README.md       # 서브 프로젝트 개요
 │   ├── SPEC.md         # 상세 스펙
 │   └── VERIFICATION.md # 검증 프로토콜
+├── run.py              # 통합 파이프라인 실행 스크립트
 ├── .env.example        # 환경변수 템플릿
 └── output/             # 변환 결과물 (.gitignore)
 ```

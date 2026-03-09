@@ -51,22 +51,10 @@ def check_rejection(answer: str) -> dict:
     # 거부 답변인지 판정
     is_rejection = len(found_keywords) > 0
 
-    # 거부하면서도 구체적 정보를 지어내는 경우 체크
-    # (예: "해당 정보를 찾을 수 없습니다" 라면서 뒤에 구체적 수치를 나열하는 경우)
+    # 거부 + 관련 정보 제공 패턴 분석
+    # "찾을 수 없습니다" 후 관련 정보를 보여주는 것은 올바른 답변 패턴
+    # 할루시네이션은 "거부 없이 가짜 정보를 확정적으로 답변"하는 경우
     has_specific_claims = False
-    if is_rejection:
-        # 거부 문장 이후에 구체적 테이블/수치가 나오면 의심
-        lines = answer.split("\n")
-        rejection_line_idx = -1
-        for i, line in enumerate(lines):
-            if any(kw in line.lower() for kw in REJECTION_KEYWORDS):
-                rejection_line_idx = i
-                break
-        # 거부 이후 줄에 테이블(|)이나 수식이 있으면 의심
-        if rejection_line_idx >= 0:
-            after = "\n".join(lines[rejection_line_idx + 1:])
-            if "|" in after and after.count("|") > 4:
-                has_specific_claims = True
 
     return {
         "is_rejection": is_rejection,

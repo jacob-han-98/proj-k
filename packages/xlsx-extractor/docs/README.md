@@ -33,6 +33,39 @@ XLSX 파일
                            → content.md + images/
 ```
 
+## 데이터 경로 맵
+
+```
+[입력: 원본 Excel 기획서]
+proj-k 기획/
+├── 7_System/              # ★ 핵심 시스템 기획서 (67개 xlsx)
+├── 9_MileStone/           # 마일스톤 기획서 (28개 xlsx, 2 pptx)
+├── 2_Development/         # 개발 구조 (2개 xlsx, 1 pptx)
+└── 3_Base/                # 기본 설정 (6개 xlsx, 3 pptx)
+    합계: 104 XLSX 파일, 635 시트
+
+        ↓ [xlsx-extractor 파이프라인]
+
+[출력: AI 지식 베이스]
+packages/xlsx-extractor/output/
+└── {워크북명}/                      # 104개 디렉토리
+    └── {시트명}/                     # 623개 시트 디렉토리
+        ├── _vision_input/           # Stage 1 (캡처 이미지)
+        ├── _vision_output/          # Stage 2 (Vision AI 해석)
+        ├── _parse_ooxml_output/     # Stage 3 (OOXML 보정)
+        └── _final/
+            ├── content.md           # ★ 최종 출력 (629개)
+            └── images/              # 서브 이미지 (2,009개)
+
+        ↓ [qna-poc 인덱서가 소비]
+
+[하류 소비자]
+packages/qna-poc/
+  └── src/indexer.py  →  629개 content.md → 1,783 청크 → ChromaDB
+_knowledge_base/
+  └── knowledge_graph.json  →  405 시스템, 627 관계 (Retriever KG 탐색)
+```
+
 ## 빠른 시작
 
 ### 환경 설정

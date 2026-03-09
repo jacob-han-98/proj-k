@@ -39,9 +39,12 @@ SYNONYMS = {
     "변신": ["변신 시스템", "트랜스폼", "변환"],
     "스킬": ["스킬 시스템", "기술", "액션 스킬"],
     "버프": ["버프 시스템", "버프/디버프", "상태 효과"],
-    "전투": ["전투 시스템", "기본 전투", "기본전투", "전투AI", "공격", "피격"],
-    "아이템": ["아이템 시스템", "장비", "인벤토리"],
+    "전투": ["전투 시스템", "기본 전투", "기본전투", "공격", "피격"],
+    "전투AI": ["전투AI시스템", "전투 AI", "몬스터 AI", "AI 행동"],
+    "아이템": ["아이템 시스템", "장비"],
+    "인벤토리": ["인벤토리 시스템", "가방", "소지품"],
     "몬스터": ["몬스터 시스템", "몹", "보스", "네임드"],
+    "어그로": ["어그로 시스템", "몬스터 어그로", "타기팅", "헤이트"],
     "퀘스트": ["퀘스트 시스템", "의뢰"],
     "NPC": ["NPC 시스템", "상인", "엔피씨"],
     "HUD": ["HUD 시스템", "UI", "인터페이스", "화면"],
@@ -56,7 +59,7 @@ SYNONYMS = {
     "텔레포트": ["텔레포트 시스템", "순간이동", "이동"],
     "카메라": ["카메라 시스템", "시점"],
     "채팅": ["채팅 시스템", "대화"],
-    "PvP": ["PvP단체전", "대전"],
+    "PvP": ["PvP단체전", "대전", "피아 식별", "피아식별"],
     "미니맵": ["미니맵 시스템", "지도"],
     "월드맵": ["월드맵 시스템", "세계지도"],
     "설정": ["설정 시스템", "옵션"],
@@ -69,6 +72,19 @@ SYNONYMS = {
     "복식": ["복식 시스템", "외형", "코스튬"],
     "시네마틱": ["시네마틱 시스템", "연출"],
     "전투력": ["전투력 시스템", "CP", "종합 전투력"],
+    "대미지": ["대미지 계산", "피해량", "명중률"],
+    "사망": ["사망 시스템", "사망 및 부활", "부활"],
+    "캐릭터": ["캐릭터 시스템", "캐릭터 선택", "캐릭터 생성"],
+    "레벨업": ["레벨업 시스템", "레벨 업"],
+    "성장": ["성장 밸런스", "캐릭터 성장"],
+    "네임드": ["네임드 몬스터", "보스 몬스터"],
+}
+
+# 자동 매핑이 잘못되는 경우 명시적 오버라이드 (key → 정확한 워크북명)
+SYNONYM_WORKBOOK_OVERRIDES = {
+    "전투": "PK_기본 전투 시스템",
+    "기본 전투": "PK_기본 전투 시스템",
+    "기본전투": "PK_기본전투_시스템",
 }
 
 
@@ -123,15 +139,31 @@ def _build_system_aliases():
                     candidates.append((wb, starts_with))
 
             if candidates:
-                # 시작 매칭 우선, 그 다음 이름 길이 짧은 것 (더 구체적)
-                candidates.sort(key=lambda x: (-x[1], len(x[0])))
-                matched_wb = candidates[0][0]
+                # 시작 매칭 우선 → "시스템" 포함 우선 → 이름 길이 짧은 것
+                candidates_scored = []
+                for wb, starts in candidates:
+                    has_system = "시스템" in wb
+                    candidates_scored.append((wb, starts, has_system))
+                candidates_scored.sort(key=lambda x: (-x[1], -x[2], len(x[0])))
+                matched_wb = candidates_scored[0][0]
+
+                # 명시적 오버라이드 적용
+                if key in SYNONYM_WORKBOOK_OVERRIDES:
+                    override = SYNONYM_WORKBOOK_OVERRIDES[key]
+                    if override in workbooks:
+                        matched_wb = override
 
                 _system_aliases[key] = matched_wb
                 _system_aliases[key.lower()] = matched_wb
                 for alias in aliases:
-                    _system_aliases[alias] = matched_wb
-                    _system_aliases[alias.lower()] = matched_wb
+                    # 별칭에도 오버라이드 확인
+                    alias_wb = SYNONYM_WORKBOOK_OVERRIDES.get(alias, matched_wb)
+                    if alias_wb in workbooks:
+                        _system_aliases[alias] = alias_wb
+                        _system_aliases[alias.lower()] = alias_wb
+                    else:
+                        _system_aliases[alias] = matched_wb
+                        _system_aliases[alias.lower()] = matched_wb
 
     except Exception as e:
         print(f"[WARN] Could not build system aliases: {e}")
@@ -389,7 +421,7 @@ def _kg_expand(system_names: list[str], query: str, depth: int = 1) -> list[dict
 
 # ── 통합 검색 ──
 
-def retrieve(query: str, top_k: int = 12, token_budget: int = 80000) -> list[dict]:
+def retrieve(query: str, top_k: int = 12, token_budget: int = 80000) -> tuple[list[dict], dict]:
     """하이브리드 검색: 구조적 KG + 벡터 시맨틱.
 
     검색 우선순위:
@@ -403,40 +435,69 @@ def retrieve(query: str, top_k: int = 12, token_budget: int = 80000) -> list[dic
         token_budget: 최대 토큰 예산
 
     Returns:
-        랭킹된 청크 리스트 (토큰 예산 내)
+        (랭킹된 청크 리스트, 검색 해석 메타데이터)
     """
     all_results = {}
+    retrieval_info = {
+        "detected_systems": [],
+        "layers_used": [],
+        "structural_hits": 0,
+        "kg_hits": 0,
+        "vector_hits": 0,
+        "search_scope": [],
+        "total_candidates": 0,
+    }
 
     # 1. 시스템명 추출 (유의어 포함)
     detected_systems = extract_system_names(query)
+    retrieval_info["detected_systems"] = detected_systems
 
     # 2. 구조적 검색 (시스템명이 감지된 경우)
+    structural_count = 0
     for sys_name in detected_systems[:3]:
         structural_items = _structural_search(sys_name, query)
         for item in structural_items:
             key = item["id"]
             if key not in all_results or item["score"] > all_results[key]["score"]:
                 all_results[key] = item
+                structural_count += 1
+    if structural_count > 0:
+        retrieval_info["layers_used"].append("structural")
+        retrieval_info["structural_hits"] = structural_count
+        retrieval_info["search_scope"].extend(
+            f"{s} (구조적 매칭)" for s in detected_systems[:3]
+        )
 
     # 3. KG 관계 확장 (시스템 간 질문 대응)
+    kg_count = 0
+    kg_expanded_systems = []
     if detected_systems:
         kg_items = _kg_expand(detected_systems, query, depth=1)
         for item in kg_items:
             key = item["id"]
             if key not in all_results or item["score"] > all_results[key]["score"]:
                 all_results[key] = item
+                kg_count += 1
+                wb = item.get("workbook", "")
+                if wb and wb not in kg_expanded_systems:
+                    kg_expanded_systems.append(wb)
+    if kg_count > 0:
+        retrieval_info["layers_used"].append("kg_expand")
+        retrieval_info["kg_hits"] = kg_count
+        retrieval_info["search_scope"].extend(
+            f"{s} (KG 관계 확장)" for s in kg_expanded_systems[:5]
+        )
 
     # 4. 벡터 시맨틱 검색 (항상 실행 — 유의어/애매한 표현 커버)
+    vector_count = 0
     vector_items = _vector_search(query, top_k=top_k)
     for item in vector_items:
         key = item["id"]
         if key not in all_results:
-            # 벡터 전용 결과는 구조적 결과보다 낮은 우선순위
             all_results[key] = item
+            vector_count += 1
         else:
-            # 이미 구조적으로 찾은 항목이면 벡터 스코어로 보완
             existing = all_results[key]
-            # 구조적 + 벡터 양쪽에서 발견되면 신뢰도 상승
             existing["score"] = min(existing["score"] * 1.2, 1.0)
 
     # 5. 시스템별 부스트 벡터 검색 (감지된 시스템에 한정)
@@ -445,24 +506,71 @@ def retrieve(query: str, top_k: int = 12, token_budget: int = 80000) -> list[dic
         for item in boosted:
             key = item["id"]
             if key not in all_results:
-                item["score"] *= 1.5  # 시스템 매칭 부스트
+                item["score"] *= 1.5
                 all_results[key] = item
+                vector_count += 1
+
+    if vector_count > 0:
+        retrieval_info["layers_used"].append("vector")
+        retrieval_info["vector_hits"] = vector_count
+
+    retrieval_info["total_candidates"] = len(all_results)
 
     # 6. 랭킹
     ranked = sorted(all_results.values(), key=lambda x: x["score"], reverse=True)
 
-    # 7. 토큰 예산 내로 자르기
+    # 7. 토큰 예산 내로 자르기 (다중 시스템 공정 배분)
     final = []
     total_tokens = 0
-    for item in ranked:
-        if total_tokens + item["tokens"] > token_budget:
-            break
-        final.append(item)
-        total_tokens += item["tokens"]
-        if len(final) >= top_k:
-            break
 
-    return final
+    if len(detected_systems) >= 2:
+        # 다중 시스템: 각 시스템에 최소 슬롯 보장
+        min_per_system = max(3, top_k // len(detected_systems))
+
+        # Pass 1: 각 시스템에서 최소 슬롯 확보
+        for sys_name in detected_systems:
+            sys_items = sorted(
+                [r for r in ranked if r.get("workbook") == sys_name],
+                key=lambda x: x["score"], reverse=True,
+            )
+            for item in sys_items[:min_per_system]:
+                if item["id"] not in {f["id"] for f in final}:
+                    if total_tokens + item["tokens"] <= token_budget:
+                        final.append(item)
+                        total_tokens += item["tokens"]
+
+        # Pass 2: 나머지 슬롯을 스코어 순으로 채움
+        used_ids = {f["id"] for f in final}
+        for item in ranked:
+            if len(final) >= top_k:
+                break
+            if item["id"] in used_ids:
+                continue
+            if total_tokens + item["tokens"] > token_budget:
+                break
+            final.append(item)
+            total_tokens += item["tokens"]
+            used_ids.add(item["id"])
+
+        final.sort(key=lambda x: x["score"], reverse=True)
+    else:
+        for item in ranked:
+            if total_tokens + item["tokens"] > token_budget:
+                break
+            final.append(item)
+            total_tokens += item["tokens"]
+            if len(final) >= top_k:
+                break
+
+    # 최종 결과의 소스 분포 기록
+    source_dist = {}
+    for item in final:
+        src = item.get("source", "unknown")
+        source_dist[src] = source_dist.get(src, 0) + 1
+    retrieval_info["final_source_distribution"] = source_dist
+    retrieval_info["final_total_tokens"] = total_tokens
+
+    return final, retrieval_info
 
 
 def format_context(chunks: list[dict]) -> str:

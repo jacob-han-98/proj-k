@@ -28,7 +28,7 @@ def chat(message: str, history: list, role: str):
         return ""
 
     # 검색
-    chunks = retrieve(message, top_k=12)
+    chunks, retrieval_info = retrieve(message, top_k=12)
     if not chunks:
         return "관련 기획서를 찾을 수 없습니다. 질문을 다시 표현해 주세요."
 
@@ -71,6 +71,20 @@ def chat(message: str, history: list, role: str):
     related = sorted(set(related) - set(detected))[:5]
     if related:
         meta_parts.append(f"**관련 시스템:** {', '.join(related)}")
+
+    # 검색 해석 정보
+    if retrieval_info:
+        ri_parts = []
+        if retrieval_info.get("detected_systems"):
+            ri_parts.append(f"감지 시스템: {', '.join(retrieval_info['detected_systems'])}")
+        if retrieval_info.get("layers_used"):
+            ri_parts.append(f"검색 레이어: {', '.join(retrieval_info['layers_used'])}")
+        dist = retrieval_info.get("final_source_distribution", {})
+        if dist:
+            dist_str = ", ".join(f"{k}:{v}" for k, v in dist.items())
+            ri_parts.append(f"결과 구성: {dist_str}")
+        if ri_parts:
+            meta_parts.append("**검색 해석:** " + " | ".join(ri_parts))
 
     meta_parts.append(
         f"*토큰: {result['tokens_used']['input']:,} in / {result['tokens_used']['output']:,} out "

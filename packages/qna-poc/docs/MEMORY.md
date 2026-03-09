@@ -4,7 +4,7 @@
 
 ---
 
-## 현재 상태: Phase 5 평가 완료 — 48/48 (100%) PASS
+## 현재 상태: Phase 6 대규모 검증 완료 — 401/495 (81%)
 
 ### 완료된 작업
 
@@ -86,8 +86,25 @@
 | LLM | global.anthropic.claude-sonnet-4-5-20250929-v1:0 |
 | 인증 | Bearer Token (AWS_BEARER_TOKEN_BEDROCK) |
 
+#### Phase 6: 대규모 GT 검증 + 검색 해석 (2026-03-09)
+- [x] `retrieve()` → `(chunks, retrieval_info)` 반환으로 변경
+  - retrieval_info에 detected_systems, layers_used, search_scope, source_distribution 포함
+- [x] API/Demo UI에 retrieval_info 포함
+- [x] `eval/generate_gt_questions.py` — 629개 content.md → 495개 QnA 자동 생성
+  - 카테고리: A(166), C(113), D(68), F(46), E(38), B(19), H(45 할루시네이션 트랩)
+  - 방법: 규칙 기반 파싱 (테이블/정의/Mermaid/UI/시스템간), API 호출 없음
+- [x] `eval/verify_gt_500.py` — 495개 대규모 검증 스크립트
+- [x] 50개 샘플 사전 검증: 79.2% (일반), 91.7% 워크북 매칭, 86.8% Top-3
+- [x] VERIFICATION.md, SPEC.md 업데이트
+- [x] 495개 전체 검증 완료: **401/495 (81%)** 전체, 356/450 (79%) 일반, 45/45 (100%) 트랩
+  - 카테고리별: A(82%), C(84%), D(82%), E(74%), F(87%), B(37%), H(100%)
+  - 약점: B. 시스템 간 연관 (37%) — 다수 워크북 크로스 검색 부족
+  - VERIFICATION.md 업데이트 완료
+
 ### 다음 단계
 
+- [ ] 실패 패턴 분석 → SYNONYMS 추가 수정 (B카테고리 37% 개선)
+- [ ] Generator 레벨 할루시네이션 트랩 검증
 - [ ] 데모 UI 실행 테스트 (Gradio)
 - [ ] FastAPI 엔드포인트 실행 테스트
 - [ ] 응답 시간 최적화 (21.9초 → 15초 목표)

@@ -57,7 +57,7 @@ def evaluate_single(question: dict, verbose: bool = True) -> dict:
 
     # 검색
     t_start = time.time()
-    chunks = retrieve(q_text, top_k=12)
+    chunks, _retrieval_info = retrieve(q_text, top_k=12)
     t_retrieve = time.time() - t_start
 
     if not chunks:

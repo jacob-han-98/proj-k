@@ -42,6 +42,7 @@ class AskResponse(BaseModel):
     conversation_id: str
     tokens_used: dict
     api_seconds: float
+    retrieval_info: dict | None = None
 
 
 class SearchRequest(BaseModel):
@@ -52,6 +53,7 @@ class SearchRequest(BaseModel):
 class SearchResult(BaseModel):
     results: list[dict]
     detected_systems: list[str]
+    retrieval_info: dict | None = None
 
 
 # ── 엔드포인트 ──
@@ -64,7 +66,7 @@ async def ask(req: AskRequest):
     history = conversations.get(conv_id, [])
 
     # 검색
-    chunks = retrieve(req.question, top_k=12)
+    chunks, retrieval_info = retrieve(req.question, top_k=12)
     if not chunks:
         raise HTTPException(status_code=404, detail="관련 기획서를 찾을 수 없습니다.")
 
@@ -98,13 +100,14 @@ async def ask(req: AskRequest):
         conversation_id=conv_id,
         tokens_used=result["tokens_used"],
         api_seconds=result["api_seconds"],
+        retrieval_info=retrieval_info,
     )
 
 
 @app.post("/search", response_model=SearchResult)
 async def search_docs(req: SearchRequest):
     """검색만 수행 (디버그/테스트용)."""
-    chunks = retrieve(req.query, top_k=req.limit)
+    chunks, retrieval_info = retrieve(req.query, top_k=req.limit)
     detected = extract_system_names(req.query)
 
     results = []
@@ -115,10 +118,11 @@ async def search_docs(req: SearchRequest):
             "section_path": chunk["section_path"],
             "score": round(chunk["score"], 4),
             "tokens": chunk["tokens"],
+            "source": chunk.get("source", "unknown"),
             "preview": chunk["text"][:300] + "..." if len(chunk["text"]) > 300 else chunk["text"],
         })
 
-    return SearchResult(results=results, detected_systems=detected)
+    return SearchResult(results=results, detected_systems=detected, retrieval_info=retrieval_info)
 
 
 @app.get("/systems")

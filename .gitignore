@@ -28,8 +28,9 @@ desktop.ini
 *.swp
 *.swo
 
-# 변환 중간 산출물 (대용량 이미지)
+# 변환 중간 산출물 (대용량)
 packages/xlsx-extractor/output/
+packages/confluence-downloader/output/
 
 # 원본 기획서 (대용량, Perforce/별도 관리)
 1_High_Concept/

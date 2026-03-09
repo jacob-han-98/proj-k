@@ -45,7 +45,7 @@ def call_bedrock(
     messages: list[dict],
     system: str = SYSTEM_PROMPT,
     model: str = None,
-    max_tokens: int = 4096,
+    max_tokens: int = 2048,
     temperature: float = 0,
 ) -> dict:
     """Bedrock Claude API 호출."""

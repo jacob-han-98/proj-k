@@ -30,6 +30,16 @@ _system_names: list[str] = []
 _system_aliases: dict[str, str] = {}  # 별칭→정식 워크북명
 _structural_index: dict[str, dict] = {}  # workbook→{sheets, sections, content_paths}
 _graph: nx.Graph | None = None
+_chroma_collection = None  # ChromaDB 컬렉션 캐시
+
+
+def _get_collection():
+    """ChromaDB 컬렉션 싱글톤 반환 (매번 PersistentClient 생성 방지)."""
+    global _chroma_collection
+    if _chroma_collection is None:
+        client = chromadb.PersistentClient(path=str(CHROMA_DIR))
+        _chroma_collection = client.get_collection(COLLECTION_NAME)
+    return _chroma_collection
 
 
 # ── 시스템명 사전 + 유의어/별칭 매핑 ──
@@ -97,8 +107,7 @@ def _build_system_aliases():
     _system_aliases = {}
 
     try:
-        client = chromadb.PersistentClient(path=str(CHROMA_DIR))
-        collection = client.get_collection(COLLECTION_NAME)
+        collection = _get_collection()
         result = collection.get(include=["metadatas"])
 
         workbooks = set()
@@ -184,8 +193,7 @@ def _build_structural_index():
     _structural_index = {}
 
     try:
-        client = chromadb.PersistentClient(path=str(CHROMA_DIR))
-        collection = client.get_collection(COLLECTION_NAME)
+        collection = _get_collection()
         result = collection.get(include=["metadatas"])
 
         for meta in result["metadatas"]:
@@ -290,13 +298,18 @@ def get_related_systems(system_name: str, depth: int = 2) -> list[str]:
 
 # ── 검색 레이어 ──
 
-def _vector_search(query: str, top_k: int = 8, system_filter: str = None) -> list[dict]:
-    """ChromaDB 시맨틱 검색."""
-    client = chromadb.PersistentClient(path=str(CHROMA_DIR))
-    collection = client.get_collection(COLLECTION_NAME)
+def _vector_search(query: str, top_k: int = 8, system_filter: str = None,
+                    query_embedding: list[float] = None) -> list[dict]:
+    """ChromaDB 시맨틱 검색.
 
-    from src.indexer import embed_texts
-    query_embedding = embed_texts([query])[0]
+    Args:
+        query_embedding: 미리 계산된 쿼리 임베딩 (없으면 내부에서 생성)
+    """
+    collection = _get_collection()
+
+    if query_embedding is None:
+        from src.indexer import embed_texts
+        query_embedding = embed_texts([query])[0]
 
     where_filter = None
     if system_filter:
@@ -336,8 +349,7 @@ def _vector_search(query: str, top_k: int = 8, system_filter: str = None) -> lis
 
 def _structural_search(workbook: str, query: str) -> list[dict]:
     """구조적 검색: 특정 워크북의 모든 청크를 가져와 키워드 관련성으로 랭킹."""
-    client = chromadb.PersistentClient(path=str(CHROMA_DIR))
-    collection = client.get_collection(COLLECTION_NAME)
+    collection = _get_collection()
 
     # 해당 워크북의 모든 청크 조회
     try:
@@ -489,8 +501,12 @@ def retrieve(query: str, top_k: int = 12, token_budget: int = 80000) -> tuple[li
         )
 
     # 4. 벡터 시맨틱 검색 (항상 실행 — 유의어/애매한 표현 커버)
+    # 쿼리 임베딩을 한 번만 계산하여 모든 벡터 검색에 재사용
+    from src.indexer import embed_texts
+    query_embedding = embed_texts([query])[0]
+
     vector_count = 0
-    vector_items = _vector_search(query, top_k=top_k)
+    vector_items = _vector_search(query, top_k=top_k, query_embedding=query_embedding)
     for item in vector_items:
         key = item["id"]
         if key not in all_results:
@@ -502,7 +518,8 @@ def retrieve(query: str, top_k: int = 12, token_budget: int = 80000) -> tuple[li
 
     # 5. 시스템별 부스트 벡터 검색 (감지된 시스템에 한정)
     for sys_name in detected_systems[:2]:
-        boosted = _vector_search(query, top_k=5, system_filter=sys_name)
+        boosted = _vector_search(query, top_k=5, system_filter=sys_name,
+                                 query_embedding=query_embedding)
         for item in boosted:
             key = item["id"]
             if key not in all_results:

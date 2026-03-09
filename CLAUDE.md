@@ -14,9 +14,9 @@ Claude LLM API와 결합된 에이전트가 Project K의 기획 내용을 가장
 
 | 단계 | 목표 | 상태 |
 |------|------|------|
-| **1단계: 지식화** | 엑셀/PDF/PPT 기획서 → 구조화된 지식 베이스 | Excel 완료 (98.1%) |
-| **2단계: QnA API** (PoC) | Backend API로 기획 QnA | **진행중** |
-| **3단계: 데이터 확장 & 동기화** | Confluence/PPTX 변환 + Perforce 동기화 | 미착수 |
+| **1단계: 지식화** | 엑셀/PDF/PPT 기획서 → 구조화된 지식 베이스 | Excel 완료 (98.1%), Confluence 다운로드 완료 (490p) |
+| **2단계: QnA API** (PoC) | Backend API로 기획 QnA | **평가 완료** (48/48, 86.5%) |
+| **3단계: 데이터 확장 & 동기화** | Confluence/PPTX 변환 + Perforce 동기화 | Confluence 다운로드 완료 |
 | **4단계: 기획 리뷰** (PoC) | 기존 기획 충돌/누락 감지, 신규 기획서 리뷰 API | 미착수 |
 | **5단계: 실시간 어시스턴트** (PoC) | 맥락 인식 실시간 피드백 API | 미착수 |
 | **피칭** | 경영진/이해관계자 시연 → 승인 | - |
@@ -54,7 +54,12 @@ proj-k 기획/
 │   │   ├── run.py               # 통합 실행 스크립트
 │   │   ├── output/              # 변환 결과 (629개 content.md)
 │   │   └── docs/                # README, SPEC, VERIFICATION, MEMORY
-│   └── qna-poc/                 # ★ QnA PoC (착수 예정)
+│   ├── confluence-downloader/   # ★ Confluence 다운로더 (완료)
+│   │   ├── src/                 # client.py, converter.py
+│   │   ├── run.py               # 메인 실행 스크립트
+│   │   ├── output/              # 다운로드 결과 (489개 content.md, 8.2GB)
+│   │   └── docs/                # README, SPEC, VERIFICATION, MEMORY
+│   └── qna-poc/                 # ★ QnA PoC (평가 완료)
 │
 ├── _knowledge_base/            # 변환 결과물 (AI가 읽을 지식)
 │   ├── PROJECT_K_KNOWLEDGE_BASE.md  # 통합 지식 베이스
@@ -76,7 +81,8 @@ proj-k 기획/
 | 유형 | 개수 | 변환 완료 | 비고 |
 |------|------|-----------|------|
 | XLSX | 104개 | **623/635 시트 (98.1%)** | xlsx-extractor로 완료 |
-| PDF  | 296개 | 0/296 | 확장 트랙 (QnA 결과에 따라) |
+| Confluence | 490페이지 | **489/490 content.md** | confluence-downloader로 완료 (REST API 직접 추출) |
+| PDF (레거시) | 296개 | 불필요 | Confluence REST API로 대체됨 |
 | PPTX | 11개  | 1/11 | 후순위 |
 
 ## 변환 파이프라인 (1단계 도구)
@@ -171,6 +177,7 @@ python ConvertProgram/_tools/run_all.py --skip-existing  # 일괄 변환
 - **`docs/MEMORY.md`**에 프로젝트 전체 진행 과정을 기록한다
 - **서브 프로젝트는 각자의 `MEMORY.md`에 상세 기록한다**:
   - `packages/xlsx-extractor/docs/MEMORY.md` — Excel 변환 서브 프로젝트
+  - `packages/confluence-downloader/docs/MEMORY.md` — Confluence 다운로드 서브 프로젝트
 - 세션 시작 시 현재 작업 중인 서브 프로젝트의 MEMORY.md를 먼저 읽고 이전 상태를 파악한다
 - 작업 단계 완료 시 즉시 업데이트한다
 - 주요 의사결정은 `docs/DECISIONS.md`에 별도 기록한다

@@ -103,11 +103,12 @@ AI가 이 모든 기획 지식을 구조화하여 보유하면:
 - Confluence에 의사결정 히스토리, 정책 문서가 있음 → 이것 없이는 "왜 이렇게 설계했는지" 답변 불가
 - Perforce 동기화 없이는 기획서가 이미 수정된 상태인데 구 버전으로 리뷰하는 사태 발생
 
-#### 3-1. Confluence PDF 변환 (296개)
-- Vision-First 파이프라인을 PDF에 적용 (xlsx-extractor 아키텍처 재사용)
-- 페이지별 스크린샷 → Vision API → 구조화된 Markdown
-- 우선순위: QnA PoC에서 답변 불가 영역으로 드러난 주제의 PDF 먼저
-- 회의록, 정책 문서, 시스템 설계 논의 등 유형별 분류
+#### 3-1. Confluence 다운로드 — 완료 (ADR-010)
+- **전략 전환**: PDF 변환(Vision-First) 대신 **Confluence REST API에서 직접 추출**
+- Storage Format → BeautifulSoup + markdownify → Markdown + 이미지 로컬 저장
+- **결과**: 490페이지 다운로드, 489개 content.md, ~2,195 이미지, 8.2GB
+- 도구: `packages/confluence-downloader/` (client.py, converter.py, run.py)
+- **다음**: 변환 품질 검증 → QnA 인덱싱 통합 (ChromaDB)
 
 #### 3-2. PPTX 변환 완료 (11개)
 - 컨셉/방향성 문서 — 기획 의도(Why) 이해에 필수
@@ -560,7 +561,7 @@ AI가 이 모든 기획 지식을 구조화하여 보유하면:
 |------|----------|
 | 1단계 | 전체 문서 90%+ 변환 완료, 지식 그래프 구축 |
 | 2단계 | 기획 QnA에 대해 80%+ 정확한 답변 (출처 포함) |
-| 3단계 | Confluence/PPTX 변환 완료, Perforce 동기화 가동, 데이터 커버리지 90%+ |
+| 3단계 | Confluence 다운로드 완료 ✅, PPTX 변환 완료, Perforce 동기화 가동, 데이터 커버리지 90%+ |
 | 4단계 | 기존 기획에서 실제 충돌/누락 5건+ 발견 |
 | 5단계 | 실시간 어시스턴트 API가 유의미한 피드백 제공 |
 | **피칭** | **경영진 승인 획득** |

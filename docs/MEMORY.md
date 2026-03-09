@@ -24,11 +24,12 @@
 
 **핵심 도구**: `packages/xlsx-extractor/` — 4단계 파이프라인 (Capture → Vision → Parse OOXML → Synthesize)
 
-### 추가 데이터 소스 (미변환, 확장 트랙)
+### 추가 데이터 소스
 
 | 유형 | 개수 | 상태 | 우선순위 |
 |------|------|------|----------|
-| Confluence PDF | 296개 | 미착수 | QnA 결과에 따라 결정 |
+| Confluence | 490페이지 | **다운로드 완료** (489 content.md, REST API 직접 추출) | QnA 통합 대기 |
+| Confluence PDF (레거시) | 296개 | 불필요 — REST API로 대체 | - |
 | PPTX | 11개 | 1/11 완료 (레거시) | 후순위 |
 | 추가 XLSX | xlsm 등 | 미착수 | 필요 시 |
 
@@ -43,11 +44,12 @@
   - 평균 21.9초 응답, 쿼리당 ~$0.05
 - **다음**: 데모 UI/API 실행 테스트, 응답 시간 최적화
 
-### 3단계: 데이터 확장 & 동기화 — 미착수 (ADR-009)
+### 3단계: 데이터 확장 & 동기화 — Confluence 다운로드 완료 (ADR-009, ADR-010)
 
 - **결정**: QnA PoC와 기획 리뷰 사이에 데이터 완전성 확보 단계 삽입
 - **근거**: 기획 리뷰(4단계)가 최신·완전한 데이터셋 필요
-- **범위**: Confluence PDF 296개 + PPTX 11개 + Perforce 동기화
+- **Confluence 다운로드 완료**: REST API 직접 추출 490페이지 → 489 content.md (ADR-010)
+- **남은 범위**: Confluence→QnA 통합 (인덱싱), PPTX 11개, Perforce 동기화
 
 ---
 
@@ -61,7 +63,15 @@
 - **API**: AWS Bedrock (Claude Opus Vision + Sonnet OCR)
 - **검증**: Human-in-the-Loop + Claude Code 반복 검증 (7 사이클)
 
-### qna-poc (진행중)
+### confluence-downloader (완료)
+
+- **위치**: `packages/confluence-downloader/`
+- **상세 기록**: `packages/confluence-downloader/docs/MEMORY.md`
+- **구성**: REST API v1 + CQL → BeautifulSoup + markdownify → Markdown + 이미지
+- **결과**: 490페이지, 489 content.md, ~2,195 이미지, 8.2GB
+- **전략**: PDF 변환 대신 Confluence Storage Format에서 직접 추출 (ADR-010)
+
+### qna-poc (평가 완료)
 
 - **위치**: `packages/qna-poc/`
 - **상세 기록**: `packages/qna-poc/docs/MEMORY.md`
@@ -98,6 +108,7 @@
 | ADR-007 | Vision AI + OOXML 하이브리드 전략 | 2026-03-08 |
 | ADR-008 | QnA PoC 우선, 데이터 확장은 병행 | 2026-03-08 |
 | ADR-009 | 데이터 확장 & 동기화를 독립 단계로 분리 (2→3단계) | 2026-03-08 |
+| ADR-010 | Confluence PDF 변환 대신 REST API 직접 추출 | 2026-03-09 |
 
 상세: `docs/DECISIONS.md`
 

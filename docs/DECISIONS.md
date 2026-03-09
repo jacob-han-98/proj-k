@@ -156,3 +156,30 @@
   - VISION.md 전체 단계 번호 재배정
   - CLAUDE.md 단계 테이블 업데이트
   - 기존 ADR에서 단계 번호 참조는 문맥으로 이해 가능 (당시 기준 번호)
+
+## ADR-010: Confluence PDF 변환 대신 REST API 직접 추출
+
+- **날짜**: 2026-03-09
+- **결정**: Confluence 데이터를 PDF 경유 변환(Vision-First) 대신 **REST API에서 Storage Format을 직접 Markdown으로 변환**
+- **근거**:
+  1. **PDF는 중간 손실 매체**: Confluence → PDF 내보내기 과정에서 레이아웃/매크로/이미지 품질 저하
+  2. **Storage Format이 구조화된 원본**: HTML/XML 기반이므로 직접 파싱이 더 정확하고 저비용
+  3. **Vision API 불필요**: PDF → 스크린샷 → Vision API 파이프라인 대비 비용 0, 속도 수십 배 빠름
+  4. **이미지 원본 확보**: 첨부 파일 API로 원본 해상도 이미지 직접 다운로드 가능
+  5. **페이지 수 증가**: 기존 PDF 296개 → REST API로 490페이지 발견 (folder 타입 포함)
+- **기술 선택**:
+  - API: Confluence REST API v1 + CQL (`parent={id}`로 재귀 탐색)
+  - 인증: Basic Auth (email + API token)
+  - 변환: BeautifulSoup (Confluence XML 전처리) + markdownify (HTML → Markdown)
+  - 재시도: 지수 백오프 (503 서버 에러 대응)
+- **결과**:
+  - 490페이지 전체 다운로드, 489개 content.md, ~2,195 이미지, 8.2GB
+  - 도구: `packages/confluence-downloader/`
+  - `Confluence PDF Sync/` 폴더의 PDF 296개는 더 이상 변환 대상이 아님
+- **대안 검토**:
+  - PDF → Vision-First: 비용 높고 (Vision API), 품질 열화 (PDF 중간 변환), 속도 느림
+  - Confluence API v2: folder 타입 API가 불안정하여 v1 + CQL 조합이 더 신뢰성 높음
+- **영향**:
+  - VISION.md 3단계 3-1항 업데이트 (PDF 변환 → REST API 직접 추출)
+  - CLAUDE.md 원본 문서 현황 테이블 업데이트
+  - 기존 `Confluence PDF Sync/` 폴더는 레거시로 분류

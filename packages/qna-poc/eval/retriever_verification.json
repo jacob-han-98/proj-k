@@ -1,0 +1,664 @@
+{
+  "timestamp": "2026-03-09T10:50:46.749253",
+  "tests": {
+    "test1_system_extraction": {
+      "passed": 8,
+      "total": 10,
+      "rate": 80.0,
+      "cases": [
+        {
+          "query": "변신 에픽 등급의 적용 스텟 수는?",
+          "description": "변신 시스템 감지",
+          "detected_systems": [
+            "PK_변신 및 스킬 시스템"
+          ],
+          "expected_partial": [
+            "변신"
+          ],
+          "hits": [
+            "변신"
+          ],
+          "misses": [],
+          "success": true,
+          "time_ms": 0.0
+        },
+        {
+          "query": "스킬 쿨타임 계산법",
+          "description": "스킬 시스템 감지",
+          "detected_systems": [
+            "PK_스킬 시스템"
+          ],
+          "expected_partial": [
+            "스킬"
+          ],
+          "hits": [
+            "스킬"
+          ],
+          "misses": [],
+          "success": true,
+          "time_ms": 0.0
+        },
+        {
+          "query": "버프가 전투에 미치는 영향",
+          "description": "버프 시스템 감지",
+          "detected_systems": [
+            "PK_버프 시스템",
+            "PK_전투력 시스템"
+          ],
+          "expected_partial": [
+            "버프"
+          ],
+          "hits": [
+            "버프"
+          ],
+          "misses": [],
+          "success": true,
+          "time_ms": 0.0
+        },
+        {
+          "query": "펫 시스템의 합성 규칙",
+          "description": "펫 시스템 감지",
+          "detected_systems": [
+            "PK_펫 시스템"
+          ],
+          "expected_partial": [
+            "펫"
+          ],
+          "hits": [
+            "펫"
+          ],
+          "misses": [],
+          "success": true,
+          "time_ms": 1.0
+        },
+        {
+          "query": "골드 밸런스에서 시간당 획득량",
+          "description": "골드 밸런스 감지",
+          "detected_systems": [
+            "PK_골드 밸런스"
+          ],
+          "expected_partial": [
+            "골드"
+          ],
+          "hits": [
+            "골드"
+          ],
+          "misses": [],
+          "success": true,
+          "time_ms": 0.0
+        },
+        {
+          "query": "몬스터 어그로 계산 방식",
+          "description": "몬스터 어그로 감지",
+          "detected_systems": [
+            "PK_몬스터설정"
+          ],
+          "expected_partial": [
+            "몬스터",
+            "어그로"
+          ],
+          "hits": [
+            "몬스터"
+          ],
+          "misses": [
+            "어그로"
+          ],
+          "success": false,
+          "time_ms": 0.0
+        },
+        {
+          "query": "HUD 전투 화면 UI 요소",
+          "description": "HUD 시스템 감지",
+          "detected_systems": [
+            "PK_HUD 시스템",
+            "PK_전투력 시스템"
+          ],
+          "expected_partial": [
+            "HUD"
+          ],
+          "hits": [
+            "HUD"
+          ],
+          "misses": [],
+          "success": true,
+          "time_ms": 0.0
+        },
+        {
+          "query": "로그인 플로우",
+          "description": "로그인 시스템 감지",
+          "detected_systems": [
+            "PK_로그인 플로우"
+          ],
+          "expected_partial": [
+            "로그인"
+          ],
+          "hits": [
+            "로그인"
+          ],
+          "misses": [],
+          "success": true,
+          "time_ms": 0.0
+        },
+        {
+          "query": "인벤토리와 아이템 연동",
+          "description": "인벤토리 + 아이템 감지",
+          "detected_systems": [
+            "PK_아이템 시스템"
+          ],
+          "expected_partial": [
+            "인벤토리"
+          ],
+          "hits": [],
+          "misses": [
+            "인벤토리"
+          ],
+          "success": false,
+          "time_ms": 0.0
+        },
+        {
+          "query": "튜토리얼 진행 순서",
+          "description": "튜토리얼 시스템 감지",
+          "detected_systems": [
+            "PK_튜토리얼, 도움말_시스템"
+          ],
+          "expected_partial": [
+            "튜토리얼"
+          ],
+          "hits": [
+            "튜토리얼"
+          ],
+          "misses": [],
+          "success": true,
+          "time_ms": 0.0
+        }
+      ]
+    },
+    "test2_retrieval_relevance": {
+      "passed": 10,
+      "total": 10,
+      "rate": 100.0,
+      "cases": [
+        {
+          "query": "변신 에픽 등급의 적용 스텟 수는?",
+          "expected_workbook": "PK_변신 및 스킬 시스템",
+          "top3_workbooks": [
+            "PK_변신 및 스킬 시스템",
+            "PK_변신 및 스킬 시스템",
+            "PK_변신 및 스킬 시스템"
+          ],
+          "top3_match": 3,
+          "total_chunks": 12,
+          "total_tokens": 8020,
+          "wb_match_in_all": 12,
+          "source_distribution": {
+            "structural": 12
+          },
+          "top5_scores": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            0.85
+          ],
+          "success": true,
+          "time_s": 2.68
+        },
+        {
+          "query": "스킬 시전 시 체크하는 조건 순서를 나열해줘",
+          "expected_workbook": "PK_스킬 시스템",
+          "top3_workbooks": [
+            "PK_스킬 시스템",
+            "PK_스킬 시스템",
+            "PK_스킬 시스템"
+          ],
+          "top3_match": 3,
+          "total_chunks": 12,
+          "total_tokens": 5743,
+          "wb_match_in_all": 12,
+          "source_distribution": {
+            "structural": 12
+          },
+          "top5_scores": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "success": true,
+          "time_s": 2.35
+        },
+        {
+          "query": "몬스터 어그로 시스템의 기본 작동 원리는?",
+          "expected_workbook": "PK_몬스터 어그로 시스템",
+          "top3_workbooks": [
+            "PK_몬스터 어그로 시스템",
+            "PK_몬스터 어그로 시스템",
+            "PK_몬스터 어그로 시스템"
+          ],
+          "top3_match": 3,
+          "total_chunks": 12,
+          "total_tokens": 4029,
+          "wb_match_in_all": 3,
+          "source_distribution": {
+            "structural": 12
+          },
+          "top5_scores": [
+            1.0,
+            0.84,
+            0.7,
+            0.7,
+            0.7
+          ],
+          "success": true,
+          "time_s": 3.25
+        },
+        {
+          "query": "펫 시스템의 핵심 기능은 무엇인가?",
+          "expected_workbook": "PK_펫 시스템",
+          "top3_workbooks": [
+            "PK_펫 시스템",
+            "PK_펫 시스템",
+            "PK_펫 시스템"
+          ],
+          "top3_match": 3,
+          "total_chunks": 12,
+          "total_tokens": 8649,
+          "wb_match_in_all": 12,
+          "source_distribution": {
+            "structural": 12
+          },
+          "top5_scores": [
+            1.0,
+            1.0,
+            0.92,
+            0.864,
+            0.864
+          ],
+          "success": true,
+          "time_s": 2.58
+        },
+        {
+          "query": "변신 시스템과 스킬 시스템은 어떻게 연동되는가?",
+          "expected_workbook": "PK_변신 및 스킬 시스템",
+          "top3_workbooks": [
+            "PK_스킬 시스템",
+            "PK_변신 및 스킬 시스템",
+            "PK_변신 및 스킬 시스템"
+          ],
+          "top3_match": 2,
+          "total_chunks": 12,
+          "total_tokens": 6035,
+          "wb_match_in_all": 11,
+          "source_distribution": {
+            "structural": 12
+          },
+          "top5_scores": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "success": true,
+          "time_s": 3.51
+        },
+        {
+          "query": "버프 시스템이 전투 대미지 계산에 어떤 영향을 주는가?",
+          "expected_workbook": "PK_버프 시스템",
+          "top3_workbooks": [
+            "PK_버프 시스템",
+            "PK_버프 시스템",
+            "PK_버프 시스템"
+          ],
+          "top3_match": 3,
+          "total_chunks": 12,
+          "total_tokens": 11221,
+          "wb_match_in_all": 11,
+          "source_distribution": {
+            "structural": 12
+          },
+          "top5_scores": [
+            1.0,
+            1.0,
+            0.875,
+            0.855,
+            0.837
+          ],
+          "success": true,
+          "time_s": 3.85
+        },
+        {
+          "query": "인벤토리 시스템과 아이템 시스템의 데이터 연결 구조는?",
+          "expected_workbook": "PK_인벤토리 시스템",
+          "top3_workbooks": [
+            "PK_인벤토리 시스템",
+            "PK_인벤토리 시스템",
+            "PK_아이템 시스템"
+          ],
+          "top3_match": 2,
+          "total_chunks": 12,
+          "total_tokens": 8621,
+          "wb_match_in_all": 9,
+          "source_distribution": {
+            "structural": 12
+          },
+          "top5_scores": [
+            1.0,
+            1.0,
+            1.0,
+            0.886,
+            0.886
+          ],
+          "success": true,
+          "time_s": 4.04
+        },
+        {
+          "query": "전투력 시스템에 영향을 주는 모든 시스템은 무엇인가?",
+          "expected_workbook": "PK_전투력 시스템",
+          "top3_workbooks": [
+            "PK_전투력 시스템",
+            "PK_전투력 시스템",
+            "PK_전투력 시스템"
+          ],
+          "top3_match": 3,
+          "total_chunks": 12,
+          "total_tokens": 6220,
+          "wb_match_in_all": 3,
+          "source_distribution": {
+            "structural": 3,
+            "vector": 8,
+            "kg_expand": 1
+          },
+          "top5_scores": [
+            1.0,
+            0.686,
+            0.643,
+            0.501,
+            0.419
+          ],
+          "success": true,
+          "time_s": 1.8
+        },
+        {
+          "query": "스탯 공식에서 정수 타입과 % 타입의 처리 차이는?",
+          "expected_workbook": "PK_스탯 및 공식",
+          "top3_workbooks": [
+            "PK_스탯 및 공식",
+            "PK_스탯 및 공식",
+            "PK_스탯 및 공식"
+          ],
+          "top3_match": 3,
+          "total_chunks": 12,
+          "total_tokens": 15061,
+          "wb_match_in_all": 11,
+          "source_distribution": {
+            "structural": 11,
+            "kg_expand": 1
+          },
+          "top5_scores": [
+            1.0,
+            1.0,
+            0.886,
+            0.886,
+            0.843
+          ],
+          "success": true,
+          "time_s": 2.15
+        },
+        {
+          "query": "HUD 전투 화면 UI 구성을 설명해줘",
+          "expected_workbook": "PK_HUD 시스템",
+          "top3_workbooks": [
+            "PK_HUD 시스템",
+            "PK_HUD 시스템",
+            "PK_HUD 시스템"
+          ],
+          "top3_match": 3,
+          "total_chunks": 12,
+          "total_tokens": 13611,
+          "wb_match_in_all": 11,
+          "source_distribution": {
+            "structural": 12
+          },
+          "top5_scores": [
+            1.0,
+            1.0,
+            1.0,
+            1.0,
+            1.0
+          ],
+          "success": true,
+          "time_s": 3.62
+        }
+      ]
+    },
+    "test3_edge_cases": {
+      "passed": 4,
+      "total": 5,
+      "rate": 80.0,
+      "cases": [
+        {
+          "query": "게임 전체 구조",
+          "type": "vague",
+          "description": "Very vague query -- should still return something",
+          "detected_systems": [],
+          "total_chunks": 12,
+          "source_distribution": {
+            "vector": 12
+          },
+          "detail": "Returned 12 chunks (need >= 1)",
+          "success": true,
+          "time_s": 0.64,
+          "top3_workbooks": [
+            "PK_게임플로우_시스템",
+            "PK_월드 시스템",
+            "PK_월드 시스템"
+          ]
+        },
+        {
+          "query": "변싱 시스템",
+          "type": "typo",
+          "description": "Typo (변싱 -> 변신) -- fuzzy matching test",
+          "detected_systems": [],
+          "total_chunks": 12,
+          "source_distribution": {
+            "vector": 12
+          },
+          "detail": "Returned 12 chunks, contains 변신 WB: True",
+          "success": true,
+          "time_s": 0.82,
+          "top3_workbooks": [
+            "PK_변신 및 스킬 시스템",
+            "PK_변신 및 스킬 시스템",
+            "PK_변신 및 스킬 시스템"
+          ]
+        },
+        {
+          "query": "변신과 스킬의 관계",
+          "type": "multi_system",
+          "description": "Multi-system query -- should find both",
+          "detected_systems": [
+            "PK_변신 및 스킬 시스템",
+            "PK_스킬 시스템"
+          ],
+          "total_chunks": 12,
+          "source_distribution": {
+            "structural": 12
+          },
+          "detail": "Detected: ['PK_변신 및 스킬 시스템', 'PK_스킬 시스템'], hits: ['변신', '스킬']/['변신', '스킬']",
+          "success": true,
+          "time_s": 2.88,
+          "top3_workbooks": [
+            "PK_변신 및 스킬 시스템",
+            "PK_변신 및 스킬 시스템",
+            "PK_스킬 시스템"
+          ]
+        },
+        {
+          "query": "낚시 시스템",
+          "type": "nonexistent",
+          "description": "Non-existent system -- graceful fallback",
+          "detected_systems": [],
+          "total_chunks": 12,
+          "source_distribution": {
+            "vector": 12
+          },
+          "detail": "Returned 12 chunks (graceful: no crash)",
+          "success": true,
+          "time_s": 0.63,
+          "top3_workbooks": [
+            "PK_월드 시스템",
+            "PK_몬스터 어그로 시스템",
+            "PK_카메라_시스템"
+          ]
+        },
+        {
+          "query": "PvP 밸런스",
+          "type": "mixed_lang",
+          "description": "Korean/English mix -- PvP detection",
+          "detected_systems": [],
+          "total_chunks": 12,
+          "source_distribution": {
+            "vector": 12
+          },
+          "detail": "Detected: [], hits: []",
+          "success": false,
+          "time_s": 0.65,
+          "top3_workbooks": [
+            "PK_리니지라이크 Stat 구조 분석",
+            "PK_피아 식별",
+            "PK_보스 레이드 시스템"
+          ]
+        }
+      ]
+    },
+    "test4_layer_comparison": {
+      "cases": [
+        {
+          "query": "변신 에픽 등급의 적용 스텟 수는?",
+          "structural_workbook": "PK_변신 및 스킬 시스템",
+          "structural_count": 55,
+          "vector_count": 8,
+          "hybrid_count": 12,
+          "time_structural_ms": 173.0,
+          "time_vector_ms": 692.0,
+          "time_hybrid_ms": 2114.1,
+          "overlap_structural_vector": 1,
+          "overlap_structural_hybrid": 4,
+          "overlap_vector_hybrid": 2,
+          "overlap_all_three": 1,
+          "structural_unique": 1,
+          "vector_unique": 3,
+          "hybrid_source_dist": {
+            "structural": 12
+          }
+        },
+        {
+          "query": "스킬 쿨타임 계산법",
+          "structural_workbook": "PK_스킬 시스템",
+          "structural_count": 39,
+          "vector_count": 8,
+          "hybrid_count": 12,
+          "time_structural_ms": 175.0,
+          "time_vector_ms": 678.9,
+          "time_hybrid_ms": 2266.8,
+          "overlap_structural_vector": 1,
+          "overlap_structural_hybrid": 3,
+          "overlap_vector_hybrid": 1,
+          "overlap_all_three": 1,
+          "structural_unique": 2,
+          "vector_unique": 4,
+          "hybrid_source_dist": {
+            "structural": 12
+          }
+        },
+        {
+          "query": "몬스터 어그로 계산 방식",
+          "structural_workbook": "PK_몬스터 어그로 시스템",
+          "structural_count": 3,
+          "vector_count": 8,
+          "hybrid_count": 12,
+          "time_structural_ms": 169.0,
+          "time_vector_ms": 717.0,
+          "time_hybrid_ms": 1830.6,
+          "overlap_structural_vector": 3,
+          "overlap_structural_hybrid": 0,
+          "overlap_vector_hybrid": 0,
+          "overlap_all_three": 0,
+          "structural_unique": 0,
+          "vector_unique": 2,
+          "hybrid_source_dist": {
+            "structural": 12
+          }
+        },
+        {
+          "query": "버프가 전투에 미치는 영향",
+          "structural_workbook": "PK_버프 시스템",
+          "structural_count": 17,
+          "vector_count": 8,
+          "hybrid_count": 12,
+          "time_structural_ms": 174.0,
+          "time_vector_ms": 668.4,
+          "time_hybrid_ms": 3489.2,
+          "overlap_structural_vector": 1,
+          "overlap_structural_hybrid": 3,
+          "overlap_vector_hybrid": 2,
+          "overlap_all_three": 1,
+          "structural_unique": 2,
+          "vector_unique": 3,
+          "hybrid_source_dist": {
+            "structural": 12
+          }
+        },
+        {
+          "query": "HUD 전투 화면 UI 요소",
+          "structural_workbook": "PK_HUD 시스템",
+          "structural_count": 12,
+          "vector_count": 8,
+          "hybrid_count": 12,
+          "time_structural_ms": 162.0,
+          "time_vector_ms": 811.0,
+          "time_hybrid_ms": 3559.1,
+          "overlap_structural_vector": 2,
+          "overlap_structural_hybrid": 5,
+          "overlap_vector_hybrid": 2,
+          "overlap_all_three": 2,
+          "structural_unique": 0,
+          "vector_unique": 3,
+          "hybrid_source_dist": {
+            "structural": 12
+          }
+        }
+      ]
+    }
+  },
+  "summary": {
+    "total_passed": 27,
+    "total_cases": 30,
+    "overall_rate": 90.0,
+    "overall_status": "PASS",
+    "per_test": {
+      "Test 1: System Name Extraction": {
+        "passed": 8,
+        "total": 10,
+        "rate": 80.0
+      },
+      "Test 2: Retrieval Relevance": {
+        "passed": 10,
+        "total": 10,
+        "rate": 100.0
+      },
+      "Test 3: Edge Cases": {
+        "passed": 4,
+        "total": 5,
+        "rate": 80.0
+      },
+      "Test 4: Search Layer Comparison": {
+        "passed": 5,
+        "total": 5,
+        "rate": 100.0
+      }
+    }
+  }
+}

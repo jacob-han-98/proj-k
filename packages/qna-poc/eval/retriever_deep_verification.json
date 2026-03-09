@@ -1,0 +1,458 @@
+{
+  "summary": {
+    "total": 10,
+    "passed": 10,
+    "accuracy": 1.0,
+    "avg_top3_precision": 0.967,
+    "avg_keyword_score": 0.95,
+    "avg_retrieve_time": 2.54,
+    "avg_tokens": 8259
+  },
+  "methodology": "Claude Code가 원본 content.md를 직접 읽어 Ground Truth(정답 출처+텍스트)를 산출한 뒤, Retriever 결과의 워크북/키워드/Top-3 정밀도를 비교 검증",
+  "results": [
+    {
+      "id": "GT-01",
+      "query": "변신 에픽 등급의 적용 스텟 수는?",
+      "ground_truth_source": "PK_변신 및 스킬 시스템/변신/_final/content.md:66",
+      "ground_truth_text": "등급별 스펙 규칙 테이블에서 에픽 등급의 적용 스텟 수 = 7",
+      "detected_systems": [
+        "PK_변신 및 스킬 시스템"
+      ],
+      "expected_workbooks": [
+        "PK_변신 및 스킬 시스템"
+      ],
+      "workbook_check": {
+        "found": [
+          "PK_변신 및 스킬 시스템"
+        ],
+        "missed": [],
+        "all_found": true,
+        "result_workbooks": [
+          "PK_변신 및 스킬 시스템"
+        ]
+      },
+      "top3_precision": 1.0,
+      "top3_workbooks": [
+        "PK_변신 및 스킬 시스템",
+        "PK_변신 및 스킬 시스템",
+        "PK_변신 및 스킬 시스템"
+      ],
+      "top3_sources": [
+        "structural",
+        "structural",
+        "structural"
+      ],
+      "keyword_score": 1.0,
+      "keyword_missed": [],
+      "source_distribution": {
+        "structural": 12
+      },
+      "total_tokens": 8020,
+      "retrieve_time": 2.29,
+      "total_chunks": 12,
+      "passed": true
+    },
+    {
+      "id": "GT-02",
+      "query": "몬스터 어그로 계산 방식은?",
+      "ground_truth_source": "PK_몬스터 어그로 시스템/몬스터 타기팅/_final/content.md:75-78",
+      "ground_truth_text": "누적 대미지 기반 1:1 비율로 어그로 수치 계산, 높은 순으로 우선순위 결정",
+      "detected_systems": [
+        "PK_몬스터 어그로 시스템",
+        "PK_몬스터설정"
+      ],
+      "expected_workbooks": [
+        "PK_몬스터 어그로 시스템"
+      ],
+      "workbook_check": {
+        "found": [
+          "PK_몬스터 어그로 시스템"
+        ],
+        "missed": [],
+        "all_found": true,
+        "result_workbooks": [
+          "PK_몬스터 어그로 시스템",
+          "PK_몬스터설정"
+        ]
+      },
+      "top3_precision": 1.0,
+      "top3_workbooks": [
+        "PK_몬스터 어그로 시스템",
+        "PK_몬스터 어그로 시스템",
+        "PK_몬스터 어그로 시스템"
+      ],
+      "top3_sources": [
+        "structural",
+        "structural",
+        "structural"
+      ],
+      "keyword_score": 1.0,
+      "keyword_missed": [],
+      "source_distribution": {
+        "structural": 12
+      },
+      "total_tokens": 4711,
+      "retrieve_time": 2.68,
+      "total_chunks": 12,
+      "passed": true
+    },
+    {
+      "id": "GT-03",
+      "query": "인벤토리와 아이템의 데이터 연결 구조는?",
+      "ground_truth_source": "PK_인벤토리 시스템/인벤토리/_final/content.md + PK_아이템 시스템/개요/_final/content.md",
+      "ground_truth_text": "인벤토리는 ItemTypeEnum으로 아이템을 분류(Equip/Consume/Material/Quest), MaxStack으로 중첩 제한",
+      "detected_systems": [
+        "PK_인벤토리 시스템",
+        "PK_아이템 시스템"
+      ],
+      "expected_workbooks": [
+        "PK_인벤토리 시스템",
+        "PK_아이템 시스템"
+      ],
+      "workbook_check": {
+        "found": [
+          "PK_인벤토리 시스템",
+          "PK_아이템 시스템"
+        ],
+        "missed": [],
+        "all_found": true,
+        "result_workbooks": [
+          "PK_아이템 시스템",
+          "PK_인벤토리 시스템"
+        ]
+      },
+      "top3_precision": 1.0,
+      "top3_workbooks": [
+        "PK_인벤토리 시스템",
+        "PK_인벤토리 시스템",
+        "PK_인벤토리 시스템"
+      ],
+      "top3_sources": [
+        "structural",
+        "structural",
+        "structural"
+      ],
+      "keyword_score": 1.0,
+      "keyword_missed": [],
+      "source_distribution": {
+        "structural": 12
+      },
+      "total_tokens": 9363,
+      "retrieve_time": 3.64,
+      "total_chunks": 12,
+      "passed": true
+    },
+    {
+      "id": "GT-04",
+      "query": "PvP 시스템의 핵심 규칙은?",
+      "ground_truth_source": "PK_피아 식별/기조 변경/_final/content.md",
+      "ground_truth_text": "패시브 모드(방어 위주, 선공 불가) vs 어그레시브 모드(선공 가능), UI 하단 좌측 토글",
+      "detected_systems": [
+        "PK_피아 식별"
+      ],
+      "expected_workbooks": [
+        "PK_피아 식별"
+      ],
+      "workbook_check": {
+        "found": [
+          "PK_피아 식별"
+        ],
+        "missed": [],
+        "all_found": true,
+        "result_workbooks": [
+          "PK_피아 식별"
+        ]
+      },
+      "top3_precision": 1.0,
+      "top3_workbooks": [
+        "PK_피아 식별",
+        "PK_피아 식별",
+        "PK_피아 식별"
+      ],
+      "top3_sources": [
+        "structural",
+        "structural",
+        "structural"
+      ],
+      "keyword_score": 0.5,
+      "keyword_missed": [
+        "패시브",
+        "어그레시브"
+      ],
+      "source_distribution": {
+        "structural": 12
+      },
+      "total_tokens": 9927,
+      "retrieve_time": 1.98,
+      "total_chunks": 12,
+      "passed": true
+    },
+    {
+      "id": "GT-05",
+      "query": "'발동 액션'이란 용어의 정의는?",
+      "ground_truth_source": "PK_발동 액션 시스템/발동 액션/_final/content.md:11-12",
+      "ground_truth_text": "공격 시 확률 발동되는 특수 공격",
+      "detected_systems": [
+        "PK_발동 액션 시스템"
+      ],
+      "expected_workbooks": [
+        "PK_발동 액션 시스템"
+      ],
+      "workbook_check": {
+        "found": [
+          "PK_발동 액션 시스템"
+        ],
+        "missed": [],
+        "all_found": true,
+        "result_workbooks": [
+          "PK_발동 액션 시스템",
+          "PK_세계관",
+          "PK_전투AI시스템"
+        ]
+      },
+      "top3_precision": 1.0,
+      "top3_workbooks": [
+        "PK_발동 액션 시스템",
+        "PK_발동 액션 시스템",
+        "PK_발동 액션 시스템"
+      ],
+      "top3_sources": [
+        "structural",
+        "structural",
+        "structural"
+      ],
+      "keyword_score": 1.0,
+      "keyword_missed": [],
+      "source_distribution": {
+        "structural": 10,
+        "vector": 2
+      },
+      "total_tokens": 10654,
+      "retrieve_time": 1.8,
+      "total_chunks": 12,
+      "passed": true
+    },
+    {
+      "id": "GT-06",
+      "query": "스킬 시전 시 체크하는 조건 순서는?",
+      "ground_truth_source": "PK_스킬 시스템/스킬/_final/content.md",
+      "ground_truth_text": "쿨타임 체크 → 타겟 유효성 → 사정거리 → Cost 소모 → 시전",
+      "detected_systems": [
+        "PK_스킬 시스템"
+      ],
+      "expected_workbooks": [
+        "PK_스킬 시스템"
+      ],
+      "workbook_check": {
+        "found": [
+          "PK_스킬 시스템"
+        ],
+        "missed": [],
+        "all_found": true,
+        "result_workbooks": [
+          "PK_스킬 시스템"
+        ]
+      },
+      "top3_precision": 1.0,
+      "top3_workbooks": [
+        "PK_스킬 시스템",
+        "PK_스킬 시스템",
+        "PK_스킬 시스템"
+      ],
+      "top3_sources": [
+        "structural",
+        "structural",
+        "structural"
+      ],
+      "keyword_score": 1.0,
+      "keyword_missed": [],
+      "source_distribution": {
+        "structural": 12
+      },
+      "total_tokens": 5743,
+      "retrieve_time": 1.98,
+      "total_chunks": 12,
+      "passed": true
+    },
+    {
+      "id": "GT-07",
+      "query": "골드 밸런스에서 필드 사냥 기준 시간당 획득량은?",
+      "ground_truth_source": "PK_골드 밸런스 content.md",
+      "ground_truth_text": "레벨/난이도별 시간당 골드 획득량 테이블",
+      "detected_systems": [
+        "PK_골드 밸런스"
+      ],
+      "expected_workbooks": [
+        "PK_골드 밸런스"
+      ],
+      "workbook_check": {
+        "found": [
+          "PK_골드 밸런스"
+        ],
+        "missed": [],
+        "all_found": true,
+        "result_workbooks": [
+          "PK_골드 밸런스",
+          "PK_리니지라이크 Stat 구조 분석",
+          "PK_스킬 대미지 밸런스",
+          "PK_장비 밸런스 및 데이터",
+          "PK_캐릭터 성장 밸런스",
+          "PK_퀘스트"
+        ]
+      },
+      "top3_precision": 1.0,
+      "top3_workbooks": [
+        "PK_골드 밸런스",
+        "PK_골드 밸런스",
+        "PK_골드 밸런스"
+      ],
+      "top3_sources": [
+        "structural",
+        "structural",
+        "structural"
+      ],
+      "keyword_score": 1.0,
+      "keyword_missed": [],
+      "source_distribution": {
+        "structural": 3,
+        "kg_expand": 3,
+        "vector": 6
+      },
+      "total_tokens": 7258,
+      "retrieve_time": 1.67,
+      "total_chunks": 12,
+      "passed": true
+    },
+    {
+      "id": "GT-08",
+      "query": "HUD 전투 화면에서 표시해야 할 UI 요소 목록은?",
+      "ground_truth_source": "PK_HUD 시스템/HUD_기본/_final/content.md",
+      "ground_truth_text": "타겟 정보, HP/MP 바, 스킬 슬롯, 미니맵, 채팅 등",
+      "detected_systems": [
+        "PK_HUD 시스템",
+        "PK_전투력 시스템"
+      ],
+      "expected_workbooks": [
+        "PK_HUD 시스템"
+      ],
+      "workbook_check": {
+        "found": [
+          "PK_HUD 시스템"
+        ],
+        "missed": [],
+        "all_found": true,
+        "result_workbooks": [
+          "PK_HUD 시스템",
+          "PK_전투력 시스템"
+        ]
+      },
+      "top3_precision": 1.0,
+      "top3_workbooks": [
+        "PK_HUD 시스템",
+        "PK_HUD 시스템",
+        "PK_HUD 시스템"
+      ],
+      "top3_sources": [
+        "structural",
+        "structural",
+        "structural"
+      ],
+      "keyword_score": 1.0,
+      "keyword_missed": [],
+      "source_distribution": {
+        "structural": 12
+      },
+      "total_tokens": 13611,
+      "retrieve_time": 3.5,
+      "total_chunks": 12,
+      "passed": true
+    },
+    {
+      "id": "GT-09",
+      "query": "변신 시스템과 스킬 시스템은 어떻게 연동되는가?",
+      "ground_truth_source": "PK_변신 및 스킬 시스템/변신 + 스킬/_final/content.md",
+      "ground_truth_text": "스킬은 의상(변신)에 귀속, 의상 착용 시 스킬 자동 장착",
+      "detected_systems": [
+        "PK_스킬 시스템",
+        "PK_변신 및 스킬 시스템"
+      ],
+      "expected_workbooks": [
+        "PK_변신 및 스킬 시스템"
+      ],
+      "workbook_check": {
+        "found": [
+          "PK_변신 및 스킬 시스템"
+        ],
+        "missed": [],
+        "all_found": true,
+        "result_workbooks": [
+          "PK_변신 및 스킬 시스템",
+          "PK_스킬 시스템"
+        ]
+      },
+      "top3_precision": 0.6666666666666666,
+      "top3_workbooks": [
+        "PK_스킬 시스템",
+        "PK_변신 및 스킬 시스템",
+        "PK_변신 및 스킬 시스템"
+      ],
+      "top3_sources": [
+        "structural",
+        "structural",
+        "structural"
+      ],
+      "keyword_score": 1.0,
+      "keyword_missed": [],
+      "source_distribution": {
+        "structural": 12
+      },
+      "total_tokens": 6035,
+      "retrieve_time": 2.82,
+      "total_chunks": 12,
+      "passed": true
+    },
+    {
+      "id": "GT-10",
+      "query": "전투AI 시스템의 기본 상태 전이 흐름은?",
+      "ground_truth_source": "PK_전투AI시스템 content.md",
+      "ground_truth_text": "스폰 → 반응 체크 → 대기/추적/공격 상태 전이",
+      "detected_systems": [
+        "PK_전투AI시스템",
+        "PK_전투력 시스템"
+      ],
+      "expected_workbooks": [
+        "PK_전투AI시스템"
+      ],
+      "workbook_check": {
+        "found": [
+          "PK_전투AI시스템"
+        ],
+        "missed": [],
+        "all_found": true,
+        "result_workbooks": [
+          "PK_전투AI시스템"
+        ]
+      },
+      "top3_precision": 1.0,
+      "top3_workbooks": [
+        "PK_전투AI시스템",
+        "PK_전투AI시스템",
+        "PK_전투AI시스템"
+      ],
+      "top3_sources": [
+        "structural",
+        "structural",
+        "structural"
+      ],
+      "keyword_score": 1.0,
+      "keyword_missed": [],
+      "source_distribution": {
+        "structural": 12
+      },
+      "total_tokens": 7272,
+      "retrieve_time": 3.07,
+      "total_chunks": 12,
+      "passed": true
+    }
+  ]
+}

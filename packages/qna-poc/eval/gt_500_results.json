@@ -1,0 +1,4484 @@
+{
+  "summary": {
+    "total": 100,
+    "overall_accuracy": 0.84,
+    "normal_accuracy": 0.8298,
+    "trap_accuracy": 1.0,
+    "avg_workbook_match": 0.9894,
+    "avg_keyword_score": 0.8413,
+    "avg_top3_precision": 0.8794,
+    "avg_search_time": 3.2028,
+    "total_time": 320.3,
+    "by_category": {
+      "D": {
+        "total": 14,
+        "pass": 12,
+        "accuracy": 0.8571
+      },
+      "E": {
+        "total": 12,
+        "pass": 11,
+        "accuracy": 0.9167
+      },
+      "F": {
+        "total": 6,
+        "pass": 6,
+        "accuracy": 1.0
+      },
+      "C": {
+        "total": 21,
+        "pass": 19,
+        "accuracy": 0.9048
+      },
+      "A": {
+        "total": 37,
+        "pass": 27,
+        "accuracy": 0.7297
+      },
+      "H": {
+        "total": 6,
+        "pass": 6,
+        "accuracy": 1.0
+      },
+      "B": {
+        "total": 4,
+        "pass": 3,
+        "accuracy": 0.75
+      }
+    }
+  },
+  "methodology": "gt_questions.json(495개)을 Retriever에 입력하여 워크북 매칭/키워드 적중/Top-3 정밀도를 검증. 할루시네이션 트랩은 구조적 매칭 없음을 확인.",
+  "results": [
+    {
+      "id": "GT-D-068",
+      "query": "테리토리 시스템의 리스폰 시 귀속 테리토리 플로우를 설명해줘",
+      "category": "D",
+      "is_trap": false,
+      "search_time": 4.821,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_테리토리 시스템",
+          "PK_스폰 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 27,
+        "kg_hits": 18,
+        "vector_hits": 6,
+        "search_scope": [
+          "PK_테리토리 시스템 (구조적 매칭)",
+          "PK_스폰 시스템 (구조적 매칭)",
+          "PK_HUD 시스템 (KG 관계 확장)",
+          "PK_NPC퀵이동 (KG 관계 확장)",
+          "PK_월드 시스템 (KG 관계 확장)",
+          "PK_월드맵 시스템 (KG 관계 확장)",
+          "PK_피아 식별 (KG 관계 확장)"
+        ],
+        "total_candidates": 51,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 8879
+      },
+      "wb_found": [
+        "PK_테리토리 시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-E-025",
+      "query": "자동 전투 시스템 화면에 표시되는 요소 목록은?",
+      "category": "E",
+      "is_trap": false,
+      "search_time": 4.282,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_자동 전투 시스템",
+          "PK_기본 전투 시스템",
+          "PK_HUD 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 55,
+        "kg_hits": 21,
+        "vector_hits": 2,
+        "search_scope": [
+          "PK_자동 전투 시스템 (구조적 매칭)",
+          "PK_기본 전투 시스템 (구조적 매칭)",
+          "PK_HUD 시스템 (구조적 매칭)",
+          "PK_몬스터 전투 시스템 (KG 관계 확장)",
+          "PK_변신 및 스킬 시스템 (KG 관계 확장)",
+          "PK_설정 시스템 (KG 관계 확장)",
+          "PK_기본전투_시스템 (KG 관계 확장)",
+          "PK_몬스터설정 (KG 관계 확장)"
+        ],
+        "total_candidates": 78,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 9384
+      },
+      "wb_found": [
+        "PK_자동 전투 시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 0.3333333333333333,
+      "passed": true
+    },
+    {
+      "id": "GT-F-046",
+      "query": "NPC 시스템의 Functional NPC 정의은?",
+      "category": "F",
+      "is_trap": false,
+      "search_time": 1.992,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_NPC 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand"
+        ],
+        "structural_hits": 80,
+        "kg_hits": 9,
+        "vector_hits": 0,
+        "search_scope": [
+          "PK_NPC 시스템 (구조적 매칭)",
+          "PK_인벤토리 시스템 (KG 관계 확장)",
+          "PK_퀘스트 (KG 관계 확장)",
+          "PK_퀘스트 인스턴스 (KG 관계 확장)"
+        ],
+        "total_candidates": 89,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 8094
+      },
+      "wb_found": [
+        "PK_NPC 시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-C-032",
+      "query": "몬스터 사망 랙돌 시스템에서 DOT의 충격량은(는) 무엇인가?",
+      "category": "C",
+      "is_trap": false,
+      "search_time": 4.268,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_몬스터 사망 랙돌 시스템",
+          "PK_몬스터 시스템",
+          "PK_사망 및 부활 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 47,
+        "kg_hits": 24,
+        "vector_hits": 4,
+        "search_scope": [
+          "PK_몬스터 사망 랙돌 시스템 (구조적 매칭)",
+          "PK_몬스터 시스템 (구조적 매칭)",
+          "PK_사망 및 부활 시스템 (구조적 매칭)",
+          "PK_몬스터 전투 시스템 (KG 관계 확장)",
+          "PK_보상 시스템 (KG 관계 확장)",
+          "PK_텍스트 이펙트 시스템 (KG 관계 확장)",
+          "PK_피격_이펙트_시스템 (KG 관계 확장)",
+          "PK_기본 전투 시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 75,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 6293
+      },
+      "wb_found": [
+        "PK_몬스터 사망 랙돌 시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 0.0,
+      "passed": false
+    },
+    {
+      "id": "GT-A-162",
+      "query": "몬스터 사망 랙돌 시스템 기획서에서 화염의 속성 FX을(를) 알려줘",
+      "category": "A",
+      "is_trap": false,
+      "search_time": 4.039,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_몬스터 사망 랙돌 시스템",
+          "PK_몬스터 시스템",
+          "PK_사망 및 부활 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 47,
+        "kg_hits": 24,
+        "vector_hits": 5,
+        "search_scope": [
+          "PK_몬스터 사망 랙돌 시스템 (구조적 매칭)",
+          "PK_몬스터 시스템 (구조적 매칭)",
+          "PK_사망 및 부활 시스템 (구조적 매칭)",
+          "PK_몬스터 전투 시스템 (KG 관계 확장)",
+          "PK_보상 시스템 (KG 관계 확장)",
+          "PK_텍스트 이펙트 시스템 (KG 관계 확장)",
+          "PK_피격_이펙트_시스템 (KG 관계 확장)",
+          "PK_기본 전투 시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 76,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 6895
+      },
+      "wb_found": [
+        "PK_몬스터 사망 랙돌 시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 0.6666666666666666,
+      "passed": true
+    },
+    {
+      "id": "GT-E-024",
+      "query": "변신 및 스킬 시스템의 스킬 메뉴 UI 구성은?",
+      "category": "E",
+      "is_trap": false,
+      "search_time": 4.034,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_변신 및 스킬 시스템",
+          "PK_스킬 시스템",
+          "PK_HUD 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 106,
+        "kg_hits": 18,
+        "vector_hits": 2,
+        "search_scope": [
+          "PK_변신 및 스킬 시스템 (구조적 매칭)",
+          "PK_스킬 시스템 (구조적 매칭)",
+          "PK_HUD 시스템 (구조적 매칭)",
+          "PK_기본 전투 시스템 (KG 관계 확장)",
+          "PK_버프 시스템 (KG 관계 확장)",
+          "PK_스탯 및 공식 (KG 관계 확장)",
+          "PK_시스템 메시지 (KG 관계 확장)",
+          "PK_기본전투_시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 126,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 11925
+      },
+      "wb_found": [
+        "PK_변신 및 스킬 시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-F-004",
+      "query": "보상 시스템 시스템의 목적은?",
+      "category": "F",
+      "is_trap": false,
+      "search_time": 2.477,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_보상 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 22,
+        "kg_hits": 15,
+        "vector_hits": 4,
+        "search_scope": [
+          "PK_보상 시스템 (구조적 매칭)",
+          "PK_HUD 시스템 (KG 관계 확장)",
+          "PK_몬스터 시스템 (KG 관계 확장)",
+          "PK_몬스터 전투 시스템 (KG 관계 확장)",
+          "PK_아이템 시스템 (KG 관계 확장)",
+          "PK_퀘스트 (KG 관계 확장)"
+        ],
+        "total_candidates": 41,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 8013
+      },
+      "wb_found": [
+        "PK_보상 시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-C-069",
+      "query": "스킬 시스템 기획서에서 Mob의 스킬을(를) 알려줘",
+      "category": "C",
+      "is_trap": false,
+      "search_time": 2.491,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_스킬 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 39,
+        "kg_hits": 15,
+        "vector_hits": 8,
+        "search_scope": [
+          "PK_스킬 시스템 (구조적 매칭)",
+          "PK_HUD 시스템 (KG 관계 확장)",
+          "PK_기본 전투 시스템 (KG 관계 확장)",
+          "PK_버프 시스템 (KG 관계 확장)",
+          "PK_스탯 및 공식 (KG 관계 확장)",
+          "PK_시스템 메시지 (KG 관계 확장)"
+        ],
+        "total_candidates": 62,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 7164
+      },
+      "wb_found": [
+        "PK_스킬 시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 0.5,
+      "kw_missed": [
+        "Mob"
+      ],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-A-118",
+      "query": "기본전투_시스템 기획서에서 좌측 하단의 UI 요소을(를) 알려줘",
+      "category": "A",
+      "is_trap": false,
+      "search_time": 4.514,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_기본전투_시스템",
+          "PK_기본 전투 시스템",
+          "PK_HUD 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 101,
+        "kg_hits": 21,
+        "vector_hits": 5,
+        "search_scope": [
+          "PK_기본전투_시스템 (구조적 매칭)",
+          "PK_기본 전투 시스템 (구조적 매칭)",
+          "PK_HUD 시스템 (구조적 매칭)",
+          "PK_발동 액션 시스템 (KG 관계 확장)",
+          "PK_스탯 및 공식 (KG 관계 확장)",
+          "PK_시스템 메시지 (KG 관계 확장)",
+          "PK_몬스터설정 (KG 관계 확장)",
+          "PK_버프 시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 127,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 15305
+      },
+      "wb_found": [
+        "PK_기본전투_시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-E-037",
+      "query": "NPC 시스템 화면에 표시되는 요소 목록은?",
+      "category": "E",
+      "is_trap": false,
+      "search_time": 3.936,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_NPC 시스템",
+          "PK_HUD 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand"
+        ],
+        "structural_hits": 92,
+        "kg_hits": 24,
+        "vector_hits": 0,
+        "search_scope": [
+          "PK_NPC 시스템 (구조적 매칭)",
+          "PK_HUD 시스템 (구조적 매칭)",
+          "PK_인벤토리 시스템 (KG 관계 확장)",
+          "PK_퀘스트 (KG 관계 확장)",
+          "PK_퀘스트 인스턴스 (KG 관계 확장)",
+          "PK_기본 전투 시스템 (KG 관계 확장)",
+          "PK_기본전투_시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 116,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 14790
+      },
+      "wb_found": [
+        "PK_NPC 시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 0.6666666666666666,
+      "kw_missed": [
+        "목표"
+      ],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-D-006",
+      "query": "피아 식별에서 =Passive부터의 진행 과정은?",
+      "category": "D",
+      "is_trap": false,
+      "search_time": 1.726,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_피아 식별"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 27,
+        "kg_hits": 3,
+        "vector_hits": 2,
+        "search_scope": [
+          "PK_피아 식별 (구조적 매칭)",
+          "PK_테리토리 시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 32,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 7714
+      },
+      "wb_found": [
+        "PK_피아 식별"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 0.0,
+      "kw_missed": [
+        "=Passive",
+        "=Passive",
+        "=Passive",
+        "=Passive",
+        "\"PvP 지향 PC의 광역 공격<br/>(→ 타 유저에게 피격되지 않음)\""
+      ],
+      "top3_precision": 1.0,
+      "passed": false
+    },
+    {
+      "id": "GT-E-021",
+      "query": "단축키 시스템의 M7 빌드 한정 단축키 강제 지정 시스템 UI 구성은?",
+      "category": "E",
+      "is_trap": false,
+      "search_time": 3.728,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_단축키 시스템",
+          "PK_HUD 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 15,
+        "kg_hits": 20,
+        "vector_hits": 7,
+        "search_scope": [
+          "PK_단축키 시스템 (구조적 매칭)",
+          "PK_HUD 시스템 (구조적 매칭)",
+          "PK_마우스 이벤트 처리 (KG 관계 확장)",
+          "PK_퀘스트 (KG 관계 확장)",
+          "PK_기본 전투 시스템 (KG 관계 확장)",
+          "PK_기본전투_시스템 (KG 관계 확장)",
+          "PK_물약 자동 사용 시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 42,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 11566
+      },
+      "wb_found": [
+        "PK_단축키 시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 0.8,
+      "kw_missed": [
+        "한정"
+      ],
+      "top3_precision": 0.3333333333333333,
+      "passed": true
+    },
+    {
+      "id": "GT-A-004",
+      "query": "로그인 플로우 기획서에서 ○ [?sba-Dev?]의 2열을(를) 알려줘",
+      "category": "A",
+      "is_trap": false,
+      "search_time": 2.093,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_로그인 플로우"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 25,
+        "kg_hits": 9,
+        "vector_hits": 5,
+        "search_scope": [
+          "PK_로그인 플로우 (구조적 매칭)",
+          "PK_인트로 시스템 (KG 관계 확장)",
+          "PK_캐릭터 생성 연출 (KG 관계 확장)",
+          "PK_퀘스트 인스턴스 (KG 관계 확장)"
+        ],
+        "total_candidates": 39,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 11019
+      },
+      "wb_found": [
+        "PK_로그인 플로우"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-D-060",
+      "query": "피격_이펙트_시스템의 출혈 이펙트 시스템 플로우를 설명해줘",
+      "category": "D",
+      "is_trap": false,
+      "search_time": 4.202,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_피격_이펙트_시스템",
+          "PK_기본 전투 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 41,
+        "kg_hits": 21,
+        "vector_hits": 2,
+        "search_scope": [
+          "PK_피격_이펙트_시스템 (구조적 매칭)",
+          "PK_기본 전투 시스템 (구조적 매칭)",
+          "PK_몬스터 기본 시스템 (KG 관계 확장)",
+          "PK_몬스터 시스템 (KG 관계 확장)",
+          "PK_HUD 시스템 (KG 관계 확장)",
+          "PK_기본전투_시스템 (KG 관계 확장)",
+          "PK_몬스터설정 (KG 관계 확장)"
+        ],
+        "total_candidates": 64,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 9033
+      },
+      "wb_found": [
+        "PK_피격_이펙트_시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-C-084",
+      "query": "게임플로우_발주 기획서에서 INTRO의 내용을(를) 알려줘",
+      "category": "C",
+      "is_trap": false,
+      "search_time": 1.762,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_게임플로우_발주"
+        ],
+        "layers_used": [
+          "structural",
+          "vector"
+        ],
+        "structural_hits": 3,
+        "kg_hits": 0,
+        "vector_hits": 9,
+        "search_scope": [
+          "PK_게임플로우_발주 (구조적 매칭)"
+        ],
+        "total_candidates": 12,
+        "final_source_distribution": {
+          "structural": 3,
+          "vector": 9
+        },
+        "final_total_tokens": 7004
+      },
+      "wb_found": [
+        "PK_게임플로우_발주"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-D-004",
+      "query": "퀘스트에서 [퀘스트Quest부터의 진행 과정은?",
+      "category": "D",
+      "is_trap": false,
+      "search_time": 2.818,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_퀘스트"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 104,
+        "kg_hits": 15,
+        "vector_hits": 3,
+        "search_scope": [
+          "PK_퀘스트 (구조적 매칭)",
+          "PK_HUD 시스템 (KG 관계 확장)",
+          "PK_NPC 시스템 (KG 관계 확장)",
+          "PK_기본전투_시스템 (KG 관계 확장)",
+          "PK_레벨업 연출 1차 (KG 관계 확장)",
+          "PK_로그인 플로우 (KG 관계 확장)"
+        ],
+        "total_candidates": 122,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 9786
+      },
+      "wb_found": [
+        "PK_퀘스트"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 0.6,
+      "kw_missed": [
+        "진행 목표 볼륨<br>입장 상태인가?",
+        "볼륨 영역<br>입장"
+      ],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-A-028",
+      "query": "월드맵 시스템 기획서에서 마을의 텔레포트 팝업창 출력 명칭을(를) 알려줘",
+      "category": "A",
+      "is_trap": false,
+      "search_time": 3.422,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_월드맵 시스템",
+          "PK_텔레포트 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 19,
+        "kg_hits": 12,
+        "vector_hits": 4,
+        "search_scope": [
+          "PK_월드맵 시스템 (구조적 매칭)",
+          "PK_텔레포트 시스템 (구조적 매칭)",
+          "PK_네임드 몬스터 타입추가 (KG 관계 확장)",
+          "PK_시스템 메시지 (KG 관계 확장)",
+          "PK_퀘스트 (KG 관계 확장)",
+          "PK_테리토리 시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 35,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 11418
+      },
+      "wb_found": [
+        "PK_월드맵 시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 0.3333333333333333,
+      "kw_missed": [
+        "OOOO : 마을명 출력",
+        "텔레포트 팝업창 출력 명칭"
+      ],
+      "top3_precision": 1.0,
+      "passed": false
+    },
+    {
+      "id": "GT-D-007",
+      "query": "펫 시스템의 복귀 소환 (씨앗주우러 갔을때) 플로우를 설명해줘",
+      "category": "D",
+      "is_trap": false,
+      "search_time": 2.029,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_펫 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 25,
+        "kg_hits": 6,
+        "vector_hits": 3,
+        "search_scope": [
+          "PK_펫 시스템 (구조적 매칭)",
+          "PK_시스템 메시지 (KG 관계 확장)",
+          "PK_아이템 시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 34,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 10732
+      },
+      "wb_found": [
+        "PK_펫 시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-A-060",
+      "query": "몬스터 전투 시스템의 개요에 대해 설명해줘",
+      "category": "A",
+      "is_trap": false,
+      "search_time": 5.814,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_몬스터 전투 시스템",
+          "PK_기본 전투 시스템",
+          "PK_몬스터 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 61,
+        "kg_hits": 33,
+        "vector_hits": 5,
+        "search_scope": [
+          "PK_몬스터 전투 시스템 (구조적 매칭)",
+          "PK_기본 전투 시스템 (구조적 매칭)",
+          "PK_몬스터 시스템 (구조적 매칭)",
+          "PK_몬스터 기본 시스템 (KG 관계 확장)",
+          "PK_몬스터 사망 랙돌 시스템 (KG 관계 확장)",
+          "PK_몬스터 어그로 시스템 (KG 관계 확장)",
+          "PK_보상 시스템 (KG 관계 확장)",
+          "PK_HUD 시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 99,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 7877
+      },
+      "wb_found": [
+        "PK_몬스터 전투 시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 0.75,
+      "kw_missed": [
+        "전반을"
+      ],
+      "top3_precision": 0.0,
+      "passed": false
+    },
+    {
+      "id": "GT-A-133",
+      "query": "몬스터설정에서 발록의 크기은(는) 무엇인가?",
+      "category": "A",
+      "is_trap": false,
+      "search_time": 4.438,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_몬스터설정",
+          "PK_몬스터 시스템",
+          "PK_설정 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 166,
+        "kg_hits": 24,
+        "vector_hits": 2,
+        "search_scope": [
+          "PK_몬스터설정 (구조적 매칭)",
+          "PK_몬스터 시스템 (구조적 매칭)",
+          "PK_설정 시스템 (구조적 매칭)",
+          "PK_기본 전투 시스템 (KG 관계 확장)",
+          "PK_기타설정 (KG 관계 확장)",
+          "PK_몬스터 전투 시스템 (KG 관계 확장)",
+          "PK_보상 시스템 (KG 관계 확장)",
+          "PK_텍스트 이펙트 시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 192,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 9977
+      },
+      "wb_found": [
+        "PK_몬스터설정"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 0.6666666666666666,
+      "kw_missed": [
+        "중대형"
+      ],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-A-107",
+      "query": "스탯 및 공식 기획서에서 2차 스탯의 근/원/마 스탯 + 전체 스탯을(를) 알려줘",
+      "category": "A",
+      "is_trap": false,
+      "search_time": 2.712,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_스탯 및 공식"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 11,
+        "kg_hits": 15,
+        "vector_hits": 5,
+        "search_scope": [
+          "PK_스탯 및 공식 (구조적 매칭)",
+          "PK_HUD 시스템 (KG 관계 확장)",
+          "PK_기본 전투 시스템 (KG 관계 확장)",
+          "PK_기본전투_시스템 (KG 관계 확장)",
+          "PK_몬스터 전투 시스템 (KG 관계 확장)",
+          "PK_버프 시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 31,
+        "final_source_distribution": {
+          "structural": 11,
+          "kg_expand": 1
+        },
+        "final_total_tokens": 14985
+      },
+      "wb_found": [
+        "PK_스탯 및 공식"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-E-033",
+      "query": "버프 시스템의 참조 경로 UI 구성은?",
+      "category": "E",
+      "is_trap": false,
+      "search_time": 3.771,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_버프 시스템",
+          "PK_HUD 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 29,
+        "kg_hits": 15,
+        "vector_hits": 7,
+        "search_scope": [
+          "PK_버프 시스템 (구조적 매칭)",
+          "PK_HUD 시스템 (구조적 매칭)",
+          "PK_기본 전투 시스템 (KG 관계 확장)",
+          "PK_변신 및 스킬 시스템 (KG 관계 확장)",
+          "PK_스탯 및 공식 (KG 관계 확장)",
+          "PK_기본전투_시스템 (KG 관계 확장)",
+          "PK_물약 자동 사용 시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 51,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 14667
+      },
+      "wb_found": [
+        "PK_버프 시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 0.6666666666666666,
+      "passed": true
+    },
+    {
+      "id": "GT-E-018",
+      "query": "기본전투_발주의 ▶ 이동 UI 구성은?",
+      "category": "E",
+      "is_trap": false,
+      "search_time": 4.382,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_기본전투_발주",
+          "PK_기본전투_시스템",
+          "PK_기본 전투 시스템",
+          "PK_HUD 시스템",
+          "PK_텔레포트 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 102,
+        "kg_hits": 21,
+        "vector_hits": 4,
+        "search_scope": [
+          "PK_기본전투_발주 (구조적 매칭)",
+          "PK_기본전투_시스템 (구조적 매칭)",
+          "PK_기본 전투 시스템 (구조적 매칭)",
+          "PK_HUD 시스템 (KG 관계 확장)",
+          "PK_발동 액션 시스템 (KG 관계 확장)",
+          "PK_스탯 및 공식 (KG 관계 확장)",
+          "PK_시스템 메시지 (KG 관계 확장)",
+          "PK_몬스터설정 (KG 관계 확장)"
+        ],
+        "total_candidates": 127,
+        "final_source_distribution": {
+          "structural": 9,
+          "kg_expand": 3
+        },
+        "final_total_tokens": 10749
+      },
+      "wb_found": [
+        "PK_기본전투_발주"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 0.0,
+      "passed": false
+    },
+    {
+      "id": "GT-C-057",
+      "query": "퀘스트 인스턴스에서 형태 속성/크기의 내용은(는) 무엇인가?",
+      "category": "C",
+      "is_trap": false,
+      "search_time": 3.439,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_퀘스트 인스턴스",
+          "PK_퀘스트"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 120,
+        "kg_hits": 15,
+        "vector_hits": 2,
+        "search_scope": [
+          "PK_퀘스트 인스턴스 (구조적 매칭)",
+          "PK_퀘스트 (구조적 매칭)",
+          "PK_HUD 시스템 (KG 관계 확장)",
+          "PK_NPC 시스템 (KG 관계 확장)",
+          "PK_기본전투_시스템 (KG 관계 확장)",
+          "PK_레벨업 연출 1차 (KG 관계 확장)",
+          "PK_로그인 플로우 (KG 관계 확장)"
+        ],
+        "total_candidates": 137,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 11059
+      },
+      "wb_found": [
+        "PK_퀘스트 인스턴스"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-C-096",
+      "query": "게임플로우_시스템 기획서에서 INTRO의 내용을(를) 알려줘",
+      "category": "C",
+      "is_trap": false,
+      "search_time": 1.501,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_게임플로우_시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "vector"
+        ],
+        "structural_hits": 7,
+        "kg_hits": 0,
+        "vector_hits": 10,
+        "search_scope": [
+          "PK_게임플로우_시스템 (구조적 매칭)"
+        ],
+        "total_candidates": 17,
+        "final_source_distribution": {
+          "structural": 7,
+          "vector": 5
+        },
+        "final_total_tokens": 6915
+      },
+      "wb_found": [
+        "PK_게임플로우_시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-A-066",
+      "query": "몬스터설정 기획서에서 하마의 크기을(를) 알려줘",
+      "category": "A",
+      "is_trap": false,
+      "search_time": 4.247,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_몬스터설정",
+          "PK_몬스터 시스템",
+          "PK_설정 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 166,
+        "kg_hits": 24,
+        "vector_hits": 1,
+        "search_scope": [
+          "PK_몬스터설정 (구조적 매칭)",
+          "PK_몬스터 시스템 (구조적 매칭)",
+          "PK_설정 시스템 (구조적 매칭)",
+          "PK_기본 전투 시스템 (KG 관계 확장)",
+          "PK_기타설정 (KG 관계 확장)",
+          "PK_몬스터 전투 시스템 (KG 관계 확장)",
+          "PK_보상 시스템 (KG 관계 확장)",
+          "PK_텍스트 이펙트 시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 191,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 11590
+      },
+      "wb_found": [
+        "PK_몬스터설정"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 0.6666666666666666,
+      "kw_missed": [
+        "하마"
+      ],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-F-035",
+      "query": "퀘스트의 개요은?",
+      "category": "F",
+      "is_trap": false,
+      "search_time": 2.541,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_퀘스트"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 104,
+        "kg_hits": 15,
+        "vector_hits": 3,
+        "search_scope": [
+          "PK_퀘스트 (구조적 매칭)",
+          "PK_HUD 시스템 (KG 관계 확장)",
+          "PK_NPC 시스템 (KG 관계 확장)",
+          "PK_기본전투_시스템 (KG 관계 확장)",
+          "PK_레벨업 연출 1차 (KG 관계 확장)",
+          "PK_로그인 플로우 (KG 관계 확장)"
+        ],
+        "total_candidates": 122,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 7494
+      },
+      "wb_found": [
+        "PK_퀘스트"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-F-022",
+      "query": "인트로 시스템의 피아의 구분이 강제 전투로 바뀌는가? 를 정의하는게 핵심은?",
+      "category": "F",
+      "is_trap": false,
+      "search_time": 4.289,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_인트로 시스템",
+          "PK_기본 전투 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 68,
+        "kg_hits": 30,
+        "vector_hits": 6,
+        "search_scope": [
+          "PK_인트로 시스템 (구조적 매칭)",
+          "PK_기본 전투 시스템 (구조적 매칭)",
+          "PK_로그인 플로우 (KG 관계 확장)",
+          "PK_볼륨 시퀀스_시스템 (KG 관계 확장)",
+          "PK_시네마틱_시스템 (KG 관계 확장)",
+          "PK_퀘스트 오브젝트 (KG 관계 확장)",
+          "PK_퀘스트 인스턴스 (KG 관계 확장)"
+        ],
+        "total_candidates": 104,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 7025
+      },
+      "wb_found": [
+        "PK_인트로 시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-D-024",
+      "query": "자동 전투 시스템에서 전투 중부터의 진행 과정은?",
+      "category": "D",
+      "is_trap": false,
+      "search_time": 4.781,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_자동 전투 시스템",
+          "PK_기본 전투 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 43,
+        "kg_hits": 21,
+        "vector_hits": 4,
+        "search_scope": [
+          "PK_자동 전투 시스템 (구조적 매칭)",
+          "PK_기본 전투 시스템 (구조적 매칭)",
+          "PK_HUD 시스템 (KG 관계 확장)",
+          "PK_몬스터 전투 시스템 (KG 관계 확장)",
+          "PK_변신 및 스킬 시스템 (KG 관계 확장)",
+          "PK_설정 시스템 (KG 관계 확장)",
+          "PK_기본전투_시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 68,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 7758
+      },
+      "wb_found": [
+        "PK_자동 전투 시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 0.3333333333333333,
+      "passed": true
+    },
+    {
+      "id": "GT-H-038",
+      "query": "미니맵에서 적 플레이어 표시 범위(m)는?",
+      "category": "H",
+      "is_trap": true,
+      "search_time": 1.685,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_미니맵 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 9,
+        "kg_hits": 3,
+        "vector_hits": 8,
+        "search_scope": [
+          "PK_미니맵 시스템 (구조적 매칭)",
+          "PK_퀘스트 인스턴스 (KG 관계 확장)"
+        ],
+        "total_candidates": 20,
+        "final_source_distribution": {
+          "structural": 9,
+          "kg_expand": 2,
+          "vector": 1
+        },
+        "final_total_tokens": 7969
+      },
+      "trap_passed": true,
+      "trap_reason": "structural_match_on_related_keyword: ['PK_미니맵 시스템']"
+    },
+    {
+      "id": "GT-D-033",
+      "query": "기본 전투 시스템에서 모든 상태 대체부터의 진행 과정은?",
+      "category": "D",
+      "is_trap": false,
+      "search_time": 2.445,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_기본 전투 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 29,
+        "kg_hits": 15,
+        "vector_hits": 7,
+        "search_scope": [
+          "PK_기본 전투 시스템 (구조적 매칭)",
+          "PK_HUD 시스템 (KG 관계 확장)",
+          "PK_기본전투_시스템 (KG 관계 확장)",
+          "PK_몬스터설정 (KG 관계 확장)",
+          "PK_버프 시스템 (KG 관계 확장)",
+          "PK_변신 및 스킬 시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 51,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 10005
+      },
+      "wb_found": [
+        "PK_기본 전투 시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-A-159",
+      "query": "보스 레이드 시스템 기획서에서 Id의 용도을(를) 알려줘",
+      "category": "A",
+      "is_trap": false,
+      "search_time": 3.891,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_보스 레이드 시스템",
+          "PK_몬스터 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 48,
+        "kg_hits": 24,
+        "vector_hits": 2,
+        "search_scope": [
+          "PK_보스 레이드 시스템 (구조적 매칭)",
+          "PK_몬스터 시스템 (구조적 매칭)",
+          "PK_바리울 리소스 (KG 관계 확장)",
+          "PK_사망 및 부활 시스템 (KG 관계 확장)",
+          "PK_시스템 메시지 (KG 관계 확장)",
+          "PK_파티 시스템 (KG 관계 확장)",
+          "PK_몬스터 전투 시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 74,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 14875
+      },
+      "wb_found": [
+        "PK_보스 레이드 시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 0.6666666666666666,
+      "kw_missed": [
+        "각 레이드 고유 Number"
+      ],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-B-006",
+      "query": "변신 시스템과 스킬 시스템은 어떻게 연동되는가?",
+      "category": "B",
+      "is_trap": false,
+      "search_time": 3.425,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_스킬 시스템",
+          "PK_변신 및 스킬 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 94,
+        "kg_hits": 15,
+        "vector_hits": 1,
+        "search_scope": [
+          "PK_스킬 시스템 (구조적 매칭)",
+          "PK_변신 및 스킬 시스템 (구조적 매칭)",
+          "PK_HUD 시스템 (KG 관계 확장)",
+          "PK_기본 전투 시스템 (KG 관계 확장)",
+          "PK_버프 시스템 (KG 관계 확장)",
+          "PK_스탯 및 공식 (KG 관계 확장)",
+          "PK_시스템 메시지 (KG 관계 확장)"
+        ],
+        "total_candidates": 110,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 5561
+      },
+      "wb_found": [
+        "PK_변신 및 스킬 시스템",
+        "PK_스킬 시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-B-017",
+      "query": "파티 전투 규칙은 어떻게 되어 있나?",
+      "category": "B",
+      "is_trap": false,
+      "search_time": 4.305,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_기본 전투 시스템",
+          "PK_파티 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 52,
+        "kg_hits": 30,
+        "vector_hits": 7,
+        "search_scope": [
+          "PK_기본 전투 시스템 (구조적 매칭)",
+          "PK_파티 시스템 (구조적 매칭)",
+          "PK_HUD 시스템 (KG 관계 확장)",
+          "PK_기본전투_시스템 (KG 관계 확장)",
+          "PK_몬스터설정 (KG 관계 확장)",
+          "PK_버프 시스템 (KG 관계 확장)",
+          "PK_변신 및 스킬 시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 89,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 9737
+      },
+      "wb_found": [
+        "PK_파티 시스템",
+        "PK_기본 전투 시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-A-010",
+      "query": "몬스터설정에서 트롤의 구분은(는) 무엇인가?",
+      "category": "A",
+      "is_trap": false,
+      "search_time": 4.01,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_몬스터설정",
+          "PK_몬스터 시스템",
+          "PK_설정 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand"
+        ],
+        "structural_hits": 166,
+        "kg_hits": 24,
+        "vector_hits": 0,
+        "search_scope": [
+          "PK_몬스터설정 (구조적 매칭)",
+          "PK_몬스터 시스템 (구조적 매칭)",
+          "PK_설정 시스템 (구조적 매칭)",
+          "PK_기본 전투 시스템 (KG 관계 확장)",
+          "PK_기타설정 (KG 관계 확장)",
+          "PK_몬스터 전투 시스템 (KG 관계 확장)",
+          "PK_보상 시스템 (KG 관계 확장)",
+          "PK_텍스트 이펙트 시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 190,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 8992
+      },
+      "wb_found": [
+        "PK_몬스터설정"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 0.3333333333333333,
+      "kw_missed": [
+        "트롤",
+        "트롤_일반"
+      ],
+      "top3_precision": 1.0,
+      "passed": false
+    },
+    {
+      "id": "GT-C-065",
+      "query": "캐릭터 성장 밸런스에서 메인 퀘스트의 1~10은(는) 무엇인가?",
+      "category": "C",
+      "is_trap": false,
+      "search_time": 4.38,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_캐릭터 성장 밸런스",
+          "PK_퀘스트",
+          "PK_캐릭터 생성 연출"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 135,
+        "kg_hits": 27,
+        "vector_hits": 3,
+        "search_scope": [
+          "PK_캐릭터 성장 밸런스 (구조적 매칭)",
+          "PK_퀘스트 (구조적 매칭)",
+          "PK_캐릭터 생성 연출 (구조적 매칭)",
+          "PK_퀘스트 인스턴스 (KG 관계 확장)",
+          "PK_HUD 시스템 (KG 관계 확장)",
+          "PK_NPC 시스템 (KG 관계 확장)",
+          "PK_기본전투_시스템 (KG 관계 확장)",
+          "PK_레벨업 연출 1차 (KG 관계 확장)"
+        ],
+        "total_candidates": 165,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 12956
+      },
+      "wb_found": [
+        "PK_캐릭터 성장 밸런스"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-B-001",
+      "query": "발동 액션과(와) 스킬의 관계를 설명해줘",
+      "category": "B",
+      "is_trap": false,
+      "search_time": 3.644,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_발동 액션 시스템",
+          "PK_스킬 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 49,
+        "kg_hits": 18,
+        "vector_hits": 4,
+        "search_scope": [
+          "PK_발동 액션 시스템 (구조적 매칭)",
+          "PK_스킬 시스템 (구조적 매칭)",
+          "PK_기본전투_시스템 (KG 관계 확장)",
+          "PK_HUD 시스템 (KG 관계 확장)",
+          "PK_기본 전투 시스템 (KG 관계 확장)",
+          "PK_버프 시스템 (KG 관계 확장)",
+          "PK_스탯 및 공식 (KG 관계 확장)"
+        ],
+        "total_candidates": 71,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 10935
+      },
+      "wb_found": [
+        "PK_발동 액션 시스템",
+        "PK_스킬 시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-C-038",
+      "query": "레벨업 연출 1차 기획서에서 달성 레벨 표기의 빌드 타깃을(를) 알려줘",
+      "category": "C",
+      "is_trap": false,
+      "search_time": 3.24,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_레벨업 연출 1차",
+          "PK_레벨업 시스템",
+          "PK_시네마틱_시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 54,
+        "kg_hits": 6,
+        "vector_hits": 2,
+        "search_scope": [
+          "PK_레벨업 연출 1차 (구조적 매칭)",
+          "PK_레벨업 시스템 (구조적 매칭)",
+          "PK_시네마틱_시스템 (구조적 매칭)",
+          "PK_퀘스트 인스턴스 (KG 관계 확장)",
+          "PK_인트로 시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 62,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 3675
+      },
+      "wb_found": [
+        "PK_레벨업 연출 1차"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 0.6666666666666666,
+      "passed": true
+    },
+    {
+      "id": "GT-C-029",
+      "query": "NPC 시스템 기획서에서 Dialogue의 Value을(를) 알려줘",
+      "category": "C",
+      "is_trap": false,
+      "search_time": 1.99,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_NPC 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand"
+        ],
+        "structural_hits": 80,
+        "kg_hits": 9,
+        "vector_hits": 0,
+        "search_scope": [
+          "PK_NPC 시스템 (구조적 매칭)",
+          "PK_인벤토리 시스템 (KG 관계 확장)",
+          "PK_퀘스트 (KG 관계 확장)",
+          "PK_퀘스트 인스턴스 (KG 관계 확장)"
+        ],
+        "total_candidates": 89,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 11203
+      },
+      "wb_found": [
+        "PK_NPC 시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-B-010",
+      "query": "로그인 시스템과 캐릭터 시스템은 어떻게 연동되는가?",
+      "category": "B",
+      "is_trap": false,
+      "search_time": 3.823,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_캐릭터 생성 연출",
+          "PK_로그인 플로우"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 39,
+        "kg_hits": 18,
+        "vector_hits": 1,
+        "search_scope": [
+          "PK_캐릭터 생성 연출 (구조적 매칭)",
+          "PK_로그인 플로우 (구조적 매칭)",
+          "PK_MileStone_Proto (KG 관계 확장)",
+          "PK_기본전투_시스템 (KG 관계 확장)",
+          "PK_전투AI시스템 (KG 관계 확장)",
+          "PK_캐릭터 선택창&변신 (KG 관계 확장)",
+          "PK_인트로 시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 58,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 11199
+      },
+      "wb_found": [
+        "PK_로그인 플로우"
+      ],
+      "wb_missed": [
+        "PK_캐릭터 선택창&변신"
+      ],
+      "wb_all_found": false,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 1.0,
+      "passed": false
+    },
+    {
+      "id": "GT-A-149",
+      "query": "몬스터 사망 랙돌 시스템의 테이블 예시에 대해 설명해줘",
+      "category": "A",
+      "is_trap": false,
+      "search_time": 3.964,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_몬스터 사망 랙돌 시스템",
+          "PK_몬스터 시스템",
+          "PK_사망 및 부활 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 47,
+        "kg_hits": 24,
+        "vector_hits": 6,
+        "search_scope": [
+          "PK_몬스터 사망 랙돌 시스템 (구조적 매칭)",
+          "PK_몬스터 시스템 (구조적 매칭)",
+          "PK_사망 및 부활 시스템 (구조적 매칭)",
+          "PK_몬스터 전투 시스템 (KG 관계 확장)",
+          "PK_보상 시스템 (KG 관계 확장)",
+          "PK_텍스트 이펙트 시스템 (KG 관계 확장)",
+          "PK_피격_이펙트_시스템 (KG 관계 확장)",
+          "PK_기본 전투 시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 77,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 7641
+      },
+      "wb_found": [
+        "PK_몬스터 사망 랙돌 시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 0.6666666666666666,
+      "passed": true
+    },
+    {
+      "id": "GT-D-022",
+      "query": "변신 및 스킬 시스템에서 [평타 공격부터의 진행 과정은?",
+      "category": "D",
+      "is_trap": false,
+      "search_time": 4.01,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_변신 및 스킬 시스템",
+          "PK_스킬 시스템",
+          "PK_기본 전투 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 123,
+        "kg_hits": 18,
+        "vector_hits": 6,
+        "search_scope": [
+          "PK_변신 및 스킬 시스템 (구조적 매칭)",
+          "PK_스킬 시스템 (구조적 매칭)",
+          "PK_기본 전투 시스템 (구조적 매칭)",
+          "PK_HUD 시스템 (KG 관계 확장)",
+          "PK_버프 시스템 (KG 관계 확장)",
+          "PK_스탯 및 공식 (KG 관계 확장)",
+          "PK_시스템 메시지 (KG 관계 확장)",
+          "PK_기본전투_시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 147,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 5734
+      },
+      "wb_found": [
+        "PK_변신 및 스킬 시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 0.6,
+      "kw_missed": [
+        "[평타 공격",
+        "최종 액션 결정"
+      ],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-H-020",
+      "query": "월드 보스 소환 조건과 출현 주기는?",
+      "category": "H",
+      "is_trap": true,
+      "search_time": 2.219,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_몬스터 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 28,
+        "kg_hits": 12,
+        "vector_hits": 12,
+        "search_scope": [
+          "PK_몬스터 시스템 (구조적 매칭)",
+          "PK_몬스터 전투 시스템 (KG 관계 확장)",
+          "PK_보상 시스템 (KG 관계 확장)",
+          "PK_텍스트 이펙트 시스템 (KG 관계 확장)",
+          "PK_피격_이펙트_시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 52,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 15515
+      },
+      "trap_passed": true,
+      "trap_reason": "structural_match_on_related_keyword: ['PK_몬스터 시스템']"
+    },
+    {
+      "id": "GT-C-082",
+      "query": "골드 밸런스에서 매우 쉬움의 소요 시간 (초)은(는) 무엇인가?",
+      "category": "C",
+      "is_trap": false,
+      "search_time": 1.506,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_골드 밸런스"
+        ],
+        "layers_used": [
+          "structural",
+          "vector"
+        ],
+        "structural_hits": 3,
+        "kg_hits": 0,
+        "vector_hits": 10,
+        "search_scope": [
+          "PK_골드 밸런스 (구조적 매칭)"
+        ],
+        "total_candidates": 13,
+        "final_source_distribution": {
+          "structural": 3,
+          "vector": 9
+        },
+        "final_total_tokens": 8455
+      },
+      "wb_found": [
+        "PK_골드 밸런스"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 0.0,
+      "kw_missed": [
+        "매우 쉬움",
+        "소요 시간 (초)"
+      ],
+      "top3_precision": 1.0,
+      "passed": false
+    },
+    {
+      "id": "GT-A-040",
+      "query": "몬스터설정 기획서에서 활용의 내용을(를) 알려줘",
+      "category": "A",
+      "is_trap": false,
+      "search_time": 4.043,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_몬스터설정",
+          "PK_몬스터 시스템",
+          "PK_설정 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 166,
+        "kg_hits": 24,
+        "vector_hits": 3,
+        "search_scope": [
+          "PK_몬스터설정 (구조적 매칭)",
+          "PK_몬스터 시스템 (구조적 매칭)",
+          "PK_설정 시스템 (구조적 매칭)",
+          "PK_기본 전투 시스템 (KG 관계 확장)",
+          "PK_기타설정 (KG 관계 확장)",
+          "PK_몬스터 전투 시스템 (KG 관계 확장)",
+          "PK_보상 시스템 (KG 관계 확장)",
+          "PK_텍스트 이펙트 시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 193,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 9078
+      },
+      "wb_found": [
+        "PK_몬스터설정"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 0.6666666666666666,
+      "passed": true
+    },
+    {
+      "id": "GT-C-008",
+      "query": "기본전투_시스템에서 **근거리 피해**의 필요 포인트은(는) 무엇인가?",
+      "category": "C",
+      "is_trap": false,
+      "search_time": 4.021,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_기본전투_시스템",
+          "PK_기본 전투 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 89,
+        "kg_hits": 21,
+        "vector_hits": 3,
+        "search_scope": [
+          "PK_기본전투_시스템 (구조적 매칭)",
+          "PK_기본 전투 시스템 (구조적 매칭)",
+          "PK_HUD 시스템 (KG 관계 확장)",
+          "PK_발동 액션 시스템 (KG 관계 확장)",
+          "PK_스탯 및 공식 (KG 관계 확장)",
+          "PK_시스템 메시지 (KG 관계 확장)",
+          "PK_몬스터설정 (KG 관계 확장)"
+        ],
+        "total_candidates": 113,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 10168
+      },
+      "wb_found": [
+        "PK_기본전투_시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 0.6666666666666666,
+      "passed": true
+    },
+    {
+      "id": "GT-A-012",
+      "query": "기본전투_시스템에서 기본 스탯 (STAT)의 표현 명칭은(는) 무엇인가?",
+      "category": "A",
+      "is_trap": false,
+      "search_time": 4.405,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_기본전투_시스템",
+          "PK_기본 전투 시스템",
+          "PK_스탯 및 공식"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 100,
+        "kg_hits": 21,
+        "vector_hits": 4,
+        "search_scope": [
+          "PK_기본전투_시스템 (구조적 매칭)",
+          "PK_기본 전투 시스템 (구조적 매칭)",
+          "PK_스탯 및 공식 (구조적 매칭)",
+          "PK_HUD 시스템 (KG 관계 확장)",
+          "PK_발동 액션 시스템 (KG 관계 확장)",
+          "PK_시스템 메시지 (KG 관계 확장)",
+          "PK_몬스터설정 (KG 관계 확장)",
+          "PK_버프 시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 125,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 9034
+      },
+      "wb_found": [
+        "PK_기본전투_시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 0.3333333333333333,
+      "kw_missed": [
+        "기본 스탯 (STAT)",
+        "표현 명칭"
+      ],
+      "top3_precision": 1.0,
+      "passed": false
+    },
+    {
+      "id": "GT-A-070",
+      "query": "퀘스트 기획서에서 Quest_Touch의 설명을(를) 알려줘",
+      "category": "A",
+      "is_trap": false,
+      "search_time": 2.393,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_퀘스트"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 104,
+        "kg_hits": 15,
+        "vector_hits": 4,
+        "search_scope": [
+          "PK_퀘스트 (구조적 매칭)",
+          "PK_HUD 시스템 (KG 관계 확장)",
+          "PK_NPC 시스템 (KG 관계 확장)",
+          "PK_기본전투_시스템 (KG 관계 확장)",
+          "PK_레벨업 연출 1차 (KG 관계 확장)",
+          "PK_로그인 플로우 (KG 관계 확장)"
+        ],
+        "total_candidates": 123,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 11221
+      },
+      "wb_found": [
+        "PK_퀘스트"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 0.3333333333333333,
+      "kw_missed": [
+        "Quest_Touch",
+        "터치 시 보상 수령"
+      ],
+      "top3_precision": 1.0,
+      "passed": false
+    },
+    {
+      "id": "GT-A-157",
+      "query": "기타설정의 일일던전 A - 봉인된 창고 설정에 대해 설명해줘",
+      "category": "A",
+      "is_trap": false,
+      "search_time": 2.881,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_기타설정",
+          "PK_설정 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 62,
+        "kg_hits": 9,
+        "vector_hits": 8,
+        "search_scope": [
+          "PK_기타설정 (구조적 매칭)",
+          "PK_설정 시스템 (구조적 매칭)",
+          "PK_몬스터설정 (KG 관계 확장)",
+          "PK_자동 전투 시스템 (KG 관계 확장)",
+          "PK_타게팅 시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 79,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 8824
+      },
+      "wb_found": [
+        "PK_기타설정"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-A-076",
+      "query": "기본전투_시스템 기획서에서 정신의 상세 설명을(를) 알려줘",
+      "category": "A",
+      "is_trap": false,
+      "search_time": 4.019,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_기본전투_시스템",
+          "PK_기본 전투 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 89,
+        "kg_hits": 21,
+        "vector_hits": 6,
+        "search_scope": [
+          "PK_기본전투_시스템 (구조적 매칭)",
+          "PK_기본 전투 시스템 (구조적 매칭)",
+          "PK_HUD 시스템 (KG 관계 확장)",
+          "PK_발동 액션 시스템 (KG 관계 확장)",
+          "PK_스탯 및 공식 (KG 관계 확장)",
+          "PK_시스템 메시지 (KG 관계 확장)",
+          "PK_몬스터설정 (KG 관계 확장)"
+        ],
+        "total_candidates": 116,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 12088
+      },
+      "wb_found": [
+        "PK_기본전투_시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 0.0,
+      "kw_missed": [
+        "정신",
+        "마법 공격력",
+        "상세 설명"
+      ],
+      "top3_precision": 1.0,
+      "passed": false
+    },
+    {
+      "id": "GT-A-053",
+      "query": "전문기술_시스템 기획서에서 성공의 설명을(를) 알려줘",
+      "category": "A",
+      "is_trap": false,
+      "search_time": 3.254,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_전문기술_시스템",
+          "PK_스킬 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 79,
+        "kg_hits": 15,
+        "vector_hits": 10,
+        "search_scope": [
+          "PK_전문기술_시스템 (구조적 매칭)",
+          "PK_스킬 시스템 (구조적 매칭)",
+          "PK_HUD 시스템 (KG 관계 확장)",
+          "PK_기본 전투 시스템 (KG 관계 확장)",
+          "PK_버프 시스템 (KG 관계 확장)",
+          "PK_스탯 및 공식 (KG 관계 확장)",
+          "PK_시스템 메시지 (KG 관계 확장)"
+        ],
+        "total_candidates": 104,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 8357
+      },
+      "wb_found": [
+        "PK_전문기술_시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 0.6666666666666666,
+      "kw_missed": [
+        "경매장 거래 가능, 창고 보관 O"
+      ],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-A-048",
+      "query": "인벤토리 시스템 기획서에서 가방 슬롯 확장이 최대인 상태에서 확장을 시도할 경우의 Recipient을(를) 알려줘",
+      "category": "A",
+      "is_trap": false,
+      "search_time": 2.446,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_인벤토리 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 23,
+        "kg_hits": 15,
+        "vector_hits": 6,
+        "search_scope": [
+          "PK_인벤토리 시스템 (구조적 매칭)",
+          "PK_HUD 시스템 (KG 관계 확장)",
+          "PK_NPC 시스템 (KG 관계 확장)",
+          "PK_변신 및 스킬 시스템 (KG 관계 확장)",
+          "PK_분해 시스템 (KG 관계 확장)",
+          "PK_스탯 및 공식 (KG 관계 확장)"
+        ],
+        "total_candidates": 44,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 12082
+      },
+      "wb_found": [
+        "PK_인벤토리 시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-A-061",
+      "query": "몬스터설정에서 잠자리의 등급은(는) 무엇인가?",
+      "category": "A",
+      "is_trap": false,
+      "search_time": 4.014,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_몬스터설정",
+          "PK_몬스터 시스템",
+          "PK_설정 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 166,
+        "kg_hits": 24,
+        "vector_hits": 2,
+        "search_scope": [
+          "PK_몬스터설정 (구조적 매칭)",
+          "PK_몬스터 시스템 (구조적 매칭)",
+          "PK_설정 시스템 (구조적 매칭)",
+          "PK_기본 전투 시스템 (KG 관계 확장)",
+          "PK_기타설정 (KG 관계 확장)",
+          "PK_몬스터 전투 시스템 (KG 관계 확장)",
+          "PK_보상 시스템 (KG 관계 확장)",
+          "PK_텍스트 이펙트 시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 192,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 9756
+      },
+      "wb_found": [
+        "PK_몬스터설정"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 0.3333333333333333,
+      "kw_missed": [
+        "잠자리",
+        "등급"
+      ],
+      "top3_precision": 1.0,
+      "passed": false
+    },
+    {
+      "id": "GT-E-026",
+      "query": "퀘스트 오브젝트 화면에 표시되는 요소 목록은?",
+      "category": "E",
+      "is_trap": false,
+      "search_time": 4.96,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_퀘스트 오브젝트",
+          "PK_퀘스트",
+          "PK_HUD 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 159,
+        "kg_hits": 36,
+        "vector_hits": 2,
+        "search_scope": [
+          "PK_퀘스트 오브젝트 (구조적 매칭)",
+          "PK_퀘스트 (구조적 매칭)",
+          "PK_HUD 시스템 (구조적 매칭)",
+          "PK_NPC 시스템 (KG 관계 확장)",
+          "PK_단축키 시스템 (KG 관계 확장)",
+          "PK_보상 시스템 (KG 관계 확장)",
+          "PK_시스템 메시지 (KG 관계 확장)",
+          "PK_월드맵 시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 197,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 10797
+      },
+      "wb_found": [
+        "PK_퀘스트 오브젝트"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-A-100",
+      "query": "종족 및 클래스에서 종족의 예시은(는) 무엇인가?",
+      "category": "A",
+      "is_trap": false,
+      "search_time": 1.614,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_종족 및 클래스"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 8,
+        "kg_hits": 3,
+        "vector_hits": 6,
+        "search_scope": [
+          "PK_종족 및 클래스 (구조적 매칭)",
+          "PK_변신 및 스킬 시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 17,
+        "final_source_distribution": {
+          "structural": 8,
+          "vector": 1,
+          "kg_expand": 3
+        },
+        "final_total_tokens": 3380
+      },
+      "wb_found": [
+        "PK_종족 및 클래스"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 0.6666666666666666,
+      "kw_missed": [
+        "인간 / 도깨비"
+      ],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-E-015",
+      "query": "퀘스트의 개발 완료_Alpha2 제외 UI 구성은?",
+      "category": "E",
+      "is_trap": false,
+      "search_time": 4.016,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_퀘스트",
+          "PK_HUD 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 116,
+        "kg_hits": 24,
+        "vector_hits": 2,
+        "search_scope": [
+          "PK_퀘스트 (구조적 매칭)",
+          "PK_HUD 시스템 (구조적 매칭)",
+          "PK_NPC 시스템 (KG 관계 확장)",
+          "PK_기본전투_시스템 (KG 관계 확장)",
+          "PK_레벨업 연출 1차 (KG 관계 확장)",
+          "PK_로그인 플로우 (KG 관계 확장)",
+          "PK_기본 전투 시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 142,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 12116
+      },
+      "wb_found": [
+        "PK_퀘스트"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 0.75,
+      "kw_missed": [
+        "완료_Alpha2"
+      ],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-D-011",
+      "query": "몬스터 시스템의 몬스터 사망 변이 플로우를 설명해줘",
+      "category": "D",
+      "is_trap": false,
+      "search_time": 3.797,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_몬스터 시스템",
+          "PK_사망 및 부활 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 39,
+        "kg_hits": 24,
+        "vector_hits": 7,
+        "search_scope": [
+          "PK_몬스터 시스템 (구조적 매칭)",
+          "PK_사망 및 부활 시스템 (구조적 매칭)",
+          "PK_몬스터 전투 시스템 (KG 관계 확장)",
+          "PK_보상 시스템 (KG 관계 확장)",
+          "PK_텍스트 이펙트 시스템 (KG 관계 확장)",
+          "PK_피격_이펙트_시스템 (KG 관계 확장)",
+          "PK_기본 전투 시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 70,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 9687
+      },
+      "wb_found": [
+        "PK_몬스터 시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-F-029",
+      "query": "월드 시스템의 목적은?",
+      "category": "F",
+      "is_trap": false,
+      "search_time": 2.231,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_월드 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 34,
+        "kg_hits": 12,
+        "vector_hits": 1,
+        "search_scope": [
+          "PK_월드 시스템 (구조적 매칭)",
+          "PK_사망 및 부활 시스템 (KG 관계 확장)",
+          "PK_시스템 메시지 (KG 관계 확장)",
+          "PK_월드_시스템 (KG 관계 확장)",
+          "PK_테리토리 시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 47,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 8780
+      },
+      "wb_found": [
+        "PK_월드 시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-D-003",
+      "query": "파티 시스템의 이전 섹션에서 이어지는 내용 플로우를 설명해줘",
+      "category": "D",
+      "is_trap": false,
+      "search_time": 2.418,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_파티 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 23,
+        "kg_hits": 15,
+        "vector_hits": 11,
+        "search_scope": [
+          "PK_파티 시스템 (구조적 매칭)",
+          "PK_보상 시스템 (KG 관계 확장)",
+          "PK_보스 레이드 시스템 (KG 관계 확장)",
+          "PK_채팅 시스템 (KG 관계 확장)",
+          "PK_퀘스트 인스턴스 (KG 관계 확장)",
+          "PK_타게팅 시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 49,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 11683
+      },
+      "wb_found": [
+        "PK_파티 시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-C-014",
+      "query": "퀘스트 인스턴스에서 ReachVolume (특정 볼륨에 도달)의 Arg0은(는) 무엇인가?",
+      "category": "C",
+      "is_trap": false,
+      "search_time": 3.223,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_퀘스트 인스턴스",
+          "PK_퀘스트"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 120,
+        "kg_hits": 15,
+        "vector_hits": 3,
+        "search_scope": [
+          "PK_퀘스트 인스턴스 (구조적 매칭)",
+          "PK_퀘스트 (구조적 매칭)",
+          "PK_HUD 시스템 (KG 관계 확장)",
+          "PK_NPC 시스템 (KG 관계 확장)",
+          "PK_기본전투_시스템 (KG 관계 확장)",
+          "PK_레벨업 연출 1차 (KG 관계 확장)",
+          "PK_로그인 플로우 (KG 관계 확장)"
+        ],
+        "total_candidates": 138,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 8855
+      },
+      "wb_found": [
+        "PK_퀘스트 인스턴스"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-H-018",
+      "query": "대장장이 NPC에서 아이템 수리 비용 공식은?",
+      "category": "H",
+      "is_trap": true,
+      "search_time": 3.797,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_아이템 시스템",
+          "PK_NPC 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 111,
+        "kg_hits": 24,
+        "vector_hits": 3,
+        "search_scope": [
+          "PK_아이템 시스템 (구조적 매칭)",
+          "PK_NPC 시스템 (구조적 매칭)",
+          "PK_HUD 시스템 (KG 관계 확장)",
+          "PK_변신 및 스킬 시스템 (KG 관계 확장)",
+          "PK_보상 시스템 (KG 관계 확장)",
+          "PK_분해 시스템 (KG 관계 확장)",
+          "PK_스탯 및 공식 (KG 관계 확장)"
+        ],
+        "total_candidates": 138,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 9387
+      },
+      "trap_passed": true,
+      "trap_reason": "structural_match_on_related_keyword: ['PK_아이템 시스템', 'PK_NPC 시스템']"
+    },
+    {
+      "id": "GT-C-003",
+      "query": "주변 탐지 시스템 기획서에서 3초의 설명을(를) 알려줘",
+      "category": "C",
+      "is_trap": false,
+      "search_time": 2.066,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_주변 탐지 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 11,
+        "kg_hits": 9,
+        "vector_hits": 3,
+        "search_scope": [
+          "PK_주변 탐지 시스템 (구조적 매칭)",
+          "PK_HUD 시스템 (KG 관계 확장)",
+          "PK_자동 전투 시스템 (KG 관계 확장)",
+          "PK_타게팅 시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 23,
+        "final_source_distribution": {
+          "structural": 11,
+          "kg_expand": 1
+        },
+        "final_total_tokens": 7052
+      },
+      "wb_found": [
+        "PK_주변 탐지 시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-E-029",
+      "query": "퀘스트 화면에 표시되는 요소 목록은?",
+      "category": "E",
+      "is_trap": false,
+      "search_time": 3.973,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_퀘스트",
+          "PK_HUD 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 116,
+        "kg_hits": 24,
+        "vector_hits": 1,
+        "search_scope": [
+          "PK_퀘스트 (구조적 매칭)",
+          "PK_HUD 시스템 (구조적 매칭)",
+          "PK_NPC 시스템 (KG 관계 확장)",
+          "PK_기본전투_시스템 (KG 관계 확장)",
+          "PK_레벨업 연출 1차 (KG 관계 확장)",
+          "PK_로그인 플로우 (KG 관계 확장)",
+          "PK_기본 전투 시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 141,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 15126
+      },
+      "wb_found": [
+        "PK_퀘스트"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 0.5,
+      "kw_missed": [
+        "개발",
+        "완료_Alpha2"
+      ],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-C-090",
+      "query": "트리거 시스템에서 WorldClass_id의 데이터 타입은(는) 무엇인가?",
+      "category": "C",
+      "is_trap": false,
+      "search_time": 1.639,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_트리거 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 12,
+        "kg_hits": 3,
+        "vector_hits": 6,
+        "search_scope": [
+          "PK_트리거 시스템 (구조적 매칭)",
+          "PK_전투AI시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 21,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 7748
+      },
+      "wb_found": [
+        "PK_트리거 시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-D-023",
+      "query": "인스턴스 시스템에서 [시작부터의 진행 과정은?",
+      "category": "D",
+      "is_trap": false,
+      "search_time": 1.714,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_인스턴스 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 8,
+        "kg_hits": 3,
+        "vector_hits": 6,
+        "search_scope": [
+          "PK_인스턴스 시스템 (구조적 매칭)",
+          "PK_퀘스트 인스턴스 (KG 관계 확장)"
+        ],
+        "total_candidates": 17,
+        "final_source_distribution": {
+          "structural": 8,
+          "kg_expand": 3,
+          "vector": 1
+        },
+        "final_total_tokens": 9852
+      },
+      "wb_found": [
+        "PK_인스턴스 시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-A-043",
+      "query": "퀘스트 인스턴스의 고려사항에 대해 설명해줘",
+      "category": "A",
+      "is_trap": false,
+      "search_time": 3.229,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_퀘스트 인스턴스",
+          "PK_퀘스트"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 120,
+        "kg_hits": 15,
+        "vector_hits": 1,
+        "search_scope": [
+          "PK_퀘스트 인스턴스 (구조적 매칭)",
+          "PK_퀘스트 (구조적 매칭)",
+          "PK_HUD 시스템 (KG 관계 확장)",
+          "PK_NPC 시스템 (KG 관계 확장)",
+          "PK_기본전투_시스템 (KG 관계 확장)",
+          "PK_레벨업 연출 1차 (KG 관계 확장)",
+          "PK_로그인 플로우 (KG 관계 확장)"
+        ],
+        "total_candidates": 136,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 6834
+      },
+      "wb_found": [
+        "PK_퀘스트 인스턴스"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-C-111",
+      "query": "기본전투_시스템에서 캐릭터 기본 이동 속도의 의도은(는) 무엇인가?",
+      "category": "C",
+      "is_trap": false,
+      "search_time": 4.841,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_기본전투_시스템",
+          "PK_캐릭터 생성 연출",
+          "PK_기본 전투 시스템",
+          "PK_텔레포트 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand"
+        ],
+        "structural_hits": 103,
+        "kg_hits": 33,
+        "vector_hits": 0,
+        "search_scope": [
+          "PK_기본전투_시스템 (구조적 매칭)",
+          "PK_캐릭터 생성 연출 (구조적 매칭)",
+          "PK_기본 전투 시스템 (구조적 매칭)",
+          "PK_HUD 시스템 (KG 관계 확장)",
+          "PK_발동 액션 시스템 (KG 관계 확장)",
+          "PK_스탯 및 공식 (KG 관계 확장)",
+          "PK_시스템 메시지 (KG 관계 확장)",
+          "PK_MileStone_Proto (KG 관계 확장)"
+        ],
+        "total_candidates": 136,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 7005
+      },
+      "wb_found": [
+        "PK_기본전투_시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-H-017",
+      "query": "혈맹 시스템의 동맹 규칙은?",
+      "category": "H",
+      "is_trap": true,
+      "search_time": 0.635,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [],
+        "layers_used": [
+          "vector"
+        ],
+        "structural_hits": 0,
+        "kg_hits": 0,
+        "vector_hits": 12,
+        "search_scope": [],
+        "total_candidates": 12,
+        "final_source_distribution": {
+          "vector": 12
+        },
+        "final_total_tokens": 3306
+      },
+      "trap_passed": true,
+      "trap_reason": "vector_only"
+    },
+    {
+      "id": "GT-C-086",
+      "query": "카메라 차폐 기획서에서 소형의 높이을(를) 알려줘",
+      "category": "C",
+      "is_trap": false,
+      "search_time": 2.462,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_카메라 차폐",
+          "PK_카메라_시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 12,
+        "kg_hits": 3,
+        "vector_hits": 6,
+        "search_scope": [
+          "PK_카메라 차폐 (구조적 매칭)",
+          "PK_카메라_시스템 (구조적 매칭)",
+          "PK_HUD 시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 21,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 7556
+      },
+      "wb_found": [
+        "PK_카메라 차폐"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 0.3333333333333333,
+      "passed": true
+    },
+    {
+      "id": "GT-F-008",
+      "query": "트리거 시스템의 목적은?",
+      "category": "F",
+      "is_trap": false,
+      "search_time": 1.668,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_트리거 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 12,
+        "kg_hits": 3,
+        "vector_hits": 2,
+        "search_scope": [
+          "PK_트리거 시스템 (구조적 매칭)",
+          "PK_전투AI시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 17,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 7748
+      },
+      "wb_found": [
+        "PK_트리거 시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-A-081",
+      "query": "Npc설정 기획서에서 resource의 내용을(를) 알려줘",
+      "category": "A",
+      "is_trap": false,
+      "search_time": 3.458,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_Npc설정",
+          "PK_NPC 시스템",
+          "PK_설정 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 128,
+        "kg_hits": 15,
+        "vector_hits": 4,
+        "search_scope": [
+          "PK_Npc설정 (구조적 매칭)",
+          "PK_NPC 시스템 (구조적 매칭)",
+          "PK_설정 시스템 (구조적 매칭)",
+          "PK_인벤토리 시스템 (KG 관계 확장)",
+          "PK_퀘스트 (KG 관계 확장)",
+          "PK_퀘스트 인스턴스 (KG 관계 확장)",
+          "PK_자동 전투 시스템 (KG 관계 확장)",
+          "PK_타게팅 시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 147,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 10794
+      },
+      "wb_found": [
+        "PK_Npc설정"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 0.3333333333333333,
+      "passed": true
+    },
+    {
+      "id": "GT-A-092",
+      "query": "몬스터설정 기획서에서 사이클롭스의 크기을(를) 알려줘",
+      "category": "A",
+      "is_trap": false,
+      "search_time": 3.898,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_몬스터설정",
+          "PK_몬스터 시스템",
+          "PK_설정 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 166,
+        "kg_hits": 24,
+        "vector_hits": 1,
+        "search_scope": [
+          "PK_몬스터설정 (구조적 매칭)",
+          "PK_몬스터 시스템 (구조적 매칭)",
+          "PK_설정 시스템 (구조적 매칭)",
+          "PK_기본 전투 시스템 (KG 관계 확장)",
+          "PK_기타설정 (KG 관계 확장)",
+          "PK_몬스터 전투 시스템 (KG 관계 확장)",
+          "PK_보상 시스템 (KG 관계 확장)",
+          "PK_텍스트 이펙트 시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 191,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 11616
+      },
+      "wb_found": [
+        "PK_몬스터설정"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-A-098",
+      "query": "몬스터_기본행동_발주의 몬스터 애니메이션 구성에 대해 설명해줘",
+      "category": "A",
+      "is_trap": false,
+      "search_time": 3.018,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_몬스터_기본행동_발주",
+          "PK_몬스터 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 41,
+        "kg_hits": 12,
+        "vector_hits": 2,
+        "search_scope": [
+          "PK_몬스터_기본행동_발주 (구조적 매칭)",
+          "PK_몬스터 시스템 (구조적 매칭)",
+          "PK_몬스터 전투 시스템 (KG 관계 확장)",
+          "PK_보상 시스템 (KG 관계 확장)",
+          "PK_텍스트 이펙트 시스템 (KG 관계 확장)",
+          "PK_피격_이펙트_시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 55,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 8055
+      },
+      "wb_found": [
+        "PK_몬스터_기본행동_발주"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 0.25,
+      "kw_missed": [
+        "최신",
+        "내역은",
+        "PC_캐릭터"
+      ],
+      "top3_precision": 1.0,
+      "passed": false
+    },
+    {
+      "id": "GT-A-124",
+      "query": "몬스터 기본 시스템에서 걷기의 LOOP은(는) 무엇인가?",
+      "category": "A",
+      "is_trap": false,
+      "search_time": 3.059,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_몬스터 기본 시스템",
+          "PK_몬스터 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 44,
+        "kg_hits": 12,
+        "vector_hits": 4,
+        "search_scope": [
+          "PK_몬스터 기본 시스템 (구조적 매칭)",
+          "PK_몬스터 시스템 (구조적 매칭)",
+          "PK_몬스터 전투 시스템 (KG 관계 확장)",
+          "PK_텍스트 이펙트 시스템 (KG 관계 확장)",
+          "PK_피격_이펙트_시스템 (KG 관계 확장)",
+          "PK_보상 시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 60,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 8678
+      },
+      "wb_found": [
+        "PK_몬스터 기본 시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 0.5,
+      "kw_missed": [
+        "LOOP"
+      ],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-C-092",
+      "query": "기본 전투 시스템 기획서에서 **공용 에셋 (무기 구분 X)**의 리소스명을(를) 알려줘",
+      "category": "C",
+      "is_trap": false,
+      "search_time": 2.331,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_기본 전투 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 29,
+        "kg_hits": 15,
+        "vector_hits": 8,
+        "search_scope": [
+          "PK_기본 전투 시스템 (구조적 매칭)",
+          "PK_HUD 시스템 (KG 관계 확장)",
+          "PK_기본전투_시스템 (KG 관계 확장)",
+          "PK_몬스터설정 (KG 관계 확장)",
+          "PK_버프 시스템 (KG 관계 확장)",
+          "PK_변신 및 스킬 시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 52,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 10541
+      },
+      "wb_found": [
+        "PK_기본 전투 시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-A-155",
+      "query": "피격_이펙트_시스템의 몬스터 이펙트 리스트에 대해 설명해줘",
+      "category": "A",
+      "is_trap": false,
+      "search_time": 4.491,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_피격_이펙트_시스템",
+          "PK_몬스터 시스템",
+          "PK_기본 전투 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 69,
+        "kg_hits": 27,
+        "vector_hits": 3,
+        "search_scope": [
+          "PK_피격_이펙트_시스템 (구조적 매칭)",
+          "PK_몬스터 시스템 (구조적 매칭)",
+          "PK_기본 전투 시스템 (구조적 매칭)",
+          "PK_몬스터 기본 시스템 (KG 관계 확장)",
+          "PK_몬스터 전투 시스템 (KG 관계 확장)",
+          "PK_보상 시스템 (KG 관계 확장)",
+          "PK_텍스트 이펙트 시스템 (KG 관계 확장)",
+          "PK_HUD 시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 99,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 9497
+      },
+      "wb_found": [
+        "PK_피격_이펙트_시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-A-022",
+      "query": "바리울 리소스 기획서에서 직업(Job)의 내용을(를) 알려줘",
+      "category": "A",
+      "is_trap": false,
+      "search_time": 1.682,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_바리울 리소스"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 59,
+        "kg_hits": 3,
+        "vector_hits": 4,
+        "search_scope": [
+          "PK_바리울 리소스 (구조적 매칭)",
+          "PK_보스 레이드 시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 66,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 8577
+      },
+      "wb_found": [
+        "PK_바리울 리소스"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-C-110",
+      "query": "전문기술_시스템에서 점령의 방패의 포인트은(는) 무엇인가?",
+      "category": "C",
+      "is_trap": false,
+      "search_time": 3.444,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_전문기술_시스템",
+          "PK_스킬 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 79,
+        "kg_hits": 15,
+        "vector_hits": 8,
+        "search_scope": [
+          "PK_전문기술_시스템 (구조적 매칭)",
+          "PK_스킬 시스템 (구조적 매칭)",
+          "PK_HUD 시스템 (KG 관계 확장)",
+          "PK_기본 전투 시스템 (KG 관계 확장)",
+          "PK_버프 시스템 (KG 관계 확장)",
+          "PK_스탯 및 공식 (KG 관계 확장)",
+          "PK_시스템 메시지 (KG 관계 확장)"
+        ],
+        "total_candidates": 102,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 7416
+      },
+      "wb_found": [
+        "PK_전문기술_시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 0.6666666666666666,
+      "passed": true
+    },
+    {
+      "id": "GT-D-059",
+      "query": "스탯 및 공식에서 방어력→피해 감소량 환산 65%부터의 진행 과정은?",
+      "category": "D",
+      "is_trap": false,
+      "search_time": 2.392,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_스탯 및 공식"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 11,
+        "kg_hits": 15,
+        "vector_hits": 5,
+        "search_scope": [
+          "PK_스탯 및 공식 (구조적 매칭)",
+          "PK_HUD 시스템 (KG 관계 확장)",
+          "PK_기본 전투 시스템 (KG 관계 확장)",
+          "PK_기본전투_시스템 (KG 관계 확장)",
+          "PK_몬스터 전투 시스템 (KG 관계 확장)",
+          "PK_버프 시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 31,
+        "final_source_distribution": {
+          "structural": 11,
+          "kg_expand": 1
+        },
+        "final_total_tokens": 14016
+      },
+      "wb_found": [
+        "PK_스탯 및 공식"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-A-032",
+      "query": "리니지라이크 컨텐츠 분석에서 기본 성장의 성장 효과은(는) 무엇인가?",
+      "category": "A",
+      "is_trap": false,
+      "search_time": 2.856,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_리니지라이크 컨텐츠 분석",
+          "PK_캐릭터 성장 밸런스"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 33,
+        "kg_hits": 9,
+        "vector_hits": 2,
+        "search_scope": [
+          "PK_리니지라이크 컨텐츠 분석 (구조적 매칭)",
+          "PK_캐릭터 성장 밸런스 (구조적 매칭)",
+          "PK_리니지라이크 Stat 구조 분석 (KG 관계 확장)",
+          "PK_캐릭터 생성 연출 (KG 관계 확장)",
+          "PK_퀘스트 인스턴스 (KG 관계 확장)"
+        ],
+        "total_candidates": 44,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 10600
+      },
+      "wb_found": [
+        "PK_리니지라이크 컨텐츠 분석"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-A-037",
+      "query": "피격_이펙트_시스템 기획서에서 복식 1 종의 용도을(를) 알려줘",
+      "category": "A",
+      "is_trap": false,
+      "search_time": 3.602,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_피격_이펙트_시스템",
+          "PK_기본 전투 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 41,
+        "kg_hits": 21,
+        "vector_hits": 4,
+        "search_scope": [
+          "PK_피격_이펙트_시스템 (구조적 매칭)",
+          "PK_기본 전투 시스템 (구조적 매칭)",
+          "PK_몬스터 기본 시스템 (KG 관계 확장)",
+          "PK_몬스터 시스템 (KG 관계 확장)",
+          "PK_HUD 시스템 (KG 관계 확장)",
+          "PK_기본전투_시스템 (KG 관계 확장)",
+          "PK_몬스터설정 (KG 관계 확장)"
+        ],
+        "total_candidates": 66,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 10065
+      },
+      "wb_found": [
+        "PK_피격_이펙트_시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-C-011",
+      "query": "스킬 시스템 기획서에서 PC의 스킬을(를) 알려줘",
+      "category": "C",
+      "is_trap": false,
+      "search_time": 2.446,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_스킬 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 39,
+        "kg_hits": 15,
+        "vector_hits": 6,
+        "search_scope": [
+          "PK_스킬 시스템 (구조적 매칭)",
+          "PK_HUD 시스템 (KG 관계 확장)",
+          "PK_기본 전투 시스템 (KG 관계 확장)",
+          "PK_버프 시스템 (KG 관계 확장)",
+          "PK_스탯 및 공식 (KG 관계 확장)",
+          "PK_시스템 메시지 (KG 관계 확장)"
+        ],
+        "total_candidates": 60,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 7494
+      },
+      "wb_found": [
+        "PK_스킬 시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-A-041",
+      "query": "종족 및 클래스 기획서에서 원거리의 도깨비을(를) 알려줘",
+      "category": "A",
+      "is_trap": false,
+      "search_time": 1.66,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_종족 및 클래스"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 8,
+        "kg_hits": 3,
+        "vector_hits": 5,
+        "search_scope": [
+          "PK_종족 및 클래스 (구조적 매칭)",
+          "PK_변신 및 스킬 시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 16,
+        "final_source_distribution": {
+          "structural": 8,
+          "kg_expand": 3,
+          "vector": 1
+        },
+        "final_total_tokens": 4656
+      },
+      "wb_found": [
+        "PK_종족 및 클래스"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-A-120",
+      "query": "아이템 시스템에서 일반 주문서의 실패 시은(는) 무엇인가?",
+      "category": "A",
+      "is_trap": false,
+      "search_time": 2.44,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_아이템 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 31,
+        "kg_hits": 15,
+        "vector_hits": 6,
+        "search_scope": [
+          "PK_아이템 시스템 (구조적 매칭)",
+          "PK_HUD 시스템 (KG 관계 확장)",
+          "PK_변신 및 스킬 시스템 (KG 관계 확장)",
+          "PK_보상 시스템 (KG 관계 확장)",
+          "PK_분해 시스템 (KG 관계 확장)",
+          "PK_스탯 및 공식 (KG 관계 확장)"
+        ],
+        "total_candidates": 52,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 7402
+      },
+      "wb_found": [
+        "PK_아이템 시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 0.6666666666666666,
+      "kw_missed": [
+        "장비 파괴 + 주문서 소모"
+      ],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-A-095",
+      "query": "몬스터설정 기획서에서 **건강식품**의 재료1 수량 필요 잠금해제을(를) 알려줘",
+      "category": "A",
+      "is_trap": false,
+      "search_time": 3.963,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_몬스터설정",
+          "PK_몬스터 시스템",
+          "PK_설정 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 166,
+        "kg_hits": 24,
+        "vector_hits": 1,
+        "search_scope": [
+          "PK_몬스터설정 (구조적 매칭)",
+          "PK_몬스터 시스템 (구조적 매칭)",
+          "PK_설정 시스템 (구조적 매칭)",
+          "PK_기본 전투 시스템 (KG 관계 확장)",
+          "PK_기타설정 (KG 관계 확장)",
+          "PK_몬스터 전투 시스템 (KG 관계 확장)",
+          "PK_보상 시스템 (KG 관계 확장)",
+          "PK_텍스트 이펙트 시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 191,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 8557
+      },
+      "wb_found": [
+        "PK_몬스터설정"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 0.0,
+      "kw_missed": [
+        "**건강식품**",
+        "Meat_Stew",
+        "재료1 수량 필요 잠금해제"
+      ],
+      "top3_precision": 1.0,
+      "passed": false
+    },
+    {
+      "id": "GT-C-060",
+      "query": "레벨업 시스템 기획서에서 ① 연출용 배경의 출력 순서을(를) 알려줘",
+      "category": "C",
+      "is_trap": false,
+      "search_time": 2.901,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_레벨업 시스템",
+          "PK_시네마틱_시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 47,
+        "kg_hits": 9,
+        "vector_hits": 4,
+        "search_scope": [
+          "PK_레벨업 시스템 (구조적 매칭)",
+          "PK_시네마틱_시스템 (구조적 매칭)",
+          "PK_레벨업 연출 1차 (KG 관계 확장)",
+          "PK_인트로 시스템 (KG 관계 확장)",
+          "PK_퀘스트 인스턴스 (KG 관계 확장)"
+        ],
+        "total_candidates": 60,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 4347
+      },
+      "wb_found": [
+        "PK_레벨업 시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 0.6666666666666666,
+      "passed": true
+    },
+    {
+      "id": "GT-H-010",
+      "query": "클랜(길드) 레벨업 보상 목록은?",
+      "category": "H",
+      "is_trap": true,
+      "search_time": 3.447,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_레벨업 시스템",
+          "PK_보상 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 27,
+        "kg_hits": 18,
+        "vector_hits": 3,
+        "search_scope": [
+          "PK_레벨업 시스템 (구조적 매칭)",
+          "PK_보상 시스템 (구조적 매칭)",
+          "PK_레벨업 연출 1차 (KG 관계 확장)",
+          "PK_HUD 시스템 (KG 관계 확장)",
+          "PK_몬스터 시스템 (KG 관계 확장)",
+          "PK_몬스터 전투 시스템 (KG 관계 확장)",
+          "PK_아이템 시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 48,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 6283
+      },
+      "trap_passed": true,
+      "trap_reason": "structural_match_on_related_keyword: ['PK_레벨업 시스템', 'PK_보상 시스템']"
+    },
+    {
+      "id": "GT-A-091",
+      "query": "월드_시스템에서 월드 ID의 스펙 분류은(는) 무엇인가?",
+      "category": "A",
+      "is_trap": false,
+      "search_time": 1.854,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_월드_시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 8,
+        "kg_hits": 6,
+        "vector_hits": 9,
+        "search_scope": [
+          "PK_월드_시스템 (구조적 매칭)",
+          "PK_시스템 메시지 (KG 관계 확장)",
+          "PK_월드 시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 23,
+        "final_source_distribution": {
+          "structural": 8,
+          "kg_expand": 3,
+          "vector": 1
+        },
+        "final_total_tokens": 10556
+      },
+      "wb_found": [
+        "PK_월드_시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-H-001",
+      "query": "PvP 레이드 시스템의 매칭 규칙은?",
+      "category": "H",
+      "is_trap": true,
+      "search_time": 1.633,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_피아 식별"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 27,
+        "kg_hits": 3,
+        "vector_hits": 10,
+        "search_scope": [
+          "PK_피아 식별 (구조적 매칭)",
+          "PK_테리토리 시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 40,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 9644
+      },
+      "trap_passed": true,
+      "trap_reason": "structural_match_on_related_keyword: ['PK_피아 식별']"
+    },
+    {
+      "id": "GT-A-150",
+      "query": "월드 시스템에서 ID의 필수여부은(는) 무엇인가?",
+      "category": "A",
+      "is_trap": false,
+      "search_time": 2.207,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_월드 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand"
+        ],
+        "structural_hits": 34,
+        "kg_hits": 12,
+        "vector_hits": 0,
+        "search_scope": [
+          "PK_월드 시스템 (구조적 매칭)",
+          "PK_사망 및 부활 시스템 (KG 관계 확장)",
+          "PK_시스템 메시지 (KG 관계 확장)",
+          "PK_월드_시스템 (KG 관계 확장)",
+          "PK_테리토리 시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 46,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 9366
+      },
+      "wb_found": [
+        "PK_월드 시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-C-041",
+      "query": "테리토리 시스템 기획서에서 domain=sc type=int32의 NamePriority을(를) 알려줘",
+      "category": "C",
+      "is_trap": false,
+      "search_time": 2.432,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_테리토리 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 13,
+        "kg_hits": 15,
+        "vector_hits": 7,
+        "search_scope": [
+          "PK_테리토리 시스템 (구조적 매칭)",
+          "PK_HUD 시스템 (KG 관계 확장)",
+          "PK_NPC퀵이동 (KG 관계 확장)",
+          "PK_월드 시스템 (KG 관계 확장)",
+          "PK_월드맵 시스템 (KG 관계 확장)",
+          "PK_피아 식별 (KG 관계 확장)"
+        ],
+        "total_candidates": 35,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 8466
+      },
+      "wb_found": [
+        "PK_테리토리 시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-D-005",
+      "query": "퀘스트에서 개수 1개 이하부터의 진행 과정은?",
+      "category": "D",
+      "is_trap": false,
+      "search_time": 2.431,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_퀘스트"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 104,
+        "kg_hits": 15,
+        "vector_hits": 1,
+        "search_scope": [
+          "PK_퀘스트 (구조적 매칭)",
+          "PK_HUD 시스템 (KG 관계 확장)",
+          "PK_NPC 시스템 (KG 관계 확장)",
+          "PK_기본전투_시스템 (KG 관계 확장)",
+          "PK_레벨업 연출 1차 (KG 관계 확장)",
+          "PK_로그인 플로우 (KG 관계 확장)"
+        ],
+        "total_candidates": 120,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 10865
+      },
+      "wb_found": [
+        "PK_퀘스트"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-A-137",
+      "query": "게임플로우_발주 기획서에서 INTRO의 명칭을(를) 알려줘",
+      "category": "A",
+      "is_trap": false,
+      "search_time": 1.5,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_게임플로우_발주"
+        ],
+        "layers_used": [
+          "structural",
+          "vector"
+        ],
+        "structural_hits": 3,
+        "kg_hits": 0,
+        "vector_hits": 9,
+        "search_scope": [
+          "PK_게임플로우_발주 (구조적 매칭)"
+        ],
+        "total_candidates": 12,
+        "final_source_distribution": {
+          "structural": 3,
+          "vector": 9
+        },
+        "final_total_tokens": 7163
+      },
+      "wb_found": [
+        "PK_게임플로우_발주"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-E-038",
+      "query": "보스 레이드 시스템 화면에 표시되는 요소 목록은?",
+      "category": "E",
+      "is_trap": false,
+      "search_time": 4.876,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_보스 레이드 시스템",
+          "PK_몬스터 시스템",
+          "PK_HUD 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 60,
+        "kg_hits": 39,
+        "vector_hits": 1,
+        "search_scope": [
+          "PK_보스 레이드 시스템 (구조적 매칭)",
+          "PK_몬스터 시스템 (구조적 매칭)",
+          "PK_HUD 시스템 (구조적 매칭)",
+          "PK_바리울 리소스 (KG 관계 확장)",
+          "PK_사망 및 부활 시스템 (KG 관계 확장)",
+          "PK_시스템 메시지 (KG 관계 확장)",
+          "PK_파티 시스템 (KG 관계 확장)",
+          "PK_몬스터 전투 시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 100,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 10435
+      },
+      "wb_found": [
+        "PK_보스 레이드 시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 0.5,
+      "kw_missed": [
+        "개요"
+      ],
+      "top3_precision": 0.6666666666666666,
+      "passed": true
+    },
+    {
+      "id": "GT-A-057",
+      "query": "몬스터설정에서 활용의 내용은(는) 무엇인가?",
+      "category": "A",
+      "is_trap": false,
+      "search_time": 3.951,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_몬스터설정",
+          "PK_몬스터 시스템",
+          "PK_설정 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 166,
+        "kg_hits": 24,
+        "vector_hits": 3,
+        "search_scope": [
+          "PK_몬스터설정 (구조적 매칭)",
+          "PK_몬스터 시스템 (구조적 매칭)",
+          "PK_설정 시스템 (구조적 매칭)",
+          "PK_기본 전투 시스템 (KG 관계 확장)",
+          "PK_기타설정 (KG 관계 확장)",
+          "PK_몬스터 전투 시스템 (KG 관계 확장)",
+          "PK_보상 시스템 (KG 관계 확장)",
+          "PK_텍스트 이펙트 시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 193,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 9150
+      },
+      "wb_found": [
+        "PK_몬스터설정"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 0.3333333333333333,
+      "passed": true
+    },
+    {
+      "id": "GT-D-064",
+      "query": "변신 및 스킬 시스템에서 (시작부터의 진행 과정은?",
+      "category": "D",
+      "is_trap": false,
+      "search_time": 3.24,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_변신 및 스킬 시스템",
+          "PK_스킬 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 94,
+        "kg_hits": 15,
+        "vector_hits": 2,
+        "search_scope": [
+          "PK_변신 및 스킬 시스템 (구조적 매칭)",
+          "PK_스킬 시스템 (구조적 매칭)",
+          "PK_HUD 시스템 (KG 관계 확장)",
+          "PK_기본 전투 시스템 (KG 관계 확장)",
+          "PK_버프 시스템 (KG 관계 확장)",
+          "PK_스탯 및 공식 (KG 관계 확장)",
+          "PK_시스템 메시지 (KG 관계 확장)"
+        ],
+        "total_candidates": 111,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 5620
+      },
+      "wb_found": [
+        "PK_변신 및 스킬 시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 0.2,
+      "kw_missed": [
+        "(시작",
+        "[합성 진행 불가",
+        "[합성 진행",
+        "(종료"
+      ],
+      "top3_precision": 1.0,
+      "passed": false
+    },
+    {
+      "id": "GT-E-001",
+      "query": "레벨업 연출 1차의 전체 레이아웃 UI 구성은?",
+      "category": "E",
+      "is_trap": false,
+      "search_time": 3.933,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_레벨업 연출 1차",
+          "PK_레벨업 시스템",
+          "PK_HUD 시스템",
+          "PK_시네마틱_시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 24,
+        "kg_hits": 18,
+        "vector_hits": 2,
+        "search_scope": [
+          "PK_레벨업 연출 1차 (구조적 매칭)",
+          "PK_레벨업 시스템 (구조적 매칭)",
+          "PK_HUD 시스템 (구조적 매칭)",
+          "PK_퀘스트 인스턴스 (KG 관계 확장)",
+          "PK_기본 전투 시스템 (KG 관계 확장)",
+          "PK_기본전투_시스템 (KG 관계 확장)",
+          "PK_물약 자동 사용 시스템 (KG 관계 확장)",
+          "PK_버프 시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 44,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 5200
+      },
+      "wb_found": [
+        "PK_레벨업 연출 1차"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 0.6666666666666666,
+      "passed": true
+    },
+    {
+      "id": "GT-E-023",
+      "query": "퀘스트 화면에 표시되는 요소 목록은?",
+      "category": "E",
+      "is_trap": false,
+      "search_time": 4.055,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_퀘스트",
+          "PK_HUD 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 116,
+        "kg_hits": 24,
+        "vector_hits": 1,
+        "search_scope": [
+          "PK_퀘스트 (구조적 매칭)",
+          "PK_HUD 시스템 (구조적 매칭)",
+          "PK_NPC 시스템 (KG 관계 확장)",
+          "PK_기본전투_시스템 (KG 관계 확장)",
+          "PK_레벨업 연출 1차 (KG 관계 확장)",
+          "PK_로그인 플로우 (KG 관계 확장)",
+          "PK_기본 전투 시스템 (KG 관계 확장)"
+        ],
+        "total_candidates": 141,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 15126
+      },
+      "wb_found": [
+        "PK_퀘스트"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 0.8,
+      "kw_missed": [
+        "찾아가기"
+      ],
+      "top3_precision": 1.0,
+      "passed": true
+    },
+    {
+      "id": "GT-A-129",
+      "query": "스킬 표준 데이터에서 Rare의 Class은(는) 무엇인가?",
+      "category": "A",
+      "is_trap": false,
+      "search_time": 3.392,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_스킬 표준 데이터",
+          "PK_스킬 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand",
+          "vector"
+        ],
+        "structural_hits": 42,
+        "kg_hits": 18,
+        "vector_hits": 6,
+        "search_scope": [
+          "PK_스킬 표준 데이터 (구조적 매칭)",
+          "PK_스킬 시스템 (구조적 매칭)",
+          "PK_스킬 대미지 밸런스 (KG 관계 확장)",
+          "PK_HUD 시스템 (KG 관계 확장)",
+          "PK_기본 전투 시스템 (KG 관계 확장)",
+          "PK_버프 시스템 (KG 관계 확장)",
+          "PK_스탯 및 공식 (KG 관계 확장)"
+        ],
+        "total_candidates": 66,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 5833
+      },
+      "wb_found": [
+        "PK_스킬 표준 데이터"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 0.0,
+      "passed": false
+    },
+    {
+      "id": "GT-C-099",
+      "query": "기본전투_시스템에서 캐릭터 기본 이동 속도의 초당 이동 속도 (M)은(는) 무엇인가?",
+      "category": "C",
+      "is_trap": false,
+      "search_time": 4.84,
+      "chunks_found": 12,
+      "retrieval_info": {
+        "detected_systems": [
+          "PK_기본전투_시스템",
+          "PK_캐릭터 생성 연출",
+          "PK_기본 전투 시스템",
+          "PK_텔레포트 시스템"
+        ],
+        "layers_used": [
+          "structural",
+          "kg_expand"
+        ],
+        "structural_hits": 103,
+        "kg_hits": 33,
+        "vector_hits": 0,
+        "search_scope": [
+          "PK_기본전투_시스템 (구조적 매칭)",
+          "PK_캐릭터 생성 연출 (구조적 매칭)",
+          "PK_기본 전투 시스템 (구조적 매칭)",
+          "PK_HUD 시스템 (KG 관계 확장)",
+          "PK_발동 액션 시스템 (KG 관계 확장)",
+          "PK_스탯 및 공식 (KG 관계 확장)",
+          "PK_시스템 메시지 (KG 관계 확장)",
+          "PK_MileStone_Proto (KG 관계 확장)"
+        ],
+        "total_candidates": 136,
+        "final_source_distribution": {
+          "structural": 12
+        },
+        "final_total_tokens": 8033
+      },
+      "wb_found": [
+        "PK_기본전투_시스템"
+      ],
+      "wb_missed": [],
+      "wb_all_found": true,
+      "kw_score": 1.0,
+      "kw_missed": [],
+      "top3_precision": 1.0,
+      "passed": true
+    }
+  ]
+}

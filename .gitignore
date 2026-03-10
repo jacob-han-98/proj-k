@@ -43,6 +43,9 @@ Confluence PDF Sync/
 # 변환 결과물 (대용량)
 _knowledge_base/
 
+# 평가 결과 (대용량 JSON, 히스토리 관리)
+packages/qna-poc/eval/results/
+
 # 테스트/임시 파일
 _test_log.txt
 변환테스트/

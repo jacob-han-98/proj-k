@@ -15,13 +15,16 @@ from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
-# 모델 매핑
-MODEL_MAPPING = {
-    "claude-opus": "global.anthropic.claude-opus-4-5-20251101-v1:0",
-    "claude-opus-4-5": "global.anthropic.claude-opus-4-5-20251101-v1:0",
-    "claude-sonnet-4-5": "global.anthropic.claude-sonnet-4-5-20250929-v1:0",
-    "claude-haiku-4-5": "global.anthropic.claude-haiku-4-5-20251001-v1:0",
-}
+# 모델 매핑 (.env의 MODEL_* 변수에서 로드)
+def _load_model_mapping() -> dict:
+    mapping = {}
+    for key, val in os.environ.items():
+        if key.startswith("MODEL_") and key != "MODEL_MAPPING":
+            alias = key[len("MODEL_"):].replace("_", "-").lower()
+            mapping[alias] = val
+    return mapping
+
+MODEL_MAPPING = _load_model_mapping()
 
 SYSTEM_PROMPT = """당신은 모바일 MMORPG "Project K"의 기획 전문가 AI 어시스턴트입니다.
 

@@ -88,6 +88,26 @@ SYNONYMS = {
     "레벨업": ["레벨업 시스템", "레벨 업"],
     "성장": ["성장 밸런스", "캐릭터 성장"],
     "네임드": ["네임드 몬스터", "보스 몬스터"],
+    # Confluence 전용 용어
+    "Beta1": ["Beta1 개선 항목", "베타1"],
+    "Beta2": ["Beta2 개선 항목", "베타2"],
+    "Beta3": ["Beta3 개선 항목", "베타3"],
+    "길드": ["길드 시스템", "클랜"],
+    "던전": ["던전 시스템", "인스턴스"],
+    "공성전": ["공성전 시스템", "공성"],
+    "서버 이동": ["서버 이동 컨텐츠", "월드 이동"],
+    "UX": ["UX 규칙", "UX UI 규칙"],
+    "레벨": ["레벨 시스템", "레벨링"],
+    "컷신": ["컷신 시스템", "시네마틱"],
+    "정령": ["정령 시스템"],
+    "재화": ["재화 시스템", "골드", "다이아"],
+    # 별칭 매핑 갭 보완 (평가 실패 분석 결과)
+    "Npc설정": ["Npc 설정", "NPC설정", "NPC 설정"],
+    "전투 연출": ["전투연출", "외곽선", "피아식별 연출"],
+    "성장 밸런스": ["밸런스", "대미지 방향성", "스탯 분야", "장비 파츠"],
+    "키 테마": ["프로젝트 키 테마", "키테마", "테마 논의"],
+    "일감 관리": ["일감", "폴리싱", "폴리싱 리스트"],
+    "R&D": ["레퍼런스", "레퍼런스 리뷰"],
 }
 
 # 자동 매핑이 잘못되는 경우 명시적 오버라이드 (key → 정확한 워크북명)
@@ -95,16 +115,37 @@ SYNONYM_WORKBOOK_OVERRIDES = {
     "전투": "PK_기본 전투 시스템",
     "기본 전투": "PK_기본 전투 시스템",
     "기본전투": "PK_기본전투_시스템",
+    "Npc설정": "PK_Npc설정",
+    "NPC설정": "PK_Npc설정",
+    "NPC 설정": "PK_Npc설정",
+    "Npc 설정": "PK_Npc설정",
 }
 
 
 def _build_system_aliases():
-    """워크북 이름에서 별칭 매핑 자동 구축 + 유의어 사전 통합."""
+    """워크북 이름에서 별칭 매핑 자동 구축 + 유의어 사전 통합.
+
+    별칭 → 워크북 리스트 매핑 (동일 용어가 Excel/Confluence 양쪽에 존재 가능).
+    """
     global _system_aliases
     if _system_aliases:
         return _system_aliases
 
-    _system_aliases = {}
+    _system_aliases = {}  # alias → list[str]  (워크북 리스트)
+
+    def _add_alias(alias: str, wb: str):
+        """별칭에 워크북 추가 (중복 방지)."""
+        key = alias.lower()
+        if key not in _system_aliases:
+            _system_aliases[key] = []
+        if wb not in _system_aliases[key]:
+            _system_aliases[key].append(wb)
+        # 원본 케이스도 등록
+        if alias != key:
+            if alias not in _system_aliases:
+                _system_aliases[alias] = []
+            if wb not in _system_aliases[alias]:
+                _system_aliases[alias].append(wb)
 
     try:
         collection = _get_collection()
@@ -118,61 +159,66 @@ def _build_system_aliases():
 
         # 정식명에서 별칭 생성
         for wb in workbooks:
-            _system_aliases[wb] = wb
-            _system_aliases[wb.lower()] = wb
+            _add_alias(wb, wb)
 
-            # PK_ 제거 버전
-            short = wb.replace("PK_", "").strip()
-            _system_aliases[short] = wb
-            _system_aliases[short.lower()] = wb
+            if wb.startswith("Confluence/"):
+                # Confluence 경로에서 별칭 추출
+                # e.g. "Confluence/Design/시스템 디자인/스킬/스킬 시스템"
+                parts = [p.strip() for p in wb.split("/") if p.strip()]
+                # 마지막 세그먼트 (가장 구체적)
+                if len(parts) >= 1:
+                    last = parts[-1]
+                    _add_alias(last, wb)
+                    _add_alias(last.replace(" ", ""), wb)
+                # 뒤에서 두 번째 + 마지막 조합
+                if len(parts) >= 2:
+                    parent_child = f"{parts[-2]}/{parts[-1]}"
+                    _add_alias(parent_child, wb)
+                # "시스템 디자인" 이후의 세그먼트 조합
+                design_idx = next((i for i, p in enumerate(parts) if "디자인" in p), -1)
+                if design_idx >= 0 and design_idx + 1 < len(parts):
+                    sub_path = "/".join(parts[design_idx + 1:])
+                    _add_alias(sub_path, wb)
+            else:
+                # PK_ 제거 버전 (Excel 워크북)
+                short = wb.replace("PK_", "").strip()
+                _add_alias(short, wb)
 
-            # 공백 제거 버전
-            nospace = short.replace(" ", "")
-            _system_aliases[nospace] = wb
-            _system_aliases[nospace.lower()] = wb
+                # 공백 제거 버전
+                nospace = short.replace(" ", "")
+                _add_alias(nospace, wb)
 
-            # "_" 제거 버전
-            nounderscore = short.replace("_", " ").strip()
-            _system_aliases[nounderscore] = wb
-            _system_aliases[nounderscore.lower()] = wb
+                # "_" 제거 버전
+                nounderscore = short.replace("_", " ").strip()
+                _add_alias(nounderscore, wb)
 
         # 유의어 사전 통합
         for key, aliases in SYNONYMS.items():
-            # key와 매칭되는 워크북 찾기 — 이름 시작부분 매칭 우선
-            candidates = []
+            # key와 매칭되는 워크북 찾기 — Excel과 Confluence 모두 수집
             for wb in workbooks:
-                wb_lower = wb.lower().replace("pk_", "")
-                if key.lower() in wb_lower or any(a.lower() in wb_lower for a in aliases):
-                    # 워크북명이 key로 시작하면 높은 우선순위
-                    starts_with = wb_lower.startswith(key.lower())
-                    candidates.append((wb, starts_with))
-
-            if candidates:
-                # 시작 매칭 우선 → "시스템" 포함 우선 → 이름 길이 짧은 것
-                candidates_scored = []
-                for wb, starts in candidates:
-                    has_system = "시스템" in wb
-                    candidates_scored.append((wb, starts, has_system))
-                candidates_scored.sort(key=lambda x: (-x[1], -x[2], len(x[0])))
-                matched_wb = candidates_scored[0][0]
-
-                # 명시적 오버라이드 적용
-                if key in SYNONYM_WORKBOOK_OVERRIDES:
-                    override = SYNONYM_WORKBOOK_OVERRIDES[key]
-                    if override in workbooks:
-                        matched_wb = override
-
-                _system_aliases[key] = matched_wb
-                _system_aliases[key.lower()] = matched_wb
-                for alias in aliases:
-                    # 별칭에도 오버라이드 확인
-                    alias_wb = SYNONYM_WORKBOOK_OVERRIDES.get(alias, matched_wb)
-                    if alias_wb in workbooks:
-                        _system_aliases[alias] = alias_wb
-                        _system_aliases[alias.lower()] = alias_wb
-                    else:
-                        _system_aliases[alias] = matched_wb
-                        _system_aliases[alias.lower()] = matched_wb
+                wb_lower = wb.lower()
+                wb_clean = wb_lower.replace("pk_", "")
+                # Confluence 경로의 마지막 세그먼트
+                if wb.startswith("Confluence/"):
+                    last_seg = wb.split("/")[-1].lower()
+                    if key.lower() in last_seg or any(a.lower() in last_seg for a in aliases):
+                        _add_alias(key, wb)
+                        for alias in aliases:
+                            _add_alias(alias, wb)
+                else:
+                    if key.lower() in wb_clean or any(a.lower() in wb_clean for a in aliases):
+                        # 명시적 오버라이드 확인
+                        override = SYNONYM_WORKBOOK_OVERRIDES.get(key)
+                        if override and override in workbooks:
+                            _add_alias(key, override)
+                        else:
+                            _add_alias(key, wb)
+                        for alias in aliases:
+                            alias_override = SYNONYM_WORKBOOK_OVERRIDES.get(alias)
+                            if alias_override and alias_override in workbooks:
+                                _add_alias(alias, alias_override)
+                            else:
+                                _add_alias(alias, wb)
 
     except Exception as e:
         print(f"[WARN] Could not build system aliases: {e}")
@@ -254,19 +300,51 @@ def extract_system_names(query: str) -> list[str]:
     """질문에서 시스템명을 추출 (별칭 + 유의어 포함).
 
     Returns:
-        정식 워크북명 리스트 (중복 제거, 긴 것 우선)
+        정식 워크북명 리스트 (중복 제거, 핵심 매칭 우선 + 교차 소스 포함)
+        - 각 매칭 용어에 대해 최적 Excel + 최적 Confluence 각 1개씩 선택
+        - 최대 6개로 제한 (검색 품질 유지)
     """
     aliases = _build_system_aliases()
     query_lower = query.lower()
 
-    found = {}  # 별칭→워크북명
-    for alias, wb in sorted(aliases.items(), key=lambda x: len(x[0]), reverse=True):
-        if alias.lower() in query_lower:
-            if wb not in found.values():
-                found[alias] = wb
+    # 1. 긴 별칭 우선으로 매칭 수집
+    matched_aliases = []  # (alias, wb_list, alias_len) 리스트
+    used_positions = set()  # query에서 이미 매칭된 위치 추적
 
-    # 워크북명 기준 중복 제거
-    return list(dict.fromkeys(found.values()))
+    for alias, wb_list in sorted(aliases.items(), key=lambda x: len(x[0]), reverse=True):
+        alias_lower = alias.lower()
+        pos = query_lower.find(alias_lower)
+        if pos < 0:
+            continue
+        # 이미 더 긴 별칭이 같은 위치를 커버하면 스킵
+        alias_positions = set(range(pos, pos + len(alias_lower)))
+        if alias_positions & used_positions:
+            continue
+        matched_aliases.append((alias, wb_list))
+        used_positions |= alias_positions
+
+    # 2. 각 매칭에서 최적 Excel + 최적 Confluence 선택
+    found_wbs = []
+    for alias, wb_list in matched_aliases:
+        excel_wbs = [w for w in wb_list if not w.startswith("Confluence/")]
+        conf_wbs = [w for w in wb_list if w.startswith("Confluence/")]
+
+        # Excel: "시스템" 포함 + 이름 짧은 것 우선
+        if excel_wbs:
+            excel_wbs.sort(key=lambda w: (-("시스템" in w), len(w)))
+            best_excel = excel_wbs[0]
+            if best_excel not in found_wbs:
+                found_wbs.append(best_excel)
+
+        # Confluence: 경로 짧은 것 (더 구체적) 우선
+        if conf_wbs:
+            conf_wbs.sort(key=lambda w: len(w))
+            best_conf = conf_wbs[0]
+            if best_conf not in found_wbs:
+                found_wbs.append(best_conf)
+
+    # 3. 최대 6개로 제한 (너무 많으면 검색 품질 저하)
+    return found_wbs[:6]
 
 
 def get_related_systems(system_name: str, depth: int = 2) -> list[str]:
@@ -417,12 +495,15 @@ def _kg_expand(system_names: list[str], query: str, depth: int = 1) -> list[dict
 
             # 관련 시스템의 워크북명 찾기
             aliases = _build_system_aliases()
-            wb_name = aliases.get(rel_sys, aliases.get(f"PK_{rel_sys}", ""))
-            if not wb_name:
+            wb_names = aliases.get(rel_sys.lower(),
+                                   aliases.get(f"pk_{rel_sys.lower()}", []))
+            if not wb_names:
                 continue
 
-            # 관련 시스템에서 쿼리 관련 청크 찾기
-            rel_items = _structural_search(wb_name, query)
+            # 관련 시스템에서 쿼리 관련 청크 찾기 (모든 소스)
+            rel_items = []
+            for wb_name in wb_names[:2]:
+                rel_items.extend(_structural_search(wb_name, query))
             for item in rel_items[:3]:  # 관련 시스템은 상위 3개만
                 item["score"] *= 0.5  # 간접 관련이므로 가중치 하향
                 item["source"] = "kg_expand"
@@ -465,8 +546,10 @@ def retrieve(query: str, top_k: int = 12, token_budget: int = 80000) -> tuple[li
     retrieval_info["detected_systems"] = detected_systems
 
     # 2. 구조적 검색 (시스템명이 감지된 경우)
+    #    Excel/Confluence 양쪽 소스를 모두 커버하도록 최대 5개
     structural_count = 0
-    for sys_name in detected_systems[:3]:
+    structural_limit = min(5, len(detected_systems))
+    for sys_name in detected_systems[:structural_limit]:
         structural_items = _structural_search(sys_name, query)
         for item in structural_items:
             key = item["id"]
@@ -477,7 +560,7 @@ def retrieve(query: str, top_k: int = 12, token_budget: int = 80000) -> tuple[li
         retrieval_info["layers_used"].append("structural")
         retrieval_info["structural_hits"] = structural_count
         retrieval_info["search_scope"].extend(
-            f"{s} (구조적 매칭)" for s in detected_systems[:3]
+            f"{s} (구조적 매칭)" for s in detected_systems[:structural_limit]
         )
 
     # 3. KG 관계 확장 (시스템 간 질문 대응)
@@ -517,7 +600,7 @@ def retrieve(query: str, top_k: int = 12, token_budget: int = 80000) -> tuple[li
             existing["score"] = min(existing["score"] * 1.2, 1.0)
 
     # 5. 시스템별 부스트 벡터 검색 (감지된 시스템에 한정)
-    for sys_name in detected_systems[:2]:
+    for sys_name in detected_systems[:4]:
         boosted = _vector_search(query, top_k=5, system_filter=sys_name,
                                  query_embedding=query_embedding)
         for item in boosted:

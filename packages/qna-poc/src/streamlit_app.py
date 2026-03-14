@@ -506,6 +506,14 @@ if prompt := st.chat_input("기획 질문을 입력하세요..."):
     with st.chat_message("user"):
         st.markdown(prompt)
 
+    # 이전 대화 히스토리 수집 (최근 3턴, 현재 질문 제외)
+    conv_history = []
+    msgs = st.session_state.messages[:-1]  # 현재 user 메시지 제외
+    for i in range(0, len(msgs) - 1, 2):
+        if msgs[i]["role"] == "user" and i + 1 < len(msgs) and msgs[i + 1]["role"] == "assistant":
+            conv_history.append((msgs[i]["content"], msgs[i + 1]["content"]))
+    conv_history = conv_history[-3:]  # 최근 3턴
+
     # Agent 호출 — 각 단계를 개별 실행하며 실시간 상태 표시
     with st.chat_message("assistant"):
         status = st.status("Agent가 답변을 준비하고 있습니다...", expanded=True)
@@ -560,7 +568,8 @@ if prompt := st.chat_input("기획 질문을 입력하세요..."):
             # ── Step 3: Answer Generation ──
             t3 = time.time()
             with st.spinner("✍️ 답변을 생성하고 있습니다..."):
-                gen_result = generate_agent_answer(prompt, chunks, role, key_systems=key_systems, model=answer_model)
+                gen_result = generate_agent_answer(prompt, chunks, role, key_systems=key_systems, model=answer_model,
+                                                    conversation_history=conv_history or None)
             gen_time = time.time() - t3
             total_tokens += gen_result.get("tokens", 0)
 
@@ -608,7 +617,8 @@ if prompt := st.chat_input("기획 질문을 입력하세요..."):
                                 merged[c["id"]] = c
                         chunks = sorted(merged.values(), key=lambda x: x.get("score", 0), reverse=True)[:20]
 
-                    gen_result2 = generate_agent_answer(prompt, chunks, role, key_systems=key_systems, model=answer_model)
+                    gen_result2 = generate_agent_answer(prompt, chunks, role, key_systems=key_systems, model=answer_model,
+                                                        conversation_history=conv_history or None)
                 retry_time = time.time() - t5
                 total_tokens += gen_result2.get("tokens", 0)
                 answer = gen_result2["answer"]

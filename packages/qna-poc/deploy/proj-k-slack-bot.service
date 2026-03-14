@@ -1,0 +1,27 @@
+# Project K QnA — Slack Bot systemd 서비스 파일
+# 위치: /etc/systemd/system/proj-k-slack-bot.service
+#
+# 설치:
+#   sudo cp proj-k-slack-bot.service /etc/systemd/system/
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable proj-k-slack-bot
+#   sudo systemctl start proj-k-slack-bot
+#
+# 로그 확인:
+#   sudo journalctl -u proj-k-slack-bot -f
+
+[Unit]
+Description=Project K QnA Slack Bot (Socket Mode)
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/proj-k-agent/packages/qna-poc
+EnvironmentFile=/home/ubuntu/proj-k-agent/packages/qna-poc/.env
+ExecStart=/home/ubuntu/proj-k-agent/.venv/bin/python -m src.slack_bot
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

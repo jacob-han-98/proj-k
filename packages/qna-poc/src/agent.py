@@ -390,10 +390,12 @@ AGENT_ANSWER_PROMPT = """당신은 모바일 MMORPG "Project K"의 기획 전문
 
 
 def generate_agent_answer(query: str, chunks: list[dict], role: str = None,
-                          key_systems: list[str] = None, model: str = "claude-sonnet-4-5") -> dict:
+                          key_systems: list[str] = None, model: str = "claude-sonnet-4-5",
+                          conversation_history: list[tuple[str, str]] = None) -> dict:
     """수집된 증거로 답변 생성.
 
     key_systems가 주어지면 해당 시스템의 청크를 우선 배치.
+    conversation_history: [(question, answer), ...] 이전 대화 (최근 3턴)
     """
     if not chunks:
         return {"answer": "(검색 결과 없음 - 답변 생성 불가)", "tokens": 0}
@@ -440,9 +442,18 @@ def generate_agent_answer(query: str, chunks: list[dict], role: str = None,
     if role:
         user_msg = f"[질문자 역할: {role}]\n\n" + user_msg
 
+    # 대화 히스토리 → messages 배열 (최근 3턴)
+    messages = []
+    if conversation_history:
+        for prev_q, prev_a in conversation_history[-3:]:
+            messages.append({"role": "user", "content": prev_q})
+            summary = prev_a[:500] + "..." if len(prev_a) > 500 else prev_a
+            messages.append({"role": "assistant", "content": summary})
+    messages.append({"role": "user", "content": user_msg})
+
     try:
         result = call_bedrock(
-            messages=[{"role": "user", "content": user_msg}],
+            messages=messages,
             system=AGENT_ANSWER_PROMPT,
             model=model,
             max_tokens=2048,
@@ -629,8 +640,14 @@ def execute_retry_search(reflection: dict, query: str, existing_chunks: list[dic
 #  Agent 메인 엔트리포인트
 # ══════════════════════════════════════════════════════════
 
-def agent_answer(query: str, role: str = None) -> dict:
+def agent_answer(query: str, role: str = None,
+                 conversation_history: list[tuple[str, str]] = None) -> dict:
     """Agent QnA 파이프라인.
+
+    Args:
+        query: 사용자 질문
+        role: 질문자 역할
+        conversation_history: [(question, answer), ...] 이전 대화 (최근 3턴)
 
     Returns:
         {
@@ -720,7 +737,8 @@ def agent_answer(query: str, role: str = None) -> dict:
     # ── Step 3: Answer Generation ──
     t_gen = time.time()
     key_systems = plan.get("key_systems", [])
-    gen_result = generate_agent_answer(query, chunks, role, key_systems=key_systems)
+    gen_result = generate_agent_answer(query, chunks, role, key_systems=key_systems,
+                                       conversation_history=conversation_history)
     gen_time = time.time() - t_gen
     total_tokens += gen_result.get("tokens", 0)
 
@@ -778,7 +796,8 @@ def agent_answer(query: str, role: str = None) -> dict:
             chunks = sorted(merged.values(), key=lambda x: x.get("score", 0), reverse=True)[:20]
 
         # 재답변 (더 적극적으로)
-        gen_result2 = generate_agent_answer(query, chunks, role, key_systems=key_systems)
+        gen_result2 = generate_agent_answer(query, chunks, role, key_systems=key_systems,
+                                            conversation_history=conversation_history)
         retry_time = time.time() - t_retry
         total_tokens += gen_result2.get("tokens", 0)
 

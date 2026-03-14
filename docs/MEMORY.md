@@ -3,9 +3,9 @@
 > 세션 간 항상성을 유지하기 위한 작업 상태 기록.
 > 세션 시작 시 반드시 이 파일을 먼저 읽는다.
 
-## 최종 업데이트: 2026-03-13
+## 최종 업데이트: 2026-03-14
 
-## 현재 단계: 2단계 QnA PoC 완료 (95% 달성) → UX 개발 진행
+## 현재 단계: 2단계 QnA PoC 완료 (95%) + Streamlit UI 완성 + 서버 배포 완료
 
 ---
 
@@ -44,15 +44,25 @@
   - A:93%, B:87%, C:100%, D:100%, E:100%, F:100%, H:100%
   - 잔여 FAIL 3건: A-003(OCR 데이터), B-002(경계값), B-003(확률적 regression)
   - 15차 평가까지 반복 개선 (47% → 95.0%)
+- **Streamlit UI 완성 (2026-03-14)**:
+  - ChatGPT 스타일 대화 인터페이스 + Agent 실시간 상태 표시
+  - Mermaid 다이어그램 렌더링 (components.html + mermaid.js CDN)
+  - Claude 스타일 옵션 바: ＋ popover(역할/모델/청크) + 모델 선택
+  - 출처 표시 (Confluence 웹 링크, Excel 스크린샷 펼치기)
+  - 피드백 시스템 (thumbs up/down + 상세 입력)
+  - QnA 히스토리 DB (SQLite, qna_db.py)
+  - **서버 배포 완료**: https://cp.tech2.hybe.im/proj-k-agent (systemd + nginx)
+- **Slack 봇 구현 완료 (2026-03-14)**:
+  - `src/slack_bot.py` — Slack Bolt (Socket Mode)
+  - `@ProjectK-AI 질문` → Agent 답변 → Block Kit 포맷
+  - DM 직접 질문 + 스레드 멀티턴
+  - Markdown→mrkdwn 변환 (테이블→코드블록, 링크, Mermaid→Streamlit 링크)
+  - systemd 서비스: `deploy/proj-k-slack-bot.service`
+  - **배포 대기**: Slack App 토큰 발급 필요
 - **UX 전략 (ADR-013)**:
-  1. Streamlit 웹앱 — 개발·품질 검증 (ChatGPT 스타일 대화 UI, Markdown 풀 렌더링)
-  2. Slack 봇 — 기획자 테스터 배포 (Slack Bolt + agent.py, 요약 답변 + Streamlit 링크)
+  1. ~~Streamlit 웹앱~~ → **완료** (배포됨)
+  2. ~~Slack 봇~~ → **코드 완료**, 토큰 발급 후 배포
   3. 피칭 후 → Next.js 전환, Slack 봇 유지
-- **병렬 작업 구조 (2026-03-12~)**:
-  - Track A: 품질 개선 (agent.py, retriever.py, eval/) — 95% 달성 완료
-  - Track B: UX 개발 (streamlit_app.py, slack_bot.py) — 미착수
-  - 공유 인터페이스: `agent_answer()` 반환 형식 고정, `api.py` v0.2.0
-  - 가이드: `packages/qna-poc/docs/UX_DEV_GUIDE.md`
 
 ### 3단계: 데이터 확장 & 동기화 — 진행 중 (ADR-009, ADR-010)
 
@@ -93,24 +103,19 @@
 - **상세 기록**: `packages/confluence-downloader/docs/MEMORY.md`
 - **결과**: 490페이지, 489 content.md, ~2,195 이미지, 8.2GB
 
-### confluence-enricher (배치 진행 중)
+### confluence-enricher (완료)
 
 - **위치**: `packages/confluence-enricher/`
 - **상세 기록**: `packages/confluence-enricher/docs/MEMORY.md`
-- **구성**: 순차적 컨텍스트 누적 Vision API → content_enriched.md 생성
-- **배치**: 257페이지, 1,432이미지 처리 중 (Claude Sonnet, ~$17 예상)
-- **프롬프트 규칙**: UI 번호 아이콘(①②③) 위치·의미 상세 서술 포함
+- **결과**: 257페이지, 1,370/1,432이미지 OK, ~$36.44 (Vision API → content_enriched.md)
 
-### qna-poc (Agent 95% 달성, UX 개발 대기)
+### qna-poc (Agent 95% + Streamlit 배포 + Slack 봇 구현 완료)
 
 - **위치**: `packages/qna-poc/`
 - **상세 기록**: `packages/qna-poc/docs/MEMORY.md`
-- **구성**: FastAPI + ChromaDB + Bedrock Claude Sonnet + Agent 파이프라인
-- **검색기**: 97.2% (481/495) — 규칙 기반 495개 GT 검증
 - **Agent QnA**: **95.0% (66/69)** — LLM-as-Judge 8축 채점, 15차 평가
-  - Agent 4원칙: Planning(Sonnet) + Search(4레이어) + Answer(Sonnet) + Reflection(Haiku)
-  - 상세: `docs/AGENT_DESIGN.md`, `docs/UX_DEV_GUIDE.md`
-- **UX**: `api.py` v0.2.0 준비완료, Streamlit/Slack 봇 구현 미착수
+- **Streamlit UI**: 배포 완료 (https://cp.tech2.hybe.im/proj-k-agent)
+- **Slack 봇**: 코드 완료 (`src/slack_bot.py`), Slack App 토큰 발급 후 배포
 
 ---
 

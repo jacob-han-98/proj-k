@@ -4,39 +4,33 @@
 
 ---
 
-## 현재 상태: 95% 달성 완료 → UX 개발 대기 (2026-03-13)
+## 현재 상태: 95% + Streamlit 배포 완료 + Slack 봇 로컬 테스트 완료 (2026-03-14)
 
 - 검색기(Retriever) 정확도: **97.2%** (Phase 10, 규칙 기반 495개)
 - **Agent QnA 답변 품질: PASS 57/60 (95.0%) + 트랩 9/9 (100%)** — **목표 95% 달성!**
   - 질문 세트 v2 (69개: 60 일반 + 9 트랩, 이미지 의존 질문 제외)
   - 8차(87.0%) → 12차(97.1%) → 14차(94.2%) → **15차(95.0%)**
   - **15차 잔여 실패 3건**: A-003(OCR), B-002(경계값), B-003(regression)
+- **Streamlit UI 배포 완료**: https://cp.tech2.hybe.im/proj-k-agent
+- **Slack 봇 구현 완료**: `src/slack_bot.py` (Slack App 생성 + 토큰 설정 필요)
 
-### 다음 작업 (재부팅 후 이어할 것)
-1. **UX 개발 (Track B)**: Streamlit + Slack 봇 구현
-   - 가이드: `docs/UX_DEV_GUIDE.md` (API 사용법, 수정 가능 파일 목록 등)
-   - 새 파일만 생성: `src/streamlit_app.py`, `src/slack_bot.py`, `src/slack_formatter.py`
-   - 의존성 추가: `streamlit>=1.30.0`, `slack-bolt>=1.18.0`, `slack-sdk>=3.25.0`
+### 다음 작업
+1. **Slack 봇 서버 배포**: 코드 push → 서버 pull → systemd 서비스 등록/시작
 2. **품질 안정화 (선택)**: B-003 regression 조사, 95% 이상 유지
-3. **Git 커밋**: 19개 변경 파일 미커밋 상태 (아래 상세)
 
-### 병렬 작업 구조 (2026-03-12~)
-- **Track A**: 품질 개선 — `src/agent.py`, `src/retriever.py`, `eval/` (95% 달성 완료)
-- **Track B**: UX 개발 — `src/streamlit_app.py`, `src/slack_bot.py` (미착수)
-- **공유 인터페이스**: `agent_answer()` 반환 형식 고정, `api.py` v0.2.0
-- **수정 경계**: Track B는 `src/agent.py`, `src/retriever.py`, `eval/` 수정 금지
-- **가이드 문서**: `docs/UX_DEV_GUIDE.md`
+### 배포 체크리스트 (서버: cp.tech2.hybe.im)
+서버 배포 시 반드시 아래 두 서비스를 모두 배포/실행:
+1. **Streamlit UI**: `streamlit run src/streamlit_app.py` (systemd: proj-k-streamlit.service)
+2. **Slack 봇**: `python -m src.slack_bot` (systemd: proj-k-slack-bot.service)
 
-### 미커밋 변경 파일 (19개, 2026-03-13 기준)
-```
-CLAUDE.md, docs/DECISIONS.md, docs/MEMORY.md, docs/VISION.md
-packages/qna-poc/docs/MEMORY.md
-packages/qna-poc/eval/generate_gt_llm.py, generate_gt_questions.py, verify_gt_500.py, verify_gt_llm.py
-packages/qna-poc/src/agent.py, api.py, build_kg.py, generator.py, indexer.py, retriever.py
-packages/xlsx-extractor/.env.example, run.py, src/capture.py
-.gitignore
-```
-총 +2,908줄 / -422줄 변경
+### UX 현황 (ADR-013)
+- **Streamlit**: 배포 완료 (ChatGPT 스타일 대화 + Agent 실시간 상태 + Mermaid + 출처 링크 + 피드백)
+- **Slack 봇**: 로컬 테스트 완료, 서버 배포 대기
+  - Socket Mode (WebSocket) — 방화벽 인바운드 불필요
+  - `@pkai 질문` → Agent 답변 → Block Kit 포맷 (표→코드블록, 출처 링크, Streamlit 상세 링크)
+  - DM 직접 질문 지원, 스레드 멀티턴 대화
+  - systemd 서비스: `deploy/proj-k-slack-bot.service`
+  - **배포 시 반드시 Streamlit + Slack 봇 둘 다 배포/실행**
 
 ### 용어 정의
 

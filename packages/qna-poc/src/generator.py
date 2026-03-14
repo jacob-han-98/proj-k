@@ -5,6 +5,7 @@ generator.py — Claude Sonnet으로 QnA 답변 생성
 """
 
 import json
+import logging
 import os
 import re
 import time
@@ -14,6 +15,38 @@ import requests
 from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+
+# ── 시스템 로그 설정 ──────────────────────────────────────
+LOG_DIR = Path(__file__).resolve().parent.parent / "logs"
+LOG_DIR.mkdir(exist_ok=True)
+
+_sys_logger = logging.getLogger("qna_system")
+_sys_logger.setLevel(logging.DEBUG)
+
+# 파일 핸들러 (전체 API call 로그)
+_log_file = LOG_DIR / f"system_{time.strftime('%Y%m%d_%H%M%S')}.log"
+_file_handler = logging.FileHandler(_log_file, encoding="utf-8")
+_file_handler.setLevel(logging.DEBUG)
+_file_handler.setFormatter(logging.Formatter(
+    "%(asctime)s [%(levelname)s] %(message)s", datefmt="%H:%M:%S"
+))
+_sys_logger.addHandler(_file_handler)
+
+# 콘솔 핸들러 (요약만)
+_console_handler = logging.StreamHandler()
+_console_handler.setLevel(logging.INFO)
+_console_handler.setFormatter(logging.Formatter(
+    "  [%(levelname)s] %(message)s"
+))
+_sys_logger.addHandler(_console_handler)
+
+def get_system_logger():
+    """시스템 로거 반환 (외부 모듈에서 사용)."""
+    return _sys_logger
+
+def get_log_file_path() -> Path:
+    """현재 로그 파일 경로 반환."""
+    return _log_file
 
 # 모델 매핑 (.env의 MODEL_* 변수에서 로드)
 def _load_model_mapping() -> dict:
@@ -75,21 +108,34 @@ def call_bedrock(
         "Authorization": f"Bearer {token}",
     }
 
+    # 시스템 로그: API 호출 시작
+    msg_preview = str(messages[0].get("content", ""))[:100] if messages else ""
+    _sys_logger.debug(f"API_CALL model={model} model_id={model_id} max_tokens={max_tokens} temp={temperature}")
+    _sys_logger.debug(f"  system_prompt: {system[:80]}...")
+    _sys_logger.debug(f"  message_preview: {msg_preview}...")
+
     t_start = time.time()
     resp = requests.post(url, json=body, headers=headers, timeout=120)
     t_api = time.time() - t_start
 
     if resp.status_code != 200:
+        _sys_logger.error(f"API_ERROR {resp.status_code}: {resp.text[:300]}")
         raise RuntimeError(f"API error {resp.status_code}: {resp.text[:500]}")
 
     result = resp.json()
     text = result["content"][0]["text"]
     usage = result.get("usage", {})
+    in_tok = usage.get("input_tokens", 0)
+    out_tok = usage.get("output_tokens", 0)
+
+    # 시스템 로그: API 호출 완료
+    _sys_logger.debug(f"API_DONE model={model} in={in_tok} out={out_tok} time={t_api:.1f}s")
+    _sys_logger.debug(f"  response_preview: {text[:120]}...")
 
     return {
         "text": text.strip(),
-        "input_tokens": usage.get("input_tokens", 0),
-        "output_tokens": usage.get("output_tokens", 0),
+        "input_tokens": in_tok,
+        "output_tokens": out_tok,
         "api_seconds": round(t_api, 1),
         "model": model,
     }

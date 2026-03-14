@@ -183,3 +183,92 @@
   - VISION.md 3단계 3-1항 업데이트 (PDF 변환 → REST API 직접 추출)
   - CLAUDE.md 원본 문서 현황 테이블 업데이트
   - 기존 `Confluence PDF Sync/` 폴더는 레거시로 분류
+
+## ADR-011: Perforce 7_System 단독 동기화 + 외부 경로 운영
+
+- **날짜**: 2026-03-09
+- **결정**:
+  1. Perforce 동기화 대상은 **7_System만** (Design 하위 다른 폴더는 미사용)
+  2. 동기화 경로는 프로젝트 외부(`D:/ProjectK/Design/7_System`)
+  3. xlsx-extractor는 `XLSX_SOURCE_DIRS` 환경변수로 외부 경로를 바라봄
+  4. `--changed-only` 플래그로 변경된 Excel만 증분 변환
+- **근거**:
+  - Design 하위에 8개 폴더(334파일)가 있으나, AI 기획 어시스턴트가 활용하는 핵심 기획서는 7_System(69파일)뿐
+  - 6_TableStructure(81), 8_Contents(82) 등은 데이터 테이블이라 기획 QnA 대상 아님
+  - 프로젝트 git 레포에 대용량 바이너리(xlsx)를 넣지 않기 위해 외부 경로 사용
+- **영향**:
+  - `scripts/.env` — P4_DEPOT_PATH, P4_LOCAL_PATH 설정
+  - `packages/xlsx-extractor/.env` — XLSX_SOURCE_DIRS 설정
+  - `scripts/update_sources.py` — Perforce 동기화 함수 (외부 경로 지원)
+  - `packages/xlsx-extractor/run.py` — `--changed-only`, `XLSX_SOURCE_DIRS` 지원
+
+## ADR-013: QnA UX — Streamlit 개발 테스트 + Slack 봇 테스터 배포
+
+- **날짜**: 2026-03-11
+- **결정**: QnA PoC의 UX 전략을 2단계로 확정
+  1. **Streamlit 웹앱**: 개발·품질 검증용 1차 인터페이스 (ChatGPT 스타일 대화 UI)
+  2. **Slack 봇**: 일부 기획자 테스터 대상 배포 (Slack Bolt + 기존 agent.py 연결)
+  3. 두 인터페이스는 동일한 Backend API(agent.py 파이프라인)를 공유
+  4. 피칭 성공 후 6단계에서 Next.js 프로덕션 웹앱으로 전환, Slack 봇은 유지
+- **근거**:
+  1. **Streamlit이 개발 테스트에 최적**: Python 백엔드와 동일 언어, `st.chat_message`로 ChatGPT 스타일 UI를 1-2일 내 구현 가능. Markdown/표/Mermaid 풀 렌더링 지원
+  2. **Slack이 테스터 배포에 최적**: 기획자가 이미 매일 사용, 설치/교육 불필요, 멘션 한 번으로 질문 가능
+  3. **진입장벽**: 새 URL 접속(Streamlit) vs 슬랙 멘션(Slack) → 테스터 입장에서 Slack이 압도적으로 낮음
+  4. **자연스러운 바이럴**: Slack 채널에 질문/답변이 공유되어 팀 학습 효과 + 피드백 수집 용이
+  5. **표현력 한계 보완**: Slack에서 표/다이어그램이 필요한 긴 답변은 Streamlit 링크로 해결
+- **대안 검토**:
+  - Claude Web MCP 통합: 기술적으로 가능하나, 전 테스터 Claude Pro/Team 구독 + 개별 MCP 설정 필요 → 비현실적
+  - Gemini 통합: 커스텀 지식베이스 연동 공식 지원 없음 → 불가
+  - Next.js 웹앱: 프로덕션 품질이지만 개발 기간 1-2주+ → PoC 단계에서는 과도
+  - Streamlit만: 테스터가 별도 URL을 방문해야 함 → 일상 업무 흐름에 자연스럽게 삽입되지 않음
+- **영향**:
+  - VISION.md 2-3절 UX 전략 업데이트
+  - `packages/qna-poc/` 내 Streamlit UI + Slack 봇 구현 추가 예정
+
+---
+
+## ADR-012: 대규모 QnA 검증 (500개) — 데이터 확장 후 자동 평가
+
+- **날짜**: 2026-03-09
+- **결정**: 3단계 데이터 확장 완료 후 **500개 QnA로 대규모 자동 검증** 실시
+- **방법**:
+  1. Claude가 가공된 Confluence + Excel 자료를 직접 읽어 질문지 생성
+  2. 질문 구성: 단순 질문, 복합 질문, 가짜 질문(10%), 유의어·오타 포함
+  3. QnA 시스템으로 전체 테스트 실행
+  4. 결과를 파일로 정리하여 사람이 리뷰 가능하게 출력
+- **근거**:
+  - 이전 평가(48개)는 Excel 데이터만 대상 — Confluence 추가 후 재검증 필수
+  - 유의어·오타 질문은 SYNONYMS 사전 및 검색 robustness 테스트
+  - 가짜 질문은 할루시네이션 방지 능력 검증
+- **출력물**:
+  - `packages/qna-poc/eval/questions_500.json` — 500개 질문 + GT
+  - `packages/qna-poc/eval/eval_results_500.json` — 테스트 결과
+  - `packages/qna-poc/eval/eval_report_500.md` — 사람 리뷰용 요약 리포트
+
+## ADR-014: Agent 파이프라인 + LLM-as-Judge 95% 달성
+
+- **날짜**: 2026-03-12
+- **결정**: 단순 RAG → Agent 4원칙 파이프라인으로 전환, LLM-as-Judge 8축 채점 체계 도입
+- **근거**:
+  1. **검색 정확도와 답변 정확도는 별개**: 검색기 97.2%인데 실제 답변 PASS는 47% (v2 기준선)
+  2. **Planning이 핵심**: Sonnet이 167개 워크북 + KG 관계에서 올바른 문서를 지목해야 답변 품질 확보
+  3. **Reflection으로 자체 보정**: Haiku가 답변 품질 검증 + 부족 시 스마트 재검색 → 경계 케이스 PASS 전환
+  4. **트랩 가드레일 필수**: Rule #7 (A 시스템 ≠ A의 B 기능), Rule #9 (우선순위) 강화로 트랩 100%
+- **Agent 파이프라인**:
+  ```
+  질문 → [Planning] Sonnet (질문 분석 + 워크북 선택 + KG 관계 참조)
+       → [Search] 하이브리드 4레이어 (구조적 + KG + 벡터 + 풀텍스트)
+       → [Answer] Sonnet (temp=0, 15 chunks, 7000 char/chunk, 9개 가드레일 규칙)
+       → [Reflection] Haiku (자체 검증, 부족하면 1회 재검색)
+       → 최종 답변 (confidence: high/medium/low/none)
+  ```
+- **Judge 8축 채점**: intent_alignment, factual_accuracy, completeness, no_misinterpretation, source_fidelity, actionability, scope_match, freshness + bonus(implicit_prerequisites)
+- **판정**: PASS(avg>=4.0 AND min>=3), PARTIAL(avg>=3.0 AND min>=2), FAIL
+- **결과**: 15차 평가 기준 **95.0% (66/69)** — 일반 57/60 + 트랩 9/9
+- **비용**: 평가 15회 + 인덱싱 다수 ≈ ~$50
+- **영향**:
+  - `src/agent.py` 신규 (Agent 파이프라인 전체)
+  - `src/api.py` v0.2.0 (Agent 연결 + CORS)
+  - `eval/verify_gt_llm.py` (Judge 채점 + 병렬 실행)
+  - `eval/generate_gt_llm.py` (v2 질문 세트 69개)
+  - `docs/AGENT_DESIGN.md`, `docs/UX_DEV_GUIDE.md` 신규

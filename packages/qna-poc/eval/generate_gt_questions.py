@@ -1,7 +1,7 @@
 """
 generate_gt_questions.py — Ground Truth QnA 대량 생성
 
-629개 content.md를 규칙 기반으로 파싱하여 ~500개 QnA 쌍을 생성.
+Excel 629개 + Confluence 489개 content.md를 규칙 기반 파싱하여 ~500개 QnA 쌍 생성.
 API 호출 없이 로컬에서 실행 (비용 $0).
 
 카테고리:
@@ -11,6 +11,7 @@ API 호출 없이 로컬에서 실행 (비용 $0).
   D. 프로세스/플로우 (Mermaid 추적)
   E. UI 사양 (UI 요소/레이아웃)
   F. 메타/히스토리 (변경 이력/용어 정의)
+  G. Confluence 전용 (디자인 방향/회의록/R&D)
   H. 할루시네이션 트랩 (존재하지 않는 데이터)
 
 Usage:
@@ -32,7 +33,34 @@ if sys.stdout.encoding != "utf-8":
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
 EXTRACTOR_OUTPUT = Path(__file__).resolve().parent.parent.parent / "xlsx-extractor" / "output"
+CONFLUENCE_OUTPUT = Path(__file__).resolve().parent.parent.parent / "confluence-downloader" / "output"
 OUTPUT_PATH = Path(__file__).resolve().parent / "gt_questions.json"
+
+
+# ── 키워드 정제 ──
+
+def _clean_keyword(kw: str) -> str:
+    """키워드에서 마크다운/HTML 포맷팅 아티팩트 제거."""
+    kw = kw.strip()
+    # **** bold markers 제거
+    kw = re.sub(r'\*{2,}', '', kw)
+    # HTML 태그 제거
+    kw = re.sub(r'<[^>]+>', ' ', kw)
+    # 앞뒤 특수문자 제거
+    kw = kw.strip('[](){}<>*_~`"\'')
+    # 연속 공백 축소
+    kw = re.sub(r'\s+', ' ', kw).strip()
+    return kw
+
+
+def _clean_keywords(keywords: list[str]) -> list[str]:
+    """키워드 리스트 정제: 빈 값/너무 짧은 값 제거."""
+    cleaned = []
+    for kw in keywords:
+        c = _clean_keyword(kw)
+        if c and len(c) >= 2:
+            cleaned.append(c)
+    return cleaned
 
 
 # ── 파서 유틸 ──
@@ -254,16 +282,24 @@ def generate_table_questions(parsed: dict) -> list[dict]:
                 ]
 
                 q = random.choice(q_templates)
-                keywords = [kw for kw in [row_label, cell_value] if len(kw) > 1]
+                # 키워드: row_label + col_name은 섹션/시트에 자주 등장하므로 우선 배치
+                # cell_value는 보조 (특정 청크에만 존재할 수 있음)
+                keywords = []
+                if row_label and len(row_label) > 1:
+                    keywords.append(row_label)
                 if col_name and len(col_name) > 1:
                     keywords.append(col_name)
+                # cell_value에서 HTML 제거 후 추가
+                clean_val = re.sub(r'<[^>]+>', ' ', cell_value).strip()
+                if clean_val and len(clean_val) > 1 and len(clean_val) <= 20:
+                    keywords.append(clean_val)
 
                 questions.append({
                     "query": q,
                     "category": category,
                     "expected_workbooks": [wb],
                     "expected_sheets": [sheet],
-                    "expected_answer_keywords": keywords[:5],
+                    "expected_answer_keywords": _clean_keywords(keywords[:4]),
                     "ground_truth_source": f"{wb}/{sheet}/_final/content.md",
                     "ground_truth_text": f"{row_label}의 {col_name} = {cell_value}",
                     "section": section_ctx,
@@ -310,7 +346,7 @@ def generate_definition_questions(parsed: dict) -> list[dict]:
             "category": "A",
             "expected_workbooks": [wb],
             "expected_sheets": [sheet],
-            "expected_answer_keywords": keywords,
+            "expected_answer_keywords": _clean_keywords(keywords),
             "ground_truth_source": f"{wb}/{sheet}/_final/content.md",
             "ground_truth_text": text[:150],
             "section": section,
@@ -330,15 +366,19 @@ def generate_mermaid_questions(parsed: dict) -> list[dict]:
         content = mermaid["content"]
         section = mermaid["section"]
 
-        # 노드 레이블 추출
+        # 노드 레이블 추출 + HTML 정리
         node_labels = re.findall(r'[\[\({"](.*?)[\]\)}""]', content)
-        node_labels = [l.strip() for l in node_labels if l.strip() and len(l.strip()) > 1]
+        node_labels = [re.sub(r'<[^>]+>', ' ', l).strip() for l in node_labels
+                       if l.strip() and len(l.strip()) > 1]
+        # 너무 긴 노드 레이블 잘라내기
+        node_labels = [l[:30] for l in node_labels if len(l) >= 2]
 
         if len(node_labels) < 2:
             continue
 
         # 엣지 레이블 추출
         edge_labels = re.findall(r'-->\|(.+?)\|', content)
+        edge_labels = [re.sub(r'<[^>]+>', ' ', e).strip() for e in edge_labels]
 
         keywords = node_labels[:4]
         if edge_labels:
@@ -356,7 +396,7 @@ def generate_mermaid_questions(parsed: dict) -> list[dict]:
             "category": "D",
             "expected_workbooks": [wb],
             "expected_sheets": [sheet],
-            "expected_answer_keywords": keywords[:5],
+            "expected_answer_keywords": _clean_keywords(keywords[:5]),
             "ground_truth_source": f"{wb}/{sheet}/_final/content.md",
             "ground_truth_text": f"플로우: {' → '.join(node_labels[:5])}",
             "section": section,
@@ -435,6 +475,270 @@ def generate_section_questions(parsed: dict) -> list[dict]:
             })
 
     return questions[:1]
+
+
+def parse_confluence_md(filepath: Path) -> dict:
+    """Confluence content.md (or content_enriched.md) 파싱."""
+    text = filepath.read_text(encoding="utf-8", errors="replace")
+    lines = text.split("\n")
+
+    result = {
+        "filepath": str(filepath),
+        "workbook": "",
+        "sheet": "",
+        "title": "",
+        "sections": [],
+        "tables": [],
+        "mermaid_blocks": [],
+        "definitions": [],
+        "key_values": [],
+        "has_ui": False,
+        "total_lines": len(lines),
+        "source_type": "confluence",
+    }
+
+    # YAML frontmatter에서 title 추출
+    title = filepath.parent.name
+    content_start = 0
+    if lines and lines[0].strip() == "---":
+        for i, line in enumerate(lines[1:], start=1):
+            if line.strip() == "---":
+                content_start = i + 1
+                break
+            if line.startswith("title:"):
+                title = line.split(":", 1)[1].strip().strip('"').strip("'")
+
+    # 경로에서 카테고리 추출
+    try:
+        rel = filepath.parent.relative_to(CONFLUENCE_OUTPUT)
+        path_parts = list(rel.parts)
+    except ValueError:
+        path_parts = [filepath.parent.name]
+
+    result["title"] = title
+    result["sheet"] = title
+    if len(path_parts) > 1:
+        result["workbook"] = f"Confluence/{'/'.join(path_parts[:-1])}"
+    else:
+        result["workbook"] = "Confluence"
+
+    # 나머지는 Excel 파서와 동일한 로직 재사용
+    current_section = ""
+    current_subsection = ""
+    in_mermaid = False
+    mermaid_buf = []
+    in_table = False
+    table_buf = []
+
+    for line in lines[content_start:]:
+        stripped = line.strip()
+
+        if stripped.startswith("# ") and not stripped.startswith("## "):
+            if not result["title"]:
+                result["title"] = stripped[2:].strip()
+            continue
+
+        if stripped.startswith("## "):
+            if in_table and table_buf:
+                result["tables"].append({
+                    "section": current_section,
+                    "subsection": current_subsection,
+                    "rows": _parse_table(table_buf),
+                    "raw": "\n".join(table_buf),
+                })
+                table_buf = []
+                in_table = False
+            current_section = stripped[3:].strip()
+            current_subsection = ""
+            result["sections"].append(current_section)
+            continue
+
+        if stripped.startswith("### "):
+            if in_table and table_buf:
+                result["tables"].append({
+                    "section": current_section,
+                    "subsection": current_subsection,
+                    "rows": _parse_table(table_buf),
+                    "raw": "\n".join(table_buf),
+                })
+                table_buf = []
+                in_table = False
+            current_subsection = stripped[4:].strip()
+            continue
+
+        if stripped.startswith("```mermaid"):
+            in_mermaid = True
+            mermaid_buf = []
+            continue
+        if in_mermaid:
+            if stripped == "```":
+                in_mermaid = False
+                result["mermaid_blocks"].append({
+                    "section": current_section,
+                    "subsection": current_subsection,
+                    "content": "\n".join(mermaid_buf),
+                })
+            else:
+                mermaid_buf.append(line)
+            continue
+
+        if "|" in stripped and stripped.startswith("|"):
+            if not in_table:
+                in_table = True
+                table_buf = []
+            table_buf.append(stripped)
+            continue
+        elif in_table:
+            if table_buf:
+                result["tables"].append({
+                    "section": current_section,
+                    "subsection": current_subsection,
+                    "rows": _parse_table(table_buf),
+                    "raw": "\n".join(table_buf),
+                })
+            table_buf = []
+            in_table = False
+
+        if stripped.startswith("- ") and len(stripped) > 15:
+            content = stripped[2:].strip()
+            result["definitions"].append({
+                "section": current_section,
+                "subsection": current_subsection,
+                "text": content,
+            })
+
+        kv_match = re.match(r'^[-→•]\s*\*?\*?\[?(.+?)\]?\*?\*?\s*[:：]\s*(.+)', stripped)
+        if kv_match:
+            result["key_values"].append({
+                "section": current_section,
+                "key": kv_match.group(1).strip(),
+                "value": kv_match.group(2).strip(),
+            })
+
+        if any(kw in stripped.lower() for kw in ["hud", "ui", "화면", "버튼", "인터페이스", "레이아웃"]):
+            result["has_ui"] = True
+
+    if in_table and table_buf:
+        result["tables"].append({
+            "section": current_section,
+            "subsection": current_subsection,
+            "rows": _parse_table(table_buf),
+            "raw": "\n".join(table_buf),
+        })
+
+    return result
+
+
+def generate_confluence_questions(parsed: dict) -> list[dict]:
+    """Confluence 문서에서 질문 생성 (카테고리 A, G)."""
+    questions = []
+    title = parsed["title"]
+    wb = parsed["workbook"]
+
+    if not title or parsed["total_lines"] < 10:
+        return []
+
+    # 섹션 기반 질문
+    meaningful_sections = [s for s in parsed["sections"]
+                          if len(s) > 3 and not s.startswith("---")]
+
+    for section in meaningful_sections[:3]:
+        section_clean = re.sub(r'^[①②③④⑤⑥⑦⑧⑨⑩\s\d.()]+', '', section).strip()
+        keywords = re.findall(r'[\w가-힣]{2,}', section_clean)
+
+        if not keywords:
+            continue
+
+        q_templates = [
+            f"{title}의 {section_clean}에 대해 설명해줘",
+            f"{title} 기획에서 {section_clean}은 어떻게 되어 있나?",
+        ]
+
+        questions.append({
+            "query": random.choice(q_templates),
+            "category": "G",
+            "expected_workbooks": [wb],
+            "expected_sheets": [title],
+            "expected_answer_keywords": _clean_keywords(keywords[:4]),
+            "ground_truth_source": parsed["filepath"],
+            "ground_truth_text": f"{title}: {section_clean}",
+            "section": section,
+        })
+
+    # 테이블 기반 질문
+    for table in parsed["tables"][:2]:
+        rows = table["rows"]
+        if len(rows) < 2 or len(rows[0]) < 2:
+            continue
+
+        header = rows[0]
+        row = rows[1]
+
+        if len(row) < 2:
+            continue
+
+        row_label = row[0].strip()
+        if not row_label or len(row_label) > 30 or len(row_label) < 2:
+            continue
+
+        for col_idx in range(1, min(len(row), len(header))):
+            col_name = header[col_idx].strip()
+            cell_value = row[col_idx].strip()
+
+            if not cell_value or cell_value in ["-", "—", ""] or not col_name:
+                continue
+
+            has_number = bool(re.search(r'\d', cell_value))
+            category = "C" if has_number else "G"
+
+            questions.append({
+                "query": f"{title}에서 {row_label}의 {col_name}은?",
+                "category": category,
+                "expected_workbooks": [wb],
+                "expected_sheets": [title],
+                "expected_answer_keywords": _clean_keywords([kw for kw in [row_label, col_name,
+                    re.sub(r'<[^>]+>', ' ', cell_value).strip()] if kw and len(kw) > 1 and len(kw) <= 20][:4]),
+                "ground_truth_source": parsed["filepath"],
+                "ground_truth_text": f"{row_label}의 {col_name} = {cell_value}",
+                "section": table["section"],
+            })
+            break  # 테이블당 1개만
+
+    # 전체 개요 질문 (파일당 최대 1개)
+    if meaningful_sections:
+        questions.append({
+            "query": f"'{title}' 기획의 주요 내용은?",
+            "category": "G",
+            "expected_workbooks": [wb],
+            "expected_sheets": [title],
+            "expected_answer_keywords": [title.split()[0]] if title.split() else [title[:3]],
+            "ground_truth_source": parsed["filepath"],
+            "ground_truth_text": f"{title} 전체 개요",
+            "section": "",
+        })
+
+    return questions[:4]  # 파일당 최대 4개
+
+
+def scan_confluence_files() -> list[Path]:
+    """Confluence output에서 content_enriched.md (우선) 또는 content.md 스캔."""
+    if not CONFLUENCE_OUTPUT.exists():
+        return []
+
+    files = []
+    for content_md in sorted(CONFLUENCE_OUTPUT.rglob("content.md")):
+        if content_md.parent == CONFLUENCE_OUTPUT:
+            continue
+        enriched = content_md.parent / "content_enriched.md"
+        target = enriched if enriched.exists() else content_md
+        try:
+            if target.stat().st_size < 100:
+                continue
+        except OSError:
+            continue
+        files.append(target)
+
+    return files
 
 
 def generate_cross_system_questions(all_parsed: list[dict]) -> list[dict]:
@@ -583,63 +887,78 @@ def scan_all_content_files() -> list[Path]:
 
 
 def generate_all_questions(dry_run: bool = False) -> dict:
-    """전체 QnA 생성."""
-    files = scan_all_content_files()
-    print(f"스캔된 content.md: {len(files)}개")
+    """전체 QnA 생성 (Excel + Confluence)."""
+    # Excel files
+    excel_files = scan_all_content_files()
+    print(f"Excel content.md: {len(excel_files)}개")
+
+    # Confluence files
+    conf_files = scan_confluence_files()
+    print(f"Confluence content.md: {len(conf_files)}개 "
+          f"({sum(1 for f in conf_files if f.name == 'content_enriched.md')} enriched)")
 
     if dry_run:
-        # 워크북별 통계
         wb_counts = {}
-        for f in files:
+        for f in excel_files:
             parts = f.relative_to(EXTRACTOR_OUTPUT).parts
             wb = parts[0] if parts else "unknown"
             wb_counts[wb] = wb_counts.get(wb, 0) + 1
-        print(f"\n워크북 수: {len(wb_counts)}")
-        for wb, count in sorted(wb_counts.items()):
-            print(f"  {wb}: {count} 시트")
+        print(f"\nExcel 워크북 수: {len(wb_counts)}")
+        print(f"Confluence 페이지 수: {len(conf_files)}")
         return {}
 
     # 1. 모든 파일 파싱
-    print("파싱 중...")
+    print("Excel 파싱 중...")
     all_parsed = []
-    for f in files:
+    for f in excel_files:
         try:
             parsed = parse_content_md(f)
-            if parsed["total_lines"] > 5:  # 의미 있는 내용이 있는 파일만
+            if parsed["total_lines"] > 5:
                 all_parsed.append(parsed)
         except Exception as e:
             print(f"  [WARN] {f}: {e}")
+    print(f"Excel 유효 파일: {len(all_parsed)}개")
 
-    print(f"유효 파일: {len(all_parsed)}개")
+    print("Confluence 파싱 중...")
+    conf_parsed = []
+    for f in conf_files:
+        try:
+            parsed = parse_confluence_md(f)
+            if parsed["total_lines"] > 10:
+                conf_parsed.append(parsed)
+        except Exception as e:
+            print(f"  [WARN] {f}: {e}")
+    print(f"Confluence 유효 파일: {len(conf_parsed)}개")
 
     # 2. 파일별 질문 생성
     all_questions = []
-    stats = {"A": 0, "B": 0, "C": 0, "D": 0, "E": 0, "F": 0, "H": 0}
+    stats = {"A": 0, "B": 0, "C": 0, "D": 0, "E": 0, "F": 0, "G": 0, "H": 0}
 
+    # Excel 질문
     for parsed in all_parsed:
         file_questions = []
-
-        # 테이블 질문 (A, C)
         tq = generate_table_questions(parsed)
         file_questions.extend(tq)
-
-        # 정의 질문 (A, F)
         dq = generate_definition_questions(parsed)
         file_questions.extend(dq)
-
-        # Mermaid 질문 (D)
         mq = generate_mermaid_questions(parsed)
         file_questions.extend(mq)
-
-        # UI 질문 (E)
         uq = generate_ui_questions(parsed)
         file_questions.extend(uq)
-
-        # 섹션 질문 (F)
         sq = generate_section_questions(parsed)
         file_questions.extend(sq)
-
         all_questions.extend(file_questions)
+
+    excel_q_count = len(all_questions)
+    print(f"Excel 질문: {excel_q_count}개")
+
+    # Confluence 질문
+    for parsed in conf_parsed:
+        cq = generate_confluence_questions(parsed)
+        all_questions.extend(cq)
+
+    conf_q_count = len(all_questions) - excel_q_count
+    print(f"Confluence 질문: {conf_q_count}개")
 
     # 3. 시스템 간 질문 (B)
     cross_q = generate_cross_system_questions(all_parsed)
@@ -656,13 +975,17 @@ def generate_all_questions(dry_run: bool = False) -> dict:
     elif len(all_questions) < target:
         print(f"  [INFO] 생성된 질문 {len(all_questions)}개 (목표 {target})")
 
-    # 6. ID 부여
+    # 6. ID 부여 + 질문/키워드 최종 정제
     category_counters = {}
     for q in all_questions:
         cat = q["category"]
         category_counters[cat] = category_counters.get(cat, 0) + 1
         q["id"] = _make_id(cat, category_counters[cat])
         q["is_hallucination_trap"] = False
+        # 질문 텍스트에서도 포맷팅 아티팩트 제거
+        q["query"] = re.sub(r'\*{2,}', '', q["query"])
+        # 키워드 최종 정제 (누락 방지)
+        q["expected_answer_keywords"] = _clean_keywords(q.get("expected_answer_keywords", []))
         stats[cat] = stats.get(cat, 0) + 1
 
     # 7. 할루시네이션 트랩 추가
@@ -682,9 +1005,9 @@ def generate_all_questions(dry_run: bool = False) -> dict:
             "hallucination_ratio": round(len(traps) / len(all_questions), 3),
             "categories": stats,
             "source_files": len(all_parsed),
-            "methodology": "Claude Code가 629개 content.md를 규칙 기반 파싱하여 "
-                          "테이블/정의/Mermaid/UI/시스템간 연관 질문을 자동 생성. "
-                          "10%는 할루시네이션 트랩(존재하지 않는 데이터 질문).",
+            "methodology": "Claude Code가 Excel 629개 + Confluence 489개 content.md를 "
+                          "규칙 기반 파싱하여 테이블/정의/Mermaid/UI/시스템간 연관 질문을 "
+                          "자동 생성. 10%는 할루시네이션 트랩(존재하지 않는 데이터 질문).",
         },
         "questions": all_questions,
     }
@@ -707,7 +1030,7 @@ def generate_all_questions(dry_run: bool = False) -> dict:
         cat_names = {
             "A": "사실 조회", "B": "시스템 간 연관", "C": "밸런스 수치",
             "D": "프로세스/플로우", "E": "UI 사양", "F": "메타/용어",
-            "H": "할루시네이션 트랩",
+            "G": "Confluence 전용", "H": "할루시네이션 트랩",
         }
         print(f"    {cat}. {cat_names.get(cat, '기타')}: {count}개")
     print(f"\n  저장: {OUTPUT_PATH}")
@@ -745,7 +1068,7 @@ def _balance_categories(questions: list[dict], target: int) -> list[dict]:
         by_cat[cat].append(q)
 
     # 카테고리별 목표 비율
-    ratios = {"A": 0.30, "C": 0.25, "D": 0.15, "F": 0.10, "E": 0.08, "B": 0.12}
+    ratios = {"A": 0.25, "C": 0.20, "D": 0.12, "F": 0.08, "E": 0.07, "B": 0.12, "G": 0.16}
 
     result = []
     for cat, ratio in ratios.items():

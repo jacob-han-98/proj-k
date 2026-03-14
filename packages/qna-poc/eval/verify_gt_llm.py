@@ -1,10 +1,20 @@
 """
-LLM-as-Judge 평가기.
+LLM-as-Judge QnA 평가기.
 
-gt_questions_llm.json의 질문을 Agent QnA 시스템으로 답변 생성 후,
-Stage 1 (규칙 기반) + Stage 2 (LLM Judge 8축+보너스) 평가를 수행한다.
+== 파이프라인 ==
+1. gt_questions_llm.json에서 미리 생성된 질문을 로드
+2. 각 질문을 Agent QnA 시스템에 전달 → 시스템이 답변 생성
+   (Agent: Planning→검색→답변→Reflection)
+3. Stage 1: 규칙 기반 빠른 필터 (검색된 문서가 맞는지)
+4. Stage 2: LLM Judge가 "시스템 답변" vs "기대 정답" 비교 평가 (8축+보너스)
 
-사용법:
+== 용어 ==
+- 질문 (question): 미리 생성된 GT 질문 (gt_questions_llm.json)
+- 시스템 답변 (generated_answer): Agent가 생성한 답변
+- 기대 정답 (expected_answer): 질문 생성 시 함께 만든 정답
+- Judge 평가: LLM이 시스템 답변과 기대 정답을 비교하여 점수 부여
+
+== 사용법 ==
     python -m eval.verify_gt_llm --stage1-only         # 무료 평가만
     python -m eval.verify_gt_llm --sample 5             # 5개만
     python -m eval.verify_gt_llm                        # 전체 (Stage 1+2)
@@ -15,10 +25,17 @@ Stage 1 (규칙 기반) + Stage 2 (LLM Judge 8축+보너스) 평가를 수행한
 
 import argparse
 import json
+import shutil
 import sys
 import time
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from pathlib import Path
+
+# Windows cp949 인코딩 문제 방지
+sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+sys.stderr.reconfigure(encoding="utf-8", errors="replace")
 
 # ── 경로 ──────────────────────────────────────────────────
 ROOT = Path(__file__).resolve().parent.parent  # packages/qna-poc
@@ -28,9 +45,12 @@ RESULTS_DIR = EVAL_DIR / "results"
 # RESULTS_PATH는 main()에서 타임스탬프 붙여서 설정
 
 sys.path.insert(0, str(ROOT))
-from src.retriever import retrieve  # noqa: E402
+from src.retriever import retrieve, warmup as retriever_warmup  # noqa: E402
 from src.generator import call_bedrock, SYSTEM_PROMPT as QNA_SYSTEM_PROMPT  # noqa: E402
+from src.generator import get_system_logger, get_log_file_path  # noqa: E402
 from src.agent import agent_answer  # noqa: E402
+
+log = get_system_logger()
 
 
 # ══════════════════════════════════════════════════════════
@@ -182,6 +202,7 @@ JUDGE_SYSTEM_PROMPT = """당신은 10년차 게임 기획 전문가입니다.
    - 5: key_facts 전부 정확히 포함, 오류 없음
    - 3: 핵심 사실 일부 포함, 오류는 없음
    - 1: 핵심 사실 누락 또는 사실 오류 포함
+   - **참고: 용어/표현 차이는 감점하지 마세요.** "Defense"와 "Melee Defense", "공격력"과 "Attack Power" 등은 같은 의미입니다. 정확한 수치와 비율이 일치하면 5점입니다.
 
 3. **completeness** (설명 충분성): 기획 전문가가 납득할 충분한 설명을 했는가?
    - 5: 추가 질문 없이 완전한 답변
@@ -207,6 +228,7 @@ JUDGE_SYSTEM_PROMPT = """당신은 10년차 게임 기획 전문가입니다.
    - 5: 질문에 딱 맞는 범위
    - 3: 약간 넓거나 좁음
    - 1: 질문과 범위 불일치 (과잉/부족)
+   - **참고: 질문에 답한 후 추가 관련 정보를 제공하는 것은 감점 사유가 아닙니다.** 핵심 답변이 정확하면 부가 정보가 있어도 4-5점입니다.
 
 8. **freshness** (최신성): 시스템 답변이 최신 버전의 정보를 반영하는가?
    - 5: 최신 기획 반영
@@ -333,7 +355,7 @@ def stage2_evaluate(question: dict, chunks: list[dict], generated_answer: str = 
             messages=[{"role": "user", "content": user_msg}],
             system=system,
             model="claude-sonnet-4-5",
-            max_tokens=1024,
+            max_tokens=2048,
             temperature=0,
         )
     except Exception as e:
@@ -341,6 +363,19 @@ def stage2_evaluate(question: dict, chunks: list[dict], generated_answer: str = 
         return {"error": str(e)}
 
     judge_output = parse_judge_json(result["text"])
+    # 파싱 실패 시 1회 재시도 (max_tokens 부족으로 JSON 잘림 방지)
+    if not judge_output:
+        try:
+            result = call_bedrock(
+                messages=[{"role": "user", "content": user_msg}],
+                system=system + "\n\n중요: 반드시 완전한 JSON만 출력하세요. reasoning은 짧게 작성하세요.",
+                model="claude-sonnet-4-5",
+                max_tokens=2048,
+                temperature=0,
+            )
+            judge_output = parse_judge_json(result["text"])
+        except Exception:
+            pass
     if not judge_output:
         return {"error": "Judge JSON parse failed", "raw": result["text"][:200]}
 
@@ -403,6 +438,8 @@ def main():
     parser.add_argument("--difficulty", type=str, default=None, help="난이도 필터")
     parser.add_argument("--category", type=str, default=None, help="카테고리 필터")
     parser.add_argument("--no-agent", action="store_true", help="Agent 없이 단순 RAG 모드")
+    parser.add_argument("--filter", type=str, default=None, help="질문 텍스트 필터 (부분 매칭)")
+    parser.add_argument("--id", type=str, default=None, help="질문 ID 필터 (콤마 구분)")
     args = parser.parse_args()
     use_agent = not args.no_agent
 
@@ -436,6 +473,11 @@ def main():
         questions = [q for q in questions if q.get("difficulty") == args.difficulty]
     if args.category:
         questions = [q for q in questions if q.get("category") == args.category]
+    if args.filter:
+        questions = [q for q in questions if args.filter in q.get("query", "") or args.filter in q.get("question", "")]
+    if args.id:
+        id_set = set(args.id.split(","))
+        questions = [q for q in questions if q.get("id") in id_set]
     if args.sample > 0:
         questions = questions[:args.sample]
 
@@ -446,22 +488,38 @@ def main():
     mode_str = "Stage 1 only" if args.stage1_only else "Stage 1 + Stage 2"
     agent_str = "Agent" if use_agent else "Simple RAG"
 
+    log_path = get_log_file_path()
     print(f"\n{'='*60}")
-    print(f"  LLM-as-Judge 평가 - {total}개 질문")
-    print(f"  일반: {normal_count} | 트랩: {trap_count}")
+    print(f"  LLM-as-Judge QnA 평가")
+    print(f"  질문 {total}개 (일반 {normal_count} + 트랩 {trap_count})")
     print(f"  모드: {mode_str} | 파이프라인: {agent_str}")
+    print(f"  로그: {log_path}")
     print(f"{'='*60}")
+    print(f"  파이프라인: 질문 -> Agent 답변 생성 -> Judge LLM 평가")
+    print(f"{'='*60}\n")
 
-    results = []
+    log.info(f"{'='*70}")
+    log.info(f"평가 시작: {total}개 질문, 모드={mode_str}, 파이프라인={agent_str}")
+    log.info(f"{'='*70}")
+
+    # ── Warmup: 캐시 미리 초기화 (병렬 실행 전 필수) ──
+    retriever_warmup()
+
+    # ── 병렬 실행 설정 ──
+    MAX_WORKERS = 10  # 동시 실행 질문 수 (API rate limit 고려)
+
+    # 스레드-세이프 카운터
+    lock = threading.Lock()
+    stats = {"pass": 0, "partial": 0, "fail": 0, "total": 0, "done": 0,
+             "judge_tokens": 0}
+    # 결과를 인덱스 순서대로 저장하기 위한 슬롯
+    results = [None] * total
+
     t0 = time.time()
-    total_judge_tokens = 0
 
-    for i, q in enumerate(questions):
-        elapsed = time.time() - t0
-        remaining = (elapsed / max(i, 1)) * (total - i) if i > 0 else 0
-
-        if (i + 1) % 10 == 0 or i == 0:
-            print(f"  [{i+1}/{total}] {elapsed:.0f}s elapsed, ~{remaining:.0f}s remaining")
+    def evaluate_one(idx: int, q: dict) -> dict:
+        """단일 질문 평가 (병렬 실행 단위)."""
+        q_t0 = time.time()
 
         entry = {
             "id": q["id"],
@@ -471,10 +529,13 @@ def main():
             "difficulty": q.get("difficulty"),
             "is_trap": q.get("is_hallucination_trap", False),
             "expected_answer": q.get("expected_answer", ""),
+            "expected_workbooks": q.get("expected_workbooks", []),
+            "key_facts": q.get("key_facts", []),
+            "rationale": q.get("rationale", ""),
+            "ground_truth_source": q.get("ground_truth_source", ""),
         }
 
         if use_agent and not args.stage1_only:
-            # ── Agent 모드: Planning → Search → Answer → Reflection ──
             try:
                 agent_result = agent_answer(q["query"], role=q.get("role"))
                 chunks = agent_result["chunks"]
@@ -484,47 +545,101 @@ def main():
                 entry["agent_confidence"] = agent_result.get("confidence", "?")
                 entry["chunks_found"] = len(chunks)
             except Exception as e:
-                print(f"  [ERROR] Agent failed for {q['id']}: {e}")
                 chunks = []
                 entry["generated_answer"] = f"(Agent 실패: {e})"
                 entry["answer_tokens"] = 0
                 entry["agent_trace"] = [{"step": "error", "message": str(e)}]
                 entry["chunks_found"] = 0
         else:
-            # ── Simple RAG 모드 ──
             try:
                 chunks, retrieval_info = retrieve(q["query"], top_k=20)
             except Exception as e:
-                print(f"  [ERROR] Retrieve failed for {q['id']}: {e}")
                 chunks, retrieval_info = [], {}
             entry["chunks_found"] = len(chunks)
 
-        # Stage 1 (규칙 기반 — 검색 품질 확인)
+        # Stage 1
         s1 = stage1_evaluate(q, chunks)
         entry.update(s1)
 
-        # Stage 2: 답변 생성 + Judge 평가
+        # Stage 2
         if not args.stage1_only:
             if not use_agent:
-                # Simple RAG: 여기서 답변 생성
                 gen_result = generate_answer(q["query"], chunks)
                 entry["generated_answer"] = gen_result["answer"]
                 entry["answer_tokens"] = gen_result["tokens"]
 
-            # Judge 평가 (Agent/RAG 공통)
+            judge_t0 = time.time()
             s2 = stage2_evaluate(q, chunks, generated_answer=entry.get("generated_answer", ""))
+            judge_time = time.time() - judge_t0
             entry.update(s2)
-            total_judge_tokens += s2.get("judge_tokens", 0) + entry.get("answer_tokens", 0)
+            entry["judge_seconds"] = round(judge_time, 1)
 
-        results.append(entry)
+        entry["total_seconds"] = round(time.time() - q_t0, 1)
+
+        # ── 스레드-세이프 결과 업데이트 ──
+        with lock:
+            results[idx] = entry
+            stats["done"] += 1
+            done = stats["done"]
+            q_tokens = entry.get("judge_tokens", 0) + entry.get("answer_tokens", 0)
+            stats["judge_tokens"] += q_tokens
+
+            verdict = entry.get("stage2_verdict", entry.get("stage1_verdict", "?"))
+            if not entry.get("is_trap") and "stage2_verdict" in entry:
+                stats["total"] += 1
+                if verdict == "PASS":
+                    stats["pass"] += 1
+                elif verdict == "PARTIAL":
+                    stats["partial"] += 1
+                else:
+                    stats["fail"] += 1
+
+            # 실시간 출력
+            elapsed = time.time() - t0
+            pct = f"{100*stats['pass']/max(stats['total'],1):.0f}%"
+            verdict_mark = {"PASS": "O", "PARTIAL": "~", "FAIL": "X"}.get(verdict, "?")
+            avg = entry.get("base_avg", 0)
+
+            if entry.get("is_trap"):
+                print(f"  [{done}/{total}] {q['id']} TRAP [{verdict_mark}] {verdict} | "
+                      f"{elapsed:.0f}s | PASS={stats['pass']}/{stats['total']} ({pct})")
+            else:
+                answer_preview = entry.get('generated_answer', '')[:60].replace(chr(10), ' ')
+                print(f"  [{done}/{total}] {q['id']} [{verdict_mark}] {verdict} avg={avg} | "
+                      f"{elapsed:.0f}s | PASS={stats['pass']}/{stats['total']} ({pct})"
+                      f" | {answer_preview}")
+
+            log.info(f"[{done}/{total}] {q['id']}: {verdict} avg={avg} "
+                     f"PASS={stats['pass']}/{stats['total']} ({pct}) "
+                     f"time={entry.get('total_seconds',0):.1f}s")
+
+            # 중간 저장 (완료된 결과만)
+            completed = [r for r in results if r is not None]
+            with open(results_path, "w", encoding="utf-8") as f:
+                json.dump(completed, f, ensure_ascii=False, indent=2)
+            shutil.copy2(results_path, latest_path)
+
+        return entry
+
+    # ── 병렬 실행 ──
+    print(f"  [병렬 실행] max_workers={MAX_WORKERS}")
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+        futures = {}
+        for idx, q in enumerate(questions):
+            future = executor.submit(evaluate_one, idx, q)
+            futures[future] = idx
+
+        for future in as_completed(futures):
+            try:
+                future.result()  # 예외 전파
+            except Exception as e:
+                idx = futures[future]
+                print(f"  [ERROR] Question {idx} failed: {e}")
+
+    # results에 None이 남아있으면 제거
+    results = [r for r in results if r is not None]
 
     total_time = time.time() - t0
-
-    # 저장 (타임스탬프 파일 + latest 심볼릭)
-    import shutil
-    with open(results_path, "w", encoding="utf-8") as f:
-        json.dump(results, f, ensure_ascii=False, indent=2)
-    shutil.copy2(results_path, latest_path)
 
     # ── 통계 출력 ──
     print(f"\n{'='*60}")
@@ -577,8 +692,8 @@ def main():
             print(f"    {cat}: {cat_pass}/{len(cat_results)}")
 
         # 비용 추정
-        est_cost = total_judge_tokens * 0.000003  # ~$3/M input tokens (Sonnet)
-        print(f"\n  Judge 토큰: {total_judge_tokens:,}")
+        est_cost = stats["judge_tokens"] * 0.000003  # ~$3/M input tokens (Sonnet)
+        print(f"\n  Judge 토큰: {stats['judge_tokens']:,}")
         print(f"  추정 비용: ~${est_cost:.4f}")
 
     # 실패 샘플
@@ -599,6 +714,13 @@ def main():
     print(f"\n  총 소요 시간: {total_time:.0f}s ({total_time/60:.1f}min)")
     print(f"  결과 저장: {results_path.name}")
     print(f"  최신 복사: {latest_path.name}")
+    print(f"  시스템 로그: {log_path}")
+    log.info(f"{'='*70}")
+    log.info(f"평가 완료: {total_time:.0f}s ({total_time/60:.1f}min)")
+    log.info(f"  PASS={stats['pass']}/{stats['total']} ({100*stats['pass']/max(stats['total'],1):.0f}%) "
+             f"PARTIAL={stats['partial']} FAIL={stats['fail']}")
+    log.info(f"  결과={results_path.name}")
+    log.info(f"{'='*70}")
 
 
 if __name__ == "__main__":

@@ -76,7 +76,17 @@ STAGE_ALIASES = {
 }
 OUTPUT_DIR = SCRIPT_DIR / "output"
 PROJECT_ROOT = SCRIPT_DIR.parent.parent  # proj-k 기획/
-XLSX_FOLDERS = ["7_System", "2_Development", "3_Base", "9_MileStone"]
+
+# 소스 폴더: 환경변수 XLSX_SOURCE_DIRS로 오버라이드 가능 (콤마 구분, 절대 경로)
+# 미설정 시 PROJECT_ROOT 하위의 기본 폴더를 사용
+_DEFAULT_XLSX_FOLDERS = ["7_System", "2_Development", "3_Base", "9_MileStone"]
+_source_dirs_env = os.environ.get("XLSX_SOURCE_DIRS", "").strip()
+if _source_dirs_env:
+    XLSX_SOURCE_DIRS = [Path(d.strip()) for d in _source_dirs_env.split(",") if d.strip()]
+    XLSX_FOLDERS = None  # 환경변수 사용 시 기본 폴더 비활성
+else:
+    XLSX_SOURCE_DIRS = None
+    XLSX_FOLDERS = _DEFAULT_XLSX_FOLDERS
 
 
 # ── 로깅 (thread-safe) ──
@@ -210,12 +220,21 @@ def resolve_xlsx_inputs(paths, all_mode=False):
     search_dirs = []
 
     if all_mode:
-        for folder in XLSX_FOLDERS:
-            d = PROJECT_ROOT / folder
-            if d.is_dir():
-                search_dirs.append(d)
-            else:
-                log.warn(f"폴더 없음: {folder}")
+        if XLSX_SOURCE_DIRS:
+            # 환경변수로 지정된 외부 소스 폴더 사용
+            for d in XLSX_SOURCE_DIRS:
+                if d.is_dir():
+                    search_dirs.append(d)
+                else:
+                    log.warn(f"소스 폴더 없음: {d}")
+        else:
+            # 기본: 프로젝트 하위 폴더
+            for folder in XLSX_FOLDERS:
+                d = PROJECT_ROOT / folder
+                if d.is_dir():
+                    search_dirs.append(d)
+                else:
+                    log.warn(f"폴더 없음: {folder}")
 
     for p_str in (paths or []):
         p = Path(p_str).resolve()
@@ -241,6 +260,46 @@ def resolve_xlsx_inputs(paths, all_mode=False):
             unique.append(f)
 
     return unique
+
+
+def filter_changed_files(xlsx_files: list[Path]) -> list[Path]:
+    """소스 파일이 마지막 변환 이후 변경된 파일만 반환.
+
+    비교 기준: 소스 xlsx mtime > 출력 폴더 내 _capture_manifest.json mtime
+    출력 폴더가 없거나 manifest가 없으면 '변경됨'으로 간주.
+    """
+    changed = []
+    skipped = []
+
+    for xlsx_path in xlsx_files:
+        file_name = xlsx_path.stem  # e.g. "PK_변신 및 스킬 시스템"
+        output_dir = OUTPUT_DIR / file_name
+        manifest = output_dir / "_capture_manifest.json"
+
+        if not manifest.exists():
+            # 아직 변환한 적 없음 → 변경됨
+            changed.append(xlsx_path)
+            continue
+
+        src_mtime = xlsx_path.stat().st_mtime
+        out_mtime = manifest.stat().st_mtime
+
+        if src_mtime > out_mtime:
+            changed.append(xlsx_path)
+        else:
+            skipped.append(xlsx_path)
+
+    if skipped:
+        log.info(f"[changed-only] 변경 감지: {len(changed)}개 변경, {len(skipped)}개 스킵")
+        if changed:
+            for f in changed[:10]:
+                log.info(f"  변경됨: {f.name}")
+            if len(changed) > 10:
+                log.info(f"  ... 외 {len(changed) - 10}개")
+    elif changed:
+        log.info(f"[changed-only] 전체 {len(changed)}개 파일이 변환 대상 (기존 출력 없음)")
+
+    return changed
 
 
 def parse_stages(stage_arg):
@@ -712,7 +771,7 @@ def main():
     )
     parser.add_argument("xlsx", nargs="*", help="Excel 파일 또는 디렉토리 (여러 개 가능)")
     parser.add_argument("--all", action="store_true",
-                        help="모든 알려진 폴더 처리 (7_System, 2_Development, 3_Base, 9_MileStone)")
+                        help="모든 소스 폴더 처리 (XLSX_SOURCE_DIRS 또는 기본 폴더)")
     parser.add_argument("--sheet", help="특정 시트만 처리 (콤마 구분)")
     parser.add_argument("--stage",
                         help="특정 단계만 실행 (cap/vis/parse/syn 또는 vis-syn 구간)")
@@ -723,6 +782,8 @@ def main():
     parser.add_argument("--force", action="store_true",
                         help="이미 완료된 시트도 재처리 (기본: 건너뛰기)")
     parser.add_argument("--output", help="출력 디렉토리 (기본: output/)")
+    parser.add_argument("--changed-only", action="store_true",
+                        help="소스 파일이 변경된 것만 처리 (mtime 비교)")
 
     args = parser.parse_args()
 
@@ -739,15 +800,26 @@ def main():
         log.error("처리할 xlsx 파일이 없습니다")
         sys.exit(1)
 
+    # --changed-only: 변경된 파일만 필터링
+    if args.changed_only:
+        original_count = len(xlsx_files)
+        xlsx_files = filter_changed_files(xlsx_files)
+        if not xlsx_files:
+            log.info(f"변경된 파일 없음 (전체 {original_count}개 중 0개 변경)")
+            sys.exit(0)
+
     # 실행 단계 결정
     run_stages = parse_stages(args.stage)
 
     # 배너
     log.banner("xlsx-extractor Pipeline v2")
-    log.info(f"입력:   {len(xlsx_files)} files")
+    log.info(f"입력:   {len(xlsx_files)} files"
+             + (f" (changed-only)" if args.changed_only else ""))
     log.info(f"병렬:   {args.parallel} workers")
     log.info(f"단계:   {' -> '.join(s.upper() for s in run_stages)}")
     log.info(f"force:  {'YES' if args.force else 'NO (완료된 시트 skip)'}")
+    if XLSX_SOURCE_DIRS:
+        log.info(f"소스:   {', '.join(str(d) for d in XLSX_SOURCE_DIRS)}")
     log.info(f"시작:   {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
     # 파일 목록 (간략)

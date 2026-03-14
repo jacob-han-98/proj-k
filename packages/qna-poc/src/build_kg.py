@@ -1,11 +1,10 @@
 """
-build_kg.py — 629개 content.md에서 Knowledge Graph 재생성
+build_kg.py — content.md에서 Knowledge Graph 재생성
 
-output/ 디렉토리의 content.md를 파싱하여:
-1. 워크북→시트 구조 추출
-2. content.md 내 시스템 간 교차 참조 탐지
-3. 공통 키워드 기반 관계 추론
-4. knowledge_graph.json 출력
+데이터 소스:
+1. xlsx-extractor output (packages/xlsx-extractor/output/)
+2. confluence-downloader output (packages/confluence-downloader/output/)
+   - content_enriched.md 우선 사용
 
 Usage:
     python -m src.build_kg
@@ -26,6 +25,7 @@ if sys.stdout.encoding != "utf-8":
     sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
 
 EXTRACTOR_OUTPUT = Path(__file__).resolve().parent.parent.parent / "xlsx-extractor" / "output"
+CONFLUENCE_OUTPUT = Path(__file__).resolve().parent.parent.parent / "confluence-downloader" / "output"
 KG_OUTPUT = Path(__file__).resolve().parent.parent.parent.parent / "_knowledge_base" / "knowledge_graph.json"
 
 # 시스템 간 관계를 감지하기 위한 키워드 패턴
@@ -104,6 +104,57 @@ def scan_content_files() -> list[dict]:
     return entries
 
 
+def scan_confluence_files() -> list[dict]:
+    """Confluence output에서 content_enriched.md (또는 content.md)를 스캔."""
+    entries = []
+
+    if not CONFLUENCE_OUTPUT.exists():
+        print(f"[WARN] Confluence output dir not found: {CONFLUENCE_OUTPUT}")
+        return entries
+
+    for content_md in sorted(CONFLUENCE_OUTPUT.rglob("content.md")):
+        # 최상위 파일 건너뛰기
+        if content_md.parent == CONFLUENCE_OUTPUT:
+            continue
+
+        # enriched 우선
+        enriched = content_md.parent / "content_enriched.md"
+        target = enriched if enriched.exists() else content_md
+
+        try:
+            text = target.read_text(encoding="utf-8")
+        except Exception:
+            continue
+
+        if len(text) < 50:
+            continue
+
+        # YAML frontmatter에서 title 추출
+        title = content_md.parent.name
+        for line in text.split("\n")[:10]:
+            if line.startswith("title:"):
+                title = line.split(":", 1)[1].strip().strip('"').strip("'")
+                break
+
+        # 경로에서 카테고리 추출
+        try:
+            rel = content_md.parent.relative_to(CONFLUENCE_OUTPUT)
+            category = "/".join(rel.parts[:-1]) if len(rel.parts) > 1 else "Confluence"
+        except ValueError:
+            category = "Confluence"
+
+        entries.append({
+            "workbook": f"Confluence/{category}",
+            "sheet": title,
+            "path": str(target),
+            "text": text,
+            "size": len(text),
+            "source_type": "confluence",
+        })
+
+    return entries
+
+
 def extract_system_info(entries: list[dict]) -> dict:
     """엔트리에서 시스템 정보 추출."""
     systems = {}
@@ -114,8 +165,8 @@ def extract_system_info(entries: list[dict]) -> dict:
         wb_entries[e["workbook"]].append(e)
 
     for wb, sheets in wb_entries.items():
-        # 워크북명에서 시스템명 추출
-        system_name = wb.replace("PK_", "").strip()
+        # 워크북명을 그대로 시스템명으로 사용 (ChromaDB 워크북명과 일치)
+        system_name = wb
 
         all_text = "\n".join(s["text"] for s in sheets)
 
@@ -135,29 +186,47 @@ def extract_system_info(entries: list[dict]) -> dict:
         # 관계 탐지 — 명시적 참조만 사용 (키워드 매칭은 노이즈 과다)
         referenced_systems = set()
 
-        # 1. 명시적 참조 ("PK_XXX" 형태)
-        explicit_refs = re.findall(r'PK_([^\s/\\,]+)', all_text)
+        # 1. 명시적 참조 ("PK_XXX" 형태 — PK_ 접두사 포함하여 ChromaDB 워크북명과 일치)
+        explicit_refs = re.findall(r'(PK_[^\s/\\,]+)', all_text)
         for ref in explicit_refs:
             ref_clean = ref.strip().rstrip(')].').replace("'", "").replace('"', '')
-            if ref_clean != system_name and len(ref_clean) > 1:
+            if ref_clean != system_name and len(ref_clean) > 3:
                 referenced_systems.add(ref_clean)
 
         # 2. 시트 내 다른 워크북 참조 ("워크북명!셀" 형태)
         sheet_refs = re.findall(r'([가-힣\w]{2,})![A-Z]\d+', all_text)
+        sheet_names_local = [s["sheet"] for s in sheets]
         for ref in sheet_refs:
-            if ref != system_name and ref not in [s["sheet"] for s in sheets]:
+            if ref == system_name or ref in sheet_names_local:
+                continue
+            # 참조를 워크북명으로 해소 (PK_ 접두사 추가 시도)
+            if f"PK_{ref}" in wb_entries:
+                referenced_systems.add(f"PK_{ref}")
+            elif ref in wb_entries:
                 referenced_systems.add(ref)
+            else:
+                # 부분 매칭으로 워크북 찾기
+                for candidate_wb in wb_entries:
+                    candidate_short = candidate_wb.replace("PK_", "").strip()
+                    if ref in candidate_short or candidate_short in ref:
+                        referenced_systems.add(candidate_wb)
+                        break
 
         # 3. 헤딩에서 다른 시스템 명시적 언급 (##/### 레벨)
         for section in sections:
             for other_wb in wb_entries:
-                other_name = other_wb.replace("PK_", "").strip()
-                if other_name != system_name and len(other_name) >= 3:
-                    if other_name in section:
-                        referenced_systems.add(other_name)
+                if other_wb != system_name and len(other_wb) >= 3:
+                    # PK_ 제거한 이름으로도 매칭 시도
+                    other_short = other_wb.replace("PK_", "").strip()
+                    if other_short in section or other_wb in section:
+                        referenced_systems.add(other_wb)
+
+        # 소스 유형 결정
+        file_types = list(set(s.get("source_type", "excel") for s in sheets))
 
         systems[system_name] = {
-            "source_files": [f"packages/xlsx-extractor/output/{wb}"],
+            "source_files": [f"packages/xlsx-extractor/output/{wb}"] if "excel" in file_types
+                            else [f"packages/confluence-downloader/output/{wb}"],
             "sheets": sheet_names,
             "sheet_count": len(sheet_names),
             "total_size": sum(s["size"] for s in sheets),
@@ -166,7 +235,7 @@ def extract_system_info(entries: list[dict]) -> dict:
             "mermaid_charts": mermaid_count,
             "sections": sections[:20],  # 상위 20개만
             "description": _extract_description(all_text),
-            "file_types": ["excel"],
+            "file_types": file_types,
         }
 
     return systems
@@ -193,15 +262,20 @@ def resolve_relationships(systems: dict) -> dict:
     system_names = set(systems.keys())
     name_lookup = {}
 
-    # 이름 정규화 룩업
+    # 이름 정규화 룩업 (ChromaDB 워크북명 기준)
     for name in system_names:
         name_lookup[name.lower()] = name
         # 공백 제거 버전
         name_lookup[name.lower().replace(" ", "")] = name
-        # 짧은 키워드 버전
-        words = name.split()
-        if words:
-            name_lookup[words[0].lower()] = name
+        # PK_ 제거 버전 (참조가 PK_ 없이 들어올 수 있음)
+        if name.startswith("PK_"):
+            short = name[3:].strip()
+            name_lookup[short.lower()] = name
+            name_lookup[short.lower().replace(" ", "")] = name
+        # Confluence 마지막 세그먼트
+        if name.startswith("Confluence/"):
+            last_seg = name.split("/")[-1]
+            name_lookup[last_seg.lower()] = name
 
     # 관계 해소 및 양방향화
     for sys_name, info in systems.items():
@@ -243,13 +317,17 @@ def build_knowledge_graph(dry_run: bool = False):
 
     print(f"{'=' * 70}")
     print(f"  Knowledge Graph 재생성")
-    print(f"  소스: {EXTRACTOR_OUTPUT}")
+    print(f"  소스: Excel({EXTRACTOR_OUTPUT}) + Confluence({CONFLUENCE_OUTPUT})")
     print(f"{'=' * 70}")
 
     # 1. 스캔
     print(f"\n  [1/4] content.md 스캔 중...")
     entries = scan_content_files()
-    print(f"    {len(entries)}개 content.md 발견")
+    print(f"    Excel: {len(entries)}개 content.md")
+    conf_entries = scan_confluence_files()
+    print(f"    Confluence: {len(conf_entries)}개 content.md")
+    entries.extend(conf_entries)
+    print(f"    합계: {len(entries)}개")
 
     # 2. 시스템 정보 추출
     print(f"  [2/4] 시스템 정보 추출 중...")
@@ -291,7 +369,7 @@ def build_knowledge_graph(dry_run: bool = False):
         "meta": {
             "created": datetime.now().isoformat(),
             "project": "Project K",
-            "source_dir": str(EXTRACTOR_OUTPUT),
+            "source_dirs": [str(EXTRACTOR_OUTPUT), str(CONFLUENCE_OUTPUT)],
             "source_files": len(entries),
             "total_systems": len(systems),
             "total_relationships": total_rels,

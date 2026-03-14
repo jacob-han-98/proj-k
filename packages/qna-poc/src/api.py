@@ -1,10 +1,11 @@
 """
 api.py — FastAPI QnA 엔드포인트
 
-POST /ask          기획 QnA
+POST /ask          기획 QnA (Agent 파이프라인)
 POST /search       검색만 (디버그용)
 GET  /systems      시스템 목록
 GET  /systems/{name}/related  관련 시스템
+GET  /health       헬스체크
 """
 
 import uuid
@@ -12,14 +13,23 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
-from src.retriever import retrieve, format_context, extract_system_names, get_related_systems, _build_structural_index
-from src.generator import generate_answer
+from src.agent import agent_answer
+from src.retriever import retrieve, extract_system_names, get_related_systems, _build_structural_index
 
-app = FastAPI(title="Project K QnA PoC", version="0.1.0")
+app = FastAPI(title="Project K QnA PoC", version="0.2.0")
+
+# CORS — Streamlit, 로컬 개발 등에서 접근 허용
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # 대화 메모리 (in-memory, 서버 재시작 시 초기화)
 conversations: dict[str, list[tuple[str, str]]] = {}
@@ -31,18 +41,16 @@ class AskRequest(BaseModel):
     question: str
     conversation_id: str | None = None
     role: str | None = None
-    model: str | None = None
 
 
 class AskResponse(BaseModel):
     answer: str
-    sources: list[dict]
     confidence: str
-    related_systems: list[str]
+    sources: list[dict]
     conversation_id: str
-    tokens_used: dict
+    total_tokens: int
     api_seconds: float
-    retrieval_info: dict | None = None
+    trace: list[dict] | None = None
 
 
 class SearchRequest(BaseModel):
@@ -53,61 +61,57 @@ class SearchRequest(BaseModel):
 class SearchResult(BaseModel):
     results: list[dict]
     detected_systems: list[str]
-    retrieval_info: dict | None = None
 
 
 # ── 엔드포인트 ──
 
+@app.get("/health")
+async def health():
+    """헬스체크."""
+    return {"status": "ok", "version": "0.2.0"}
+
+
 @app.post("/ask", response_model=AskResponse)
 async def ask(req: AskRequest):
-    """기획 QnA 질문."""
-    # 대화 ID 관리
+    """기획 QnA 질문 — Agent 파이프라인 (Planning→Search→Answer→Reflection)."""
     conv_id = req.conversation_id or str(uuid.uuid4())
+
+    result = agent_answer(req.question, role=req.role)
+
+    # 소스 정보 추출
+    sources = []
+    seen = set()
+    for chunk in result.get("chunks", []):
+        key = f"{chunk.get('workbook', '')}/{chunk.get('sheet', '')}"
+        if key not in seen:
+            seen.add(key)
+            sources.append({
+                "workbook": chunk.get("workbook", ""),
+                "sheet": chunk.get("sheet", ""),
+                "section_path": chunk.get("section_path", ""),
+                "score": round(chunk.get("combined_score", chunk.get("score", 0)), 3),
+            })
+
+    # 대화 히스토리 저장 (최근 5턴)
     history = conversations.get(conv_id, [])
-
-    # 검색
-    chunks, retrieval_info = retrieve(req.question, top_k=12)
-    if not chunks:
-        raise HTTPException(status_code=404, detail="관련 기획서를 찾을 수 없습니다.")
-
-    context = format_context(chunks)
-
-    # 답변 생성
-    result = generate_answer(
-        question=req.question,
-        context=context,
-        role=req.role,
-        conversation_history=history,
-        model=req.model,
-    )
-
-    # 관련 시스템 추출
-    detected = extract_system_names(req.question)
-    related = []
-    for sys_name in detected[:2]:
-        related.extend(get_related_systems(sys_name, depth=1))
-    related = sorted(set(related) - set(detected))[:10]
-
-    # 대화 히스토리 저장 (최근 3턴)
     history.append((req.question, result["answer"]))
-    conversations[conv_id] = history[-3:]
+    conversations[conv_id] = history[-5:]
 
     return AskResponse(
         answer=result["answer"],
-        sources=result["sources"],
-        confidence=result["confidence"],
-        related_systems=related,
+        confidence=result.get("confidence", "medium"),
+        sources=sources[:10],
         conversation_id=conv_id,
-        tokens_used=result["tokens_used"],
-        api_seconds=result["api_seconds"],
-        retrieval_info=retrieval_info,
+        total_tokens=result.get("total_tokens", 0),
+        api_seconds=result.get("total_api_seconds", 0),
+        trace=result.get("trace"),
     )
 
 
 @app.post("/search", response_model=SearchResult)
 async def search_docs(req: SearchRequest):
     """검색만 수행 (디버그/테스트용)."""
-    chunks, retrieval_info = retrieve(req.query, top_k=req.limit)
+    chunks, _info = retrieve(req.query, top_k=req.limit)
     detected = extract_system_names(req.query)
 
     results = []
@@ -122,7 +126,7 @@ async def search_docs(req: SearchRequest):
             "preview": chunk["text"][:300] + "..." if len(chunk["text"]) > 300 else chunk["text"],
         })
 
-    return SearchResult(results=results, detected_systems=detected, retrieval_info=retrieval_info)
+    return SearchResult(results=results, detected_systems=detected)
 
 
 @app.get("/systems")

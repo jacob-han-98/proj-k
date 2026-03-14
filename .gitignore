@@ -46,10 +46,27 @@ _knowledge_base/
 # 평가 결과 (대용량 JSON, 히스토리 관리)
 packages/qna-poc/eval/results/
 
+# 시스템 로그
+packages/qna-poc/logs/
+
 # 테스트/임시 파일
 _test_log.txt
 변환테스트/
 shapeﻊ/
+packages/xlsx-extractor/output_test/
+packages/xlsx-extractor/reprocess_*.py
+packages/xlsx-extractor/reprocess_*.json
+packages/xlsx-extractor/reprocess_*.txt
+packages/xlsx-extractor/test_*.py
+packages/qna-poc/test_*.py
+packages/qna-poc/test_*.png
+
+# 보안 (개인키, 인증서)
+*.pem
+*.key
+
+# DB 파일
+*.db
 
 # Claude Code 로컬 설정
 .claude/

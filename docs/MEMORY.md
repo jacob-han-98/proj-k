@@ -3,9 +3,9 @@
 > 세션 간 항상성을 유지하기 위한 작업 상태 기록.
 > 세션 시작 시 반드시 이 파일을 먼저 읽는다.
 
-## 최종 업데이트: 2026-03-09
+## 최종 업데이트: 2026-03-13
 
-## 현재 단계: 2단계 (QnA PoC) 평가 완료 — 48/48 (100%)
+## 현재 단계: 2단계 QnA PoC 완료 (95% 달성) → UX 개발 진행
 
 ---
 
@@ -33,51 +33,84 @@
 | PPTX | 11개 | 1/11 완료 (레거시) | 후순위 |
 | 추가 XLSX | xlsm 등 | 미착수 | 필요 시 |
 
-### 2단계: QnA PoC — 평가 완료 (ADR-008)
+### 2단계: QnA PoC — **95% 달성**, UX 개발 진행 중
 
-- **결정**: Excel 데이터만으로 QnA PoC 먼저 진행
-- **근거**: 핵심 데이터 98.1% 확보, 가치 증명 우선
-- **아키텍처**: Hybrid Retrieval (KG-first + Vector complement) + Bedrock Claude Sonnet
+- **아키텍처**: Agent 파이프라인 (Planning→Search→Answer→Reflection) + Hybrid 4레이어 검색
 - **위치**: `packages/qna-poc/`
-- **인덱싱**: 629개 content.md → 1,783 청크, ChromaDB 저장
-- **평가 결과**: **48/48 (100%)** — 6 카테고리 × 4 직군 모두 통과
-  - 평균 21.9초 응답, 쿼리당 ~$0.05
-- **다음**: 데모 UI/API 실행 테스트, 응답 시간 최적화
+- **인덱싱**: Excel + Confluence → 4,133 청크, ChromaDB 저장 (~/.qna-poc-chroma)
+- **검색기(Retriever) 정확도**: **97.2% (481/495)** — 규칙 기반 495개 질문 (10차 평가)
+- **Agent QnA 답변 품질**: **95.0% (66/69)** — LLM-as-Judge 8축 채점 (15차 평가)
+  - 일반: 57/60 (95.0%), 트랩: 9/9 (100%)
+  - A:93%, B:87%, C:100%, D:100%, E:100%, F:100%, H:100%
+  - 잔여 FAIL 3건: A-003(OCR 데이터), B-002(경계값), B-003(확률적 regression)
+  - 15차 평가까지 반복 개선 (47% → 95.0%)
+- **UX 전략 (ADR-013)**:
+  1. Streamlit 웹앱 — 개발·품질 검증 (ChatGPT 스타일 대화 UI, Markdown 풀 렌더링)
+  2. Slack 봇 — 기획자 테스터 배포 (Slack Bolt + agent.py, 요약 답변 + Streamlit 링크)
+  3. 피칭 후 → Next.js 전환, Slack 봇 유지
+- **병렬 작업 구조 (2026-03-12~)**:
+  - Track A: 품질 개선 (agent.py, retriever.py, eval/) — 95% 달성 완료
+  - Track B: UX 개발 (streamlit_app.py, slack_bot.py) — 미착수
+  - 공유 인터페이스: `agent_answer()` 반환 형식 고정, `api.py` v0.2.0
+  - 가이드: `packages/qna-poc/docs/UX_DEV_GUIDE.md`
 
-### 3단계: 데이터 확장 & 동기화 — Confluence 다운로드 완료 (ADR-009, ADR-010)
+### 3단계: 데이터 확장 & 동기화 — 진행 중 (ADR-009, ADR-010)
 
-- **결정**: QnA PoC와 기획 리뷰 사이에 데이터 완전성 확보 단계 삽입
-- **근거**: 기획 리뷰(4단계)가 최신·완전한 데이터셋 필요
 - **Confluence 다운로드 완료**: REST API 직접 추출 490페이지 → 489 content.md (ADR-010)
-- **남은 범위**: Confluence→QnA 통합 (인덱싱), PPTX 11개, Perforce 동기화
+- **Confluence 이미지 보강 완료**: 257페이지/1,370이미지 OK (~$36.44, Vision API → content_enriched.md)
+- **Perforce 동기화 완료**: 7_System 69파일 → D:/ProjectK/Design/7_System (최신 리비전)
+  - P4 워크스페이스: jacob-D, 스트림: //main/ProjectK
+  - 7_System만 동기화 대상 (핵심 기획서 폴더, 나머지 미사용)
+- **xlsx-extractor 외부 경로 연동**: XLSX_SOURCE_DIRS=D:/ProjectK/Design/7_System
+- **증분 변환 기능**: --changed-only (mtime 비교로 변경분만 재변환)
+- **파이프라인 통합**: rebuild_knowledge.py (5단계: 소스 업데이트 → Excel 변환 → 이미지 보강 → 인덱싱 → KG)
+
+#### 3단계 완료 작업
+1. ✅ Excel 재변환 (66파일, 401/408 시트 OK, 7.8M 토큰)
+2. ✅ Confluence 이미지 보강 (257페이지, 1,370 이미지, $36.44)
+3. ✅ ChromaDB 재인덱싱 (3,036 chunks, +90 증가)
+4. ✅ **대규모 QnA 재검증: 97.2% (481/495)** — 최신 데이터 반영 확인
+
+#### 남은 작업
+1. 실패 7개 Excel 시트 재변환 (COM 캡처 오류 — RDP 환경 필요)
+2. PR 생성 (remote 설정 후)
 
 ---
 
 ## 2. 서브 프로젝트 현황
 
-### xlsx-extractor (완료)
+### xlsx-extractor (완료 → 재변환 예정)
 
 - **위치**: `packages/xlsx-extractor/`
 - **상세 기록**: `packages/xlsx-extractor/docs/MEMORY.md`
 - **파이프라인**: Excel COM 캡처 → Claude Opus Vision → OOXML 보정 → 14단계 Dedup + OCR 교정
-- **API**: AWS Bedrock (Claude Opus Vision + Sonnet OCR)
-- **검증**: Human-in-the-Loop + Claude Code 반복 검증 (7 사이클)
+- **소스 경로**: `D:/ProjectK/Design/7_System` (Perforce 동기화, .env XLSX_SOURCE_DIRS)
+- **재변환**: Perforce 최신 리비전 수신 완료 → `--changed-only`로 변경분 재변환 필요
 
 ### confluence-downloader (완료)
 
 - **위치**: `packages/confluence-downloader/`
 - **상세 기록**: `packages/confluence-downloader/docs/MEMORY.md`
-- **구성**: REST API v1 + CQL → BeautifulSoup + markdownify → Markdown + 이미지
 - **결과**: 490페이지, 489 content.md, ~2,195 이미지, 8.2GB
-- **전략**: PDF 변환 대신 Confluence Storage Format에서 직접 추출 (ADR-010)
 
-### qna-poc (평가 완료)
+### confluence-enricher (배치 진행 중)
+
+- **위치**: `packages/confluence-enricher/`
+- **상세 기록**: `packages/confluence-enricher/docs/MEMORY.md`
+- **구성**: 순차적 컨텍스트 누적 Vision API → content_enriched.md 생성
+- **배치**: 257페이지, 1,432이미지 처리 중 (Claude Sonnet, ~$17 예상)
+- **프롬프트 규칙**: UI 번호 아이콘(①②③) 위치·의미 상세 서술 포함
+
+### qna-poc (Agent 95% 달성, UX 개발 대기)
 
 - **위치**: `packages/qna-poc/`
 - **상세 기록**: `packages/qna-poc/docs/MEMORY.md`
-- **구성**: FastAPI + ChromaDB + Gradio + Bedrock Claude Sonnet
-- **코드**: indexer.py, retriever.py (hybrid KG+vector), generator.py, api.py, demo_ui.py
-- **데이터**: eval/questions.json (48개 평가 질문)
+- **구성**: FastAPI + ChromaDB + Bedrock Claude Sonnet + Agent 파이프라인
+- **검색기**: 97.2% (481/495) — 규칙 기반 495개 GT 검증
+- **Agent QnA**: **95.0% (66/69)** — LLM-as-Judge 8축 채점, 15차 평가
+  - Agent 4원칙: Planning(Sonnet) + Search(4레이어) + Answer(Sonnet) + Reflection(Haiku)
+  - 상세: `docs/AGENT_DESIGN.md`, `docs/UX_DEV_GUIDE.md`
+- **UX**: `api.py` v0.2.0 준비완료, Streamlit/Slack 봇 구현 미착수
 
 ---
 
@@ -87,6 +120,11 @@
 - `convert_xlsx.py` — Tier 1+1.5 변환 (xlsx-extractor로 대체됨)
 - `vision_reinforce.py` — Vision 보정 (xlsx-extractor에 통합됨)
 - `run_all.py` — 레거시 오케스트레이션
+
+### 통합 스크립트 (scripts/)
+- `update_sources.py` — Perforce + Confluence 데이터 소스 업데이트
+- `rebuild_knowledge.py` — 5단계 파이프라인 (소스 업데이트 → Excel 변환 → 이미지 보강 → 인덱싱 → KG)
+- `scripts/.env` — P4 설정 (P4PORT, P4USER, P4CLIENT, P4PASSWD, P4_DEPOT_PATH, P4_LOCAL_PATH)
 
 ### 지식 베이스 (_knowledge_base/)
 - `knowledge_graph.json` — 405 시스템, 627 관계 (QnA PoC에서 활용)
@@ -109,6 +147,9 @@
 | ADR-008 | QnA PoC 우선, 데이터 확장은 병행 | 2026-03-08 |
 | ADR-009 | 데이터 확장 & 동기화를 독립 단계로 분리 (2→3단계) | 2026-03-08 |
 | ADR-010 | Confluence PDF 변환 대신 REST API 직접 추출 | 2026-03-09 |
+| ADR-011 | Perforce 7_System 단독 동기화 + 외부 경로 운영 | 2026-03-09 |
+| ADR-012 | 대규모 QnA 검증 500개 — 데이터 확장 후 자동 평가 | 2026-03-09 |
+| ADR-013 | QnA UX — Streamlit 개발 테스트 + Slack 봇 테스터 배포 | 2026-03-11 |
 
 상세: `docs/DECISIONS.md`
 

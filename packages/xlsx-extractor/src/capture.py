@@ -44,6 +44,22 @@ def safe_filename(name):
         name = name.replace(ch, "_")
     return name
 
+
+def _trim_right_whitespace(img, bg_threshold=240, padding=20):
+    """이미지 우측 빈 공간 자동 크롭. AutoFit 후 불필요한 여백 제거."""
+    import numpy as np
+    arr = np.array(img.convert("RGB"))
+    h, w, _ = arr.shape
+    non_bg = ~np.all(arr > bg_threshold, axis=2)
+    col_has_content = non_bg.any(axis=0)
+    if not col_has_content.any():
+        return img
+    rightmost = int(np.where(col_has_content)[0][-1])
+    crop_x = min(rightmost + padding, w)
+    if crop_x < w * 0.95:
+        return img.crop((0, 0, crop_x, h))
+    return img
+
 def get_sheet_names(xlsx_path):
     import openpyxl
     wb = openpyxl.load_workbook(xlsx_path, read_only=True, data_only=True)
@@ -116,12 +132,26 @@ def phase1_capture_images(xlsx_path, output_base, sheet_indices, sheet_names, ex
                         print(f"  [{i+1}/{total}] {name} -> BLANK ({elapsed:.1f}s)")
                         continue
 
+                # ── 캡처 범위 확장: 오버플로우 텍스트를 잡기 위해 우측 여백 추가 ──
+                # UsedRange만 캡처하면 마지막 컬럼에서 오버플로우 텍스트가 잘림
+                # 우측으로 컬럼을 확장하여 오버플로우 영역까지 캡처
+                extra_cols = 50  # 고정 50컬럼 여백 (~3200px) — 오버플로우 텍스트 확보
+                last_row = ur.Row + row_count - 1
+                last_col = ur.Column + col_count - 1 + extra_cols
+                capture_range = ws.Range(
+                    ws.Cells(ur.Row, ur.Column),
+                    ws.Cells(last_row, last_col)
+                )
+
                 # CopyPicture: xlScreen=1, xlBitmap=2
-                ur.CopyPicture(Appearance=1, Format=2)
+                capture_range.CopyPicture(Appearance=1, Format=2)
                 img = ImageGrab.grabclipboard()
 
                 if img is None:
                     raise RuntimeError("CopyPicture failed: no image in clipboard")
+
+                # ── 우측 여백 자동 크롭 ──
+                img = _trim_right_whitespace(img)
 
                 img.save(full_png, "PNG")
                 w, h = img.size

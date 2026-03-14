@@ -1,0 +1,11 @@
+[server]
+headless = true
+port = 8502
+enableCORS = false
+enableXsrfProtection = false
+
+# nginx 리버스 프록시 뒤에서 /proj-k-agent 경로로 서빙
+baseUrlPath = "/proj-k-agent"
+
+[browser]
+gatherUsageStats = false

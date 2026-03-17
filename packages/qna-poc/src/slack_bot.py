@@ -7,6 +7,7 @@ Slack Bolt 기반. @ProjectK-AI 멘션 또는 DM으로 질문 → Agent 답변.
 실행: cd packages/qna-poc && python -m src.slack_bot
 """
 
+import base64
 import os
 import re
 import sys
@@ -44,8 +45,8 @@ def md_to_slack(text: str) -> str:
     # 테이블 → 텍스트 (Slack은 표 미지원)
     text = _convert_tables(text)
 
-    # Mermaid 블록 → 제거 (Slack에서 렌더링 불가)
-    text = re.sub(r'```mermaid\n.*?```', '[다이어그램은 Streamlit에서 확인]', text, flags=re.DOTALL)
+    # Mermaid 블록 → mermaid.ink 이미지 링크로 변환
+    text = _convert_mermaid_blocks(text)
 
     # 헤딩 → bold
     text = re.sub(r'^#{1,6}\s+(.+)$', r'*\1*', text, flags=re.MULTILINE)
@@ -64,6 +65,22 @@ def md_to_slack(text: str) -> str:
     text = re.sub(r'</?(?:summary|details|div|span|br)[^>]*>', '', text)
 
     return text.strip()
+
+
+def _mermaid_to_image_url(code: str) -> str:
+    """Mermaid 코드 → mermaid.ink 이미지 URL 변환."""
+    encoded = base64.urlsafe_b64encode(code.strip().encode("utf-8")).decode("ascii")
+    return f"https://mermaid.ink/img/{encoded}"
+
+
+def _convert_mermaid_blocks(text: str) -> str:
+    """Mermaid 코드블록을 mermaid.ink 이미지 링크로 변환."""
+    def _replace(m):
+        code = m.group(1)
+        url = _mermaid_to_image_url(code)
+        return f"<{url}|:bar_chart: 플로우 다이어그램 보기>"
+
+    return re.sub(r'```mermaid\n(.*?)```', _replace, text, flags=re.DOTALL)
 
 
 def _convert_tables(text: str) -> str:
@@ -173,6 +190,9 @@ def format_answer_blocks(question: str, result: dict) -> list[dict]:
     conf_emoji = {"high": ":large_green_circle:", "medium": ":large_yellow_circle:",
                   "low": ":red_circle:", "none": ":white_circle:"}.get(confidence, ":white_circle:")
 
+    # Mermaid 블록 추출 (이미지 블록으로 분리)
+    mermaid_blocks = re.findall(r'```mermaid\n(.*?)```', answer, flags=re.DOTALL)
+
     # 답변 본문 (Slack mrkdwn)
     slack_answer = md_to_slack(answer)
 
@@ -186,6 +206,15 @@ def format_answer_blocks(question: str, result: dict) -> list[dict]:
             "text": {"type": "mrkdwn", "text": slack_answer},
         },
     ]
+
+    # Mermaid 다이어그램을 인라인 이미지로 추가
+    for i, mermaid_code in enumerate(mermaid_blocks[:3]):  # 최대 3개
+        img_url = _mermaid_to_image_url(mermaid_code)
+        blocks.append({
+            "type": "image",
+            "image_url": img_url,
+            "alt_text": f"플로우 다이어그램 {i + 1}",
+        })
 
     # 출처
     sources_text = format_sources_slack(sources)
@@ -324,9 +353,17 @@ def _handle_question(event, say, client):
             _thread_history[thread_ts] = []
         _thread_history[thread_ts].append((question, result["answer"]))
 
-        # Block Kit 메시지 전송
+        # Block Kit 메시지 전송 (이미지 블록 실패 시 폴백)
         blocks = format_answer_blocks(question, result)
-        say(blocks=blocks, text=result["answer"][:200], thread_ts=thread_ts)
+        try:
+            say(blocks=blocks, text=result["answer"][:200], thread_ts=thread_ts)
+        except Exception as img_err:
+            if "image" in str(img_err).lower():
+                # 이미지 블록 제거 후 재시도
+                blocks = [b for b in blocks if b.get("type") != "image"]
+                say(blocks=blocks, text=result["answer"][:200], thread_ts=thread_ts)
+            else:
+                raise
 
     except Exception as e:
         log.error(f"[ERROR] {e}", exc_info=True)

@@ -140,6 +140,49 @@ python ConvertProgram/_tools/run_all.py --skip-existing  # 일괄 변환
 - Tier 1 셀 데이터: 원본 행 90%+ 반영
 - Tier 1.5 도형: 327/327 추출, 연결선 123/123 매핑
 
+## QnA Agent 파이프라인 (2단계)
+
+> 상세 리포트: `packages/qna-poc/docs/PIPELINE_REPORT.md`
+
+### 지식 베이스 (ChromaDB)
+- 벡터DB: ChromaDB (`~/.qna-poc-chroma`, 컬렉션 `project_k`)
+- 임베딩: Amazon Titan Embeddings v2 (Bedrock, 1024차원)
+- 데이터: **4,133 청크** (Excel 2,852 + Confluence 1,281), 176 워크북
+- 메타데이터: workbook, sheet, section_path, tokens, source_path, has_table, has_images, has_mermaid
+
+### Agent 파이프라인 (5단계)
+```
+질문 → Planning(Sonnet) → Search(4-레이어) → Answer(Sonnet) → Reflection(Haiku) → [Retry]
+```
+
+1. **Planning** (`plan_search()`): 질문 분석 → 검색 전략 JSON (query_type, key_systems, search_plan)
+2. **Search** (`execute_search()`): LLM 미사용, 4-레이어 하이브리드 검색 → max 25 청크
+   - L1 구조적(워크북), L2 KG확장(NetworkX), L3 벡터(Titan), L4 풀텍스트($contains)
+3. **Answer** (`generate_agent_answer()`): 증거 기반 답변 (20개 규칙 프롬프트, detail_level 3단계)
+4. **Reflection** (`reflect_on_answer()`): Haiku로 품질 검증 + short-circuit 패턴
+5. **Retry** (조건부): Reflection 부족 판정 시 재검색 + 재답변 (1회)
+
+### Deep Research (overview 전용)
+- **트리거**: `query_type == "overview"` + 관련 청크 30개 초과
+- **Map-Reduce**: 워크북별 그룹 → **Haiku**로 각 그룹 요약 (병렬 5) → **Sonnet**으로 최종 종합
+- 워크북 수 제한 없음 — Haiku 요약으로 비용 효율 확보
+
+### LLM 모델 배치
+| 용도 | 모델 | 이유 |
+|------|------|------|
+| Planning / Answer / Retry / Deep Research 종합 | Sonnet | 복잡한 추론 필요 |
+| Reflection / Deep Research 그룹 요약 | Haiku | 비용 효율 (Sonnet 대비 12배 저렴) |
+| 임베딩 | Titan v2 | AWS Bedrock 네이티브 |
+
+### 핵심 파일 (qna-poc)
+- `src/agent.py` — Agent 파이프라인 + Deep Research + 프롬프트
+- `src/retriever.py` — 4-레이어 검색 + 동의어 + 구조적 인덱스
+- `src/generator.py` — `call_bedrock()` LLM 게이트웨이
+- `src/indexer.py` — ChromaDB 인덱싱 (Excel + Confluence → 청크)
+- `src/streamlit_app.py` — 웹 UI (Streamlit)
+- `src/api.py` — FastAPI 백엔드
+- `eval/` — 평가 스크립트 (GT 생성, LLM-as-Judge)
+
 ## Claude Code 작업 규칙
 
 ### 개발 방침: 작은 데이터부터 검증하며 진행 (필수)

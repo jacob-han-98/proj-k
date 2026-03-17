@@ -9,6 +9,8 @@ import os
 import re
 import sys
 import time
+import uuid
+from datetime import datetime
 from pathlib import Path
 
 import streamlit as st
@@ -171,15 +173,66 @@ div[data-testid="stHorizontalBlock"]:has([data-testid="stPopover"]) .stSelectbox
 section[data-testid="stMain"] > div {
     padding-bottom: 120px;
 }
+
+/* 사이드바 스레드 버튼: 컴팩트 + 말줄임 */
+[data-testid="stSidebar"] .stButton > button {
+    font-size: 0.85rem !important;
+    padding: 6px 12px !important;
+    text-align: left !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+/* 삭제 버튼: 작게 */
+[data-testid="stSidebar"] [data-testid="stColumn"]:last-child .stButton > button {
+    padding: 6px 4px !important;
+    min-height: 0 !important;
+    font-size: 0.9rem !important;
+    color: #9ca3af !important;
+    background: transparent !important;
+    border: none !important;
+}
+[data-testid="stSidebar"] [data-testid="stColumn"]:last-child .stButton > button:hover {
+    color: #ef4444 !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
 
-# ── 세션 상태 초기화 ──
-if "messages" not in st.session_state:
-    st.session_state.messages = []
-if "feedback" not in st.session_state:
-    st.session_state.feedback = {}  # msg_idx -> "up" | "down"
+# ── 스레드 관리 ──
+def _create_thread() -> dict:
+    """새 대화 스레드 생성."""
+    tid = str(uuid.uuid4())[:8]
+    return {
+        "id": tid,
+        "title": "새 대화",
+        "created_at": datetime.now().isoformat(),
+        "messages": [],
+        "feedback": {},
+    }
+
+
+def _sync_active_thread():
+    """messages/feedback를 활성 스레드에 연결 (alias)."""
+    tid = st.session_state.active_thread_id
+    thread = st.session_state.threads[tid]
+    st.session_state.messages = thread["messages"]
+    st.session_state.feedback = thread["feedback"]
+
+
+def _auto_title(question: str, max_len: int = 20) -> str:
+    """첫 질문에서 스레드 제목 자동 생성."""
+    title = question.strip().replace("\n", " ")
+    return title[:max_len] + "…" if len(title) > max_len else title
+
+
+if "threads" not in st.session_state:
+    initial = _create_thread()
+    st.session_state.threads = {initial["id"]: initial}
+    st.session_state.thread_order = [initial["id"]]
+    st.session_state.active_thread_id = initial["id"]
+
+_sync_active_thread()
 
 
 def format_confidence(conf: str) -> str:
@@ -886,14 +939,53 @@ def show_kb_viewer():
             st.progress(pct / 100, text=f"{icon} {field}: {cnt}/{stats['total_metas']} ({pct:.1f}%)")
 
 
-# ── 사이드바 (최소화) ──
+# ── 사이드바: 스레드 관리 ──
 with st.sidebar:
     st.title("🎮 Project K QnA")
 
-    if st.button("🗑️ 대화 초기화", use_container_width=True):
-        st.session_state.messages = []
-        st.session_state.feedback = {}
+    # 새 대화 버튼
+    if st.button("➕ 새 대화", use_container_width=True, type="primary"):
+        new_thread = _create_thread()
+        st.session_state.threads[new_thread["id"]] = new_thread
+        st.session_state.thread_order.insert(0, new_thread["id"])
+        st.session_state.active_thread_id = new_thread["id"]
         st.rerun()
+
+    st.divider()
+
+    # 스레드 목록
+    for _tid in list(st.session_state.thread_order):
+        _thread = st.session_state.threads.get(_tid)
+        if not _thread:
+            continue
+        _is_active = (_tid == st.session_state.active_thread_id)
+        _title = _thread["title"]
+        _has_msgs = len(_thread["messages"]) > 0
+
+        _col_btn, _col_del = st.columns([5, 1])
+        with _col_btn:
+            if st.button(
+                f"{'💬 ' if _is_active else ''}{_title}",
+                key=f"thread_{_tid}",
+                use_container_width=True,
+                type="primary" if _is_active else "secondary",
+            ):
+                if not _is_active:
+                    st.session_state.active_thread_id = _tid
+                    st.rerun()
+        with _col_del:
+            if _has_msgs and st.button("×", key=f"del_{_tid}", help="삭제"):
+                del st.session_state.threads[_tid]
+                st.session_state.thread_order.remove(_tid)
+                if _tid == st.session_state.active_thread_id:
+                    if st.session_state.thread_order:
+                        st.session_state.active_thread_id = st.session_state.thread_order[0]
+                    else:
+                        _new = _create_thread()
+                        st.session_state.threads[_new["id"]] = _new
+                        st.session_state.thread_order = [_new["id"]]
+                        st.session_state.active_thread_id = _new["id"]
+                st.rerun()
 
     st.divider()
 
@@ -995,6 +1087,9 @@ if not st.session_state.messages:
             with (_c1 if _i % 2 == 0 else _c2):
                 if st.button(_text, key=f"preset_{_i}", use_container_width=True):
                     st.session_state.messages.append({"role": "user", "content": _text})
+                    _t = st.session_state.threads[st.session_state.active_thread_id]
+                    if _t["title"] == "새 대화":
+                        _t["title"] = _auto_title(_text)
                     st.session_state["_pending_prompt"] = _text
                     st.rerun()
 
@@ -1195,6 +1290,9 @@ prompt_style = st.session_state.prompt_style
 # ── 입력 ──
 if prompt := st.chat_input("기획 질문을 입력하세요...", disabled=_is_processing):
     st.session_state.messages.append({"role": "user", "content": prompt})
+    _t = st.session_state.threads[st.session_state.active_thread_id]
+    if _t["title"] == "새 대화":
+        _t["title"] = _auto_title(prompt)
     st.session_state["_pending_prompt"] = prompt
     st.rerun()
 

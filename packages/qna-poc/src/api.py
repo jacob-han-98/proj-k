@@ -8,6 +8,7 @@ GET  /systems/{name}/related  관련 시스템
 GET  /health       헬스체크
 """
 
+import threading
 import uuid
 from pathlib import Path
 
@@ -33,6 +34,7 @@ app.add_middleware(
 
 # 대화 메모리 (in-memory, 서버 재시작 시 초기화)
 conversations: dict[str, list[tuple[str, str]]] = {}
+_conv_lock = threading.Lock()
 
 
 # ── Request/Response 모델 ──
@@ -41,6 +43,8 @@ class AskRequest(BaseModel):
     question: str
     conversation_id: str | None = None
     role: str | None = None
+    model: str = "claude-opus-4-5"
+    prompt_style: str = "검증세트 최적화"  # "검증세트 최적화" | "기본"
 
 
 class AskResponse(BaseModel):
@@ -66,17 +70,26 @@ class SearchResult(BaseModel):
 # ── 엔드포인트 ──
 
 @app.get("/health")
-async def health():
+def health():
     """헬스체크."""
     return {"status": "ok", "version": "0.2.0"}
 
 
 @app.post("/ask", response_model=AskResponse)
-async def ask(req: AskRequest):
-    """기획 QnA 질문 — Agent 파이프라인 (Planning→Search→Answer→Reflection)."""
+def ask(req: AskRequest):
+    """기획 QnA 질문 — Agent 파이프라인 (Planning→Search→Answer→Reflection).
+
+    def (not async def) → FastAPI가 자동으로 threadpool에서 실행 → 동시 요청 처리 가능.
+    """
     conv_id = req.conversation_id or str(uuid.uuid4())
 
-    result = agent_answer(req.question, role=req.role)
+    # 이전 대화 히스토리 조회
+    with _conv_lock:
+        conv_history = list(conversations.get(conv_id, []))
+
+    result = agent_answer(req.question, role=req.role,
+                          model=req.model, prompt_style=req.prompt_style,
+                          conversation_history=conv_history or None)
 
     # 소스 정보 추출
     sources = []
@@ -93,9 +106,10 @@ async def ask(req: AskRequest):
             })
 
     # 대화 히스토리 저장 (최근 5턴)
-    history = conversations.get(conv_id, [])
-    history.append((req.question, result["answer"]))
-    conversations[conv_id] = history[-5:]
+    with _conv_lock:
+        history = conversations.get(conv_id, [])
+        history.append((req.question, result["answer"]))
+        conversations[conv_id] = history[-5:]
 
     return AskResponse(
         answer=result["answer"],
@@ -109,7 +123,7 @@ async def ask(req: AskRequest):
 
 
 @app.post("/search", response_model=SearchResult)
-async def search_docs(req: SearchRequest):
+def search_docs(req: SearchRequest):
     """검색만 수행 (디버그/테스트용)."""
     chunks, _info = retrieve(req.query, top_k=req.limit)
     detected = extract_system_names(req.query)
@@ -130,7 +144,7 @@ async def search_docs(req: SearchRequest):
 
 
 @app.get("/systems")
-async def list_systems():
+def list_systems():
     """인덱싱된 시스템 목록."""
     index = _build_structural_index()
     systems = sorted(index.keys())
@@ -138,7 +152,7 @@ async def list_systems():
 
 
 @app.get("/systems/{name}/related")
-async def related_systems(name: str):
+def related_systems(name: str):
     """관련 시스템 조회."""
     related = get_related_systems(name, depth=2)
     return {"system": name, "related": related, "count": len(related)}

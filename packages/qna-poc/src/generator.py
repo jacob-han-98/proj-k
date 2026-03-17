@@ -114,13 +114,37 @@ def call_bedrock(
     _sys_logger.debug(f"  system_prompt: {system[:80]}...")
     _sys_logger.debug(f"  message_preview: {msg_preview}...")
 
-    t_start = time.time()
-    resp = requests.post(url, json=body, headers=headers, timeout=120)
-    t_api = time.time() - t_start
+    # 지수 백오프 재시도 (429/503/529만 재시도, 400/401/403은 즉시 실패)
+    _RETRYABLE_CODES = {429, 503, 529}
+    _MAX_RETRIES = 3
+    last_error = None
 
-    if resp.status_code != 200:
-        _sys_logger.error(f"API_ERROR {resp.status_code}: {resp.text[:300]}")
-        raise RuntimeError(f"API error {resp.status_code}: {resp.text[:500]}")
+    t_start = time.time()
+    for attempt in range(_MAX_RETRIES + 1):
+        try:
+            resp = requests.post(url, json=body, headers=headers, timeout=180)
+        except requests.exceptions.Timeout as e:
+            last_error = e
+            if attempt < _MAX_RETRIES:
+                wait = 2 ** attempt * 2  # 2s, 4s, 8s
+                _sys_logger.warning(f"API_TIMEOUT attempt={attempt+1}/{_MAX_RETRIES+1}, retry in {wait}s")
+                time.sleep(wait)
+                continue
+            raise RuntimeError(f"API timeout after {_MAX_RETRIES+1} attempts") from e
+
+        if resp.status_code == 200:
+            break
+
+        if resp.status_code not in _RETRYABLE_CODES or attempt == _MAX_RETRIES:
+            _sys_logger.error(f"API_ERROR {resp.status_code}: {resp.text[:300]}")
+            raise RuntimeError(f"API error {resp.status_code}: {resp.text[:500]}")
+
+        # 재시도 가능한 에러
+        wait = 2 ** attempt * 2  # 2s, 4s, 8s
+        _sys_logger.warning(f"API_RETRY {resp.status_code} attempt={attempt+1}/{_MAX_RETRIES+1}, retry in {wait}s")
+        time.sleep(wait)
+
+    t_api = time.time() - t_start
 
     result = resp.json()
     text = result["content"][0]["text"]

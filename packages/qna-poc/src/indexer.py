@@ -222,10 +222,13 @@ def parse_content_md(filepath: Path, source_type: str = "excel") -> dict:
     sheet = ""
     content_start = 0
 
+    source_url = ""  # Confluence 원본 페이지 URL 또는 Excel depot 경로
+
     if source_type == "confluence":
         # Confluence: YAML frontmatter 파싱
         meta, content_start = _parse_yaml_frontmatter(lines)
         title = meta.get("title", filepath.parent.name)
+        source_url = meta.get("source", "")
         # Confluence 경로에서 카테고리 추출 (Design/시스템/하위시스템)
         try:
             rel = filepath.parent.relative_to(CONFLUENCE_OUTPUT)
@@ -244,6 +247,7 @@ def parse_content_md(filepath: Path, source_type: str = "excel") -> dict:
                 parts = line.replace("> 원본:", "").strip().split(" / 시트: ")
                 workbook = parts[0].strip()
                 sheet = parts[1].strip() if len(parts) > 1 else ""
+                source_url = f"//main/ProjectK/Design/7_System/{workbook}.xlsx"
                 break
         # 메타데이터 블록(--- 구분선 이전) 건너뛰기
         # 주의: --- 구분선은 파일 앞부분(메타데이터 영역)에서만 찾음
@@ -347,6 +351,7 @@ def parse_content_md(filepath: Path, source_type: str = "excel") -> dict:
         "h1_title": h1_title,
         "sections": sections,
         "filepath": str(filepath),
+        "source_url": source_url,
     }
 
 
@@ -426,6 +431,7 @@ def chunk_file(filepath: Path, source_type: str = "excel") -> list[dict]:
     parsed = parse_content_md(filepath, source_type=source_type)
     workbook = parsed["workbook"]
     sheet = parsed["sheet"]
+    source_url = parsed.get("source_url", "")
     parent_context = f"{workbook} / {sheet}" if workbook else sheet
 
     all_chunks = []
@@ -441,6 +447,7 @@ def chunk_file(filepath: Path, source_type: str = "excel") -> list[dict]:
             chunk["has_table"] = bool(re.search(r'\|.*\|.*\|', chunk["text"]))
             chunk["has_images"] = "![" in chunk["text"]
             chunk["source_path"] = str(filepath)
+            chunk["source_url"] = source_url
 
             # 최소 토큰 필터
             if chunk["tokens"] >= MIN_CHUNK_TOKENS:
@@ -463,6 +470,7 @@ def chunk_file(filepath: Path, source_type: str = "excel") -> list[dict]:
             "has_table": bool(re.search(r'\|.*\|.*\|', merged_text)),
             "has_images": "![" in merged_text,
             "source_path": str(filepath),
+            "source_url": source_url,
         }
         all_chunks.append(merged)
 
@@ -640,6 +648,7 @@ def index_chunks(chunks: list[dict], reset: bool = False):
             "has_images": chunk["has_images"],
             "tokens": chunk["tokens"],
             "source_path": chunk["source_path"],
+            "source_url": chunk.get("source_url", ""),
         })
 
     # 4. 배치 추가 (ChromaDB 제한: 5461개씩)

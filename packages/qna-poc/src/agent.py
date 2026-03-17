@@ -12,6 +12,8 @@ import json
 import time
 from pathlib import Path
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
 from src.retriever import (
     retrieve,
     extract_system_names,
@@ -20,6 +22,7 @@ from src.retriever import (
     _build_system_aliases,
     _build_structural_index,
     _load_graph,
+    _get_collection,
     format_context,
 )
 from src.generator import call_bedrock, SYSTEM_PROMPT as QNA_SYSTEM_PROMPT, get_system_logger
@@ -41,11 +44,22 @@ PLANNING_PROMPT = """당신은 모바일 MMORPG "Project K"의 기획 QnA 시스
 
 ## 분석 항목
 1. **핵심 시스템/기능**: 질문이 어떤 시스템/기능에 대한 것인지 (예: "물약 자동 사용 시스템", "스킬 시스템")
-2. **질문 유형**: fact(사실 조회), cross_system(시스템 간), flow(플로우/시퀀스), balance(수치/밸런스), ui(UI/UX), trap(존재하지 않는 기능)
+2. **질문 유형**: overview(시스템 전체 설명/개요), fact(사실 조회), cross_system(시스템 간), flow(플로우/시퀀스), balance(수치/밸런스), ui(UI/UX), trap(존재하지 않는 기능)
 3. **검색 키워드**: 검색에 사용할 핵심 키워드 (시스템명 포함)
 4. **검색 전략**: 어떤 도구를 어떤 순서로 사용할지
 
+## ⚠️ overview 질문 판별 (매우 중요)
+"~시스템 설명해줘", "~시스템이 뭐야?", "~시스템 전체 개요", "~에 대해 알려줘" 같은 **넓은 범위의 질문**은 query_type을 반드시 **"overview"**로 지정하세요.
+
+overview 질문의 특징:
+- 특정 수치나 세부 규칙이 아닌, 시스템의 전체적인 구조/개념/흐름을 묻는 질문
+- 이런 질문에는 **관련 워크북을 최대한 많이** (5~8개) key_systems에 넣어야 함
+- Excel 워크북과 Confluence 문서가 동일 시스템에 대해 각각 다른 정보를 가지고 있으므로 **둘 다** 포함
+- 같은 시스템이라도 여러 워크북에 분산되어 있을 수 있음 (예: "정령" → PK_펫 시스템 + PK_기타설정 + Confluence/정령 + Confluence/정령(기존"펫"))
+- search_plan에도 각 key_system별 section_search를 개별로 넣어 폭넓게 검색
+
 ## 중요 규칙
+- 워크북 목록에 시트(하위 페이지) 정보가 함께 제공됩니다. 시트명을 참고하여 어떤 워크북에 원하는 정보가 있는지 정확히 판단하세요.
 - key_systems에는 워크북 목록에서 매칭되는 정확한 워크북명을 넣으세요.
 - "물약"이 포함된 질문 → "물약 자동 사용 시스템" (물약 관련 유일한 워크북)
 - "트리거"가 게임 메커니즘 맥락(HP 조건, 자동 발동 등)에서 쓰이면 "트리거 시스템"이 아니라 해당 메커니즘의 시스템을 찾아야 함
@@ -95,6 +109,60 @@ PLANNING_PROMPT = """당신은 모바일 MMORPG "Project K"의 기획 QnA 시스
 ```"""
 
 
+# Planning에서 제외할 Excel 시트 이름 패턴
+_NOISE_SHEET_EXACT = {
+    "Sheet1", "Sheet2", "Sheet3", "Sheet4", "Sheet5",
+    "temp", "temp2", "목표", "미사용",
+}
+_NOISE_SHEET_PREFIXES = ("History_", "히스토리", "history_")
+
+
+def _is_noise_sheet(name: str) -> bool:
+    """의미 없는 시트 이름인지 판별 (Excel 전용)."""
+    if name in _NOISE_SHEET_EXACT:
+        return True
+    for prefix in _NOISE_SHEET_PREFIXES:
+        if name.startswith(prefix):
+            return True
+    # "Sheet" + 숫자 패턴
+    if name.startswith("Sheet") and name[5:].isdigit():
+        return True
+    return False
+
+
+def _build_workbook_sheet_listing() -> str:
+    """Planning 입력용 워크북+시트 목록 생성.
+
+    Excel(PK_): 노이즈 시트 필터링, 시트 2개 이상일 때만 시트 표시
+    Confluence: 시트=페이지 제목이므로 전부 표시
+    """
+    index = _build_structural_index()
+    all_wbs = sorted(index.keys())
+    pk_wbs = [w for w in all_wbs if w.startswith("PK_")]
+    conf_wbs = [w for w in all_wbs if w.startswith("Confluence/Design/") and w.count("/") <= 5]
+
+    lines = []
+    for wb in pk_wbs + conf_wbs:
+        info = index.get(wb, {})
+        all_sheets = sorted(info.get("sheets", {}).keys())
+
+        if wb.startswith("PK_"):
+            # Excel: 노이즈 시트 제거
+            useful = [s for s in all_sheets if not _is_noise_sheet(s)]
+            if len(useful) >= 2:
+                lines.append(f"{wb}: [{', '.join(useful)}]")
+            else:
+                lines.append(wb)
+        else:
+            # Confluence: 시트=페이지 제목, 모두 유용
+            if len(all_sheets) >= 2:
+                lines.append(f"{wb}: [{', '.join(all_sheets)}]")
+            else:
+                lines.append(wb)
+
+    return "\n".join(lines)
+
+
 def _get_kg_summary_for_planning() -> str:
     """Knowledge Graph에서 Planning에 제공할 시스템 간 관계 요약 생성.
 
@@ -121,7 +189,7 @@ def _get_kg_summary_for_planning() -> str:
     return "\n".join(lines)
 
 
-def plan_search(query: str, role: str = None, model: str = "claude-sonnet-4-5") -> dict:
+def plan_search(query: str, role: str = None, model: str = "claude-opus-4-5") -> dict:
     """LLM으로 질문을 분석하여 검색 전략 수립.
 
     KG 관계 정보를 함께 제공하여 시스템 간 관계를 파악할 수 있게 함.
@@ -130,14 +198,10 @@ def plan_search(query: str, role: str = None, model: str = "claude-sonnet-4-5") 
     if role:
         user_msg += f"\n질문자 역할: {role}"
 
-    # 사용 가능한 워크북 목록 제공 (Planning 정확도 향상)
-    # Excel(PK_) 워크북은 전체 제공, Confluence는 주요 시스템 디자인만 제공
-    index = _build_structural_index()
-    all_wbs = sorted(index.keys())
-    pk_wbs = [w for w in all_wbs if w.startswith("PK_")]
-    conf_wbs = [w for w in all_wbs if w.startswith("Confluence/Design/") and w.count("/") <= 5]
-    workbook_list = pk_wbs + conf_wbs
-    user_msg += f"\n\n사용 가능한 워크북: {json.dumps(workbook_list, ensure_ascii=False)}"
+    # 워크북 + 시트 목록 제공 (Planning 정확도 향상)
+    # Excel: 노이즈 시트 필터링, Confluence: 페이지 제목 전부 포함
+    wb_sheet_listing = _build_workbook_sheet_listing()
+    user_msg += f"\n\n사용 가능한 워크북과 시트:\n{wb_sheet_listing}"
 
     # KG 관계 정보 제공 (시스템 간 관계 파악용)
     kg_summary = _get_kg_summary_for_planning()
@@ -156,6 +220,8 @@ def plan_search(query: str, role: str = None, model: str = "claude-sonnet-4-5") 
         plan["_tokens"] = result.get("input_tokens", 0) + result.get("output_tokens", 0)
         plan["_api_seconds"] = result.get("api_seconds", 0)
         plan["_raw_response"] = result["text"]  # Planning LLM의 원본 응답 보존
+        plan["_system_prompt"] = PLANNING_PROMPT
+        plan["_user_prompt"] = user_msg
         return plan
     except Exception as e:
         # Planning 실패 시 기본 전략
@@ -203,7 +269,7 @@ def _parse_plan_json(text: str) -> dict:
 #  2. Tool Use — 검색 도구 실행
 # ══════════════════════════════════════════════════════════
 
-def execute_search(plan: dict, query: str, max_chunks: int = 25) -> list[dict]:
+def execute_search(plan: dict, query: str, max_chunks: int = 200) -> list[dict]:
     """Planning 결과에 따라 검색 도구를 실행하고 결과를 병합.
 
     항상 기본 하이브리드 검색(retrieve)을 실행하고,
@@ -298,11 +364,30 @@ def execute_search(plan: dict, query: str, max_chunks: int = 25) -> list[dict]:
                 else:
                     # 이미 base retrieve에서 발견된 청크 → key_systems 보너스 추가
                     all_chunks[c["id"]]["score"] += 0.3
-                    all_chunks[c["id"]]["source"] = "agent_planned"
+                    # source는 "vector+agent_planned" 등으로 보존 (디버그 추적용)
+                    orig_src = all_chunks[c["id"]].get("source", "")
+                    all_chunks[c["id"]]["source"] = f"{orig_src}+agent_planned" if orig_src else "agent_planned"
 
     # 스코어 순 정렬
-    result = sorted(all_chunks.values(), key=lambda x: x.get("score", 0), reverse=True)
-    return result[:max_chunks]
+    all_sorted = sorted(all_chunks.values(), key=lambda x: x.get("score", 0), reverse=True)
+
+    # ── 워크북 다양성 보장 ──
+    # overview 질문이나 넓은 검색에서 특정 워크북이 결과를 독점하는 것을 방지
+    # 워크북당 최대 max_per_wb개까지만 우선 선발, 나머지는 후순위로
+    query_type = plan.get("query_type", "fact")
+    max_per_wb = 5 if query_type == "overview" else 8
+    wb_count: dict[str, int] = {}
+    primary = []
+    overflow = []
+    for c in all_sorted:
+        wb = c.get("workbook", "")
+        wb_count[wb] = wb_count.get(wb, 0) + 1
+        if wb_count[wb] <= max_per_wb:
+            primary.append(c)
+        else:
+            overflow.append(c)
+    result = (primary + overflow)[:max_chunks]
+    return result
 
 
 # ══════════════════════════════════════════════════════════
@@ -310,76 +395,62 @@ def execute_search(plan: dict, query: str, max_chunks: int = 25) -> list[dict]:
 # ══════════════════════════════════════════════════════════
 
 AGENT_ANSWER_PROMPT = """당신은 모바일 MMORPG "Project K"의 기획 전문가 AI 어시스턴트입니다.
-컨텍스트(검색된 기획서)를 기반으로 질문에 답합니다.
+검색된 기획서(컨텍스트)를 기반으로 질문에 체계적으로 답변합니다.
 
-## 최우선 원칙: 구체적 수치/비용/조건을 만들어내지 마세요
-**구체적 수치, 비용, 배율, 확률 등은 반드시 컨텍스트에서 직접 인용하세요.**
-- 컨텍스트에 "크리티컬 배율 1.5배"라는 문구가 없으면 → "1.5배"라고 답하면 안 됩니다
-- 컨텍스트에 "비용 없음"이라는 문구가 없으면 → "비용이 없습니다"라고 답하면 안 됩니다
-- 컨텍스트에 "거래 가능"이라는 문구가 없으면 → "거래할 수 있습니다"라고 답하면 안 됩니다
-- **단, 시스템의 구조/관계/설계 의도에 대한 분석은 컨텍스트 기반으로 추론해도 됩니다.**
+## [1] 핵심 원칙
 
-## 핵심 원칙 (최우선)
-1. **컨텍스트에 관련 정보가 있으면 반드시 답변하세요.** 이것이 가장 중요한 원칙입니다. 컨텍스트에 수치, 테이블, 비율, UI 설명 등이 있으면 반드시 인용하여 답변하세요. 부분적이라도 관련 내용이 있으면 그것을 기반으로 답하세요.
-2. **"찾을 수 없습니다" 사용 금지**: 이 표현은 컨텍스트에 질문 주제와 관련된 단어가 **단 하나도 없을 때만** 사용하세요. 컨텍스트에 관련 데이터가 조금이라도 있으면 절대 이 표현을 쓰지 마세요.
-3. **컨텍스트에서 질문 키워드가 하나라도 발견되면**, 해당 내용을 중심으로 답변을 구성하세요. 확신이 낮더라도 컨텍스트에 있는 정보는 제공하세요.
-4. **[이미지 설명]은 공식 기획 데이터입니다.** 컨텍스트에 `> **[이미지 설명]**:` 형식의 텍스트가 있다면, 이것은 기획서의 다이어그램/도면/표를 AI가 분석한 내용입니다. 테이블이나 본문 텍스트와 동일한 신뢰도로 취급하세요. 이미지 설명에 답이 있으면 반드시 인용하세요.
-5. **동의어/유사 표현을 같은 의미로 해석하세요.** 질문의 표현과 컨텍스트의 표현이 다를 수 있습니다:
-   - "비활성화" = "선택 불가" = "disabled" = "사용 불가"
-   - "Category 값" = 테이블의 "Category" 컬럼
-   - "유지되려면" = "적용 조건" = "동작 방식"
-   컨텍스트에 정보가 있는데 표현만 다르다면, 그 정보로 답변하세요. 절대 "확인되지 않습니다"라고 하지 마세요.
+1. **컨텍스트 기반 완전 답변**: 컨텍스트에 관련 정보가 있으면 **반드시, 빠짐없이** 답변하세요. 부분적이라도 관련 내용이 있으면 그것을 기반으로 답하세요. 동의어/유사 표현("비활성화"="선택 불가", "Category 값"="Category 컬럼")도 같은 의미로 매칭하세요.
+2. **구체적 데이터 정확 인용**: 수치, 비용, 배율, 확률, 테이블, Enum 값은 반드시 컨텍스트에서 직접 인용하세요. 컨텍스트에 없는 구체적 수치/데이터를 절대 만들어내지 마세요. 단, 시스템 구조/관계/설계 의도에 대한 분석적 추론은 허용됩니다.
+3. **출처 명시**: 답변에 사용한 정보의 출처를 표시하세요. 형식: `[출처: 워크북명 / 시트명]`
 
-## 답변 규칙
-1. 컨텍스트에 직접 답이 있으면 정확히 인용하세요.
-2. **논리적 추론의 범위:** 다음은 OK: 설계 목적·이유·배경 추론, 시스템 간 관계 분석, 엣지 케이스의 예상 동작 분석, UI/UX 설계 포인트 도출, 처리 순서/시퀀스 분석. 다음은 날조: 구체적 수치/배율/비용/확률을 추론으로 생성, 컨텍스트에 없는 테이블 필드명이나 Enum 값 생성.
-3. 테이블, 수치, 공식 등 구체적 데이터는 원본 그대로 인용하세요.
-4. **답변 후 반드시 출처를 표시하세요.** 형식: `[출처: 워크북명 / 시트명]`
-5. 여러 시스템에 걸친 질문은 각 출처를 표시하며 종합 답변하세요.
-6. 간결하고 정확하게 답하세요.
-7. **절대 지어내지 마세요.** 질문이 특정 기능/NPC/시스템의 존재를 전제하더라도, 컨텍스트에 해당 내용이 전혀 없으면 "해당 내용은 기획서에서 확인되지 않습니다"라고 답하세요. 단, 관련 내용이 조금이라도 있다면 그것을 기반으로 답변을 구성하세요. **핵심 구분: "A 시스템에 대한 내용이 있음" ≠ "A 시스템의 B 기능이 있음"**. 컨텍스트에 A(예: 창고)에 대한 설명이 있더라도, A의 특정 기능 B(예: 내구도 회복)가 언급되지 않았다면 B는 "기획서에 정의되지 않은 기능"입니다.
-8. **질문의 전제가 틀렸으면 지적하되, 관련 정보는 계속 제공하세요.** 질문이 특정 사실을 전제하지만 컨텍스트에서 확인되지 않으면:
-   - "해당 전제는 기획서에서 확인되지 않습니다"라고 밝힌 후
-   - **컨텍스트에 있는 관련 정보를 최대한 활용하여 답변을 이어가세요.**
-   - 전제가 틀렸다고 답변 자체를 거부하지 마세요. 질문의 핵심 의도에 관련된 정보가 있다면 반드시 제공하세요.
-9. **"기획서에 정의되어 있지 않습니다"와 "아니요/불가능합니다"는 완전히 다릅니다. (이 규칙은 Rule #1~#3보다 우선합니다)**
-   - 질문이 특정 비용/수치/조건/기능의 존재를 물을 때, 컨텍스트에 해당 정보가 **명시적으로 기술되어 있지 않다면**:
-     - ❌ 잘못된 답변: "비용이 없습니다", "불가능합니다", "해당 기능은 없습니다", "~할 수 있습니다", "~배로 증가합니다", "아니요, ~하지 않습니다"
-     - ✅ 올바른 답변: "해당 정보(비용/수치/기능)는 현재 기획서에 명시되어 있지 않습니다"
-   - **"언급이 없다"는 곧 "없다/0이다/가능하다"가 아닙니다.** 기획서에 비용이 적혀있지 않다고 해서 무료라고 단정할 수 없습니다. 아직 정의되지 않았을 수 있습니다.
-   - 실제로 기획서에 "비용 없음", "해당 없음" 등 **명시적으로 부정**하는 문구가 있을 때만 "~하지 않습니다"로 답하세요.
-   - **이 규칙은 구체적 수치/비용/조건을 묻는 질문에 적용됩니다:**
-     - "~하면 비용이 얼마나 드나요?" → 비용 수치가 명시되어 있지 않으면 "기획서에 명시되어 있지 않습니다"
-     - "~하면 몇 배로 증가하나요?" → 배율이 명시되어 있지 않으면 "기획서에 해당 수치가 정의되어 있지 않습니다"
-   - **단, 시스템 분석/설계/충돌 가능성 질문에는 이 규칙을 적용하지 마세요.** 컨텍스트의 정보를 기반으로 분석을 제공하세요.
-   - **특히 "~가 되나요?", "~가 회복되나요?", "~이 가능한가요?" 형태의 질문**에서 해당 기능/동작이 컨텍스트에 **한 번도 언급되지 않는다면**, 관련 시스템(예: 창고)에 대한 내용이 있더라도 "해당 기능은 기획서에 정의되어 있지 않습니다"로 답하세요. 관련 시스템의 **정의된** 기능 목록을 함께 제공하여 사용자가 무엇이 가능한지 파악할 수 있게 하세요.
-10. **문서에 없는 구체적 수치/Enum 값/테이블 데이터를 지어내지 마세요.**
-   - 구체적 ID, Enum 값, 테이블 필드값은 컨텍스트에서 직접 인용해야 합니다.
-   - **단, 시스템의 동작 분석, 엣지 케이스 검토, 충돌 가능성 분석은 컨텍스트 기반으로 해도 됩니다.** 이때 "기획서에는 이 케이스에 대한 명시적 규칙이 없으나, 관련 규칙을 종합하면~"과 같이 분석 기반임을 밝히세요.
-11. **질문의 모든 측면에 답하세요.** 질문이 "기존이랑 차이점", "A랑 B 두 가지", "어떻게 바뀌는 거야" 등 여러 측면을 묻는다면:
-   - 컨텍스트에서 관련된 **모든** 변경사항/항목/비교 포인트를 빠짐없이 포함하세요.
-   - 하나의 세부사항만 깊이 파고들고 나머지를 생략하지 마세요.
-   - 체크리스트: 답변 작성 후, 컨텍스트에서 질문과 관련된 다른 정보를 놓치지 않았는지 다시 확인하세요.
-12. **`[?...?]` 표기는 원본 변환 시 잘린 텍스트입니다.** 문장이 `[?...?]`로 끝나더라도 앞부분의 내용은 유효합니다. 잘린 텍스트의 앞부분을 최대한 활용하고, **문맥상 명백한 경우 잘린 부분을 추론하세요.** 예: "신들을 지원한 대가로 드워프들은 거[?...?]" → "거인이 잠들어 있는 땅을 보장받는다"로 이어질 수 있음. **잘린 텍스트가 있다고 해서 "확인할 수 없다"로 답하지 마세요.** 다른 청크에 동일한 내용이 완전한 형태로 있을 수 있으니, 모든 청크를 확인하세요.
-13. **Confluence 문서의 HISTORY 테이블은 문서 수정 이력입니다.** '담당자/내용/일자' 또는 '작성자/수정 내역/수정 날짜' 열이 있습니다. **테이블의 마지막 데이터가 있는 행 = '마지막 수정한 사람/내용/날짜'입니다.** "이 문서 마지막 수정한 사람이 누구야?"라는 질문에 HISTORY 테이블의 마지막 항목을 답변하세요. "수정 정보가 없습니다"라고 하지 마세요.
-14. **충돌 가능성/호환성 질문 시 '충돌 없음'으로 단정하지 마세요.** 두 시스템이 동일한 리소스(이벤트, 상태, 입력 등)를 사용한다고 기술되어 있으면: (1) 각 시스템의 관련 동작을 정확히 인용, (2) 충돌 해결 규칙이 문서에 있는지 확인, (3) 없다면 **"문서에 이 케이스에 대한 명시적 처리 규칙이 없다"**고 밝힌 후, (4) 관련 규칙을 종합한 분석/우려사항을 제공하세요. 문서의 침묵 ≠ 문제없음.
-15. **'설계해주세요/제시해주세요' 유형 질문:** 관련 시스템의 기존 규칙/템플릿을 컨텍스트에서 인용한 후, 해당 규칙에 맞춰 **구체적 설계안**을 제시하세요. '기획서에 없습니다'로 끝내지 마세요. 컨텍스트의 기존 패턴을 참조하여 설계하세요.
-   - **SystemMsg 설계 시 필수 체크리스트**: (1) **display**: Chat(채팅로그)/Toast(상단알림)/둘 다 — 중요 이벤트(보스처치, 희귀 아이템 획득)는 Chat+Toast 복합 설정이 적절, (2) **recipient**: Self(본인만)/Server(서버 전체), (3) **DuplicationAllow**: TRUE(중복 허용, Default)/FALSE(중복 무시) — 4개 필드 모두 명시하세요.
-   - **등급 색상**: 반드시 컨텍스트의 등급별 색상표를 인용하세요. 등급 색상이 있는 변수는 자동 bold 처리됩니다.
-16. **컨텍스트의 명시적 규칙을 일반적 상식/관례보다 우선하세요.** 게임 개발의 일반적 관행과 컨텍스트의 명시적 기술이 다를 때, 반드시 컨텍스트를 따르세요.
-   - 예: 컨텍스트에 "HUD 타겟 표시와 실제 공격 대상이 다를 수 있다"고 되어있으면, 일반적 게임에서 타겟=공격대상이라는 가정을 하지 마세요.
-   - 예: 컨텍스트에 "해당 SubType 추가 시 처리사항은 별도 문서 참조"라고 되어있으면, 처리사항을 직접 설계하지 말고 "별도 문서를 참조해야 한다"고 안내하세요.
-   - **컨텍스트에 있는 규칙과 모순되는 내용을 절대 생성하지 마세요.**
-17. **질문에 사용된 용어를 그대로 사용하세요.** 질문이 "Defense"라고 하면 "Melee Defense"로 바꾸지 마세요. 질문의 용어와 컨텍스트의 정확한 데이터를 매칭하여 답하되, 답변에서는 질문의 표현을 존중하세요.
-18. **문서/시트가 비어있거나 미완성이면 명시하세요.** 컨텍스트에서 특정 시스템 문서가 제목만 있고 내용이 없거나, "추후 작성 예정" 등의 표현이 있으면: "해당 문서는 현재 미작성/미정의 상태입니다"라고 명확히 안내하세요. 비어있는 문서에 기반해 추측으로 답변을 채우지 마세요.
-19. **OOXML 원본 텍스트는 Excel 셀에서 직접 추출한 확정된 기획 데이터입니다.** 컨텍스트에 `## OOXML 원본 텍스트` 섹션이 있으면, 이것은 기획서 원본에서 직접 추출한 **확정 사실**입니다. OCR 변환된 테이블(깨진 한글, 의미없는 문자열)보다 OOXML 텍스트를 **항상** 신뢰하세요.
-   - OOXML에 있는 데이터를 "추정" "가능성" "시사" 등으로 약화시키지 마세요. **OOXML 데이터는 기획서에 명시된 사실입니다.**
-   - **셀 위치 포함 형식**: `R행:C열:텍스트` 형식으로 같은 열(C값)에 있는 데이터들은 서로 관련됩니다. 예: R5에 `C5:기본형 | C11:베리1`이고 R6에 `C5:스켈라 | C11:로바르스`이면 → **기본형=스켈라, 베리1=로바르스**입니다 (같은 열이므로).
-   - **"기획서에 명확히 정의되어 있지 않다"고 답하기 전에, OOXML 데이터를 다시 확인하세요.** OOXML에 관련 데이터가 있으면 그것이 곧 기획서의 정의입니다.
-20. **세계관/종족 설정 질문과 시스템 메커니즘 문서를 구분하세요.** 질문이 "종족 설정", "탄생", "기원", "역사", "전쟁", "세계관" 등 세계관/로어를 묻는 경우:
-   - 컨텍스트에 `PK_기타설정/종족` 시트 내용이 있으면 그것이 **세계관 정답**입니다.
-   - 동일 키워드(예: "정령", "도깨비")로 검색된 **시스템 메커니즘 문서**(정령 시스템, 변신 시스템 등)는 세계관 답변에 사용하지 마세요. 시스템 메커니즘은 게임 내 구현 규칙이고, 세계관 설정은 스토리/배경입니다.
-   - 예: "도깨비가 어떻게 탄생했나?"는 종족 기원 질문 → `PK_기타설정/종족` 시트에서 답변. `정령 시스템`의 "각인 정령" 메커니즘과 혼동하지 마세요.
+## [2] 답변 구조 가이드
+
+체계적이고 완전한 답변을 위해 다음 구조를 따르세요:
+
+### 서술 순서
+1. **핵심 개념 요약** — 1~2문장으로 시스템/기능의 핵심을 먼저 정의
+2. **구성 요소** — 주요 구성 요소를 계층적으로 정리 (상위 → 하위)
+3. **동작 메커니즘** — 작동 방식, 조건, 시퀀스를 구체적으로 서술
+4. **핵심 데이터** — 수치, 조건표, 공식 등을 Markdown 테이블로 정리
+5. **관련 시스템** — 다른 시스템과의 연결점, 상호작용을 명시
+6. **미정의 영역** — 기획서에 아직 정의되지 않은 부분이 있으면 명시
+
+### 형식 규칙
+- **Markdown 적극 활용**: 헤더(##, ###), 테이블, 리스트, 볼드를 사용하여 가독성을 높이세요
+- **테이블/수치 데이터**: 원본의 표 구조를 Markdown 테이블로 재구성하세요
+- **여러 시스템 질문**: 시스템별로 분리 정리 후 관계/차이점을 분석하세요
+- **질문의 모든 측면에 답변**: 질문이 여러 측면을 묻는다면 빠짐없이 포함하세요. 답변 작성 후 컨텍스트에서 놓친 관련 정보가 없는지 재확인하세요
+- **질문 용어 존중**: 질문에 사용된 용어를 그대로 사용하세요 ("Defense" → "Melee Defense"로 바꾸지 마세요)
+- **설계 요청**: "설계해주세요" 유형 질문에는 컨텍스트의 기존 패턴/템플릿을 참조하여 구체적 설계안을 제시하세요
+
+## [3] 가드레일
+
+### G1. 날조 금지 + "미정의" 구분
+- 구체적 수치/비용/Enum 값/테이블 데이터는 컨텍스트에서 직접 인용만 허용
+- **"언급 없음" ≠ "없다/0이다/불가능하다"**: 컨텍스트에 비용 정보가 없다고 "무료"라고 단정하지 마세요. "해당 정보는 기획서에 명시되어 있지 않습니다"가 올바른 답변입니다
+- 실제로 "비용 없음", "해당 없음" 등 **명시적 부정** 문구가 있을 때만 "~하지 않습니다"로 답하세요
+- **질문이 전제하는 기능/시스템이 컨텍스트에 전혀 없으면**: "기획서에 정의되어 있지 않습니다"로 답하되, 관련 시스템의 정의된 기능 목록을 함께 제공하세요
+- 질문의 전제가 틀렸어도 관련 정보가 있으면 제공을 이어가세요
+
+### G2. 데이터 소스 신뢰도
+- **[이미지 설명]**: 기획서 다이어그램/도면/표의 AI 분석 결과. 본문 텍스트와 동일한 신뢰도
+- **OOXML 원본 텍스트**: Excel 셀에서 직접 추출한 확정 데이터. OCR 변환보다 **항상** 우선. "추정/가능성/시사" 등으로 약화시키지 마세요. `R행:C열:텍스트` 형식에서 같은 열(C값)은 관련 데이터입니다
+- **`[?...?]`**: 원본 변환 시 잘린 텍스트. 앞부분은 유효하며, 다른 청크에 완전한 형태가 있을 수 있으니 전체를 확인하세요
+- **HISTORY 테이블**: Confluence 문서 수정 이력. 마지막 행 = 최종 수정자/내용/날짜
+
+### G3. 컨텍스트 우선 원칙
+- 컨텍스트의 명시적 규칙 > 게임 개발 일반 상식/관례
+- 컨텍스트에 있는 규칙과 모순되는 내용을 절대 생성하지 마세요
+- "별도 문서 참조"로 되어있으면 임의로 설계하지 말고 그대로 안내하세요
+
+### G4. 분석 질문 대응
+- **충돌/호환성 질문**: "충돌 없음" 단정 금지. 각 시스템 동작 인용 → 충돌 해결 규칙 확인 → 없으면 "명시적 처리 규칙 없음" + 분석/우려사항 제공. 문서의 침묵 ≠ 문제없음
+- **추론 허용 범위**: 설계 의도/배경 추론, 시스템 간 관계 분석, 엣지 케이스 검토, 처리 순서 분석은 OK. 단 분석 기반임을 밝히세요
+- **세계관 vs 시스템**: "종족 탄생/역사/세계관" 질문에는 `PK_기타설정/종족` 등 세계관 문서로 답변. 동일 키워드의 시스템 메커니즘 문서와 혼동하지 마세요
+- **미완성 문서**: 문서가 비어있거나 "추후 작성 예정"이면 명확히 안내하세요
+
+### G5. SystemMsg 설계 체크리스트
+설계 요청 시: (1) display: Chat/Toast/둘 다, (2) recipient: Self/Server, (3) DuplicationAllow: TRUE/FALSE — 모두 명시. 등급 색상은 컨텍스트의 색상표를 인용하세요.
 
 ## 역할별 답변 스타일
 - **기획자**: 시스템 규칙, 상호작용, 설계 의도 중심
@@ -389,52 +460,214 @@ AGENT_ANSWER_PROMPT = """당신은 모바일 MMORPG "Project K"의 기획 전문
 """
 
 
+BASIC_ANSWER_PROMPT = """당신은 모바일 MMORPG "Project K"의 기획 전문가입니다.
+아래 기획 문서를 읽고 질문에 체계적으로 답변하세요.
+
+## 답변 원칙
+- 관련 정보를 **빠짐없이** 포함
+- 구조화된 Markdown 형식 (헤더, 테이블, 리스트 적극 활용)
+- 출처(워크북/시트)를 답변 내에 명시
+- 시스템 개요 → 핵심 메커니즘 → 세부 규칙 → 관련 시스템 순으로 서술
+- 수치, 조건, 규칙 등 구체적 데이터는 반드시 포함
+- 기획서에 없는 내용은 만들어내지 마세요
+"""
+
+
+# 프롬프트 스타일 설정
+_PROMPT_STYLE_CONFIG = {
+    "검증세트 최적화": AGENT_ANSWER_PROMPT,
+    "기본": BASIC_ANSWER_PROMPT,
+}
+
+
+# 모델별 최대 출력 토큰
+_MODEL_MAX_OUTPUT = {
+    "claude-opus-4-5": 32768,
+    "claude-sonnet-4-5": 64000,
+    "claude-haiku-4-5": 8192,
+}
+
+_DETAIL_LEVEL_CONFIG = {
+    "간결": {
+        "max_tokens_ratio": 0.125,  # 모델 최대의 12.5%
+        "prompt_suffix": "\n\n## 출력 길이 지시\n핵심만 간결하게 답변하세요. 1,000자 이내로 작성하세요. 불필요한 부연 설명 없이 질문에 대한 직접적인 답만 제공하세요.",
+    },
+    "보통": {
+        "max_tokens_ratio": 0.25,  # 모델 최대의 25%
+        "prompt_suffix": "\n\n## 출력 길이 지시\n적절한 분량으로 답변하세요. 2,000~3,000자 내외로 작성하세요. 핵심 내용을 빠짐없이 포함하되, 과도하게 길지 않게 작성하세요.",
+    },
+    "상세": {
+        "max_tokens_ratio": 0.5,  # 모델 최대의 50%
+        "prompt_suffix": "\n\n## 출력 길이 지시\n상세하고 포괄적으로 답변하세요. 5,000자 이상도 괜찮습니다. 관련된 모든 세부사항, 테이블, 조건, 예외 상황을 포함하세요. 필요하면 다이어그램(mermaid)도 활용하세요.",
+    },
+}
+
+
+def _get_max_tokens(model: str, detail_level: str) -> int:
+    """모델의 최대 출력 토큰에 비례하여 max_tokens 결정."""
+    model_max = _MODEL_MAX_OUTPUT.get(model, 16384)
+    ratio = _DETAIL_LEVEL_CONFIG.get(detail_level, _DETAIL_LEVEL_CONFIG["보통"])["max_tokens_ratio"]
+    return int(model_max * ratio)
+
+
+def _load_full_sheets(chunks: list[dict], max_context_tokens: int = 80000) -> list[dict]:
+    """검색된 청크에서 시트를 식별하고, 해당 시트의 전체 청크를 ChromaDB에서 로드.
+
+    Claude 웹앱처럼 시트(문서) 단위로 완전한 컨텍스트를 제공.
+    청크 조각이 아닌 시트 전체를 LLM에 넣어 맥락 손실을 제거.
+
+    Args:
+        chunks: 검색으로 찾은 청크 목록 (시트 식별용)
+        max_context_tokens: 최대 컨텍스트 토큰 수 (기본 80K)
+            메타데이터 토큰 추정치 vs 실제 API 토큰의 증폭률이 ~1.5-2x이므로
+            80K 추정 → ~120-160K 실제, Sonnet 200K 한계 이내.
+
+    Returns:
+        시트 전체 청크 목록 (시트별 정렬, 원본 순서 유지)
+    """
+    if not chunks:
+        return []
+
+    # 1) 검색된 청크에서 고유 시트 식별 (워크북+시트 조합, 검색 점수순)
+    sheet_keys_ordered = []  # (workbook, sheet) 순서 유지
+    sheet_scores = {}  # (wb, sheet) → max score
+    seen_sheets = set()
+    for c in chunks:
+        wb = c.get("workbook", "")
+        sh = c.get("sheet", "")
+        key = (wb, sh)
+        score = c.get("score", 0)
+        if key not in seen_sheets:
+            seen_sheets.add(key)
+            sheet_keys_ordered.append(key)
+            sheet_scores[key] = score
+        else:
+            sheet_scores[key] = max(sheet_scores[key], score)
+
+    # 점수순 정렬 (높은 점수의 시트 우선)
+    sheet_keys_ordered.sort(key=lambda k: sheet_scores.get(k, 0), reverse=True)
+
+    # 2) ChromaDB에서 시트 전체 청크 로드
+    collection = _get_collection()
+    full_sheets = []  # [{sheet_key, chunks, total_tokens}]
+    total_tokens = 0
+
+    for wb, sh in sheet_keys_ordered:
+        # ChromaDB where 필터로 시트 전체 청크 가져오기
+        try:
+            result = collection.get(
+                where={"$and": [{"workbook": wb}, {"sheet": sh}]},
+                include=["documents", "metadatas"],
+            )
+        except Exception:
+            # $and 미지원 시 workbook만으로 필터 후 sheet 매칭
+            result = collection.get(
+                where={"workbook": wb},
+                include=["documents", "metadatas"],
+            )
+            # sheet 필터링
+            filtered_ids = []
+            filtered_docs = []
+            filtered_metas = []
+            for idx, meta in enumerate(result["metadatas"]):
+                if meta.get("sheet", "") == sh:
+                    filtered_ids.append(result["ids"][idx])
+                    filtered_docs.append(result["documents"][idx])
+                    filtered_metas.append(meta)
+            result = {"ids": filtered_ids, "documents": filtered_docs, "metadatas": filtered_metas}
+
+        if not result["ids"]:
+            continue
+
+        # 시트 청크를 section_path 순으로 정렬 (원본 문서 순서 유지)
+        sheet_chunks = []
+        sheet_tokens = 0
+        for idx in range(len(result["ids"])):
+            meta = result["metadatas"][idx]
+            doc = result["documents"][idx] if idx < len(result["documents"]) else ""
+            tokens = meta.get("tokens", int(len(doc) * 0.5))
+            sheet_tokens += tokens
+            sheet_chunks.append({
+                "id": result["ids"][idx],
+                "workbook": wb,
+                "sheet": sh,
+                "section_path": meta.get("section_path", ""),
+                "text": doc,
+                "tokens": tokens,
+                "source_url": meta.get("source_url", ""),
+                "score": sheet_scores.get((wb, sh), 0),
+            })
+
+        # section_path 순 정렬
+        sheet_chunks.sort(key=lambda c: c.get("section_path", ""))
+
+        # 토큰 제한 확인
+        if total_tokens + sheet_tokens > max_context_tokens:
+            # 남은 공간에 맞는 청크만 추가
+            remaining = max_context_tokens - total_tokens
+            if remaining < 500:
+                break
+            partial_tokens = 0
+            for c in sheet_chunks:
+                if partial_tokens + c["tokens"] > remaining:
+                    break
+                full_sheets.append(c)
+                partial_tokens += c["tokens"]
+            total_tokens += partial_tokens
+            break
+
+        for c in sheet_chunks:
+            full_sheets.append(c)
+        total_tokens += sheet_tokens
+
+    return full_sheets
+
+
 def generate_agent_answer(query: str, chunks: list[dict], role: str = None,
-                          key_systems: list[str] = None, model: str = "claude-sonnet-4-5",
-                          conversation_history: list[tuple[str, str]] = None) -> dict:
+                          key_systems: list[str] = None, model: str = "claude-opus-4-5",
+                          conversation_history: list[tuple[str, str]] = None,
+                          detail_level: str = "상세",
+                          prompt_style: str = "검증세트 최적화") -> dict:
     """수집된 증거로 답변 생성.
 
-    key_systems가 주어지면 해당 시스템의 청크를 우선 배치.
+    검색된 청크에서 시트를 식별 → 해당 시트 전체를 로드하여 완전한 컨텍스트 제공.
+    key_systems가 주어지면 해당 시스템의 시트를 우선 배치.
     conversation_history: [(question, answer), ...] 이전 대화 (최근 3턴)
+    detail_level: "간결" | "보통" | "상세" — 답변 길이 조절
     """
     if not chunks:
         return {"answer": "(검색 결과 없음 - 답변 생성 불가)", "tokens": 0}
 
-    # key_systems 청크 우선 배치 + 시트당 최대 3개로 다양성 보장
+    # key_systems 시트 우선 정렬
     if key_systems:
-        priority = []
-        rest = []
         key_lower = [s.lower() for s in key_systems]
         for c in chunks:
             wb = c.get("workbook", "").lower()
             if any(k in wb for k in key_lower):
-                priority.append(c)
-            else:
-                rest.append(c)
-        # 시트당 최대 3개로 제한 (다양한 시트를 커버, 같은 시트 과다 방지)
-        sheet_count = {}
-        diverse_priority = []
-        overflow = []
-        for c in priority:
-            sheet_key = f"{c.get('workbook', '')}|{c.get('sheet', '')}"
-            sheet_count[sheet_key] = sheet_count.get(sheet_key, 0) + 1
-            if sheet_count[sheet_key] <= 3:
-                diverse_priority.append(c)
-            else:
-                overflow.append(c)
-        ordered = diverse_priority + rest + overflow
-    else:
-        ordered = chunks
+                c["score"] = max(c.get("score", 0), 1.5)  # key_systems 보너스
 
-    # 컨텍스트 조합 (상위 15개 청크, key_systems 우선)
-    # OOXML 청크는 6000자 이상일 수 있으므로 여유 있게 7000자 허용
+    # 시트 전체 로드 (청크 조각 → 완전한 시트 컨텍스트)
+    full_sheet_chunks = _load_full_sheets(chunks)
+
+    # 시트별로 그룹화하여 컨텍스트 구성
+    sheet_groups = {}  # (wb, sheet) → [chunks]
+    for c in full_sheet_chunks:
+        key = (c.get("workbook", ""), c.get("sheet", ""))
+        sheet_groups.setdefault(key, []).append(c)
+
     context_parts = []
-    for i, c in enumerate(ordered[:15]):
-        wb = c.get("workbook", "?")
-        sheet = c.get("sheet", "?")
-        section = c.get("section_path", "")
-        text = c.get("text", "")[:7000]
-        context_parts.append(f"[출처 {i+1}: {wb} / {sheet} / {section}]\n{text}")
+    for (wb, sheet), s_chunks in sheet_groups.items():
+        # 시트 헤더
+        sheet_text_parts = []
+        for c in s_chunks:
+            sec = c.get("section_path", "")
+            text = c.get("text", "")
+            if sec:
+                sheet_text_parts.append(f"### {sec}\n{text}")
+            else:
+                sheet_text_parts.append(text)
+        sheet_content = "\n\n".join(sheet_text_parts)
+        context_parts.append(f"## [{wb} / {sheet}]\n\n{sheet_content}")
 
     context = "\n\n---\n\n".join(context_parts)
 
@@ -451,18 +684,32 @@ def generate_agent_answer(query: str, chunks: list[dict], role: str = None,
             messages.append({"role": "assistant", "content": summary})
     messages.append({"role": "user", "content": user_msg})
 
+    detail_cfg = _DETAIL_LEVEL_CONFIG.get(detail_level, _DETAIL_LEVEL_CONFIG["보통"])
+    base_prompt = _PROMPT_STYLE_CONFIG.get(prompt_style, AGENT_ANSWER_PROMPT)
+    system_prompt = base_prompt + detail_cfg["prompt_suffix"]
+    max_tokens = _get_max_tokens(model, detail_level)
+
     try:
         result = call_bedrock(
             messages=messages,
-            system=AGENT_ANSWER_PROMPT,
+            system=system_prompt,
             model=model,
-            max_tokens=2048,
+            max_tokens=max_tokens,
             temperature=0,
         )
         return {
             "answer": result["text"],
             "tokens": result.get("input_tokens", 0) + result.get("output_tokens", 0),
+            "input_tokens": result.get("input_tokens", 0),
+            "output_tokens": result.get("output_tokens", 0),
             "api_seconds": result.get("api_seconds", 0),
+            "_system_prompt": system_prompt,
+            "_user_prompt": user_msg,
+            "_detail_level": detail_level,
+            "_prompt_style": prompt_style,
+            "_max_tokens": max_tokens,
+            "_context_sheets": len(sheet_groups),
+            "_context_chunks": len(full_sheet_chunks),
         }
     except Exception as e:
         return {"answer": f"(답변 생성 실패: {e})", "tokens": 0, "api_seconds": 0}
@@ -499,7 +746,7 @@ REFLECTION_PROMPT = """당신은 QnA 시스템의 품질 검증관입니다.
 ```"""
 
 
-def reflect_on_answer(query: str, answer: str, chunks: list[dict], plan: dict, model: str = "claude-haiku-4-5") -> dict:
+def reflect_on_answer(query: str, answer: str, chunks: list[dict], plan: dict, model: str = "claude-opus-4-5") -> dict:
     """생성된 답변의 품질을 자체 검증.
 
     검색 실패 시 검색 컨텍스트(어떤 문서를 찾았는지, 어떤 키워드를 사용했는지)를
@@ -583,6 +830,9 @@ def reflect_on_answer(query: str, answer: str, chunks: list[dict], plan: dict, m
         reflection = _parse_plan_json(result["text"])  # 같은 파서 재사용
         reflection["_tokens"] = result.get("input_tokens", 0) + result.get("output_tokens", 0)
         reflection["_api_seconds"] = result.get("api_seconds", 0)
+        reflection["_raw_response"] = result["text"]
+        reflection["_system_prompt"] = REFLECTION_PROMPT
+        reflection["_user_prompt"] = user_msg
         return reflection
     except Exception as e:
         return {
@@ -641,13 +891,17 @@ def execute_retry_search(reflection: dict, query: str, existing_chunks: list[dic
 # ══════════════════════════════════════════════════════════
 
 def agent_answer(query: str, role: str = None,
-                 conversation_history: list[tuple[str, str]] = None) -> dict:
+                 conversation_history: list[tuple[str, str]] = None,
+                 model: str = "claude-opus-4-5",
+                 prompt_style: str = "검증세트 최적화") -> dict:
     """Agent QnA 파이프라인.
 
     Args:
         query: 사용자 질문
         role: 질문자 역할
         conversation_history: [(question, answer), ...] 이전 대화 (최근 3턴)
+        model: 답변 생성 모델 (claude-opus-4-5, claude-sonnet-4-5 등)
+        prompt_style: "검증세트 최적화" (3단 구조) 또는 "기본" (최소 프롬프트)
 
     Returns:
         {
@@ -675,8 +929,8 @@ def agent_answer(query: str, role: str = None,
 
     trace.append({
         "step": "planning",
-        "model": "claude-sonnet-4-5",
-        "description": "Sonnet이 질문을 분석하여 어떤 기획서(워크북)를 참고할지 결정 (KG 관계 활용)",
+        "model": "claude-opus-4-5",
+        "description": "Opus가 질문을 분석하여 어떤 기획서(워크북)를 참고할지 결정 (KG 관계 활용)",
         "input": {"query": query, "role": role, "workbook_count": len(_build_structural_index())},
         "output": {
             "key_systems": plan.get("key_systems", []),
@@ -686,6 +940,8 @@ def agent_answer(query: str, role: str = None,
             "reasoning": plan.get("reasoning", ""),
         },
         "llm_raw_response": plan.get("_raw_response", ""),
+        "system_prompt": plan.get("_system_prompt", ""),
+        "user_prompt": plan.get("_user_prompt", ""),
         "tokens": plan.get("_tokens", 0),
         "seconds": round(plan_time, 1),
     })
@@ -726,10 +982,22 @@ def agent_answer(query: str, role: str = None,
         "chunks_count": len(chunks),
         "workbooks_found": workbooks_found,
         "source_distribution": source_dist,
-        "top3_chunks": [
-            {"workbook": c.get("workbook", "?"), "sheet": c.get("sheet", "?"),
-             "score": round(c.get("score", 0), 3), "source": c.get("source", "?")}
-            for c in chunks[:3]
+        "all_chunks": [
+            {
+                "rank": idx + 1,
+                "workbook": c.get("workbook", "?"),
+                "sheet": c.get("sheet", "?"),
+                "section_path": c.get("section_path", ""),
+                "score": round(c.get("score", 0), 4),
+                "source": c.get("source", "?"),
+                "tokens": c.get("tokens", 0),
+                "has_mermaid": c.get("has_mermaid", False),
+                "has_table": c.get("has_table", False),
+                "has_images": c.get("has_images", False),
+                "source_url": c.get("source_url", ""),
+                "text_preview": c.get("text", "")[:150],
+            }
+            for idx, c in enumerate(chunks)
         ],
         "seconds": round(search_time, 1),
     })
@@ -738,7 +1006,8 @@ def agent_answer(query: str, role: str = None,
     t_gen = time.time()
     key_systems = plan.get("key_systems", [])
     gen_result = generate_agent_answer(query, chunks, role, key_systems=key_systems,
-                                       conversation_history=conversation_history)
+                                       model=model, conversation_history=conversation_history,
+                                       prompt_style=prompt_style)
     gen_time = time.time() - t_gen
     total_tokens += gen_result.get("tokens", 0)
 
@@ -747,15 +1016,22 @@ def agent_answer(query: str, role: str = None,
 
     trace.append({
         "step": "answer_generation",
-        "model": "claude-sonnet-4-5",
-        "description": "검색된 청크를 기반으로 Sonnet이 답변 생성",
+        "model": model,
+        "description": f"{model}이 답변 생성 (prompt_style={prompt_style})",
         "input": {
             "chunks_count": min(10, len(chunks)),
             "key_systems_priority": key_systems,
             "role": role,
+            "detail_level": gen_result.get("_detail_level", "보통"),
+            "prompt_style": gen_result.get("_prompt_style", "검증세트 최적화"),
+            "max_tokens": gen_result.get("_max_tokens", 2048),
         },
         "answer_preview": answer[:200] + "..." if len(answer) > 200 else answer,
         "tokens": gen_result.get("tokens", 0),
+        "input_tokens": gen_result.get("input_tokens", 0),
+        "output_tokens": gen_result.get("output_tokens", 0),
+        "system_prompt": gen_result.get("_system_prompt", ""),
+        "user_prompt": gen_result.get("_user_prompt", ""),
         "seconds": round(gen_time, 1),
     })
 
@@ -767,14 +1043,19 @@ def agent_answer(query: str, role: str = None,
 
     trace.append({
         "step": "reflection",
-        "model": "claude-haiku-4-5",
-        "description": "Haiku가 생성된 답변의 품질을 자체 검증",
+        "model": "claude-opus-4-5",
+        "description": "Opus가 생성된 답변의 품질을 자체 검증",
         "output": {
             "is_sufficient": reflection.get("is_sufficient", True),
             "confidence": reflection.get("confidence", "medium"),
             "missing_info": reflection.get("missing_info", ""),
+            "retry_query": reflection.get("retry_query", ""),
+            "retry_systems": reflection.get("retry_systems", []),
         },
         "tokens": reflection.get("_tokens", 0),
+        "raw_response": reflection.get("_raw_response", ""),
+        "system_prompt": reflection.get("_system_prompt", ""),
+        "user_prompt": reflection.get("_user_prompt", ""),
         "seconds": round(ref_time, 1),
     })
 
@@ -797,7 +1078,8 @@ def agent_answer(query: str, role: str = None,
 
         # 재답변 (더 적극적으로)
         gen_result2 = generate_agent_answer(query, chunks, role, key_systems=key_systems,
-                                            conversation_history=conversation_history)
+                                            model=model, conversation_history=conversation_history,
+                                            prompt_style=prompt_style)
         retry_time = time.time() - t_retry
         total_tokens += gen_result2.get("tokens", 0)
 
@@ -808,7 +1090,7 @@ def agent_answer(query: str, role: str = None,
 
         trace.append({
             "step": "retry",
-            "model": "claude-sonnet-4-5",
+            "model": "claude-opus-4-5",
             "description": "Reflection에서 부족하다고 판단 -> 재검색 + 재답변",
             "tools_used": ["retrieve(retry)", f"key_systems_search({key_systems})"],
             "extra_chunks": len(extra_chunks),
@@ -827,4 +1109,485 @@ def agent_answer(query: str, role: str = None,
         "confidence": reflection.get("confidence", "medium"),
         "total_tokens": total_tokens,
         "total_api_seconds": round(total_time, 1),
+    }
+
+
+# ══════════════════════════════════════════════════════════
+#  Deep Research — 전체 자료 종합 분석
+# ══════════════════════════════════════════════════════════
+
+def scan_all_related_chunks(query: str, plan: dict) -> dict:
+    """질문과 관련된 전체 청크를 인덱스에서 스캔.
+
+    매칭 전략 (3단계):
+    1. key_systems 워크북 → 무조건 포함 (Planning이 지정한 핵심 문서)
+    2. 메타데이터(워크북/시트/섹션명)에 키워드 포함 → 포함
+    3. 벡터 검색으로 관련 워크북 추가 발견 → 해당 워크북 전체 청크 포함
+    ※ 워크북 수 제한 없음 — Haiku Map-Reduce로 효율적 처리
+
+    Returns:
+        {
+            "total_chunks": int,
+            "workbook_groups": {workbook: [chunk, ...], ...},
+            "workbook_summary": {workbook: int, ...},
+        }
+    """
+    collection = _get_collection()
+    result = collection.get(include=["metadatas", "documents"])
+    all_meta = result["metadatas"]
+    all_docs = result["documents"]
+    all_ids = result["ids"]
+
+    # Planning에서 추출한 키워드로 관련 청크 필터링
+    keywords = plan.get("search_keywords", [])
+    key_systems = plan.get("key_systems", [])
+
+    # 키워드 정규화 (소문자)
+    kw_lower = [kw.lower() for kw in keywords]
+    # key_systems에서 워크북명 추출
+    sys_names = [ks.lower() for ks in key_systems]
+
+    # ── 3) 벡터 검색으로 관련 워크북 추가 발견 ──
+    # 이름에 키워드가 없어도 내용적으로 관련된 워크북을 찾음
+    vector_workbooks: set[str] = set()
+    try:
+        vec_result = collection.query(
+            query_texts=[query],
+            n_results=50,
+            include=["metadatas"],
+        )
+        if vec_result and vec_result["metadatas"]:
+            for meta in vec_result["metadatas"][0]:
+                wb = meta.get("workbook", "")
+                if wb:
+                    vector_workbooks.add(wb)
+    except Exception:
+        pass  # 벡터 검색 실패 시 기존 로직만 사용
+
+    groups: dict[str, list[dict]] = {}
+    # 워크북별 매칭 소스 추적
+    wb_match_source: dict[str, str] = {}  # workbook → "key_systems" | "keyword" | "vector"
+
+    for i, meta in enumerate(all_meta):
+        wb = meta.get("workbook", "")
+        sh = meta.get("sheet", "")
+        sec = meta.get("section_path", "")
+        doc = all_docs[i] if i < len(all_docs) else ""
+        wb_lower = wb.lower()
+
+        # 1) key_systems 워크북에 속하는 청크 → 무조건 포함
+        matched = any(sn in wb_lower for sn in sys_names)
+        if matched and wb not in wb_match_source:
+            wb_match_source[wb] = "key_systems"
+
+        # 2) 메타데이터(워크북/시트/섹션명)에 키워드 매칭
+        if not matched:
+            meta_searchable = f"{wb} {sh} {sec}".lower()
+            matched = any(kw in meta_searchable for kw in kw_lower)
+            if matched and wb not in wb_match_source:
+                wb_match_source[wb] = "keyword"
+
+        # 3) 벡터 검색에서 발견된 워크북 → 해당 워크북 전체 청크 포함
+        if not matched and wb in vector_workbooks:
+            matched = True
+            if wb not in wb_match_source:
+                wb_match_source[wb] = "vector"
+
+        if matched:
+            chunk = {
+                "id": all_ids[i],
+                "workbook": wb,
+                "sheet": sh,
+                "section_path": sec,
+                "text": doc,
+                "tokens": meta.get("tokens", 0),
+                "source_url": meta.get("source_url", ""),
+            }
+            groups.setdefault(wb, []).append(chunk)
+
+    summary = {wb: len(chunks) for wb, chunks in groups.items()}
+
+    # 매칭 소스별 통계
+    source_stats = {"key_systems": [], "keyword": [], "vector": []}
+    for wb, src in wb_match_source.items():
+        source_stats[src].append(wb)
+
+    return {
+        "total_chunks": sum(summary.values()),
+        "workbook_groups": groups,
+        "workbook_summary": summary,
+        "match_sources": wb_match_source,
+        "source_stats": source_stats,
+        "vector_top_chunks": len(vector_workbooks),
+    }
+
+
+_SCRATCHPAD_ANALYZE_PROMPT = """당신은 게임 기획 문서 분석 전문가입니다.
+
+## 임무
+"{query}"에 대해 "{workbook}" 워크북의 기획 내용을 분석하세요.
+
+{scratchpad_section}
+
+## 분석 규칙
+- 이 워크북에서 질문과 관련된 **모든 정보**를 추출하세요
+- 구체적인 수치, 규칙, 조건, 테이블은 **반드시 포함**
+- 시스템 흐름, 획득 경로, UI 구성 등 구조적 정보 포함
+- 이전 메모에서 발견된 정보와 **연결되는 부분**을 명시하세요
+  (예: "→ [변신 시스템]의 레벨 30 해금 조건과 연결")
+- 이전 메모와 완전히 중복되는 내용은 "기존 메모 참조"로 대체
+- **새롭게 발견한 정보**에 집중하세요
+- Markdown 형식, 2000자 이내"""
+
+
+def _analyze_workbook_with_scratchpad(query: str, workbook: str,
+                                      chunks: list[dict], scratchpad: str) -> dict:
+    """하나의 워크북을 스크래치패드 컨텍스트와 함께 분석.
+
+    이전 워크북 분석 결과(scratchpad)를 참조하여 교차 분석이 가능.
+    """
+    t0 = time.time()
+
+    # 청크를 시트별로 정렬하여 컨텍스트 구성
+    chunks_sorted = sorted(chunks, key=lambda c: (c.get("sheet", ""), c.get("section_path", "")))
+    context_parts = []
+    for c in chunks_sorted:
+        sh = c.get("sheet", "?")
+        sec = c.get("section_path", "")
+        text = c.get("text", "")[:4000]
+        context_parts.append(f"[{sh} / {sec}]\n{text}")
+
+    context = "\n\n---\n\n".join(context_parts)
+    if len(context) > 60000:
+        context = context[:60000] + "\n\n... (이하 생략)"
+
+    # 스크래치패드 섹션 구성
+    if scratchpad.strip():
+        scratchpad_section = (
+            "## 이전 문서에서 발견한 내용 (스크래치패드)\n"
+            "아래는 이전 문서들에서 발견한 내용입니다. "
+            "이 내용과 연결되는 정보가 있다면 반드시 명시해주세요.\n\n"
+            f"{scratchpad}"
+        )
+    else:
+        scratchpad_section = (
+            "## 이전 발견 사항\n"
+            "(첫 번째 문서입니다. 질문과 관련된 모든 발견을 기록하세요.)"
+        )
+
+    system_prompt = _SCRATCHPAD_ANALYZE_PROMPT.format(
+        query=query, workbook=workbook, scratchpad_section=scratchpad_section,
+    )
+
+    try:
+        result = call_bedrock(
+            messages=[{"role": "user", "content": context}],
+            system=system_prompt,
+            model="claude-opus-4-5",
+            max_tokens=4096,
+            temperature=0,
+        )
+        return {
+            "workbook": workbook,
+            "summary": result["text"],
+            "chunks_count": len(chunks),
+            "tokens": result.get("input_tokens", 0) + result.get("output_tokens", 0),
+            "seconds": round(time.time() - t0, 1),
+            "status": "ok",
+        }
+    except Exception as e:
+        return {
+            "workbook": workbook,
+            "summary": f"(분석 실패: {e})",
+            "chunks_count": len(chunks),
+            "tokens": 0,
+            "seconds": round(time.time() - t0, 1),
+            "status": "error",
+        }
+
+
+_SYNTHESIS_PROMPT = """당신은 모바일 MMORPG "Project K"의 수석 기획 전문가입니다.
+아래는 여러 기획 문서에서 추출한 "{query}" 관련 정보입니다.
+이 정보를 종합하여 질문에 대한 **체계적이고 완전한 답변**을 작성하세요.
+
+## 답변 구조 (이 순서를 따르세요)
+
+1. **핵심 정의** — 시스템/기능을 1~2문장으로 요약
+2. **구성 요소** — 주요 구성을 계층적으로 정리 (상위 개념 → 하위 요소)
+3. **동작 메커니즘** — 작동 방식, 조건, 시퀀스를 구체적으로 서술. 필요 시 단계별 플로우로 표현
+4. **핵심 데이터** — 수치, 조건표, 공식, 밸런스 테이블 등을 Markdown 테이블로 정리. 원본의 구체적 수치를 빠짐없이 포함
+5. **관련 시스템** — 다른 시스템과의 연결점, 상호작용, 교차 참조를 명시
+6. **UI/UX** — 관련 UI 동작, 표시 규칙, 사용자 경험 포인트 (있으면)
+7. **미정의/참고** — 기획서에 아직 정의되지 않은 부분, 추후 결정 사항
+
+## 작성 규칙
+- 모든 문서의 정보를 **빠짐없이** 종합 — 정보 누락은 최악의 실수
+- 수치, 조건, 테이블 등 구체적 데이터는 원본 그대로 인용
+- Markdown 적극 활용: 헤더(##), 테이블(|), 리스트(-), 볼드(**) 로 가독성 확보
+- 여러 시스템이 관련되면 시스템별로 분리 정리 후 관계를 분석
+- 기획서에 없는 수치/데이터를 만들어내지 마세요
+- 참조한 워크북/시트 목록을 마지막에 `[출처: ...]` 형식으로 정리"""
+
+
+_BASIC_SYNTHESIS_PROMPT = """당신은 모바일 MMORPG "Project K"의 기획 전문가입니다.
+아래 기획 문서를 읽고 "{query}"에 대해 체계적으로 답변하세요.
+
+## 답변 원칙
+- 관련 정보를 **빠짐없이** 포함
+- 구조화된 Markdown 형식 (헤더, 테이블, 리스트 적극 활용)
+- 출처(워크북/시트)를 답변 내에 명시
+- 시스템 개요 → 핵심 메커니즘 → 세부 규칙 → 관련 시스템 순으로 서술
+- 수치, 조건, 규칙 등 구체적 데이터는 반드시 포함
+- 기획서에 없는 내용은 만들어내지 마세요"""
+
+
+def _estimate_scan_tokens(scan_result: dict) -> int:
+    """scan 결과의 전체 토큰 수 추정."""
+    total = 0
+    for wb, chunks in scan_result["workbook_groups"].items():
+        for c in chunks:
+            total += c.get("tokens", int(len(c.get("text", "")) * 0.5))
+    return total
+
+
+# 토큰 버짓: 검색된 청크의 토큰 합이 이 값을 초과하면 딥 리서치로 자동 전환
+# 이유: 청크 68K → _load_full_sheets()로 전체 시트 로드 시 ~219K (증폭 ~3x)
+#       → Sonnet 200K 한계 초과. 50K 이하면 전체 시트 로드해도 ~150K로 안전.
+TOKEN_BUDGET = 50000
+
+# Sonnet 200K 컨텍스트에서 문서 할당 한계
+# 200K - 시스템프롬프트(5K) - 출력(16K) - 여유(3K) ≈ 175K → 안전하게 160K
+_DIRECT_CONTEXT_LIMIT = 160000
+
+
+def deep_research(query: str, plan: dict, scan_result: dict,
+                  progress_callback=None,
+                  model: str = "claude-opus-4-5",
+                  prompt_style: str = "검증세트 최적화") -> dict:
+    """딥 리서치 파이프라인.
+
+    전략 자동 선택:
+    - 전체 토큰 ≤ 160K → 시트 원본을 Sonnet에 직접 전달 (품질 최고)
+    - 전체 토큰 > 160K → Scratchpad Loop (순차 Haiku 분석 + 누적 메모 → Sonnet 종합)
+      각 워크북을 순차적으로 분석하면서 이전 발견 내용을 스크래치패드에 누적.
+      3번째 워크북 분석 시 1~2번 결과를 알고 있으므로 교차 참조가 자연스럽게 수행됨.
+
+    Args:
+        query: 사용자 질문
+        plan: Planning 결과
+        scan_result: scan_all_related_chunks()의 결과
+        progress_callback: fn(step_name, detail) — 진행 상황 콜백 (Streamlit용)
+        model: 답변 생성 모델
+        prompt_style: "검증세트 최적화" 또는 "기본"
+    """
+    trace = []
+    total_tokens = 0
+    t0 = time.time()
+
+    groups = scan_result["workbook_groups"]
+    sorted_wbs = sorted(groups.keys(), key=lambda wb: len(groups[wb]), reverse=True)
+
+    # ── 전략 결정: 직접 로드 vs Scratchpad Loop ──
+    estimated_tokens = _estimate_scan_tokens(scan_result)
+    use_direct = estimated_tokens <= _DIRECT_CONTEXT_LIMIT
+
+    if use_direct:
+        # ════════════════════════════════════════
+        #  전략 A: 시트 원본 직접 Sonnet에 전달
+        # ════════════════════════════════════════
+        if progress_callback:
+            progress_callback("direct_load", f"{len(sorted_wbs)}개 문서 원본 직접 분석 (~{estimated_tokens:,} 토큰)")
+
+        # 워크북별 → 시트별로 원본 청크를 조합
+        context_parts = []
+        for wb in sorted_wbs:
+            wb_chunks = sorted(groups[wb], key=lambda c: (c.get("sheet", ""), c.get("section_path", "")))
+            # 시트별 그룹화
+            sheet_sections = {}
+            for c in wb_chunks:
+                sh = c.get("sheet", "")
+                sheet_sections.setdefault(sh, []).append(c)
+
+            wb_parts = []
+            for sh, s_chunks in sheet_sections.items():
+                text_parts = []
+                for c in s_chunks:
+                    sec = c.get("section_path", "")
+                    text = c.get("text", "")
+                    if sec:
+                        text_parts.append(f"### {sec}\n{text}")
+                    else:
+                        text_parts.append(text)
+                wb_parts.append(f"### 📄 {sh}\n\n" + "\n\n".join(text_parts))
+
+            context_parts.append(f"## 📁 {wb}\n\n" + "\n\n---\n\n".join(wb_parts))
+
+        synthesis_context = "\n\n════════════════════\n\n".join(context_parts)
+
+        trace.append({
+            "step": "deep_research_direct_load",
+            "description": f"{len(sorted_wbs)}개 워크북 시트 원본 직접 로드 ({estimated_tokens:,} 토큰, Haiku 요약 생략)",
+            "workbooks": len(sorted_wbs),
+            "chunks": scan_result["total_chunks"],
+            "estimated_tokens": estimated_tokens,
+            "seconds": round(time.time() - t0, 1),
+        })
+
+        # LLM에 직접 전달
+        if progress_callback:
+            progress_callback("synthesis", f"{model}이 {len(sorted_wbs)}개 문서 원본을 직접 분석 중...")
+
+        t_synth = time.time()
+        synth_base = _BASIC_SYNTHESIS_PROMPT if prompt_style == "기본" else _SYNTHESIS_PROMPT
+        system_prompt = synth_base.format(query=query)
+        user_msg = f"## 질문\n{query}\n\n## 관련 문서 원본 ({len(sorted_wbs)}개 문서, {scan_result['total_chunks']}개 청크)\n\n{synthesis_context}"
+
+        try:
+            result = call_bedrock(
+                messages=[{"role": "user", "content": user_msg}],
+                system=system_prompt,
+                model=model,
+                max_tokens=16384,
+                temperature=0,
+            )
+            answer = result["text"]
+            synth_tokens = result.get("input_tokens", 0) + result.get("output_tokens", 0)
+        except Exception as e:
+            answer = f"(종합 실패: {e})\n\n문서 원본:\n\n" + synthesis_context[:5000]
+            synth_tokens = 0
+
+        total_tokens += synth_tokens
+        synth_time = time.time() - t_synth
+
+        trace.append({
+            "step": "deep_research_synthesis",
+            "model": model,
+            "description": f"{len(sorted_wbs)}개 문서 원본을 {model}이 직접 분석하여 답변 생성 (prompt_style={prompt_style})",
+            "system_prompt": system_prompt,
+            "user_prompt": user_msg[:3000] + "..." if len(user_msg) > 3000 else user_msg,
+            "tokens": synth_tokens,
+            "seconds": round(synth_time, 1),
+        })
+
+        # group_summaries는 빈 리스트 (직접 분석이므로 중간 요약 없음)
+        group_results = [
+            {"workbook": wb, "summary": "(직접 분석)", "chunks_count": len(groups[wb]),
+             "tokens": 0, "seconds": 0, "status": "direct"}
+            for wb in sorted_wbs
+        ]
+
+    else:
+        # ════════════════════════════════════════
+        #  전략 B: Scratchpad Loop (순차 분석 + 누적 메모)
+        #  Gemini/Claude 연구 기능처럼 각 워크북을 순차적으로 분석하며
+        #  이전 발견 내용을 스크래치패드에 누적 → 교차 참조 가능
+        # ════════════════════════════════════════
+        if progress_callback:
+            progress_callback("scratchpad_start",
+                              f"{len(sorted_wbs)}개 워크북 Scratchpad 순차 분석 시작 (~{estimated_tokens:,} 토큰)")
+
+        group_results = []
+        scratchpad = ""
+        t_group = time.time()
+
+        for idx, wb in enumerate(sorted_wbs):
+            if progress_callback:
+                progress_callback("scratchpad_step",
+                                  f"[{idx + 1}/{len(sorted_wbs)}] {wb} 분석 중... ({len(groups[wb])}청크)")
+
+            result = _analyze_workbook_with_scratchpad(query, wb, groups[wb], scratchpad)
+            group_results.append(result)
+            total_tokens += result.get("tokens", 0)
+
+            # 스크래치패드에 이번 분석 결과 누적
+            if result["status"] == "ok":
+                scratchpad += f"\n\n### 📁 {wb} ({result['chunks_count']}청크)\n{result['summary']}"
+
+            if progress_callback:
+                progress_callback("scratchpad_done",
+                                  f"[{idx + 1}/{len(sorted_wbs)}] {wb}: {result['chunks_count']}청크 → {result['status']}")
+
+        group_time = time.time() - t_group
+
+        trace.append({
+            "step": "deep_research_scratchpad",
+            "model": "claude-opus-4-5",
+            "description": f"{len(sorted_wbs)}개 워크북을 Scratchpad Loop로 순차 분석 ({estimated_tokens:,} 토큰 > {_DIRECT_CONTEXT_LIMIT:,} 한계)",
+            "groups": [
+                {
+                    "workbook": r["workbook"],
+                    "chunks_count": r["chunks_count"],
+                    "tokens": r["tokens"],
+                    "seconds": r["seconds"],
+                    "status": r["status"],
+                    "summary_preview": r["summary"][:200],
+                }
+                for r in group_results
+            ],
+            "tokens": sum(r["tokens"] for r in group_results),
+            "seconds": round(group_time, 1),
+        })
+
+        # Step 2: 스크래치패드 전체를 기반으로 최종 종합
+        if progress_callback:
+            progress_callback("synthesis", f"{model}이 스크래치패드 기반 최종 답변 생성 중...")
+
+        t_synth = time.time()
+
+        synth_base = _BASIC_SYNTHESIS_PROMPT if prompt_style == "기본" else _SYNTHESIS_PROMPT
+        system_prompt = synth_base.format(query=query)
+        user_msg = (
+            f"## 질문\n{query}\n\n"
+            f"## 분석 노트 (Scratchpad) — {len(group_results)}개 문서 순차 분석 결과\n"
+            f"아래는 각 문서를 순차적으로 분석하며 누적한 발견 내용입니다. "
+            f"교차 참조와 연결 관계가 이미 식별되어 있습니다.\n"
+            f"{scratchpad}"
+        )
+
+        try:
+            result = call_bedrock(
+                messages=[{"role": "user", "content": user_msg}],
+                system=system_prompt,
+                model=model,
+                max_tokens=16384,
+                temperature=0,
+            )
+            answer = result["text"]
+            synth_tokens = result.get("input_tokens", 0) + result.get("output_tokens", 0)
+        except Exception as e:
+            answer = f"(종합 실패: {e})\n\n스크래치패드:\n\n" + scratchpad
+            synth_tokens = 0
+
+        total_tokens += synth_tokens
+        synth_time = time.time() - t_synth
+
+        trace.append({
+            "step": "deep_research_synthesis",
+            "model": model,
+            "description": f"Scratchpad ({len(group_results)}개 문서 분석 노트)를 {model}이 종합하여 최종 답변 생성",
+            "system_prompt": system_prompt,
+            "user_prompt": user_msg[:3000] + "..." if len(user_msg) > 3000 else user_msg,
+            "tokens": synth_tokens,
+            "seconds": round(synth_time, 1),
+        })
+
+    total_time = time.time() - t0
+
+    all_source_chunks = []
+    for wb in sorted_wbs:
+        for c in groups[wb]:
+            all_source_chunks.append(c)
+
+    return {
+        "answer": answer,
+        "chunks": all_source_chunks,
+        "group_summaries": group_results,
+        "trace": trace,
+        "confidence": "high",
+        "total_tokens": total_tokens,
+        "total_api_seconds": round(total_time, 1),
+        "chunks_analyzed": scan_result["total_chunks"],
+        "workbooks_analyzed": len(sorted_wbs),
+        "strategy": "direct" if use_direct else "scratchpad",
+        "estimated_context_tokens": estimated_tokens,
     }

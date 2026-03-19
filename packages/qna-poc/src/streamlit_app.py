@@ -5,10 +5,13 @@ ChatGPT 스타일 대화형 인터페이스.
 실행: cd packages/qna-poc && streamlit run src/streamlit_app.py
 """
 
+import logging
 import os
 import re
 import sys
+import threading
 import time
+import traceback
 import uuid
 from datetime import datetime
 from pathlib import Path
@@ -205,10 +208,11 @@ def _create_thread() -> dict:
     tid = str(uuid.uuid4())[:8]
     return {
         "id": tid,
-        "title": "새 대화",
+        "title": "...",
         "created_at": datetime.now().isoformat(),
         "messages": [],
         "feedback": {},
+        "processing": None,
     }
 
 
@@ -226,13 +230,293 @@ def _auto_title(question: str, max_len: int = 20) -> str:
     return title[:max_len] + "…" if len(title) > max_len else title
 
 
+def _agent_worker(proc: dict):
+    """백그라운드 스레드에서 Agent 파이프라인 실행. st.* 절대 사용 금지."""
+    try:
+        prompt = proc["prompt"]
+        role = proc["role"]
+        p_model = proc["planning_model"]
+        a_model = proc["answer_model"]
+        r_model = proc["reflection_model"]
+        p_style = proc["prompt_style"]
+        conv_hist = proc["conv_history"]
+
+        # ── Step 1: Planning ──
+        proc["status"] = "planning"
+        proc["step_detail"] = "🧠 질문을 분석하고 있습니다..."
+        t1 = time.time()
+        plan = plan_search(prompt, role=role, model=p_model)
+        plan_time = time.time() - t1
+        proc["plan"] = plan
+        proc["total_tokens"] += plan.get("_tokens", 0)
+
+        key_systems = plan.get("key_systems", [])
+        query_type = plan.get("query_type", "?")
+        sys_display = ", ".join(key_systems[:3]) if key_systems else "자동 검색"
+
+        proc["trace"].append({
+            "step": "planning", "model": p_model,
+            "description": f"질문 분석 → {sys_display}",
+            "output": {
+                "key_systems": key_systems, "query_type": query_type,
+                "search_keywords": plan.get("search_keywords", []),
+                "search_plan": plan.get("search_plan", []),
+                "reasoning": plan.get("reasoning", ""),
+            },
+            "llm_raw_response": plan.get("_raw_response", ""),
+            "system_prompt": plan.get("_system_prompt", ""),
+            "user_prompt": plan.get("_user_prompt", ""),
+            "tokens": plan.get("_tokens", 0),
+            "seconds": round(plan_time, 1),
+        })
+
+        # ── Step 2: Search ──
+        proc["status"] = "searching"
+        proc["step_detail"] = "🔎 기획서에서 관련 내용을 검색하고 있습니다..."
+        t2 = time.time()
+        chunks = execute_search(plan, prompt)
+        search_time = time.time() - t2
+
+        context_tokens = sum(c.get("tokens", 0) for c in chunks)
+        workbooks_found = sorted(set(c.get("workbook", "?") for c in chunks))
+        use_deep = context_tokens > TOKEN_BUDGET
+        proc["chunks"] = chunks
+        proc["context_tokens"] = context_tokens
+        proc["use_deep_research"] = use_deep
+
+        source_dist = {}
+        for c in chunks:
+            src = c.get("source", "unknown")
+            source_dist[src] = source_dist.get(src, 0) + 1
+
+        tools_used = ["retrieve(hybrid)"]
+        for step in plan.get("search_plan", []):
+            tool_name = step.get("tool", "retrieve")
+            tool_args = step.get("args", {})
+            if tool_name == "section_search":
+                tools_used.append(f"section_search(workbook={tool_args.get('workbook', '?')})")
+            elif tool_name == "kg_related":
+                tools_used.append(f"kg_related(system={tool_args.get('system', '?')})")
+
+        proc["trace"].append({
+            "step": "search", "model": None,
+            "description": f"하이브리드 검색 → {len(chunks)}개 청크",
+            "tools_used": tools_used,
+            "chunks_count": len(chunks),
+            "context_tokens": context_tokens,
+            "token_budget": TOKEN_BUDGET,
+            "auto_deep_research": use_deep,
+            "workbooks_found": workbooks_found,
+            "source_distribution": source_dist,
+            "all_chunks": [
+                {
+                    "rank": idx + 1,
+                    "workbook": c.get("workbook", "?"),
+                    "sheet": c.get("sheet", "?"),
+                    "section_path": c.get("section_path", ""),
+                    "score": round(c.get("score", 0), 4),
+                    "source": c.get("source", "?"),
+                    "tokens": c.get("tokens", 0),
+                    "has_mermaid": c.get("has_mermaid", False),
+                    "has_table": c.get("has_table", False),
+                    "has_images": c.get("has_images", False),
+                    "text_preview": c.get("text", "")[:150],
+                }
+                for idx, c in enumerate(chunks)
+            ],
+            "seconds": round(search_time, 1),
+        })
+
+        # ── Deep Research / 일반 답변 분기 ──
+        dr_sources = None
+        if use_deep:
+            proc["status"] = "deep_scan"
+            proc["step_detail"] = "📚 전체 관련 문서를 스캔하고 있습니다..."
+            scan = scan_all_related_chunks(prompt, plan)
+
+            proc["status"] = "deep_research"
+            wb_count = len(scan["workbook_summary"])
+            total_related = scan["total_chunks"]
+            proc["step_detail"] = f"🔬 딥 리서치 — {wb_count}개 문서, {total_related}개 청크 분석 중..."
+
+            def _progress(step_name, detail):
+                proc["step_detail"] = f"📝 {detail}"
+
+            dr_result = deep_research(prompt, plan, scan, progress_callback=_progress,
+                                      model=a_model, prompt_style=p_style)
+            answer = dr_result["answer"]
+            chunks = dr_result["chunks"]
+            proc["trace"].extend(dr_result["trace"])
+            proc["total_tokens"] += dr_result["total_tokens"]
+            confidence = dr_result["confidence"]
+
+            dr_sources = []
+            for gs in dr_result["group_summaries"]:
+                dr_sources.append({
+                    "workbook": gs["workbook"],
+                    "sheet": f"{gs['chunks_count']}개 청크 분석",
+                    "section_path": "", "score": 0,
+                })
+            chunks = []
+            proc["dr_result"] = dr_result
+        else:
+            # ── Step 3: Answer ──
+            proc["status"] = "answering"
+            proc["step_detail"] = "✍️ 답변을 생성하고 있습니다..."
+            t3 = time.time()
+            gen_result = generate_agent_answer(
+                prompt, chunks, role, key_systems=key_systems, model=a_model,
+                conversation_history=conv_hist or None, prompt_style=p_style,
+            )
+            gen_time = time.time() - t3
+            proc["total_tokens"] += gen_result.get("tokens", 0)
+            answer = gen_result["answer"]
+
+            proc["trace"].append({
+                "step": "answer_generation", "model": a_model,
+                "description": f"답변 생성 ({gen_time:.1f}초)",
+                "input": {
+                    "chunks_count": min(10, len(chunks)),
+                    "key_systems_priority": key_systems,
+                    "role": role,
+                    "detail_level": gen_result.get("_detail_level", "상세"),
+                    "max_tokens": gen_result.get("_max_tokens", 4096),
+                },
+                "answer_preview": answer[:200] + "..." if len(answer) > 200 else answer,
+                "tokens": gen_result.get("tokens", 0),
+                "input_tokens": gen_result.get("input_tokens", 0),
+                "output_tokens": gen_result.get("output_tokens", 0),
+                "system_prompt": gen_result.get("_system_prompt", ""),
+                "user_prompt": gen_result.get("_user_prompt", ""),
+                "seconds": round(gen_time, 1),
+            })
+
+            # ── Step 4: Reflection ──
+            proc["status"] = "reflecting"
+            proc["step_detail"] = "🪞 답변 품질을 검증하고 있습니다..."
+            t4 = time.time()
+            reflection = reflect_on_answer(prompt, answer, chunks, plan, model=r_model)
+            ref_time = time.time() - t4
+            proc["total_tokens"] += reflection.get("_tokens", 0)
+            confidence = reflection.get("confidence", "medium")
+
+            # short-circuit인 경우 (LLM 미호출, FAIL_PATTERNS 매칭) 별도 표시
+            _is_shortcircuit = reflection.get("_tokens", 0) == 0 and not reflection.get("is_sufficient", True)
+            if _is_shortcircuit:
+                _ref_desc = "답변 내 정보 부족 감지 — 재검색 결정"
+            else:
+                _ref_desc = f"자체 검증 — 신뢰도: {confidence}"
+
+            proc["trace"].append({
+                "step": "reflection", "model": r_model if not _is_shortcircuit else None,
+                "description": _ref_desc,
+                "output": {
+                    "is_sufficient": reflection.get("is_sufficient", True),
+                    "confidence": confidence,
+                    "missing_info": reflection.get("missing_info", ""),
+                    "retry_query": reflection.get("retry_query", ""),
+                    "retry_systems": reflection.get("retry_systems", []),
+                },
+                "tokens": reflection.get("_tokens", 0),
+                "raw_response": reflection.get("_raw_response", ""),
+                "system_prompt": reflection.get("_system_prompt", ""),
+                "user_prompt": reflection.get("_user_prompt", ""),
+                "seconds": round(ref_time, 1),
+            })
+
+            # ── Step 4b: Retry ──
+            if not reflection.get("is_sufficient", True):
+                proc["status"] = "retrying"
+                proc["step_detail"] = "🔄 정보가 부족합니다. 재검색 중..."
+                t5 = time.time()
+                extra_chunks = execute_retry_search(reflection, prompt, chunks)
+                if extra_chunks:
+                    merged = {c["id"]: c for c in chunks}
+                    for c in extra_chunks:
+                        if c["id"] not in merged:
+                            merged[c["id"]] = c
+                    chunks = sorted(merged.values(), key=lambda x: x.get("score", 0), reverse=True)[:20]
+                gen_result2 = generate_agent_answer(
+                    prompt, chunks, role, key_systems=key_systems, model=a_model,
+                    conversation_history=conv_hist or None, prompt_style=p_style,
+                )
+                retry_time = time.time() - t5
+                proc["total_tokens"] += gen_result2.get("tokens", 0)
+                answer = gen_result2["answer"]
+                proc["trace"].append({
+                    "step": "retry", "model": a_model,
+                    "description": f"재검색 + 재답변 (+{len(extra_chunks)}개)",
+                    "extra_chunks": len(extra_chunks),
+                    "tokens": gen_result2.get("tokens", 0),
+                    "seconds": round(retry_time, 1),
+                })
+
+        # ── 완료: 결과 조립 ──
+        total_time = time.time() - proc["started_at"]
+        if dr_sources:
+            sources = dr_sources
+        else:
+            sources = []
+            seen = set()
+            for chunk in chunks:
+                key = f"{chunk.get('workbook', '')}/{chunk.get('sheet', '')}"
+                if key not in seen:
+                    seen.add(key)
+                    sources.append({
+                        "workbook": chunk.get("workbook", ""),
+                        "sheet": chunk.get("sheet", ""),
+                        "section_path": chunk.get("section_path", ""),
+                        "score": round(chunk.get("combined_score", chunk.get("score", 0)), 3),
+                    })
+
+        meta = {
+            "confidence": confidence,
+            "total_tokens": proc["total_tokens"],
+            "api_seconds": round(total_time, 1),
+            "sources": sources,
+            "trace": proc["trace"],
+        }
+
+        # DB 저장
+        qna_id = save_qna(
+            question=prompt, answer=answer, role=role,
+            confidence=confidence, total_tokens=proc["total_tokens"],
+            api_seconds=round(total_time, 1), sources=sources, trace=proc["trace"],
+            planning_model=p_model, answer_model=a_model, reflection_model=r_model,
+        )
+
+        proc["final_message"] = {
+            "role": "assistant",
+            "content": answer,
+            "meta": meta,
+            "qna_id": qna_id,
+            "_chunks": chunks,
+            "_key_systems": key_systems,
+            "_question": prompt,
+            "_used_model": a_model,
+            "_used_prompt_style": p_style,
+        }
+        proc["finished_at"] = time.time()
+        proc["status"] = "done"
+
+    except Exception as e:
+        proc["status"] = "error"
+        proc["error"] = traceback.format_exc()
+        proc["finished_at"] = time.time()
+        logging.getLogger(__name__).error(f"Agent worker error: {e}", exc_info=True)
+
+
 if "threads" not in st.session_state:
     initial = _create_thread()
     st.session_state.threads = {initial["id"]: initial}
     st.session_state.thread_order = [initial["id"]]
     st.session_state.active_thread_id = initial["id"]
+if "_workers" not in st.session_state:
+    st.session_state._workers = {}  # tid -> threading.Thread
 
 _sync_active_thread()
+
+log = logging.getLogger(__name__)
 
 
 def format_confidence(conf: str) -> str:
@@ -944,7 +1228,7 @@ with st.sidebar:
     st.title("🎮 Project K QnA")
 
     # 새 대화 버튼
-    if st.button("➕ 새 대화", use_container_width=True, type="primary"):
+    if st.button("➕ 새 대화", use_container_width=True):
         new_thread = _create_thread()
         st.session_state.threads[new_thread["id"]] = new_thread
         st.session_state.thread_order.insert(0, new_thread["id"])
@@ -961,14 +1245,18 @@ with st.sidebar:
         _is_active = (_tid == st.session_state.active_thread_id)
         _title = _thread["title"]
         _has_msgs = len(_thread["messages"]) > 0
+        _is_thread_busy = bool(
+            _thread.get("processing") and _thread["processing"]["status"] not in ("done", "error")
+        )
 
         _col_btn, _col_del = st.columns([5, 1])
         with _col_btn:
+            _prefix = "⏳ " if _is_thread_busy else ("💬 " if _is_active else "")
             if st.button(
-                f"{'💬 ' if _is_active else ''}{_title}",
+                f"{_prefix}{_title}",
                 key=f"thread_{_tid}",
                 use_container_width=True,
-                type="primary" if _is_active else "secondary",
+                type="secondary",
             ):
                 if not _is_active:
                     st.session_state.active_thread_id = _tid
@@ -1012,12 +1300,54 @@ if "reflection_model" not in st.session_state:
 if "prompt_style" not in st.session_state:
     st.session_state.prompt_style = "기본"
 
-# 처리 중 플래그 (chat_input split-rerun 패턴)
-_is_processing = "_pending_prompt" in st.session_state
+# 처리 중 플래그 (활성 스레드 기준)
+_active_proc = st.session_state.threads[st.session_state.active_thread_id].get("processing")
+_is_processing = bool(_active_proc and _active_proc["status"] not in ("done", "error"))
+
+
+def _start_agent(question: str):
+    """질문을 받아 백그라운드 Agent 워커를 시작한다."""
+    tid = st.session_state.active_thread_id
+    thread = st.session_state.threads[tid]
+    thread["messages"].append({"role": "user", "content": question})
+    if thread["title"] == "...":
+        thread["title"] = _auto_title(question)
+
+    # 이전 대화 히스토리 수집 (최근 3턴)
+    conv_history = []
+    msgs = thread["messages"][:-1]
+    for i in range(0, len(msgs) - 1, 2):
+        if msgs[i]["role"] == "user" and i + 1 < len(msgs) and msgs[i + 1]["role"] == "assistant":
+            conv_history.append((msgs[i]["content"], msgs[i + 1]["content"]))
+    conv_history = conv_history[-3:]
+
+    proc = {
+        "status": "pending", "step_detail": "시작 중...",
+        "prompt": question, "role": st.session_state.role,
+        "planning_model": st.session_state.planning_model,
+        "answer_model": st.session_state.answer_model,
+        "reflection_model": st.session_state.reflection_model,
+        "prompt_style": st.session_state.prompt_style,
+        "conv_history": conv_history,
+        "started_at": time.time(), "finished_at": None,
+        "plan": None, "chunks": None, "context_tokens": 0,
+        "use_deep_research": False, "dr_result": None,
+        "total_tokens": 0, "trace": [],
+        "final_message": None, "error": None,
+    }
+    thread["processing"] = proc
+
+    worker = threading.Thread(target=_agent_worker, args=(proc,), daemon=True)
+    st.session_state._workers[tid] = worker
+    worker.start()
+    st.rerun()
 
 
 # ── 메인: 웰컴 화면 or 대화 ──
-if not st.session_state.messages:
+_sync_active_thread()  # 사이드바에서 스레드 전환 후 messages 동기화 보장
+_active_thread_ref = st.session_state.threads[st.session_state.active_thread_id]
+_has_messages = len(_active_thread_ref["messages"]) > 0 or _active_thread_ref.get("processing")
+if not _has_messages:
     # 웰컴 전용 CSS
     st.markdown("""<style>
     /* 웰컴: 입력 박스를 프리셋 바로 아래로 올리기
@@ -1079,6 +1409,7 @@ if not st.session_state.messages:
         "스킬 시스템 설명해줘",
         "전투 시스템 알려줘",
         "캐릭터 성장 정리해줘",
+        '텔레포트 시도 시 "거리가 짧아 텔레포트를 이용하지 않았습니다"라는 메시지가 나오는 조건은?',
     ]
     _pad_l, _center, _pad_r = st.columns([2, 1.5, 2])
     with _center:
@@ -1086,12 +1417,24 @@ if not st.session_state.messages:
         for _i, _text in enumerate(_presets):
             with (_c1 if _i % 2 == 0 else _c2):
                 if st.button(_text, key=f"preset_{_i}", use_container_width=True):
-                    st.session_state.messages.append({"role": "user", "content": _text})
-                    _t = st.session_state.threads[st.session_state.active_thread_id]
-                    if _t["title"] == "새 대화":
-                        _t["title"] = _auto_title(_text)
-                    st.session_state["_pending_prompt"] = _text
-                    st.rerun()
+                    _start_agent(_text)
+
+else:
+    # 채팅 모드 전용 CSS — 입력 영역 하단 고정 + 너비 제한
+    st.markdown("""<style>
+    div[data-testid="stBottom"] {
+        position: fixed !important;
+    }
+    div[data-testid="stBottomBlockContainer"] {
+        max-width: 900px !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+    }
+    /* 입력창이 고정되므로 콘텐츠 하단 여백 확보 */
+    section[data-testid="stMain"] .block-container {
+        padding-bottom: 120px !important;
+    }
+    </style>""", unsafe_allow_html=True)
 
 # ── 대화 히스토리 렌더링 ──
 for i, msg in enumerate(st.session_state.messages):
@@ -1287,356 +1630,56 @@ answer_model = st.session_state.answer_model
 reflection_model = st.session_state.reflection_model
 prompt_style = st.session_state.prompt_style
 
-# ── 입력 ──
-if prompt := st.chat_input("기획 질문을 입력하세요...", disabled=_is_processing):
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    _t = st.session_state.threads[st.session_state.active_thread_id]
-    if _t["title"] == "새 대화":
-        _t["title"] = _auto_title(prompt)
-    st.session_state["_pending_prompt"] = prompt
-    st.rerun()
+# ── 입력 (스레드별 독립 key로 입력 내용 격리) ──
+if prompt := st.chat_input("기획 질문을 입력하세요...", disabled=_is_processing, key=f"chat_{st.session_state.active_thread_id}"):
+    _start_agent(prompt)
 
-# ── 질문 처리 (split-rerun: 옵션 비활성 상태에서 실행) ──
-if "_pending_prompt" in st.session_state:
-    prompt = st.session_state.pop("_pending_prompt")
+# ── 백그라운드 처리 상태 확인 + 완료 결과 반영 ──
+_active_thread = st.session_state.threads[st.session_state.active_thread_id]
+_proc = _active_thread.get("processing")
 
-    # 이전 대화 히스토리 수집 (최근 3턴, 현재 질문 제외)
-    conv_history = []
-    msgs = st.session_state.messages[:-1]  # 현재 user 메시지 제외
-    for i in range(0, len(msgs) - 1, 2):
-        if msgs[i]["role"] == "user" and i + 1 < len(msgs) and msgs[i + 1]["role"] == "assistant":
-            conv_history.append((msgs[i]["content"], msgs[i + 1]["content"]))
-    conv_history = conv_history[-3:]  # 최근 3턴
+if _proc is not None:
+    if _proc["status"] == "done":
+        # 완료: 결과를 messages로 이동, processing 제거
+        _active_thread["messages"].append(_proc["final_message"])
+        _active_thread["processing"] = None
+        st.session_state._workers.pop(st.session_state.active_thread_id, None)
+        st.rerun()
 
-    # Agent 호출 — 각 단계를 개별 실행하며 실시간 상태 표시
-    with st.chat_message("assistant"):
-        status = st.status("Agent가 답변을 준비하고 있습니다...", expanded=True)
-        trace = []
-        total_tokens = 0
-        t0 = time.time()
+    elif _proc["status"] == "error":
+        # 에러 표시
+        with st.chat_message("assistant"):
+            st.error(f"오류 발생: {_proc.get('error', '알 수 없는 오류')}")
+        _active_thread["processing"] = None
+        st.session_state._workers.pop(st.session_state.active_thread_id, None)
 
-        with status:
-            # ── Step 1: Planning ──
-            t1 = time.time()
-            with st.spinner("🧠 질문을 분석하고 있습니다..."):
-                plan = plan_search(prompt, role=role, model=planning_model)
-            plan_time = time.time() - t1
-            total_tokens += plan.get("_tokens", 0)
-
-            key_systems = plan.get("key_systems", [])
-            query_type = plan.get("query_type", "?")
-            sys_display = ", ".join(key_systems[:3]) if key_systems else "자동 검색"
-            st.write(f"✅ 분석 완료 — **{sys_display}** 검색 예정 ({plan_time:.1f}초)")
-
-            trace.append({
-                "step": "planning", "model": planning_model,
-                "description": "질문 분석 + 워크북 선택 + KG 관계 참조",
-                "output": {
-                    "key_systems": key_systems,
-                    "query_type": query_type,
-                    "search_keywords": plan.get("search_keywords", []),
-                    "search_plan": plan.get("search_plan", []),
-                    "reasoning": plan.get("reasoning", ""),
-                },
-                "llm_raw_response": plan.get("_raw_response", ""),
-                "system_prompt": plan.get("_system_prompt", ""),
-                "user_prompt": plan.get("_user_prompt", ""),
-                "tokens": plan.get("_tokens", 0),
-                "seconds": round(plan_time, 1),
-            })
-
-            # ── Step 2: Search ──
-            t2 = time.time()
-            with st.spinner("🔎 기획서에서 관련 내용을 검색하고 있습니다..."):
-                chunks = execute_search(plan, prompt)
-            search_time = time.time() - t2
-
-            # 컨텍스트 토큰 계산 → 토큰 버짓 기반 자동 분기 결정
-            context_tokens = sum(c.get("tokens", 0) for c in chunks)
-            workbooks_found = sorted(set(c.get("workbook", "?") for c in chunks))
-            wb_short = [w.replace("PK_", "") for w in workbooks_found[:4]]
-            _use_deep_research = context_tokens > TOKEN_BUDGET
-
-            if _use_deep_research:
-                st.write(
-                    f"📊 **{len(chunks)}개** 청크, **{context_tokens:,}** 토큰 "
-                    f"(버짓 {TOKEN_BUDGET:,} 초과) → 딥 리서치 자동 전환"
-                )
-            else:
-                st.write(f"✅ **{len(chunks)}개** 청크 발견 — {', '.join(wb_short)} ({search_time:.1f}초)")
-
-            source_dist = {}
-            for c in chunks:
-                src = c.get("source", "unknown")
-                source_dist[src] = source_dist.get(src, 0) + 1
-
-            tools_used = ["retrieve(hybrid)"]
-            for step in plan.get("search_plan", []):
-                tool_name = step.get("tool", "retrieve")
-                tool_args = step.get("args", {})
-                if tool_name == "section_search":
-                    tools_used.append(f"section_search(workbook={tool_args.get('workbook', '?')})")
-                elif tool_name == "kg_related":
-                    tools_used.append(f"kg_related(system={tool_args.get('system', '?')})")
-
-            trace.append({
-                "step": "search", "model": None,
-                "description": "하이브리드 4레이어 검색",
-                "tools_used": tools_used,
-                "chunks_count": len(chunks),
-                "context_tokens": context_tokens,
-                "token_budget": TOKEN_BUDGET,
-                "auto_deep_research": _use_deep_research,
-                "workbooks_found": workbooks_found,
-                "source_distribution": source_dist,
-                "all_chunks": [
-                    {
-                        "rank": idx + 1,
-                        "workbook": c.get("workbook", "?"),
-                        "sheet": c.get("sheet", "?"),
-                        "section_path": c.get("section_path", ""),
-                        "score": round(c.get("score", 0), 4),
-                        "source": c.get("source", "?"),
-                        "tokens": c.get("tokens", 0),
-                        "has_mermaid": c.get("has_mermaid", False),
-                        "has_table": c.get("has_table", False),
-                        "has_images": c.get("has_images", False),
-                        "text_preview": c.get("text", "")[:150],
-                    }
-                    for idx, c in enumerate(chunks)
-                ],
-                "seconds": round(search_time, 1),
-            })
-
-            # ── 딥 리서치 / 일반 답변 자동 분기 ──
-            _dr_sources = None
-            if _use_deep_research:
-                # ── 딥 리서치 경로: Scratchpad Loop ──
-                with st.spinner("📚 전체 관련 문서를 스캔하고 있습니다..."):
-                    scan = scan_all_related_chunks(prompt, plan)
-                total_related = scan["total_chunks"]
-                wb_count = len(scan["workbook_summary"])
-
-                src = scan.get("source_stats", {})
-                ks_count = len(src.get("key_systems", []))
-                kw_count = len(src.get("keyword", []))
-                vec_count = len(src.get("vector", []))
-                parts = []
-                if ks_count:
-                    parts.append(f"Planning {ks_count}개")
-                if kw_count:
-                    parts.append(f"키워드 {kw_count}개")
-                if vec_count:
-                    parts.append(f"벡터 {vec_count}개")
-                source_detail = f" ({' + '.join(parts)})" if parts else ""
-                st.write(f"🔬 **딥 리서치 시작** — {wb_count}개 문서{source_detail}, {total_related}개 청크 전체 분석")
-
-                # Scratchpad 진행 상황 표시
-                _progress_placeholder = st.empty()
-
-                def _progress(step_name, detail):
-                    _progress_placeholder.caption(f"📝 {detail}")
-
-                dr_result = deep_research(prompt, plan, scan, progress_callback=_progress,
-                                          model=answer_model, prompt_style=prompt_style)
-                _progress_placeholder.empty()
-
-                # 전략 표시
-                strategy = dr_result.get("strategy", "scratchpad")
-                est_tokens = dr_result.get("estimated_context_tokens", 0)
-                if strategy == "direct":
-                    st.write(f"⚡ **원본 직접 분석** — {est_tokens:,} 토큰을 직접 전달")
-                else:
-                    st.write(f"📝 **Scratchpad 분석** — {est_tokens:,} 토큰 (순차 분석 + 교차 참조)")
-
-                answer = dr_result["answer"]
-                chunks = dr_result["chunks"]
-                trace.extend(dr_result["trace"])
-                total_tokens += dr_result["total_tokens"]
-                confidence = dr_result["confidence"]
-
-                _dr_sources = []
-                for gs in dr_result["group_summaries"]:
-                    _dr_sources.append({
-                        "workbook": gs["workbook"],
-                        "sheet": f"{gs['chunks_count']}개 청크 분석",
-                        "section_path": "",
-                        "score": 0,
-                    })
-                chunks = []
-
-                st.write(
-                    f"✅ 딥 리서치 완료 — "
-                    f"**{dr_result['workbooks_analyzed']}개 문서**, "
-                    f"**{dr_result['chunks_analyzed']}건** 분석 "
-                    f"({dr_result['total_api_seconds']:.1f}초)"
-                )
-
-                with st.expander(f"📊 워크북별 분석 ({len(dr_result['group_summaries'])}개)", expanded=False):
-                    for gs in dr_result["group_summaries"]:
-                        wb_name = gs["workbook"].replace("PK_", "").split("/")[-1]
-                        st.markdown(f"**{wb_name}** ({gs['chunks_count']}청크, {gs['seconds']:.1f}s)")
-                        st.caption(gs["summary"][:300] + "..." if len(gs["summary"]) > 300 else gs["summary"])
-                        st.divider()
-
-            else:
-                # ── 일반 답변 경로 ──
-
-                # ── Step 3: Answer Generation ──
-                t3 = time.time()
-                with st.spinner("✍️ 답변을 생성하고 있습니다..."):
-                    gen_result = generate_agent_answer(prompt, chunks, role, key_systems=key_systems, model=answer_model,
-                                                        conversation_history=conv_history or None,
-                                                        prompt_style=prompt_style)
-                gen_time = time.time() - t3
-                total_tokens += gen_result.get("tokens", 0)
-
-                answer = gen_result["answer"]
-                st.write(f"✅ 답변 생성 완료 ({gen_time:.1f}초)")
-
-                trace.append({
-                    "step": "answer_generation", "model": answer_model,
-                    "description": "검색 결과 기반 답변 생성",
-                    "input": {
-                        "chunks_count": min(10, len(chunks)),
-                        "key_systems_priority": key_systems,
-                        "role": role,
-                        "detail_level": gen_result.get("_detail_level", "상세"),
-                        "max_tokens": gen_result.get("_max_tokens", 4096),
-                    },
-                    "answer_preview": answer[:200] + "..." if len(answer) > 200 else answer,
-                    "tokens": gen_result.get("tokens", 0),
-                    "input_tokens": gen_result.get("input_tokens", 0),
-                    "output_tokens": gen_result.get("output_tokens", 0),
-                    "system_prompt": gen_result.get("_system_prompt", ""),
-                    "user_prompt": gen_result.get("_user_prompt", ""),
-                    "seconds": round(gen_time, 1),
-                })
-
-                # ── Step 4: Reflection ──
-                t4 = time.time()
-                with st.spinner("🪞 답변 품질을 검증하고 있습니다..."):
-                    reflection = reflect_on_answer(prompt, answer, chunks, plan, model=reflection_model)
-                ref_time = time.time() - t4
-                total_tokens += reflection.get("_tokens", 0)
-
-                confidence = reflection.get("confidence", "medium")
-
-                trace.append({
-                    "step": "reflection", "model": reflection_model,
-                    "description": "자체 품질 검증",
-                    "output": {
-                        "is_sufficient": reflection.get("is_sufficient", True),
-                        "confidence": confidence,
-                        "missing_info": reflection.get("missing_info", ""),
-                        "retry_query": reflection.get("retry_query", ""),
-                        "retry_systems": reflection.get("retry_systems", []),
-                    },
-                    "tokens": reflection.get("_tokens", 0),
-                    "raw_response": reflection.get("_raw_response", ""),
-                    "system_prompt": reflection.get("_system_prompt", ""),
-                    "user_prompt": reflection.get("_user_prompt", ""),
-                    "seconds": round(ref_time, 1),
-                })
-
-                # ── Step 4b: Retry if needed ──
-                if not reflection.get("is_sufficient", True):
-                    t5 = time.time()
-                    with st.spinner("🔄 정보가 부족합니다. 재검색 중..."):
-                        extra_chunks = execute_retry_search(reflection, prompt, chunks)
-                        if extra_chunks:
-                            merged = {c["id"]: c for c in chunks}
-                            for c in extra_chunks:
-                                if c["id"] not in merged:
-                                    merged[c["id"]] = c
-                            chunks = sorted(merged.values(), key=lambda x: x.get("score", 0), reverse=True)[:20]
-
-                        gen_result2 = generate_agent_answer(prompt, chunks, role, key_systems=key_systems, model=answer_model,
-                                                            conversation_history=conv_history or None,
-                                                            prompt_style=prompt_style)
-                    retry_time = time.time() - t5
-                    total_tokens += gen_result2.get("tokens", 0)
-                    answer = gen_result2["answer"]
-
-                    st.write(f"✅ 재검색 완료 — +{len(extra_chunks)}개 청크 추가 ({retry_time:.1f}초)")
-
-                    trace.append({
-                        "step": "retry", "model": answer_model,
-                        "description": "재검색 + 재답변",
-                        "extra_chunks": len(extra_chunks),
-                        "tokens": gen_result2.get("tokens", 0),
-                        "seconds": round(retry_time, 1),
-                    })
-                else:
-                    st.write(f"✅ 검증 통과 — 신뢰도: {confidence}")
-
-        total_time = time.time() - t0
-        status.update(label=f"완료 ({total_time:.1f}초)", state="complete", expanded=False)
-
-        # 답변 렌더링
-        render_answer_markdown(answer)
-
-        # 소스 추출 (딥 리서치: 워크북 단위 / 일반: 청크 단위)
-        if _dr_sources:
-            sources = _dr_sources
-        else:
-            sources = []
-            seen = set()
-            for chunk in chunks:
-                key = f"{chunk.get('workbook', '')}/{chunk.get('sheet', '')}"
-                if key not in seen:
-                    seen.add(key)
-                    sources.append({
-                        "workbook": chunk.get("workbook", ""),
-                        "sheet": chunk.get("sheet", ""),
-                        "section_path": chunk.get("section_path", ""),
-                        "score": round(chunk.get("combined_score", chunk.get("score", 0)), 3),
-                    })
-
-        api_seconds = round(total_time, 1)
-        meta = {
-            "confidence": confidence,
-            "total_tokens": total_tokens,
-            "api_seconds": api_seconds,
-            "sources": sources,
-            "trace": trace,
-        }
-
-        st.markdown(
-            f'<div class="metric-bar">'
-            f'신뢰도: {format_confidence(confidence)} · '
-            f'토큰: {total_tokens:,} · '
-            f'응답: {api_seconds}초'
-            f'</div>',
-            unsafe_allow_html=True,
-        )
-        render_sources(sources)
-        render_trace(trace)
-
-        # DB에 QnA 이력 저장
-        qna_id = save_qna(
-            question=prompt, answer=answer, role=role,
-            confidence=confidence, total_tokens=total_tokens,
-            api_seconds=api_seconds, sources=sources, trace=trace,
-            planning_model=planning_model, answer_model=answer_model,
-            reflection_model=reflection_model,
-        )
-
-        # 세션에 저장
-        msg_idx = len(st.session_state.messages)
-        st.session_state.messages.append({
-            "role": "assistant",
-            "content": answer,
-            "meta": meta,
-            "qna_id": qna_id,
-            "_chunks": chunks,
-            "_key_systems": key_systems,
-            "_question": prompt,
-            "_used_model": answer_model,
-            "_used_prompt_style": prompt_style,
-        })
-        render_feedback(msg_idx)
-        render_retry_panel(msg_idx)
-
-    # 답변 완료 → rerun하여 chat_input 다시 활성화
-    st.rerun()
+    else:
+        # 처리 중: st.fragment로 2초마다 자동 업데이트
+        # time.sleep() 대신 fragment(run_every=2) 사용 → 스크립트 즉시 완료 → 이전 렌더 잔존 방지
+        @st.fragment(run_every=2)
+        def _show_processing():
+            _at = st.session_state.threads[st.session_state.active_thread_id]
+            _p = _at.get("processing")
+            if not _p or _p["status"] in ("done", "error"):
+                st.rerun(scope="app")  # 완료/에러 → 전체 앱 리런
+                return
+            _elapsed = time.time() - _p["started_at"]
+            _status_labels = {
+                "pending": "시작 중...",
+                "planning": "🧠 질문을 분석하고 있습니다...",
+                "searching": "🔎 기획서에서 관련 내용을 검색하고 있습니다...",
+                "deep_scan": "📚 전체 관련 문서를 스캔하고 있습니다...",
+                "deep_research": "🔬 딥 리서치 진행 중...",
+                "answering": "✍️ 답변을 생성하고 있습니다...",
+                "reflecting": "🪞 답변 품질을 검증하고 있습니다...",
+                "retrying": "🔄 재검색 중...",
+                "finalizing": "💾 저장 중...",
+            }
+            _label = _status_labels.get(_p["status"], _p["status"])
+            with st.chat_message("assistant"):
+                with st.status(f"Agent가 답변을 준비하고 있습니다... ({_elapsed:.0f}초)", expanded=True):
+                    for _step in _p["trace"]:
+                        st.write(f"✅ {_step.get('description', _step['step'])} ({_step.get('seconds', 0):.1f}초)")
+                    _detail = _p.get("step_detail", "")
+                    st.write(f"⏳ {_detail}" if _detail else f"⏳ {_label}")
+        _show_processing()

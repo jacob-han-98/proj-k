@@ -272,3 +272,35 @@
   - `eval/verify_gt_llm.py` (Judge 채점 + 병렬 실행)
   - `eval/generate_gt_llm.py` (v2 질문 세트 69개)
   - `docs/AGENT_DESIGN.md`, `docs/UX_DEV_GUIDE.md` 신규
+
+---
+
+## ADR-015: 프론트엔드 전환 — Streamlit → React(Vite) SPA
+
+- **날짜**: 2026-03-19
+- **결정**: ADR-013의 Streamlit 1차 인터페이스를 건너뛰고, React + Vite SPA로 프론트엔드 직접 구축
+- **변경 전 (ADR-013 계획)**:
+  1. Streamlit 웹앱 (개발·검증용)
+  2. Slack 봇 (테스터 배포)
+  3. 피칭 성공 후 Next.js 프로덕션 전환
+- **변경 후 (실제 진행)**:
+  1. ~~Streamlit~~ → **React + Vite SPA** (개발·검증·데모용)
+  2. Slack 봇 (테스터 배포, 유지)
+  3. 피칭 성공 후 Next.js 전환 (React 컴포넌트 재사용)
+- **근거**:
+  1. **Streamlit의 구조적 한계**: Python 스크립트를 매번 위→아래 re-run하는 실행 모델이라, 멀티 스레드 대화 관리·localStorage 히스토리·SSE 스트리밍 같은 인터랙티브 기능 구현에 해킹스러운 우회가 필요
+  2. **Mermaid 렌더링 문제**: Streamlit의 iframe 격리 환경에서 Mermaid 다이어그램의 height 처리, 배경색 제어 등에 지속적 이슈 발생
+  3. **버릴 코드 최소화**: Streamlit UI는 6단계 Next.js 전환 시 전면 폐기 대상. 반면 React 컴포넌트는 Next.js로 거의 그대로 이관 가능 → 동일 시간을 투자하면 React가 자산으로 남음
+  4. **FastAPI 백엔드 준비 완료**: api.py v0.2.0이 SSE 스트리밍·CORS·대화 관리를 이미 지원하므로, 프론트엔드만 붙이면 되는 상황
+  5. **PoC 수준에 Vite가 적합**: Next.js의 SSR/라우팅/미들웨어는 현재 불필요. Vite + React의 경량 구성이 빠른 개발에 최적
+- **기술 스택**:
+  - React 19 + TypeScript + Vite 8
+  - react-markdown + remark-gfm (Markdown 렌더링)
+  - mermaid (다이어그램 렌더링)
+  - SSE (EventSource) → FastAPI StreamingResponse 연결
+  - localStorage 기반 대화 히스토리 (서버 저장 불필요)
+- **현재 상태**: 단일 파일 SPA (App.tsx ~320줄). PoC로 충분하며, 기능 확장 시 컴포넌트 분리 예정
+- **Next.js 전환 경로**: React 컴포넌트·CSS·API 호출 코드를 거의 그대로 가져갈 수 있어 마이그레이션 비용 낮음
+- **영향**:
+  - `packages/frontend/` 신규 (Vite + React SPA)
+  - ADR-013의 3단계 UX 전략이 사실상 2단계로 단순화

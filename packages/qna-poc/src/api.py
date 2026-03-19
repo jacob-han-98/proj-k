@@ -2,12 +2,15 @@
 api.py — FastAPI QnA 엔드포인트
 
 POST /ask          기획 QnA (Agent 파이프라인)
+POST /ask_stream   기획 QnA + SSE 스트리밍 (상태 + 결과)
 POST /search       검색만 (디버그용)
 GET  /systems      시스템 목록
 GET  /systems/{name}/related  관련 시스템
 GET  /health       헬스체크
 """
 
+import json
+import queue
 import threading
 import uuid
 from pathlib import Path
@@ -15,6 +18,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
@@ -120,6 +124,96 @@ def ask(req: AskRequest):
         api_seconds=result.get("total_api_seconds", 0),
         trace=result.get("trace"),
     )
+
+
+@app.post("/ask_stream")
+def ask_stream(req: AskRequest):
+    """기획 QnA + SSE 스트리밍.
+
+    NDJSON 형식으로 중간 상태와 최종 결과를 스트리밍:
+      {"type": "status", "message": "🧠 질문을 분석하고 있습니다..."}
+      {"type": "status", "message": "🔎 기획서에서 관련 내용을 검색하고 있습니다..."}
+      ...
+      {"type": "result", "data": { ...AskResponse... }}
+    """
+    conv_id = req.conversation_id or str(uuid.uuid4())
+
+    with _conv_lock:
+        conv_history = list(conversations.get(conv_id, []))
+
+    # status_callback → queue로 중간 상태 전달
+    status_q: queue.Queue[str | None] = queue.Queue()
+
+    def on_status(msg: str):
+        status_q.put(msg)
+
+    # agent_answer를 별도 스레드에서 실행
+    result_holder: list[dict] = []
+    error_holder: list[Exception] = []
+
+    def run_agent():
+        try:
+            res = agent_answer(
+                req.question, role=req.role,
+                model=req.model, prompt_style=req.prompt_style,
+                conversation_history=conv_history or None,
+                status_callback=on_status,
+            )
+            result_holder.append(res)
+        except Exception as e:
+            error_holder.append(e)
+        finally:
+            status_q.put(None)  # sentinel: 완료 신호
+
+    t = threading.Thread(target=run_agent, daemon=True)
+    t.start()
+
+    def event_generator():
+        while True:
+            msg = status_q.get()
+            if msg is None:
+                break
+            yield json.dumps({"type": "status", "message": msg}, ensure_ascii=False) + "\n"
+
+        t.join()
+
+        if error_holder:
+            yield json.dumps({"type": "error", "message": str(error_holder[0])}, ensure_ascii=False) + "\n"
+            return
+
+        result = result_holder[0]
+
+        # 소스 정보 추출 (동일 로직)
+        sources = []
+        seen = set()
+        for chunk in result.get("chunks", []):
+            key = f"{chunk.get('workbook', '')}/{chunk.get('sheet', '')}"
+            if key not in seen:
+                seen.add(key)
+                sources.append({
+                    "workbook": chunk.get("workbook", ""),
+                    "sheet": chunk.get("sheet", ""),
+                    "section_path": chunk.get("section_path", ""),
+                    "score": round(chunk.get("combined_score", chunk.get("score", 0)), 3),
+                })
+
+        # 대화 히스토리 저장
+        with _conv_lock:
+            history = conversations.get(conv_id, [])
+            history.append((req.question, result["answer"]))
+            conversations[conv_id] = history[-5:]
+
+        payload = {
+            "answer": result["answer"],
+            "confidence": result.get("confidence", "medium"),
+            "sources": sources[:10],
+            "conversation_id": conv_id,
+            "total_tokens": result.get("total_tokens", 0),
+            "api_seconds": result.get("total_api_seconds", 0),
+        }
+        yield json.dumps({"type": "result", "data": payload}, ensure_ascii=False) + "\n"
+
+    return StreamingResponse(event_generator(), media_type="application/x-ndjson")
 
 
 @app.post("/search", response_model=SearchResult)

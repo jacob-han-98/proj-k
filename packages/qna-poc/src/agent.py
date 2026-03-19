@@ -893,7 +893,8 @@ def execute_retry_search(reflection: dict, query: str, existing_chunks: list[dic
 def agent_answer(query: str, role: str = None,
                  conversation_history: list[tuple[str, str]] = None,
                  model: str = "claude-opus-4-5",
-                 prompt_style: str = "검증세트 최적화") -> dict:
+                 prompt_style: str = "검증세트 최적화",
+                 status_callback=None) -> dict:
     """Agent QnA 파이프라인.
 
     Args:
@@ -920,6 +921,7 @@ def agent_answer(query: str, role: str = None,
     log.debug(f"AGENT_START query='{query[:60]}' role={role}")
 
     # ── Step 1: Planning ──
+    if status_callback: status_callback("🧠 질문을 분석하고 있습니다...")
     t_plan = time.time()
     plan = plan_search(query, role)
     plan_time = time.time() - t_plan
@@ -947,6 +949,7 @@ def agent_answer(query: str, role: str = None,
     })
 
     # ── Step 2: Tool Use (Search) ──
+    if status_callback: status_callback("🔎 기획서에서 관련 내용을 검색하고 있습니다...")
     t_search = time.time()
     chunks = execute_search(plan, query)
     search_time = time.time() - t_search
@@ -1003,6 +1006,7 @@ def agent_answer(query: str, role: str = None,
     })
 
     # ── Step 3: Answer Generation ──
+    if status_callback: status_callback("✍️ 답변을 생성하고 있습니다...")
     t_gen = time.time()
     key_systems = plan.get("key_systems", [])
     gen_result = generate_agent_answer(query, chunks, role, key_systems=key_systems,
@@ -1036,6 +1040,7 @@ def agent_answer(query: str, role: str = None,
     })
 
     # ── Step 4: Reflection ──
+    if status_callback: status_callback("🔍 답변 품질을 검증하고 있습니다...")
     t_ref = time.time()
     reflection = reflect_on_answer(query, answer, chunks, plan)
     ref_time = time.time() - t_ref
@@ -1064,6 +1069,7 @@ def agent_answer(query: str, role: str = None,
 
     # ── Step 4b: Retry if needed ──
     if not reflection.get("is_sufficient", True):
+        if status_callback: status_callback("🔄 보충 검색 후 답변을 개선하고 있습니다...")
         t_retry = time.time()
 
         # 재검색

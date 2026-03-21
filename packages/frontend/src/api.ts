@@ -1,10 +1,25 @@
-export const API_BASE_URL = 'http://127.0.0.1:8088';
+export const API_BASE_URL = import.meta.env.MODE === 'production'
+  ? `${window.location.origin}/proj-k/api`
+  : 'http://127.0.0.1:8088';
 
 export interface Source {
   workbook: string;
   sheet: string;
   section_path: string;
   score: number;
+  source_url?: string;
+}
+
+export interface Proposal {
+  type: 'modify' | 'create';
+  workbook: string;
+  sheet: string;
+  section?: string;
+  reason: string;
+  before?: string;
+  after?: string;
+  content?: string;
+  diff_summary: string;
 }
 
 export interface AskResponse {
@@ -14,6 +29,7 @@ export interface AskResponse {
   conversation_id: string;
   total_tokens: number;
   api_seconds: number;
+  proposals?: Proposal[];
 }
 
 export const askQuestion = async (
@@ -42,6 +58,260 @@ export const askQuestion = async (
   return response.json();
 };
 
+// ── Admin 타입 ──
+
+export interface ConversationSummary {
+  id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+  turn_count: number;
+  last_model: string;
+}
+
+export interface ConversationTurn {
+  question: string;
+  answer: string;
+  sources: Source[];
+  confidence: string;
+  model: string;
+  total_tokens: number;
+  api_seconds: number;
+  timestamp: string;
+}
+
+export interface ConversationDetail {
+  id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+  turns: ConversationTurn[];
+}
+
+export const fetchConversations = async (): Promise<{ conversations: ConversationSummary[]; total: number }> => {
+  const res = await fetch(`${API_BASE_URL}/admin/conversations`);
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res.json();
+};
+
+export const forkConversation = async (id: string): Promise<{ conversation_id: string; title: string; turn_count: number }> => {
+  const res = await fetch(`${API_BASE_URL}/conversations/${encodeURIComponent(id)}/fork`, { method: 'POST' });
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res.json();
+};
+
+export const fetchConversationDetail = async (id: string): Promise<ConversationDetail> => {
+  const res = await fetch(`${API_BASE_URL}/admin/conversations/${encodeURIComponent(id)}`);
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res.json();
+};
+
+// ── Conflicts 타입 ──
+
+export interface ConflictItem {
+  type: string;
+  topic: string;
+  excel_says: string;
+  confluence_says: string;
+  severity: string;
+  recommendation: string;
+}
+
+export interface ConflictComparison {
+  has_conflict: boolean;
+  severity: string;
+  version_relationship: string;
+  conflicts: ConflictItem[];
+  summary: string;
+  _meta?: { input_tokens: number; output_tokens: number; api_seconds: number };
+}
+
+export interface ConflictPair {
+  excel: string;
+  confluence: string;
+  confidence: string;
+  overlap_topic: string;
+  risk_reason: string;
+}
+
+export interface ConflictAnalysis {
+  pair: ConflictPair;
+  comparison?: ConflictComparison;
+  error?: string;
+}
+
+export interface ConflictScanResult {
+  scan_time: string;
+  elapsed_seconds: number;
+  pairs_found: number;
+  pairs_analyzed: number;
+  total_conflicts: number;
+  severity_counts: Record<string, number>;
+  pairs: ConflictPair[];
+  analyses: ConflictAnalysis[];
+}
+
+export const createConfluencePage = async (title: string, contentMd: string, parentPath?: string): Promise<{ success: boolean; page_id: string; page_url: string; title: string }> => {
+  const res = await fetch(`${API_BASE_URL}/confluence/create-page`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title, content_md: contentMd, parent_path: parentPath }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: `HTTP ${res.status}` }));
+    throw new Error(err.detail || `API error: ${res.status}`);
+  }
+  return res.json();
+};
+
+// ── 기획서 품질 기준 ──
+
+export interface QualityCriterion {
+  id: string;
+  category: string;
+  title: string;
+  description: string;
+  weight: number;
+  source: string;
+}
+
+export interface QualityCriteria {
+  version: string;
+  updated_at: string;
+  criteria: QualityCriterion[];
+  reference_docs: { title: string; url: string; note: string }[];
+}
+
+export const fetchQualityCriteria = async (): Promise<QualityCriteria> => {
+  const res = await fetch(`${API_BASE_URL}/quality-criteria`);
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res.json();
+};
+
+export const updateQualityCriteria = async (criteria: QualityCriterion[]): Promise<void> => {
+  const res = await fetch(`${API_BASE_URL}/quality-criteria`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ criteria }),
+  });
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+};
+
+export const fetchConflicts = async (): Promise<ConflictScanResult> => {
+  const res = await fetch(`${API_BASE_URL}/conflicts`);
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res.json();
+};
+
+// ── 데이터 파이프라인 API ──
+
+export interface PipelineStats {
+  sources: number;
+  documents: { total: number; by_status: Record<string, number> };
+  jobs: Record<string, number>;
+  issues: Record<string, number>;
+  active_snapshot: { snapshot_name: string; chunk_count: number; created_at: string } | null;
+}
+
+export interface PipelineSource {
+  id: number;
+  name: string;
+  source_type: string;
+  path: string;
+  convert_strategy: string;
+  schedule: string;
+  enabled: number;
+  properties: string;
+  created_at: string;
+}
+
+export interface PipelineDocument {
+  id: number;
+  source_id: number;
+  file_path: string;
+  file_type: string;
+  title: string | null;
+  status: string;
+  metadata: string;
+  last_crawled_at: string | null;
+  updated_at: string;
+}
+
+export interface PipelineJob {
+  id: number;
+  job_type: string;
+  status: string;
+  priority: number;
+  worker_type: string;
+  worker_id: string | null;
+  params: string;
+  result: string;
+  error_message: string | null;
+  retry_count: number;
+  created_at: string;
+  completed_at: string | null;
+}
+
+export interface PipelineIssue {
+  id: number;
+  document_id: number;
+  issue_type: string;
+  severity: string;
+  title: string;
+  description: string | null;
+  reported_by: string | null;
+  status: string;
+  doc_title: string | null;
+  file_path: string | null;
+  created_at: string;
+}
+
+export const fetchPipelineStatus = async (): Promise<PipelineStats> => {
+  const res = await fetch(`${API_BASE_URL}/admin/pipeline/status`);
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res.json();
+};
+
+export const fetchPipelineSources = async (): Promise<{ sources: PipelineSource[] }> => {
+  const res = await fetch(`${API_BASE_URL}/admin/pipeline/sources`);
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res.json();
+};
+
+export const fetchPipelineDocuments = async (sourceId?: number, status?: string): Promise<{ documents: PipelineDocument[]; total: number }> => {
+  const params = new URLSearchParams();
+  if (sourceId) params.set('source_id', String(sourceId));
+  if (status) params.set('status', status);
+  const res = await fetch(`${API_BASE_URL}/admin/pipeline/documents?${params}`);
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res.json();
+};
+
+export const fetchPipelineJobs = async (status?: string): Promise<{ jobs: PipelineJob[]; stats: Record<string, number> }> => {
+  const params = new URLSearchParams();
+  if (status) params.set('status', status);
+  const res = await fetch(`${API_BASE_URL}/admin/pipeline/jobs?${params}`);
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res.json();
+};
+
+export const fetchPipelineIssues = async (status?: string): Promise<{ issues: PipelineIssue[] }> => {
+  const params = new URLSearchParams();
+  if (status) params.set('status', status);
+  const res = await fetch(`${API_BASE_URL}/admin/pipeline/issues?${params}`);
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res.json();
+};
+
+export const triggerPipelineJob = async (jobType: string, sourceId?: number, documentId?: number): Promise<{ job_id: number }> => {
+  const params = new URLSearchParams({ job_type: jobType });
+  if (sourceId) params.set('source_id', String(sourceId));
+  if (documentId) params.set('document_id', String(documentId));
+  const res = await fetch(`${API_BASE_URL}/admin/pipeline/jobs/trigger?${params}`, { method: 'POST' });
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res.json();
+};
+
 /** NDJSON 스트리밍 이벤트 타입 */
 export type StreamEvent =
   | { type: 'status'; message: string }
@@ -57,11 +327,13 @@ export const askQuestionStream = async (
   model: string = 'claude-opus-4-5',
   prompt_style: string = '검증세트 최적화',
   conversation_id?: string,
+  signal?: AbortSignal,
 ): Promise<void> => {
   const response = await fetch(`${API_BASE_URL}/ask_stream`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ question, conversation_id, model, prompt_style }),
+    signal,
   });
 
   if (!response.ok) {
@@ -72,32 +344,35 @@ export const askQuestionStream = async (
   const decoder = new TextDecoder();
   let buffer = '';
 
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
 
-    buffer += decoder.decode(value, { stream: true });
-    const lines = buffer.split('\n');
-    buffer = lines.pop() || ''; // 마지막 불완전 라인은 버퍼에 유지
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
 
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed) continue;
-      try {
-        const event: StreamEvent = JSON.parse(trimmed);
-        onEvent(event);
-      } catch {
-        // 파싱 실패한 라인은 무시
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed) continue;
+        try {
+          const event: StreamEvent = JSON.parse(trimmed);
+          onEvent(event);
+        } catch {
+          // 파싱 실패한 라인은 무시
+        }
       }
     }
-  }
 
-  // 버퍼에 남은 마지막 라인 처리
-  if (buffer.trim()) {
-    try {
-      onEvent(JSON.parse(buffer.trim()));
-    } catch {
-      // ignore
+    if (buffer.trim()) {
+      try {
+        onEvent(JSON.parse(buffer.trim()));
+      } catch {
+        // ignore
+      }
     }
+  } finally {
+    reader.releaseLock();
   }
 };

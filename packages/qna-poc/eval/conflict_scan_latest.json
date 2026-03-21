@@ -1,0 +1,1139 @@
+{
+  "scan_time": "2026-03-19T17:50:15.126730",
+  "elapsed_seconds": 805.9,
+  "pairs_found": 47,
+  "pairs_analyzed": 15,
+  "total_conflicts": 62,
+  "severity_counts": {
+    "critical": 10,
+    "major": 25,
+    "minor": 27
+  },
+  "pairs": [
+    {
+      "excel": "PK_스탯 및 공식",
+      "confluence": "Design\\시스템 디자인\\성장 밸런스\\스탯 및 대미지 공식 개편",
+      "confidence": "high",
+      "overlap_topic": "스탯 정의 및 대미지 계산 공식",
+      "risk_reason": "Excel은 초기 스탯 구조, Confluence는 개편안으로 공식이 충돌 가능"
+    },
+    {
+      "excel": "PK_대미지 명중률 계산기",
+      "confluence": "Design\\시스템 디자인\\성장 밸런스\\대미지 공식 및 공격_방어 스탯",
+      "confidence": "high",
+      "overlap_topic": "대미지 및 명중률 계산 공식",
+      "risk_reason": "계산기 시트와 공식 문서가 별도 관리되어 수식 불일치 위험"
+    },
+    {
+      "excel": "PK_변신 및 스킬 시스템",
+      "confluence": "Design\\시스템 디자인\\변신\\변신 개선 시스템 기획",
+      "confidence": "high",
+      "overlap_topic": "변신 시스템 구조 및 UI",
+      "risk_reason": "Excel은 초기 설계, Confluence는 개선안으로 시스템 구조 변경 가능"
+    },
+    {
+      "excel": "PK_스킬 시스템",
+      "confluence": "Design\\시스템 디자인\\스킬\\스킬 시스템",
+      "confidence": "high",
+      "overlap_topic": "스킬 시스템 전반 설계",
+      "risk_reason": "Excel 발주 리스트와 Confluence 시스템 문서 간 스킬 구조 차이 가능"
+    },
+    {
+      "excel": "PK_몬스터 시스템",
+      "confluence": "Design\\시스템 디자인\\몬스터\\몬스터 어그로 시스템",
+      "confidence": "high",
+      "overlap_topic": "몬스터 행동 및 어그로 로직",
+      "risk_reason": "Excel은 전체 몬스터 시스템, Confluence는 어그로 세부 개선으로 로직 충돌 가능"
+    },
+    {
+      "excel": "PK_퀘스트",
+      "confluence": "Design\\컨텐츠 디자인\\Beta3 개선 항목\\[Beta3] 퀘스트 개선",
+      "confidence": "high",
+      "overlap_topic": "퀘스트 시스템 구조 및 UI",
+      "risk_reason": "Excel은 초기 퀘스트 구조, Beta3 개선으로 다이얼로그/진행 방식 변경됨"
+    },
+    {
+      "excel": "PK_아이템 시스템",
+      "confluence": "Design\\시스템 디자인\\아이템\\아이템 강화\\장비 강화 시스템",
+      "confidence": "high",
+      "overlap_topic": "아이템 등급 및 강화 시스템",
+      "risk_reason": "Excel은 아이템 전반, Confluence는 강화 세부로 강화 공식 불일치 가능"
+    },
+    {
+      "excel": "PK_골드 밸런스",
+      "confluence": "Design\\시스템 디자인\\경제 밸런스\\골드 밸런스",
+      "confidence": "high",
+      "overlap_topic": "골드 획득 및 소모 밸런스",
+      "risk_reason": "Excel 시트와 Confluence 문서 간 던전/필드 사냥 골드량 차이 가능"
+    },
+    {
+      "excel": "PK_장비 밸런스 및 데이터",
+      "confluence": "Design\\시스템 디자인\\경제 밸런스\\장비 계획\\장비 드랍 및 제작 밸런스",
+      "confidence": "high",
+      "overlap_topic": "장비 드랍률 및 제작 밸런스",
+      "risk_reason": "Excel 드랍 계획과 Confluence 밸런스 문서 간 드랍률 수치 불일치 위험"
+    },
+    {
+      "excel": "PK_캐릭터 성장 밸런스",
+      "confluence": "Design\\시스템 디자인\\성장 밸런스\\성장 밸런스 기본 정보",
+      "confidence": "high",
+      "overlap_topic": "캐릭터 레벨별 성장 곡선",
+      "risk_reason": "Excel 시뮬레이션과 Confluence 기본 정보 간 성장 곡선 차이 가능"
+    },
+    {
+      "excel": "PK_로그인 플로우",
+      "confluence": "Design\\시스템 디자인\\기반 시스템\\로그인\\로그인 및 캐릭터 생성과 선택",
+      "confidence": "high",
+      "overlap_topic": "로그인 및 캐릭터 생성 프로세스",
+      "risk_reason": "Excel 플로우와 Confluence 프로세스 문서 간 단계 차이 가능"
+    },
+    {
+      "excel": "PK_HUD 시스템",
+      "confluence": "Design\\시스템 디자인\\UX UI 규칙\\UX 규칙 문서\\HUD 기능적 레이아웃 구성",
+      "confidence": "high",
+      "overlap_topic": "HUD 레이아웃 및 전투 UI",
+      "risk_reason": "Excel HUD 시트와 Confluence UX 규칙 간 레이아웃 구성 차이 가능"
+    },
+    {
+      "excel": "PK_인벤토리 시스템",
+      "confluence": "Design\\시스템 디자인\\아이템\\인벤토리",
+      "confidence": "high",
+      "overlap_topic": "인벤토리 슬롯 및 정렬 시스템",
+      "risk_reason": "Excel 인벤토리 구조와 Confluence 자동 정렬 기능 간 로직 충돌 가능"
+    },
+    {
+      "excel": "PK_파티 시스템",
+      "confluence": "Design\\시스템 디자인\\기반 시스템\\파티 시스템",
+      "confidence": "medium",
+      "overlap_topic": "파티 결성 및 보상 시스템",
+      "risk_reason": "Excel은 초기 파티 구조, Confluence는 세부 기능으로 보상 규칙 차이 가능"
+    },
+    {
+      "excel": "PK_길드",
+      "confluence": "Design\\시스템 디자인\\길드\\길드 시스템",
+      "confidence": "medium",
+      "overlap_topic": "길드 기본 시스템",
+      "risk_reason": "Excel 길드 구조와 Confluence 길드 스킬/금고 시스템 간 기능 범위 차이"
+    },
+    {
+      "excel": "PK_채팅 시스템",
+      "confluence": "Design\\시스템 디자인\\기반 시스템\\채팅",
+      "confidence": "high",
+      "overlap_topic": "채팅 시스템 및 메시지 타입",
+      "risk_reason": "Excel Enum 테이블과 Confluence 채팅 규칙 간 메시지 타입 불일치 가능"
+    },
+    {
+      "excel": "PK_월드 시스템",
+      "confluence": "Design\\시스템 디자인\\맵\\테리토리 시스템",
+      "confidence": "high",
+      "overlap_topic": "월드 및 테리토리 구조",
+      "risk_reason": "Excel 월드 시스템과 Confluence 테리토리 시스템 간 영역 정의 충돌 가능"
+    },
+    {
+      "excel": "PK_보스 레이드 시스템",
+      "confluence": "Design\\시스템 디자인\\던전\\인터서버 던전 시스템",
+      "confidence": "medium",
+      "overlap_topic": "보스 레이드 및 인스턴스 공간",
+      "risk_reason": "Excel 보스 레이드와 Confluence 인터서버 던전 간 매칭 규칙 차이 가능"
+    },
+    {
+      "excel": "PK_전문기술_시스템",
+      "confluence": "Design\\시스템 디자인\\제작\\전문 기술\\전문기술 시스템",
+      "confidence": "high",
+      "overlap_topic": "전문기술 수렵 및 제작 시스템",
+      "risk_reason": "Excel UI 시트와 Confluence 시스템 문서 간 제작 규칙 불일치 가능"
+    },
+    {
+      "excel": "PK_펫 시스템",
+      "confluence": "Design\\시스템 디자인\\정령 (기존 _펫_)\\정령&도깨비 시스템_기본 및 강화",
+      "confidence": "high",
+      "overlap_topic": "펫(정령) 시스템 및 강화",
+      "risk_reason": "Excel 펫 시스템이 Confluence에서 정령으로 명칭 변경, 시스템 구조 차이 가능"
+    },
+    {
+      "excel": "PK_자동 전투 시스템",
+      "confluence": "Design\\시스템 디자인\\전투\\자동 전투 시스템",
+      "confidence": "high",
+      "overlap_topic": "자동 전투 로직 및 우선순위",
+      "risk_reason": "Excel 세부 내용과 Confluence 자동 전투 규칙 간 타게팅 로직 차이 가능"
+    },
+    {
+      "excel": "PK_물약 자동 사용 시스템",
+      "confluence": "Design\\시스템 디자인\\전투\\자동 물약 사용 시스템",
+      "confidence": "high",
+      "overlap_topic": "물약 자동 사용 조건",
+      "risk_reason": "Excel과 Confluence 간 물약 사용 트리거 조건 불일치 가능"
+    },
+    {
+      "excel": "PK_미니맵 시스템",
+      "confluence": "Design\\시스템 디자인\\맵\\중간맵_미니맵 개선",
+      "confidence": "high",
+      "overlap_topic": "미니맵 UI 및 기능",
+      "risk_reason": "Excel 1차/2차 개발 스펙과 Confluence 개선안 간 기능 범위 차이"
+    },
+    {
+      "excel": "PK_월드맵 시스템",
+      "confluence": "Design\\컨텐츠 디자인\\Beta1 개선 항목\\[Beta1] 월드맵 시스템 개선",
+      "confidence": "high",
+      "overlap_topic": "월드맵 UI 및 텔레포트",
+      "risk_reason": "Excel 기존 스펙과 Beta1 개선안 간 월드맵 표시 방식 변경됨"
+    },
+    {
+      "excel": "PK_버프 시스템",
+      "confluence": "Design\\시스템 디자인\\스킬\\스킬 이펙트\\버프 스택 비례",
+      "confidence": "high",
+      "overlap_topic": "버프 시스템 및 스택 로직",
+      "risk_reason": "Excel 버프 기능 리스트와 Confluence 스택 효과 간 버프 로직 충돌 가능"
+    },
+    {
+      "excel": "PK_보상 시스템",
+      "confluence": "Design\\시스템 디자인\\보상 시스템\\몬스터 보상",
+      "confidence": "high",
+      "overlap_topic": "몬스터 드랍 보상 규칙",
+      "risk_reason": "Excel 몬스터 보상 테이블과 Confluence 보상 공통 규칙 간 드랍률 차이 가능"
+    },
+    {
+      "excel": "PK_분해 시스템",
+      "confluence": "Design\\시스템 디자인\\아이템\\아이템 분해\\아이템 분해_규칙",
+      "confidence": "high",
+      "overlap_topic": "아이템 분해 규칙 및 재료 획득",
+      "risk_reason": "Excel 세부 내용과 Confluence 분해 규칙 간 재료 획득량 차이 가능"
+    },
+    {
+      "excel": "PK_사망 및 부활 시스템",
+      "confluence": "Design\\시스템 디자인\\전투\\사망 시스템 개선",
+      "confidence": "high",
+      "overlap_topic": "사망 및 부활 처리",
+      "risk_reason": "Excel 초기 사망 시스템과 Confluence 개선안 간 부활 조건 변경됨"
+    },
+    {
+      "excel": "PK_레벨업 시스템",
+      "confluence": "Design\\시스템 디자인\\성장 밸런스\\경험치 테이블 구성",
+      "confidence": "high",
+      "overlap_topic": "레벨업 경험치 및 보상",
+      "risk_reason": "Excel 레벨업 부가효과와 Confluence 경험치 테이블 간 보상 구조 차이 가능"
+    },
+    {
+      "excel": "PK_종족 및 클래스",
+      "confluence": "Design\\시스템 디자인\\클래스\\클래스 기본 정보",
+      "confidence": "high",
+      "overlap_topic": "종족 및 클래스 정의",
+      "risk_reason": "Excel 종족 정의와 Confluence 클래스 정보 간 스탯 기본값 차이 가능"
+    },
+    {
+      "excel": "PK_카메라_시스템",
+      "confluence": "Design\\시스템 디자인\\전투\\인게임 카메라 시스템",
+      "confidence": "high",
+      "overlap_topic": "카메라 시스템 및 세팅",
+      "risk_reason": "Excel 카메라 시스템과 Confluence 카메라 세팅 간 FOV/거리 값 차이 가능"
+    },
+    {
+      "excel": "PK_시네마틱_시스템",
+      "confluence": "Design\\컨텐츠 디자인\\컷신\\[Beta2] 컷신 제작",
+      "confidence": "medium",
+      "overlap_topic": "시네마틱 컷신 시스템",
+      "risk_reason": "Excel 시네마틱 구조와 Beta2 컷신 제작 간 연출 방식 차이 가능"
+    },
+    {
+      "excel": "PK_튜토리얼, 도움말_시스템",
+      "confluence": "Design\\컨텐츠 디자인\\Beta2 개선 항목\\[Beta2] 튜토리얼, 도움말",
+      "confidence": "high",
+      "overlap_topic": "튜토리얼 및 도움말 시스템",
+      "risk_reason": "Excel 조작 튜토리얼과 Beta2 개선안 간 튜토리얼 단계 변경됨"
+    },
+    {
+      "excel": "PK_NPC 시스템",
+      "confluence": "Design\\컨텐츠 디자인\\Beta3 개선 항목\\[Beta3] 신규 상인 타입 및 인터렉션 조건 추가",
+      "confidence": "high",
+      "overlap_topic": "NPC 인터렉션 및 상인 시스템",
+      "risk_reason": "Excel NPC 정의와 Beta3 신규 상인 타입 간 인터렉션 조건 충돌 가능"
+    },
+    {
+      "excel": "PK_거래소",
+      "confluence": "Design\\시스템 디자인\\거래소\\거래소 시스템",
+      "confidence": "high",
+      "overlap_topic": "거래소 시스템 및 UI",
+      "risk_reason": "Excel 거래소 구조와 Confluence 거래소 시스템 간 수수료/검색 규칙 차이 가능"
+    },
+    {
+      "excel": "PK_우편",
+      "confluence": "Design\\시스템 디자인\\기반 시스템\\우편\\우편 시스템",
+      "confidence": "high",
+      "overlap_topic": "우편 시스템 및 보상 수령",
+      "risk_reason": "Excel 우편 구조와 Confluence 우편 시스템 간 첨부 아이템 규칙 차이 가능"
+    },
+    {
+      "excel": "PK_성향 시스템",
+      "confluence": "Design\\시스템 디자인\\PvP 컨텐츠\\성향 시스템",
+      "confidence": "medium",
+      "overlap_topic": "성향 시스템 및 PK 패널티",
+      "risk_reason": "Excel 성향 정의와 Confluence PvP 성향 간 패널티 규칙 차이 가능"
+    },
+    {
+      "excel": "PK_공성전",
+      "confluence": "Design\\시스템 디자인\\PvP 컨텐츠\\공성전\\공성전 시스템",
+      "confidence": "medium",
+      "overlap_topic": "공성전 시스템",
+      "risk_reason": "Excel 공성전 구조와 Confluence 공성전 시스템 간 점령 규칙 차이 가능"
+    },
+    {
+      "excel": "PK_스킬 대미지 밸런스",
+      "confluence": "Design\\시스템 디자인\\성장 밸런스\\스킬 대미지 및 효과 설계",
+      "confidence": "high",
+      "overlap_topic": "스킬 대미지 배율 및 쿨타임",
+      "risk_reason": "Excel 대미지 계산기와 Confluence 스킬 대미지 설계 간 배율 수치 불일치 가능"
+    },
+    {
+      "excel": "PK_전투AI시스템",
+      "confluence": "Design\\시스템 디자인\\몬스터\\몬스터 어그로 시스템",
+      "confidence": "high",
+      "overlap_topic": "몬스터 AI 및 어그로 로직",
+      "risk_reason": "Excel 전투 AI와 Confluence 어그로 시스템 간 타게팅 우선순위 충돌 가능"
+    },
+    {
+      "excel": "PK_던전",
+      "confluence": "Design\\시스템 디자인\\던전\\시간 던전 시스템",
+      "confidence": "medium",
+      "overlap_topic": "던전 시스템 및 입장 조건",
+      "risk_reason": "Excel 던전 구조와 Confluence 시간 던전 간 입장 제한 규칙 차이 가능"
+    },
+    {
+      "excel": "PK_컬렉션",
+      "confluence": "Design\\시스템 디자인\\컬렉션\\컬렉션 시스템",
+      "confidence": "high",
+      "overlap_topic": "컬렉션 시스템 및 보상",
+      "risk_reason": "Excel 컬렉션 구조와 Confluence 컬렉션 시스템 간 보상 규칙 차이 가능"
+    },
+    {
+      "excel": "PK_제작",
+      "confluence": "Design\\시스템 디자인\\제작\\아이템 제작 시스템",
+      "confidence": "high",
+      "overlap_topic": "아이템 제작 시스템",
+      "risk_reason": "Excel 제작 구조와 Confluence 제작 시스템 간 재료 소모량 차이 가능"
+    },
+    {
+      "excel": "PK_월드 이벤트",
+      "confluence": "Design\\시스템 디자인\\월드 이벤트\\월드 이벤트 시스템",
+      "confidence": "medium",
+      "overlap_topic": "월드 이벤트 시스템",
+      "risk_reason": "Excel 월드 이벤트 구조와 Confluence 이벤트 스케줄러 간 발동 조건 차이 가능"
+    },
+    {
+      "excel": "PK_스폰 시스템",
+      "confluence": "Design\\제작 가이드\\몬스터 - 제작 가이드\\몬스터 생성 및 레벨 배치",
+      "confidence": "medium",
+      "overlap_topic": "몬스터 스폰 및 배치",
+      "risk_reason": "Excel 스폰 시스템과 Confluence 배치 가이드 간 스폰 연출 차이 가능"
+    },
+    {
+      "excel": "PK_텔레포트 시스템",
+      "confluence": "Design\\시스템 디자인\\기반 시스템\\이동 편의성\\기존 텔레포트 시스템 개편 및 이동 편의성 정책",
+      "confidence": "high",
+      "overlap_topic": "텔레포트 시스템 개편",
+      "risk_reason": "Excel 텔레포트 구조와 Confluence 개편안 간 이동 조건 변경됨"
+    },
+    {
+      "excel": "PK_환경설정",
+      "confluence": "Design\\시스템 디자인\\기반 시스템\\환경설정\\환경 설정(전투_그래픽)",
+      "confidence": "high",
+      "overlap_topic": "환경설정 옵션",
+      "risk_reason": "Excel 환경설정 리스트와 Confluence 전투/그래픽 설정 간 옵션 항목 차이 가능"
+    }
+  ],
+  "analyses": [
+    {
+      "pair": {
+        "excel": "PK_스탯 및 공식",
+        "confluence": "Design\\시스템 디자인\\성장 밸런스\\스탯 및 대미지 공식 개편",
+        "confidence": "high",
+        "overlap_topic": "스탯 정의 및 대미지 계산 공식",
+        "risk_reason": "Excel은 초기 스탯 구조, Confluence는 개편안으로 공식이 충돌 가능"
+      },
+      "comparison": {
+        "error": "JSON parse error",
+        "raw": "```json\n{\n  \"has_conflict\": true,\n  \"severity\": \"critical\",\n  \"version_relationship\": \"Confluence 문서는 Excel 문서의 '대미지 공식 개편'을 구체화한 최신 버전입니다. Excel은 UI 중심 기획서이고, Confluence는 공식 개편의 상세 구현 명세입니다. 두 문서는 상호보완적이지만, 공식 부분에서 근본적인 구조 변경이 발생했습니다.\",\n  \"conflicts\": [\n    {\n      \"type\": \"구조적차이\",\n      \"topic\": \"대미지 공식의 근본 구조\",\n      \"excel_says\": \"무기 피해(랜덤) + 공격력/보정값 + 모든 피해 → 방어력/보정값 + 피해 감소 차감 방식. 공격자 피해량 산정(①+②) - 피격자 피해 감소량(③) = 최종 피해\",\n      \"confluence_says\": \"Attack vs Defense 비율 공식 도입: 기본 대미지 = 유효 공격",
+        "pair": {
+          "excel": "PK_스탯 및 공식",
+          "confluence": "Design\\시스템 디자인\\성장 밸런스\\스탯 및 대미지 공식 개편",
+          "confidence": "high",
+          "overlap_topic": "스탯 정의 및 대미지 계산 공식",
+          "risk_reason": "Excel은 초기 스탯 구조, Confluence는 개편안으로 공식이 충돌 가능"
+        }
+      }
+    },
+    {
+      "pair": {
+        "excel": "PK_대미지 명중률 계산기",
+        "confluence": "Design\\시스템 디자인\\성장 밸런스\\대미지 공식 및 공격_방어 스탯",
+        "confidence": "high",
+        "overlap_topic": "대미지 및 명중률 계산 공식",
+        "risk_reason": "계산기 시트와 공식 문서가 별도 관리되어 수식 불일치 위험"
+      },
+      "comparison": {
+        "error": "JSON parse error",
+        "raw": "```json\n{\n  \"has_conflict\": true,\n  \"severity\": \"critical\",\n  \"version_relationship\": \"Excel은 상세 시뮬레이션 데이터와 구 공식을 포함하고 있으며, Confluence는 최신 개편 공식과 기획 의도를 담고 있습니다. Confluence가 더 최신 버전이지만, Excel의 시뮬레이션 데이터는 구 공식 기반으로 outdated 상태입니다.\",\n  \"conflicts\": [\n    {\n      \"type\": \"공식불일치\",\n      \"topic\": \"대미지 계산 공식 - 무기 공격력 처리\",\n      \"excel_says\": \"Previous: Random(WeaponMin,WeaponMax) + (AttackPower...) × AttackModifierPercent. 현재: Random(WeaponMin,WeaponMax) × WeaponModifier + (AttackPower...) × AttackMod",
+        "pair": {
+          "excel": "PK_대미지 명중률 계산기",
+          "confluence": "Design\\시스템 디자인\\성장 밸런스\\대미지 공식 및 공격_방어 스탯",
+          "confidence": "high",
+          "overlap_topic": "대미지 및 명중률 계산 공식",
+          "risk_reason": "계산기 시트와 공식 문서가 별도 관리되어 수식 불일치 위험"
+        }
+      }
+    },
+    {
+      "pair": {
+        "excel": "PK_변신 및 스킬 시스템",
+        "confluence": "Design\\시스템 디자인\\변신\\변신 개선 시스템 기획",
+        "confidence": "high",
+        "overlap_topic": "변신 시스템 구조 및 UI",
+        "risk_reason": "Excel은 초기 설계, Confluence는 개선안으로 시스템 구조 변경 가능"
+      },
+      "comparison": {
+        "has_conflict": true,
+        "severity": "critical",
+        "version_relationship": "Excel 문서는 베타 2 이전의 '강화' 시스템을 상세히 기술하고 있으며, Confluence 문서는 베타 3 이후 '강화 탭 제거' 및 시스템 전면 개편을 명시하고 있습니다. Confluence가 최신 설계이며 Excel 문서는 폐기 대상입니다.",
+        "conflicts": [
+          {
+            "type": "폐기후보",
+            "topic": "강화 시스템 전체",
+            "excel_says": "UI_변신_강화 시트 전체가 '안전 강화'와 '확률 강화' 플로우, 재료 등록, 경험치 획득, 성공/실패 연출 등 상세한 강화 시스템을 기술. 진입 방법은 '변신 메뉴 진입 후 강화 탭 클릭'",
+            "confluence_says": "[2-1] 목록, [2-2] 목록, [2-3] 합성, [2-4] 보유효과 모든 섹션에서 '기존과 동일하나, 강화 탭 제거'를 명시. [1-2] 설계 변화 동기에서 '성장 피로도', '천장 시스템 부재' 등을 이유로 시스템 개편 설명",
+            "severity": "critical",
+            "recommendation": "Excel의 'UI_변신_강화' 시트 전체를 아카이브 처리하고, 문서 상단에 '베타 3 이후 폐기됨 - Confluence 5708480896 참조' 경고 추가 필요. Perforce에서 해당 시트를 삭제하거나 '_deprecated' 폴더로 이동 권장"
+          },
+          {
+            "type": "구조적차이",
+            "topic": "변신 탭 구조",
+            "excel_says": "탭 구성: 목록 | 합성 | 강화 | 컬렉션 | 확장 (5개 탭)",
+            "confluence_says": "탭 구성: 목록 | 합성 | 보유효과 (3개 탭). '컬렉션'이 '보유효과'로 명칭 변경되었으며, '강화'와 '확장' 탭 제거됨",
+            "severity": "critical",
+            "recommendation": "Excel 문서의 모든 탭 구조 참조를 Confluence 기준으로 업데이트하거나, Excel 문서 자체를 폐기 처리. UI 개발팀에 최신 탭 구조(3개) 전달 필요"
+          },
+          {
+            "type": "정보누락",
+            "topic": "외형변경 및 공성전 시스템",
+            "excel_says": "변신 시스템만 다루며, '외형변경'이나 '공성전' 아바타 개념 없음. 착용 상태 UI도 단일 슬롯만 존재",
+            "confluence_says": "[2-2] 목록에서 '변신/외형변경/공성전' 3개 착용 슬롯 및 탭 구조 상세 기술. MetamorphClass에 Type 컬럼(Metamorph, Skin, Siege) 추가. 각 타입별 필터링 및 장착 로직 정의",
+            "severity": "major",
+            "recommendation": "Excel 문서에는 외형변경/공성전 시스템이 전혀 반영되지 않음. 새 시스템 기획서를 별도로 작성하거나, Confluence 문서를 단일 소스로 지정하고 Excel 참조 중단 필요"
+          },
+          {
+            "type": "정보누락",
+            "topic": "합성 실패 게이지 (천장 시스템)",
+            "excel_says": "합성 시스템 언급 있으나, 실패 게이지나 천장 시스템 개념 없음",
+            "confluence_says": "[2-3] 합성에서 '합성 실패 게이지' 상세 정의. 전설/영웅/희귀 등급별 MaxComposeFail 도달 시 무조건 성공 처리. ContentSetting에 MaxComposeFailLegendary/Unique/Rare 파라미터 추가",
+            "severity": "major",
+            "recommendation": "천장 시스템은 베타 3의 핵심 개선사항. ContentSetting 테이블에 MaxComposeFail 파라미터 추가 여부 확인 필요. Excel 문서에는 이 개념이 없으므로 Confluence 기준으로 개발 진행"
+          },
+          {
+            "type": "구조적차이",
+            "topic": "클래스 제한 로직",
+            "excel_says": "강화 가능 목록에서 '한 번도 획득하지 않은 변신 및 최대 강화 단계인 변신 제외'만 언급. 클래스 제한 언급 없음",
+            "confluence_says": "[2-2] 목록에서 '현재 캐릭터가 사용할 수 없는 무기에 해당하는 변신도 전부 출력'하되, 아이콘 우하단에 클래스 정보 표기. 착용 시도 시 에러 메시지(Meta_Error_WrongClass) 출력",
+            "severity": "major",
+            "recommendation": "Excel 문서는 클래스 간 변신 공유 제한을 다루지 않음. Confluence의 클래스 제한 로직(표시는 하되 착용 불가)을 UI 및 에러 처리에 반영 필요. SystemMsg 테이블에 Meta_Error_WrongClass 추가 확인"
+          },
+          {
+            "type": "정보누락",
+            "topic": "변신 포인트 시스템",
+            "excel_says": "컬렉션 시스템 언급('전체 성장 비중의 약 1% 차지')만 있으며, 포인트 개념 없음",
+            "confluence_says": "[2-4] 보유효과에서 '변신 포인트 현황' 상세 정의. 전설/영웅/전체 포인트를 보유 아바타 수량으로 계산. 각 포인트별 적용 스탯 구조 및 TextKey 정의",
+            "severity": "major",
+            "recommendation": "Excel의 '컬렉션'과 Confluence의 '보유효과(변신 포인트)'는 완전히 다른 시스템. 포인트 계산 로직 및 UI 구현은 Confluence 기준으로 진행. Excel 문서의 컬렉션 관련 내용 폐기 처리"
+          },
+          {
+            "type": "버전불일치",
+            "topic": "문서 변환 날짜 vs 실제 설계 시점",
+            "excel_says": "변환일: 2026-03-10 (미래 날짜이므로 오타 가능성). 원본은 Perforce의 'PK_변신 및 스킬 시스템.xlsx'",
+            "confluence_says": "작성일: 2026-02-26, 다운로드: 2026-03-09. [1-2]에서 '베타 2 이전'과 '베타 3 이후' 명확히 구분. Excel 문서를 '기존 기획'으로 참조",
+            "severity": "minor",
+            "recommendation": "Excel 문서의 변환일(2026-03-10)이 Confluence 다운로드일(2026-03-09)보다 미래인 점 확인 필요. 날짜 오류일 가능성 높음. Perforce 원본의 최종 수정일 확인 후, Confluence가 최신임을 명확히 문서화"
+          },
+          {
+            "type": "정보누락",
+            "topic": "TextKey 및 SystemMsg 정의",
+            "excel_says": "일부 TextKey 정의 있음(Meta_Enchant_UI_01~04, MetamorphWarning_UseRare 등). 주로 강화 관련 메시지",
+            "confluence_says": "새로운 TextKey 다수 정의(Metamorph_Select_Metamorph/Skin/Siege, Metamorph_Compose_Fail, Metamorph_HaveEffect_Points 등). SystemMsg에 Meta_Error_WrongClass 추가",
+            "severity": "minor",
+            "recommendation": "Confluence에 정의된 새 TextKey들이 로컬라이제이션 테이블에 등록되었는지 확인. Excel의 강화 관련 TextKey(Meta_Enchant_UI_01~04)는 사용되지 않으므로 삭제 또는 deprecated 처리"
+          }
+        ],
+        "summary": "Excel 문서는 베타 2 이전의 '강화' 중심 변신 시스템을 상세히 기술하고 있으나, Confluence 문서는 베타 3 이후 강화 탭 제거 및 외형변경/공성전/변신 포인트 시스템으로의 전면 개편을 명시합니다. 두 문서는 동일 시스템의 다른 버전이 아니라 구세대 vs 신세대 설계이며, Excel 문서는 폐기 대상입니다. 즉시 Confluence를 단일 소스로 지정하고, Excel 문서를 아카이브 처리해야 합니다.",
+        "_meta": {
+          "input_tokens": 21642,
+          "output_tokens": 2848,
+          "api_seconds": 54.5
+        }
+      }
+    },
+    {
+      "pair": {
+        "excel": "PK_스킬 시스템",
+        "confluence": "Design\\시스템 디자인\\스킬\\스킬 시스템",
+        "confidence": "high",
+        "overlap_topic": "스킬 시스템 전반 설계",
+        "risk_reason": "Excel 발주 리스트와 Confluence 시스템 문서 간 스킬 구조 차이 가능"
+      },
+      "comparison": {
+        "has_conflict": true,
+        "severity": "critical",
+        "version_relationship": "Excel 문서는 상세한 스킬 시스템 기획서이며, Confluence 페이지는 빈 페이지 상태입니다. Excel이 실제 작업 문서이고 Confluence는 아직 작성되지 않은 것으로 보입니다.",
+        "conflicts": [
+          {
+            "type": "정보누락",
+            "topic": "스킬 시스템 전체 설계",
+            "excel_says": "Excel에는 리니지류 스킬 정리 시트에 공격/약화 스킬의 상세 데이터 테이블이 존재합니다. 디스인티그레이트, 미티어 스트라이크, 들이박기, 아이스 스파이크, 파이어볼, 프로즌 클라우드, 아이스 랜스, 포스 필드 등 8개 공격 스킬과 디케이 포션, 커스 패럴라이즈, 어스 바인드, 스톰 등 4개 약화 스킬의 등급별(일반/고급/희귀/영웅/전설/신화) 수치(시전시간, 쿨타임, 사정거리, 대미지, 적중확률 등)가 정의되어 있습니다.",
+            "confluence_says": "Confluence 페이지는 완전히 비어있습니다. 스킬 시스템에 대한 어떠한 정보도 없습니다.",
+            "severity": "critical",
+            "recommendation": "Excel의 스킬 시스템 기획 내용을 Confluence로 이관하여 팀 전체가 접근 가능하도록 해야 합니다. 특히 공격/약화 스킬의 등급별 밸런싱 수치는 개발/QA 팀과 공유가 필수적입니다."
+          },
+          {
+            "type": "정보누락",
+            "topic": "스킬 제작 발주 명세",
+            "excel_says": "Excel의 '발주 스킬 분류' 시트에는 PC 4개, Mob 일반 1개, Mob 보스급 2개 등 총 13개 스킬과 3개 버프의 제작 발주 내역이 있습니다. 각 스킬별로 Caster_Animation, Caster_Effect, Launch_Animation, Launch_Effect, Main_Effect, Projectile_Effect, Explosion_Effect, Hit_Effect 등 상세한 애니메이션/이펙트 요구사항이 명시되어 있습니다. 예: 화랑검의 기상(지연시전/즉시발동, 검기 발사), 용의 기세(즉시시전/즉시발동, 충격파), 바리울의 불(검에 불 이펙트 부착) 등.",
+            "confluence_says": "Confluence에는 제작 발주 관련 정보가 전혀 없습니다.",
+            "severity": "critical",
+            "recommendation": "아트/이펙트 팀과의 협업을 위해 발주 스킬 분류 시트의 내용을 Confluence에 반드시 문서화해야 합니다. 특히 애니메이션/이펙트 요구사항은 제작 파이프라인의 핵심 정보입니다."
+          },
+          {
+            "type": "정보누락",
+            "topic": "스킬 시전/발동 메커니즘 설계",
+            "excel_says": "Excel에는 스킬의 시전 방식(즉시/지연)과 발동 방식(즉시/지연)의 조합에 대한 설계 논의가 포함되어 있습니다. '기획 질문사항' 섹션에서 '강력한 마법은 지연 발동으로 균형을 맞춘다', '도착판정 가치(연계기, 발사체 속도)', '지연 발동 + 지연 도착의 UI/UX 문제' 등 핵심 게임플레이 메커니즘에 대한 고민이 기록되어 있습니다.",
+            "confluence_says": "Confluence에는 시전/발동 메커니즘에 대한 설계 논의가 없습니다.",
+            "severity": "major",
+            "recommendation": "스킬 시스템의 핵심 메커니즘(시전/발동 타이밍, 도착판정, 발사체 시스템)에 대한 설계 결정사항을 Confluence에 문서화하여 프로그래밍 팀과 공유해야 합니다. 특히 '지연 발동 시 2개 스킬 동시 캐스팅 UI 표시 문제' 등 미해결 이슈는 명확히 표시해야 합니다."
+          },
+          {
+            "type": "정보누락",
+            "topic": "스킬 분류 체계",
+            "excel_says": "Excel에는 스킬을 공격/강화/약화/회복/특수로 분류하는 체계가 있으며, 각 카테고리별 대표 스킬 목록이 제시되어 있습니다. 예: 강화(쉴드, 텔레포트, 헤이스트), 특수(힐, 블레스트 아머, 이뮨 투 함), 회복(힐, 드라이힐, 광역힐) 등.",
+            "confluence_says": "Confluence에는 스킬 분류 체계가 없습니다.",
+            "severity": "major",
+            "recommendation": "스킬 분류 체계를 Confluence에 문서화하여 전체 스킬 시스템의 구조를 명확히 해야 합니다. 이는 향후 신규 스킬 추가 시 일관성 유지에 필수적입니다."
+          },
+          {
+            "type": "정보누락",
+            "topic": "클래스별 스킬 할당",
+            "excel_says": "Excel의 '발주 스킬 분류' 시트에는 인간/우사, 인간/용사, 인간/메이지, 인간/프리스트, 인간/마법검사 등 클래스별로 할당된 스킬 목록이 있습니다. 예: 우사(화랑검의 기상, 용의 기세, 바리울의 불, 귀면의 보호), 용사(회복의 숨결, 돌개바람, 들이박기) 등.",
+            "confluence_says": "Confluence에는 클래스별 스킬 할당 정보가 없습니다.",
+            "severity": "major",
+            "recommendation": "클래스별 스킬 할당을 Confluence에 문서화하여 밸런싱 논의와 클래스 정체성 설계를 팀 전체가 검토할 수 있도록 해야 합니다."
+          },
+          {
+            "type": "폐기후보",
+            "topic": "Confluence 빈 페이지",
+            "excel_says": "Excel은 실제 작업 중인 상세 기획서입니다.",
+            "confluence_says": "Confluence 페이지는 생성만 되고 내용이 전혀 없는 상태입니다.",
+            "severity": "minor",
+            "recommendation": "Confluence 페이지를 삭제하거나, Excel 내용을 이관하여 실제 문서로 만들어야 합니다. 현재 상태로는 팀원들에게 혼란만 줄 수 있습니다."
+          }
+        ],
+        "summary": "Excel 문서는 스킬 시스템의 상세 기획서로 공격/약화 스킬의 등급별 수치, 13개 스킬/3개 버프의 제작 발주 명세, 시전/발동 메커니즘 설계, 클래스별 스킬 할당 등 핵심 정보를 모두 포함하고 있습니다. 반면 Confluence 페이지는 완전히 비어있어 심각한 정보 불일치 상태입니다. Excel의 내용을 Confluence로 이관하여 팀 전체가 접근 가능하도록 하는 것이 시급합니다.",
+        "_meta": {
+          "input_tokens": 12184,
+          "output_tokens": 2479,
+          "api_seconds": 46.6
+        }
+      }
+    },
+    {
+      "pair": {
+        "excel": "PK_몬스터 시스템",
+        "confluence": "Design\\시스템 디자인\\몬스터\\몬스터 어그로 시스템",
+        "confidence": "high",
+        "overlap_topic": "몬스터 행동 및 어그로 로직",
+        "risk_reason": "Excel은 전체 몬스터 시스템, Confluence는 어그로 세부 개선으로 로직 충돌 가능"
+      },
+      "comparison": {
+        "has_conflict": true,
+        "severity": "critical",
+        "version_relationship": "Excel 문서는 초기 기획 단계의 광범위한 아이디어 수집 문서(Appendix)이며, Confluence는 실제 구현된 어그로 시스템의 명확한 명세서입니다. Excel은 가독성이 매우 낮고 OCR 오류가 심각하여 실제 내용 파악이 거의 불가능한 상태입니다.",
+        "conflicts": [
+          {
+            "type": "구조적차이",
+            "topic": "어그로 시스템 정의 및 구조",
+            "excel_says": "Excel 문서의 'Appendix' 시트는 OCR 오류로 인해 내용이 심각하게 손상되어 있으나, '4. 스타의 그룹' 섹션에서 어그로 관련 개념을 언급하는 것으로 보입니다. 그러나 구체적인 시스템 규칙이나 수치는 판독 불가능합니다.",
+            "confluence_says": "명확한 어그로 시스템 정의: 대미지 누적 기반 우선순위, 선공/비선공 구분, 타겟 갱신 쿨타임(기본 5초), AggroType 열거형(HighestAggro, LowestAggro, LowestHealth, HighestHealth, ClosestTarget, FarthestTarget, RandomTarget), AggroTypeInRange 옵션 등 구체적인 구현 명세 제공",
+            "severity": "critical",
+            "recommendation": "Excel 문서는 OCR 품질 문제로 실제 기획 의도 파악이 불가능합니다. 원본 Excel 파일을 직접 확인하거나, Confluence 문서를 단일 진실 공급원(Single Source of Truth)으로 지정하고 Excel 문서는 아카이브 처리를 권장합니다."
+          },
+          {
+            "type": "정보누락",
+            "topic": "어그로 타겟팅 타입 상세 규칙",
+            "excel_says": "Excel 'Appendix' 시트에서 어그로 관련 테이블 구조가 존재하는 것으로 보이나, OCR 오류로 인해 '| 어그로 타입 | 속성 타입 | 적용 관계 | 비고 |' 정도의 헤더만 판독 가능하며 실제 데이터는 읽을 수 없습니다.",
+            "confluence_says": "7가지 AggroType 상세 정의: HighestAggro(기본값, 동일 수치 시 최근 업데이트 대상 선택), LowestAggro, LowestHealth, HighestHealth, ClosestTarget(거리 동일 시 랜덤), FarthestTarget, RandomTarget(RandomTargetNum 변수로 최대 명수 지정)",
+            "severity": "major",
+            "recommendation": "Confluence에 정의된 7가지 AggroType이 Excel 원본에도 존재하는지 확인 필요. Excel 문서가 초기 기획 단계라면 Confluence의 구현 명세가 최종 버전이므로, Excel 문서에 '구현 완료 - Confluence 참조' 표시 추가 권장."
+          },
+          {
+            "type": "정보누락",
+            "topic": "사거리 내 대상 찾기 옵션 (AggroTypeInRange)",
+            "excel_says": "Excel 문서에서 해당 기능에 대한 언급을 찾을 수 없습니다. OCR 오류로 인해 누락되었을 가능성도 있으나, 판독 가능한 범위 내에서는 확인되지 않습니다.",
+            "confluence_says": "AggroTypeInRange 옵션 상세 정의: MonsterBattle.xlsx에 컬럼 추가, 기본값 False, True 시 스킬 사거리 내 대상만 검색, 예외 처리 규칙(장애물로 인한 이동 필요 시 대상 제외, 사거리 내 대상 없을 시 패턴 취소) 포함",
+            "severity": "major",
+            "recommendation": "AggroTypeInRange는 구현 단계에서 추가된 기능으로 보입니다. Excel 문서가 초기 기획이라면 이 기능이 없는 것이 정상이나, 현재 구현 상태를 반영하려면 Excel 문서 업데이트 또는 '구현 시 추가된 기능' 섹션 추가 권장."
+          },
+          {
+            "type": "정보누락",
+            "topic": "타겟 갱신 쿨타임 및 대상 전환 우선순위",
+            "excel_says": "Excel 문서에서 타겟 갱신 쿨타임이나 대상 전환 우선순위에 대한 명확한 언급을 찾을 수 없습니다.",
+            "confluence_says": "타겟 갱신 쿨타임: MonsterClass 테이블의 TargetRefreshTime 필드로 설정, 0 또는 미입력 시 MonsterDefaultTargetRefreshTime 사용(기본 5초). 대상 전환 우선순위: 1)대상 사망/이탈, 2)타겟 갱신 쿨타임 만료, 3)추적 볼륨 벗어남, 4)추적 시간 초과, 5)액션 사용 시",
+            "severity": "major",
+            "recommendation": "타겟 갱신 쿨타임과 대상 전환 우선순위는 게임플레이에 직접적인 영향을 주는 핵심 규칙입니다. Excel 문서가 최신화되어야 한다면 이 정보를 반드시 추가해야 하며, 그렇지 않다면 Confluence를 공식 명세서로 지정하고 Excel은 참조용으로만 사용 권장."
+          },
+          {
+            "type": "폐기후보",
+            "topic": "Excel 문서의 가독성 및 유효성",
+            "excel_says": "Excel 'Appendix' 시트는 OCR 처리 결과 대부분의 텍스트가 '잡', '식', '곤', '해', '밖' 등의 무의미한 문자로 변환되어 실제 내용 파악이 거의 불가능합니다. 예: '슌밖비발업 data 식밖직외식고 그밖해식 설명하고', '워의식, 식곤 잡라스라난의 등 그 잡래식' 등",
+            "confluence_says": "명확하고 구조화된 문서: 정의, 규칙, 플로우, 테이블 섹션으로 구성, 플로우차트 이미지 포함, 구체적인 예시 제공, 테이블 경로 및 변수명 명시",
+            "severity": "critical",
+            "recommendation": "Excel 문서는 현재 상태로는 실무에 사용 불가능합니다. 다음 중 하나를 선택해야 합니다: 1) 원본 Excel 파일을 직접 열어 내용 확인 후 Confluence와 동기화, 2) Excel 문서를 아카이브 처리하고 Confluence를 단일 진실 공급원으로 지정, 3) Excel 문서를 완전히 재작성. 현재로서는 Confluence 문서만 신뢰 가능합니다."
+          },
+          {
+            "type": "버전불일치",
+            "topic": "문서의 목적 및 상태",
+            "excel_says": "Excel 'Appendix' 시트는 제목에서 '주요 개발 고려중인 기능'이라고 명시하고 있으며, '기획의도로 고려하던 내용들을 정리'라는 설명이 있습니다. 이는 확정되지 않은 아이디어 수집 단계의 문서임을 시사합니다.",
+            "confluence_says": "Confluence 문서는 'HISTORY' 섹션에서 '2025-06-30 퍼포스로 문서 이전'이라고 명시되어 있으며, 구체적인 구현 명세(테이블 경로, 변수명, 기본값 등)를 포함하고 있어 실제 구현된 시스템의 공식 문서로 보입니다.",
+            "severity": "major",
+            "recommendation": "두 문서의 목적이 다릅니다. Excel은 초기 기획 아이디어 수집용, Confluence는 구현 명세서입니다. 문서 관리 정책을 명확히 하고, Excel 문서에 '초안 - 최종 구현은 Confluence 참조' 워터마크 추가 또는 Excel 문서를 '기획 히스토리' 폴더로 이동 권장."
+          }
+        ],
+        "summary": "Excel 문서는 OCR 오류로 인해 내용 파악이 거의 불가능한 상태이며, 초기 기획 아이디어 수집 단계의 문서로 보입니다. Confluence 문서는 명확하고 구체적인 구현 명세를 제공하고 있어 실무에 사용 가능합니다. Excel 문서는 아카이브 처리하고 Confluence를 단일 진실 공급원으로 지정하거나, 원본 Excel 파일을 직접 확인하여 내용을 재작성해야 합니다.",
+        "_meta": {
+          "input_tokens": 17566,
+          "output_tokens": 2898,
+          "api_seconds": 44.3
+        }
+      }
+    },
+    {
+      "pair": {
+        "excel": "PK_퀘스트",
+        "confluence": "Design\\컨텐츠 디자인\\Beta3 개선 항목\\[Beta3] 퀘스트 개선",
+        "confidence": "high",
+        "overlap_topic": "퀘스트 시스템 구조 및 UI",
+        "risk_reason": "Excel은 초기 퀘스트 구조, Beta3 개선으로 다이얼로그/진행 방식 변경됨"
+      },
+      "comparison": {
+        "error": "JSON parse error",
+        "raw": "```json\n{\n  \"has_conflict\": true,\n  \"severity\": \"major\",\n  \"version_relationship\": \"Excel은 Alpha2 기준 기획서이고, Confluence는 Beta3 개선 항목 문서입니다. Confluence가 더 최신이며 Excel의 일부 기능을 개선/변경하는 내용을 담고 있습니다. 두 문서는 상호 보완적이지만, 일부 기능에서 명확한 변경사항이 있어 Excel 문서의 일부 내용이 outdated 상태입니다.\",\n  \"conflicts\": [\n    {\n      \"type\": \"구조적차이\",\n      \"topic\": \"일일 퀘스트 목록 노출 조건\",\n      \"excel_says\": \"Excel 문서에는 일일 퀘스트의 노출 조건에 대한 명시적 설명이 없음. UI String 시트에서 퀘스트 관련 UI 요소만 정의되어 있음.\",\n      \"confluence_says\": \"Beta3에서 일일 퀘스트는 '수락 조건을 만족",
+        "pair": {
+          "excel": "PK_퀘스트",
+          "confluence": "Design\\컨텐츠 디자인\\Beta3 개선 항목\\[Beta3] 퀘스트 개선",
+          "confidence": "high",
+          "overlap_topic": "퀘스트 시스템 구조 및 UI",
+          "risk_reason": "Excel은 초기 퀘스트 구조, Beta3 개선으로 다이얼로그/진행 방식 변경됨"
+        }
+      }
+    },
+    {
+      "pair": {
+        "excel": "PK_아이템 시스템",
+        "confluence": "Design\\시스템 디자인\\아이템\\아이템 강화\\장비 강화 시스템",
+        "confidence": "high",
+        "overlap_topic": "아이템 등급 및 강화 시스템",
+        "risk_reason": "Excel은 아이템 전반, Confluence는 강화 세부로 강화 공식 불일치 가능"
+      },
+      "comparison": {
+        "has_conflict": true,
+        "severity": "major",
+        "version_relationship": "Excel은 아이템 시스템 전반의 기초 설계 문서이고, Confluence는 '장비 강화' 세부 시스템 문서입니다. Excel에는 강화 시스템이 '별도 문서에서 정의'된다고만 언급되어 있으나, Confluence에는 구체적인 강화 규칙과 테이블 설계가 존재합니다. 두 문서는 상호 보완 관계이지만, 강화 재료 아이템의 분류 체계에서 명확한 불일치가 발견되었습니다.",
+        "conflicts": [
+          {
+            "type": "구조적차이",
+            "topic": "강화 재료 아이템의 분류 체계",
+            "excel_says": "Excel 'Enum' 시트에서 ConsumeTypeEnum에 EnchantWeapon(3), EnchantArmor(4), EnchantAccessory(5)를 정의하고, '개요' 시트에서 '소모성 아이템'으로 분류. '2025.03.17 기준, Enum만 있고 기능 미구현'이라고 명시.",
+            "confluence_says": "Confluence에서는 강화 재료를 ItemEtcClass(재료 아이템)로 분류하며, '현재는 ItemConsumeClass에 등록되어 있는데, 강화 재료 아이템은 자체 사용될 예정이 없으므로 ItemEtcClass로 이동'이라고 명시. EtcType으로 EnchantWeapon/Armor/Accessory 및 Blessed/Cursed 변형을 정의.",
+            "severity": "major",
+            "recommendation": "Excel의 ConsumeTypeEnum에서 강화 재료를 제거하고 MaterialTypeEnum 또는 별도 Enum으로 이동 필요. Confluence의 설계(ItemEtcClass)를 Excel에 반영하여 '재료 아이템'으로 재분류하고, '기능 미구현' 주석 제거. 두 문서 간 아이템 분류 체계를 일치시켜야 합니다."
+          },
+          {
+            "type": "정보누락",
+            "topic": "축복받은/저주받은 강화 주문서 Enum 누락",
+            "excel_says": "Excel Enum 시트에는 일반 강화 재료(EnchantWeapon/Armor/Accessory)만 정의되어 있고, 축복받은(Blessed) 및 저주받은(Cursed) 변형은 존재하지 않음.",
+            "confluence_says": "Confluence에서는 BlessedEnchantWeapon/Armor/Accessory 및 CursedEnchantWeapon/Armor/Accessory를 명시적으로 정의하고, 각각 대성공 확률 및 강화 단계 감소 기능을 설명. '※ Enum 추가가 너무 많이 되는 것 같으면 다른 방안을 모색…'이라는 주석 포함.",
+            "severity": "major",
+            "recommendation": "Excel Enum 시트에 BlessedEnchant* 및 CursedEnchant* 시리즈를 추가하거나, Confluence의 우려대로 Enum 폭발을 방지하기 위해 강화 재료에 'Tier' 또는 'Modifier' 속성을 추가하는 방식으로 설계 변경 검토 필요. 두 문서 간 Enum 정의를 동기화해야 합니다."
+          },
+          {
+            "type": "정보누락",
+            "topic": "강화 시스템 테이블 설계 누락",
+            "excel_says": "Excel에는 강화 시스템에 대한 언급이 '개요' 시트에서 '장비 강화'가 가능하다는 정도만 있고, '분해 / 제작 / 컬렉션 등은 별도 문서에서 정의'라고만 명시. 구체적인 테이블 설계나 확률 체계는 없음.",
+            "confluence_says": "Confluence에는 Enchant 테이블(강화 ID, 단계별 확률, 골드 비용, 성공/실패/보존 확률 등 17개 컬럼)과 EnchantBonus 테이블(강화 단계별 스탯 상승치)이 상세히 정의되어 있음. ItemEquipClass에 EnchantId 컬럼 연결 필요성도 명시.",
+            "severity": "major",
+            "recommendation": "Excel 문서에 '장비 강화 시스템은 별도 Confluence 문서 참조' 링크를 명시하거나, 강화 테이블 설계의 개요를 Excel에 추가하여 문서 간 연결성을 강화. 또는 Confluence의 테이블 설계를 Excel 시트로 역이식하여 단일 소스 유지 검토."
+          },
+          {
+            "type": "수치불일치",
+            "topic": "최대 스택 수 불일치",
+            "excel_says": "Excel '개요' 시트에서 소모성 아이템/재료 아이템/퀘스트 아이템의 최대 스택 수를 모두 9,999로 정의.",
+            "confluence_says": "Confluence에는 스택 수에 대한 직접적인 언급이 없으나, '일반' 시트에서 '② 재료 아이템'의 최대 스택수가 '① 소모성 아이템과 동일(최대 스택수만 다름)'이라고 명시되어 있어 암묵적으로 다른 값을 시사.",
+            "severity": "minor",
+            "recommendation": "Excel '일반' 시트의 '② 재료 아이템' 섹션에서 '최대 스택수만 다름'이라는 표현이 모호함. 실제로 다른 값이 적용되는지 확인하고, 동일하다면 해당 문구 삭제. Confluence에는 스택 수 정보가 없으므로 Excel이 정답일 가능성 높음."
+          },
+          {
+            "type": "정보누락",
+            "topic": "안전 강화 구간 정의 누락",
+            "excel_says": "Excel에는 안전 강화 구간에 대한 언급이 전혀 없음. '개요' 시트에서 '안전 강화 시스템 O'라고만 명시.",
+            "confluence_says": "Confluence에서는 '안전 강화 구간'을 SuccessProb=100%인 구간으로 명확히 정의하고, 안전 구간 일괄 강화 기능(바로 강화)을 상세히 설명. 체크박스 on/off 및 재료 부족 시 처리 로직까지 포함.",
+            "severity": "major",
+            "recommendation": "Excel 문서에 안전 강화 구간의 정의와 일괄 강화 기능을 추가하거나, Confluence 링크를 명시. 기획 의도상 중요한 UX 요소이므로 Excel의 '개요' 또는 '장비' 시트에 개념 설명 필요."
+          },
+          {
+            "type": "버전불일치",
+            "topic": "기능 구현 상태 불일치",
+            "excel_says": "Excel Enum 시트에서 EnchantWeapon/Armor/Accessory에 대해 '2025.03.17 기준, Enum만 있고 기능 미구현'이라고 명시.",
+            "confluence_says": "Confluence 문서는 2025-06-23 신규 작성, 2026-01-20 최종 수정되었으며, 강화 시스템이 상세히 설계되어 있고 '[구현 완료]' 태그가 여러 섹션에 존재. 저주받은 강화주문서, 컬렉션 연계 등이 구현 완료 상태.",
+            "severity": "major",
+            "recommendation": "Excel의 '2025.03.17 기준, 기능 미구현' 주석을 제거하고 최신 상태로 업데이트. Confluence가 2025-06-23 이후 작성되었으므로 강화 시스템은 이미 구현되었거나 구현 중일 가능성 높음. Excel 문서의 날짜(2026-03-10 변환)가 더 최신이지만 내용은 outdated 상태."
+          },
+          {
+            "type": "정보누락",
+            "topic": "컬렉션 강화 단계 표시 기능 누락",
+            "excel_says": "Excel에는 컬렉션 시스템과 강화 시스템의 연계에 대한 언급이 전혀 없음.",
+            "confluence_says": "Confluence [4-3] 섹션에서 강화 UI 내 '컬렉션 정보 보기' 체크박스 기능을 상세히 설명. 아이템 아이콘에 컬렉션 달성을 위한 최소 강화 단계를 표시하는 UX 기능 포함. ItemCollectionClass 테이블 연계 로직까지 명시.",
+            "severity": "minor",
+            "recommendation": "Excel 문서에 컬렉션-강화 연계 기능을 추가하거나, '컬렉션 시스템.xlsx' 문서 참조 링크 명시. 이는 UX 편의 기능이므로 필수는 아니지만, 시스템 간 연계성을 문서화하는 것이 바람직."
+          },
+          {
+            "type": "정보누락",
+            "topic": "강화 결과 아이템명 표기 규칙 누락",
+            "excel_says": "Excel '영문명' 시트에서 네이밍 규칙을 정의하지만, 강화된 아이템의 표기 방법은 없음.",
+            "confluence_says": "Confluence [3-3]에서 강화된 아이템명을 '+{강화단계} {ItemName}' 형태로 표기한다고 명시. 예: '+10 해와 달의 검'.",
+            "severity": "minor",
+            "recommendation": "Excel '영문명' 시트 또는 '장비' 시트에 강화 아이템명 표기 규칙 추가. 클라이언트 UI 및 로그 시스템에서 일관된 표기를 위해 문서화 필요."
+          },
+          {
+            "type": "정보누락",
+            "topic": "강화 재료 수량 및 골드 비용 정보 누락",
+            "excel_says": "Excel에는 강화 시 소모되는 재료 수량이나 골드 비용에 대한 언급이 전혀 없음.",
+            "confluence_says": "Confluence Enchant 테이블에서 GoldPrice 컬럼을 정의하고, 강화 단계별로 골드가 소모된다고 명시. 재료는 1개씩 소모되는 것으로 추정(명시적 언급 없음).",
+            "severity": "minor",
+            "recommendation": "Excel 문서에 강화 비용(골드, 재료 수량) 개념을 추가하거나 Confluence 참조 링크 명시. 경제 시스템 설계 시 중요한 요소이므로 개요 수준에서라도 언급 필요."
+          },
+          {
+            "type": "폐기후보",
+            "topic": "Excel '이미지 편집' 시트의 플로우차트",
+            "excel_says": "Excel '이미지 편집' 시트에 '상품 구매 시도' 플로우차트가 존재하지만, 아이템 시스템과 무관한 BM 상점 구매 로직으로 보임.",
+            "confluence_says": "Confluence에는 해당 내용 없음. 강화 시스템의 성공/실패 플로우차트는 별도로 존재.",
+            "severity": "minor",
+            "recommendation": "Excel '이미지 편집' 시트의 플로우차트가 아이템 시스템 문서에 포함된 이유 확인 필요. 잘못 삽입된 내용이라면 제거하거나 별도 BM 시스템 문서로 이동. 시트명도 '이미지 편집'이 아닌 내용과 맞지 않음."
+          }
+        ],
+        "summary": "Excel은 아이템 시스템의 기초 설계 문서이고 Confluence는 장비 강화 세부 시스템 문서로 상호 보완 관계입니다. 그러나 강화 재료의 분류 체계(Consume vs Etc)에서 major 충돌이 발견되었으며, Excel에는 축복/저주 강화 주문서 Enum, 안전 강화 구간, 강화 테이블 설계 등 Confluence에 존재하는 핵심 정보가 누락되어 있습니다. Excel의 '기능 미구현' 주석(2025.03.17)은 outdated 상태이며, Confluence(2025.06.23~2026.01.20)가 더 최신 설계를 반영하고 있습니다. 두 문서 간 아이템 분류 체계 통일, Excel의 강화 시스템 정보 업데이트, Enum 동기화가 시급합니다.",
+        "_meta": {
+          "input_tokens": 20382,
+          "output_tokens": 4054,
+          "api_seconds": 69.5
+        }
+      }
+    },
+    {
+      "pair": {
+        "excel": "PK_골드 밸런스",
+        "confluence": "Design\\시스템 디자인\\경제 밸런스\\골드 밸런스",
+        "confidence": "high",
+        "overlap_topic": "골드 획득 및 소모 밸런스",
+        "risk_reason": "Excel 시트와 Confluence 문서 간 던전/필드 사냥 골드량 차이 가능"
+      },
+      "comparison": {
+        "has_conflict": true,
+        "severity": "minor",
+        "version_relationship": "Excel은 Confluence의 상세 구현 버전. Confluence는 개요 및 기조 설명, Excel은 실제 데이터 테이블. 두 문서는 상호 보완 관계이며, 일부 지역명 및 네임드 정보에서 미세한 차이 존재.",
+        "conflicts": [
+          {
+            "type": "정보누락",
+            "topic": "지역명 불일치 - '배반자들의 소굴' vs '맥반석[?]의 소'",
+            "excel_says": "셀레탄 30~31 레벨 지역명: '맥반석[?]의 소' (불확실 표시 포함)",
+            "confluence_says": "셀레탄 30~31 레벨 지역명: '배반자들의 소굴'",
+            "severity": "minor",
+            "recommendation": "지역명 최종 확정 필요. Confluence의 '배반자들의 소굴'이 공식 명칭인지, Excel의 '맥반석의 소'가 최신 변경사항인지 확인 후 통일."
+          },
+          {
+            "type": "정보누락",
+            "topic": "지역명 불일치 - '금빛 열매 자생지' vs '잊혀진 늪배 사냥지'",
+            "excel_says": "로바르스 54~56 레벨 지역명: '잊혀진 늪배 사냥지'",
+            "confluence_says": "로바르스 54~56 레벨 지역명: '금빛 열매 자생지'",
+            "severity": "minor",
+            "recommendation": "지역명 최종 확정 필요. 두 문서 간 명칭 통일 필요."
+          },
+          {
+            "type": "정보누락",
+            "topic": "지역명 불일치 - '성난 폭풍의 평원' vs '상년 폭풍녘 벌[?]'",
+            "excel_says": "소르브 74~75 레벨 지역명: '상년 폭풍녘 벌[?]' (불확실 표시 포함)",
+            "confluence_says": "소르브 74~75 레벨 지역명: '성난 폭풍의 평원'",
+            "severity": "minor",
+            "recommendation": "지역명 최종 확정 필요. Confluence의 '성난 폭풍의 평원'이 공식 명칭으로 보임. Excel 수정 필요."
+          },
+          {
+            "type": "정보누락",
+            "topic": "네임드 몬스터 정보 - Excel에만 존재",
+            "excel_says": "각 지역별 네임드 몬스터 상세 정보 포함 (예: 성터 요괴 대장, 스켈레톤_보스A, 라자루 대제 등)",
+            "confluence_says": "네임드 몬스터 정보 없음. 지역명과 레벨대, 골드량만 표시.",
+            "severity": "minor",
+            "recommendation": "Confluence에 네임드 정보 추가 여부 검토. 기획 문서 완성도를 위해 Excel의 네임드 정보를 Confluence에도 반영 권장."
+          },
+          {
+            "type": "정보누락",
+            "topic": "시간당 골드 획득량 상세 계산 - Excel에만 존재",
+            "excel_says": "쉬움/보통/어려움/매우 어려움 난이도별 시간당 골드 획득량 및 3/6/12/24/30시간 누적 골드량 상세 테이블 제공",
+            "confluence_says": "난이도별 시간당 골드 획득량 상세 계산 없음. 이미지로 첨부된 테이블에는 포함되어 있으나 본문에는 설명 없음.",
+            "severity": "minor",
+            "recommendation": "Confluence 본문에 난이도별 골드 획득량 계산 로직 추가 설명 권장. 현재는 이미지에만 의존."
+          },
+          {
+            "type": "정보누락",
+            "topic": "던전 골드 획득 배율 - Confluence에만 상세 설명",
+            "excel_says": "던전 사냥 기준 시트에 '필드의 골드 획득량을 레벨대별 / 난이도별로 선정하여 배율 지정' 개요만 존재. 구체적 배율 테이블 없음.",
+            "confluence_says": "던전별 골드 획득량 기준 테이블 제공 (일일던전 x5, 주간던전 x1 등). 예시: 35레벨대 일일던전은 <숭배의 언덕> 보통 난이도 기준 5배.",
+            "severity": "minor",
+            "recommendation": "Excel에 던전별 골드 배율 상세 테이블 추가 권장. 현재 Excel은 개요만 있고 구체적 수치 없음."
+          },
+          {
+            "type": "정보누락",
+            "topic": "컨텐츠별 소모 금액 - Excel에만 상세 테이블",
+            "excel_says": "컨텐츠별 소모 금액 상세 테이블 제공 (길드 기부, 강화, 스킬 강화, 던전 입장, 제작 등 최소/최대 금액)",
+            "confluence_says": "컨텐츠별 소모 금액 개념 설명 및 예시만 제공. 상세 수치 테이블은 이미지로만 첨부.",
+            "severity": "minor",
+            "recommendation": "Confluence 본문에 컨텐츠별 소모 금액 테이블 명시적 추가 권장. 현재는 이미지에만 의존."
+          },
+          {
+            "type": "정보누락",
+            "topic": "BM 상점 골드 소모 - Confluence에만 존재",
+            "excel_says": "BM 상점 관련 정보 없음.",
+            "confluence_says": "BM 상점 (지속) 섹션 존재. 일일 100만골드 소모 유도, 정령탄/소환권/강화재료/성장재료 등 판매 계획.",
+            "severity": "minor",
+            "recommendation": "Excel에 BM 상점 골드 소모 시트 추가 검토. Confluence에 명시된 BM 상점 정보를 Excel에도 반영 권장."
+          },
+          {
+            "type": "수치불일치",
+            "topic": "액티브 스킬 희귀 등급 가격 - 총 금액 계산 오류",
+            "excel_says": "액티브 스킬_희귀 (가격 15,000,000) → 총 금액 20,000,000 / 액티브 스킬_희귀 (가격 20,000,000) → 총 금액 50,000,000 / 액티브 스킬_희귀 (가격 50,000,000) → 총 금액 75,000,000",
+            "confluence_says": "이미지 상 동일한 가격 구조이나, 총 금액 계산 로직 불명확 (누적 합산으로 추정)",
+            "severity": "minor",
+            "recommendation": "Excel의 '총 금액' 컬럼 계산 로직 명확화 필요. 단일 구매 금액인지, 누적 합산 금액인지 컬럼명 또는 비고로 명시 권장."
+          }
+        ],
+        "summary": "두 문서는 상호 보완 관계로, Excel은 상세 데이터 테이블 중심, Confluence는 기조 및 개념 설명 중심입니다. 주요 충돌은 지역명 불일치 3건(배반자들의 소굴 vs 맥반석의 소, 금빛 열매 자생지 vs 잊혀진 늪배 사냥지, 성난 폭풍의 평원 vs 상년 폭풍녘 벌)과 정보 분산(네임드 정보, 던전 배율, BM 상점 등)입니다. 심각도는 minor 수준이며, 지역명 통일 및 상호 정보 보완이 필요합니다.",
+        "_meta": {
+          "input_tokens": 12723,
+          "output_tokens": 2523,
+          "api_seconds": 40.2
+        }
+      }
+    },
+    {
+      "pair": {
+        "excel": "PK_장비 밸런스 및 데이터",
+        "confluence": "Design\\시스템 디자인\\경제 밸런스\\장비 계획\\장비 드랍 및 제작 밸런스",
+        "confidence": "high",
+        "overlap_topic": "장비 드랍률 및 제작 밸런스",
+        "risk_reason": "Excel 드랍 계획과 Confluence 밸런스 문서 간 드랍률 수치 불일치 위험"
+      },
+      "comparison": {
+        "error": "JSON parse error",
+        "raw": "```json\n{\n  \"has_conflict\": true,\n  \"severity\": \"critical\",\n  \"version_relationship\": \"Excel은 악세서리 장비 아이템 데이터 테이블이고, Confluence는 장비 드랍/제작 밸런스 설계 문서입니다. Excel은 구현 데이터, Confluence는 설계 문서로 서로 다른 레이어이지만, Confluence의 제작 재료 설계가 Excel 데이터 구조에 반영되어야 하는 관계입니다.\",\n  \"conflicts\": [\n    {\n      \"type\": \"정보누락\",\n      \"topic\": \"장비 등급(Grade) 체계 불일치\",\n      \"excel_says\": \"Excel 테이블에는 Grade 컬럼이 존재하지만 모든 데이터 행에서 값이 비어있음('-'). 310001~313321 범위의 악세서리 아이템들의 등급 정보가 누락됨.\",\n      \"confluence_says\": \"Confluence는 명확한 등급 체",
+        "pair": {
+          "excel": "PK_장비 밸런스 및 데이터",
+          "confluence": "Design\\시스템 디자인\\경제 밸런스\\장비 계획\\장비 드랍 및 제작 밸런스",
+          "confidence": "high",
+          "overlap_topic": "장비 드랍률 및 제작 밸런스",
+          "risk_reason": "Excel 드랍 계획과 Confluence 밸런스 문서 간 드랍률 수치 불일치 위험"
+        }
+      }
+    },
+    {
+      "pair": {
+        "excel": "PK_캐릭터 성장 밸런스",
+        "confluence": "Design\\시스템 디자인\\성장 밸런스\\성장 밸런스 기본 정보",
+        "confidence": "high",
+        "overlap_topic": "캐릭터 레벨별 성장 곡선",
+        "risk_reason": "Excel 시뮬레이션과 Confluence 기본 정보 간 성장 곡선 차이 가능"
+      },
+      "comparison": {
+        "has_conflict": true,
+        "severity": "critical",
+        "version_relationship": "문서 B(Confluence)가 제공되지 않아 비교 불가능. 문서 A(Excel)만 존재하는 상태로, Confluence 페이지 내용이 누락되어 충돌 분석을 수행할 수 없음.",
+        "conflicts": [
+          {
+            "type": "정보누락",
+            "topic": "Confluence 문서 전체 누락",
+            "excel_says": "Alpha 2 성장 밸런스 전체 설계 포함: 1~20레벨 성장 곡선, 경험치 출처 비율(메인 퀘스트 30%/20%, 몬스터 사냥 70%/80%), 레벨별 필요 경험치(exponential 증가), 플레이 타임 1시간, 지역별 밸런스(얼리던1/2/3), 메인/서브 퀘스트 상세 테이블 포함",
+            "confluence_says": "문서 내용이 제공되지 않음. '출처: Design\\시스템 디자인\\성장 밸런스\\성장 밸런스 기본 정보'라는 경로만 명시됨",
+            "severity": "critical",
+            "recommendation": "Confluence 페이지의 실제 내용을 제공해야 비교 분석 가능. 현재 상태로는 Excel 문서가 Perforce 원본이며 최신 버전인지, Confluence에 동일/상이한 내용이 있는지 확인 불가능. Confluence 페이지 전체 내용을 추출하여 재비교 필요."
+          }
+        ],
+        "summary": "문서 B(Confluence)의 실제 내용이 제공되지 않아 비교 분석을 수행할 수 없습니다. Excel 문서는 Alpha 2 성장 밸런스의 상세한 설계(경험치 곡선, 퀘스트 밸런스, 플레이 타임 등)를 포함하고 있으나, Confluence 페이지가 동일한 정보를 담고 있는지, 상이한 버전인지, 또는 outdated된 정보가 있는지 확인하려면 Confluence 문서의 전체 내용이 필요합니다.",
+        "_meta": {
+          "input_tokens": 11989,
+          "output_tokens": 704,
+          "api_seconds": 16.1
+        }
+      }
+    },
+    {
+      "pair": {
+        "excel": "PK_로그인 플로우",
+        "confluence": "Design\\시스템 디자인\\기반 시스템\\로그인\\로그인 및 캐릭터 생성과 선택",
+        "confidence": "high",
+        "overlap_topic": "로그인 및 캐릭터 생성 프로세스",
+        "risk_reason": "Excel 플로우와 Confluence 프로세스 문서 간 단계 차이 가능"
+      },
+      "comparison": {
+        "has_conflict": true,
+        "severity": "major",
+        "version_relationship": "Excel 문서(PK_로그인 플로우.xlsx)는 Alpha2 마감 기준(2025.05.08, v0.65)으로 상세 구현 명세를 포함하며, Confluence 페이지는 개요 수준의 정리 문서로 보입니다. Excel이 더 최신이고 상세하나, Confluence는 파편화된 정보를 통합하려는 목적으로 작성 중인 것으로 판단됩니다.",
+        "conflicts": [
+          {
+            "type": "정보누락",
+            "topic": "Alpha2 미구현 항목 및 TC(Test Case) 정보",
+            "excel_says": "Excel에는 'TC' 시트에 39개의 상세 테스트 케이스가 정의되어 있으며, '목표 및 개요' 시트에 Alpha2 마감 기준 미구현 항목 3가지(캐릭터 생성 일자 불일치, 레벨 10 이하 캐릭터 삭제 가능, 캐릭터 생성 창 스킬 설명 연결)가 명시되어 있습니다.",
+            "confluence_says": "Confluence 페이지는 '파편화 되어 있는 기획 내용 위키에 정리'한다는 목적만 명시되어 있고, 구체적인 테스트 케이스나 미구현 항목에 대한 언급이 전혀 없습니다.",
+            "severity": "major",
+            "recommendation": "Confluence 페이지에 Excel의 TC 시트 내용과 Alpha2 미구현 항목을 반영하여 QA 및 개발팀이 참조할 수 있도록 업데이트 필요. 특히 미구현 항목은 추적 가능하도록 Jira 링크와 함께 정리 권장."
+          },
+          {
+            "type": "정보누락",
+            "topic": "상세 UI 구성 및 플로우 다이어그램",
+            "excel_says": "Excel '로그인 플로우' 시트에는 ①개발사 로고 → ②타이틀 화면(대기) → ③계정 로그인 → ④타이틀 화면(선택 대기) → ⑤서버 선택 → 캐릭터 선택/생성으로 이어지는 상세 플로우가 Mermaid 다이어그램과 스크린샷 이미지(6개)로 문서화되어 있습니다. 각 단계별 UI 구성 요소(①~④ 번호 라벨링)와 터치 인터랙션, 분기 조건이 명시되어 있습니다.",
+            "confluence_says": "Confluence 페이지는 '문서 구성' 섹션만 있고 실제 플로우 내용이 비어 있습니다. 관련 문서 링크로 Perforce의 'PK_로그인 플로우.xlsx'를 참조하도록 되어 있으나, 위키 내에 통합된 내용은 없습니다.",
+            "severity": "major",
+            "recommendation": "Confluence를 단일 진실 공급원(Single Source of Truth)으로 만들려면 Excel의 플로우 다이어그램, UI 구성 설명, 스크린샷을 Confluence에 임베드하거나 재작성 필요. 현재 상태로는 개발팀이 Perforce Excel 파일을 직접 열어야 하므로 접근성이 떨어집니다."
+          },
+          {
+            "type": "정보누락",
+            "topic": "NPC 및 기능 테이블 정의",
+            "excel_says": "Excel 'Sheet3' 시트에는 NpcLocation, FunctionNpcInfo, MerchantGoods, TeleporterInfo 등 4개의 상세 데이터 테이블이 정의되어 있으며, NPC 출현/소멸 조건, 기능 타입, 상인 상품 목록, 텔레포터 목적지 등이 구체적으로 명시되어 있습니다(예: NPC ID 100001~100005, 상품 ID 101-1~7).",
+            "confluence_says": "Confluence 페이지에는 NPC 관련 테이블이나 게임 시스템 데이터에 대한 언급이 전혀 없습니다.",
+            "severity": "minor",
+            "recommendation": "Sheet3의 NPC 테이블은 로그인 플로우와 직접 관련이 없어 보이므로, 별도 Confluence 페이지(예: 'NPC 시스템 설계')로 분리하여 정리하는 것이 적절합니다. 현재 Excel 파일에 혼재되어 있는 것은 문서 구조상 부적절해 보입니다."
+          },
+          {
+            "type": "버전불일치",
+            "topic": "문서 최신성 및 History 추적",
+            "excel_says": "Excel 'History_Ver0.65' 시트에는 v0.1(24.10.16)부터 v0.65(25.05.08)까지 11개 버전의 상세 변경 이력이 기록되어 있으며, 최종 버전은 'Alpha2 마감에 맞춰 문서 최신화(미구현 내용만 별도 정리)'로 명시되어 있습니다.",
+            "confluence_says": "Confluence 페이지의 'HISTORY' 테이블은 비어 있으며, 페이지 메타데이터상 version 6(2026-03-09 다운로드 기준)이지만 실제 변경 이력이 기록되지 않았습니다.",
+            "severity": "major",
+            "recommendation": "Confluence 페이지의 HISTORY 섹션을 Excel의 History 시트 내용으로 채우고, 향후 변경 사항은 Confluence에서 관리하도록 프로세스 정립 필요. 현재는 Excel과 Confluence 중 어느 것이 최신인지 불명확합니다."
+          },
+          {
+            "type": "구조적차이",
+            "topic": "문서 범위 및 목적",
+            "excel_says": "Excel 문서는 '로그인 플로우'를 중심으로 하되, Sheet1에서 'Alpha1에 맞춰서 정리'하며 '실행 파일 구동 → 계정 로그인 → 서버 선택 → 타이틀 화면 → 캐릭터 선택 및 생성 → 접속'의 단계만 다룬다고 명시. 또한 'Sheet3'에 NPC 테이블, '보스전 이후 연출_Backup' 시트에 후반 연출 콘티가 포함되어 있어 문서 범위가 혼재되어 있습니다.",
+            "confluence_says": "Confluence 페이지는 '로그인 및 캐릭터 생성과 선택'이라는 명확한 제목으로 범위를 한정하고 있으며, '파편화 되어 있는 기획 내용 위키에 정리'한다는 목적을 명시. 관련 문서로 'PK_캐릭터 생성 연출.xlsx'도 별도로 참조하고 있습니다.",
+            "severity": "minor",
+            "recommendation": "Excel 파일 내 'Sheet3(NPC 테이블)'과 '보스전 이후 연출_Backup' 시트는 로그인 플로우와 무관하므로 별도 파일로 분리 권장. Confluence는 '로그인 및 캐릭터 생성/선택'에만 집중하고, 연출 관련 내용은 'PK_캐릭터 생성 연출.xlsx'를 참조하는 현재 구조가 더 적절합니다."
+          },
+          {
+            "type": "정보누락",
+            "topic": "개발 일정 및 담당 파트 정보",
+            "excel_says": "Excel '목표 및 개요' 시트에는 '로그인 플로우 테이블'이 있어 각 기능별로 '기획 현황', '클라이언트 필요 여부', '서버 필요 여부', '아트(+UI) 필요 여부', '빌드 타겟(Alpha 2)' 정보가 정리되어 있습니다.",
+            "confluence_says": "Confluence 페이지에는 개발 일정이나 파트별 작업 필요 여부에 대한 정보가 없습니다.",
+            "severity": "minor",
+            "recommendation": "Confluence에 개발 일정 및 파트별 작업 현황 섹션을 추가하여 프로젝트 관리 도구로서의 기능을 강화할 수 있습니다. 다만 이는 Jira와 중복될 수 있으므로, Jira 대시보드 링크로 대체하는 것도 고려 가능합니다."
+          }
+        ],
+        "summary": "Excel 문서(v0.65, 2025.05.08)는 Alpha2 마감 기준의 상세 구현 명세이며, Confluence 페이지(v6, 2026-03-09)는 파편화된 정보를 통합하려는 개요 문서입니다. 주요 충돌은 Confluence에 Excel의 핵심 내용(TC 39개, 미구현 항목 3개, 상세 플로우 다이어그램, NPC 테이블)이 누락되어 있다는 점입니다. Confluence를 단일 진실 공급원으로 만들려면 Excel 내용을 통합하고, 무관한 내용(NPC 테이블, 보스전 연출)은 별도 문서로 분리해야 합니다.",
+        "_meta": {
+          "input_tokens": 12190,
+          "output_tokens": 2973,
+          "api_seconds": 49.9
+        }
+      }
+    },
+    {
+      "pair": {
+        "excel": "PK_HUD 시스템",
+        "confluence": "Design\\시스템 디자인\\UX UI 규칙\\UX 규칙 문서\\HUD 기능적 레이아웃 구성",
+        "confidence": "high",
+        "overlap_topic": "HUD 레이아웃 및 전투 UI",
+        "risk_reason": "Excel HUD 시트와 Confluence UX 규칙 간 레이아웃 구성 차이 가능"
+      },
+      "comparison": {
+        "has_conflict": true,
+        "severity": "major",
+        "version_relationship": "Excel은 상세 구현 명세서(알파/베타 일정 포함), Confluence는 크로스플랫폼 UX 원칙 문서. 상호보완적이나 일부 레이아웃 구조와 우선순위에서 불일치 발견.",
+        "conflicts": [
+          {
+            "type": "구조적차이",
+            "topic": "HUD 영역 구분 체계",
+            "excel_says": "Excel은 기능별 번호 체계(①~⑰)로 HUD 요소를 분류하며, 비전투/전투 시나리오를 별도 시트로 구분. 레이아웃은 이미지 기반 설명.",
+            "confluence_says": "Confluence는 9개 영역(3x3 그리드, Anchored 기준)으로 HUD를 체계화하고 각 영역의 기능적 역할을 명시. 크로스플랫폼 일관성 강조.",
+            "severity": "major",
+            "recommendation": "두 문서의 영역 분류 체계를 통합 필요. Confluence의 9영역 체계를 Excel에 반영하거나, Excel의 번호 체계를 Confluence 영역에 매핑하는 통합 테이블 작성 권장."
+          },
+          {
+            "type": "정보누락",
+            "topic": "퀵슬롯 자동 사용(Auto-Use) 시스템",
+            "excel_says": "Excel에는 '자동 전투 On/Off' 버튼(⑭)과 '물약 자동 사용 정보'(⑯)가 있으나, 스와이프 기반 슬롯별 자동 발사 기능은 명시되지 않음.",
+            "confluence_says": "Confluence는 '슬롯을 위/아래 스와이프하여 자동 사용 활성화/비활성화' 기능을 상세히 정의. 시각적 피드백(Glowing Effect), 우선순위 규칙 포함.",
+            "severity": "major",
+            "recommendation": "Excel 'HUD_전투' 시트에 슬롯별 자동 발사 인터랙션 규칙 추가 필요. Confluence의 스와이프 UX를 Excel 10-1, 10-2 항목에 통합하고, 우선순위 로직을 명시."
+          },
+          {
+            "type": "수치불일치",
+            "topic": "퀵슬롯 규격 및 배치",
+            "excel_says": "Excel은 슬롯 크기/간격을 명시하지 않음. 'Item1~Item4, Skill1~Skill4' 표기만 있으며, 페이지 인디케이터(●○○○○) 언급.",
+            "confluence_says": "Confluence는 1920x1080 기준으로 메인 공격 버튼(180x180px), 일반 스킬 슬롯(90x90px, 간격 12px), 소모품 슬롯(80x80px, 간격 10px) 등 구체적 수치 제공. 세이프존(좌우 100px) 규칙 명시.",
+            "severity": "major",
+            "recommendation": "Excel에 Confluence의 슬롯 규격 테이블을 추가하거나, 별도 'UI 규격 시트' 생성 후 상호 참조. 페이지 인디케이터와 8개 스킬 슬롯 배치 관계 명확화 필요."
+          },
+          {
+            "type": "정보누락",
+            "topic": "버프/디버프 우선순위 규칙",
+            "excel_says": "Excel은 '잔여 시간순 정렬' 및 'Priority 컬럼 기반 우선순위' 규칙을 상세히 설명. BuffClass - Duration값 -1이면 패시브 탭 출력 등 구현 로직 포함.",
+            "confluence_says": "Confluence는 '버프/디버프 아이콘' 항목만 언급하며, 정렬 규칙이나 세부 UI 구조는 미기재. '캐릭터 정보 영역' 테이블에서 클릭 시 사이드 패널 출력만 명시.",
+            "severity": "minor",
+            "recommendation": "Confluence에 Excel의 버프/디버프 정렬 규칙 요약 추가 권장. 또는 Excel 참조 링크 명시하여 구현팀이 상세 로직을 확인할 수 있도록 조치."
+          },
+          {
+            "type": "구조적차이",
+            "topic": "메뉴 아이콘 카테고리 분류",
+            "excel_says": "Excel은 '성장/컨텐츠/커뮤니티/편의&기타' 4개 카테고리로 메뉴를 분류하고, 가로 5칸 제한 규칙 명시. 각 카테고리별 TextKey 매핑 테이블 포함.",
+            "confluence_says": "Confluence는 '햄버거 메뉴(전체 메뉴)' 버튼만 언급하며, 카테고리 구조나 배치 규칙은 미기재. '우측 상단' 영역에서 '전투 외적인 정보 확인 및 게임 환경 설정' 역할만 정의.",
+            "severity": "minor",
+            "recommendation": "Confluence에 Excel의 메뉴 카테고리 체계 요약 추가 또는 Excel 참조 명시. 크로스플랫폼 환경에서 메뉴 확장성 고려 시 가로 5칸 제한 규칙의 PC 적용 여부 검토 필요."
+          },
+          {
+            "type": "정보누락",
+            "topic": "화폐 UI 터치 박스 및 계층 구조",
+            "excel_says": "Excel은 '유료 화폐(좌)/기본 화폐(우)' 최대 단위 명시(999,999 / 9,999,999,999). 터치 시 '계정 귀속/캐릭터 귀속' 화폐 목록 출력 규칙 포함.",
+            "confluence_says": "Confluence는 '보유 재화(다이아, 골드 등)' 항목만 '중앙 상단' 영역에 배치. 터치 인터랙션이나 계층 구조는 미기재.",
+            "severity": "minor",
+            "recommendation": "Confluence에 화폐 UI 터치 시 동작 규칙 추가 또는 Excel 참조 링크 명시. 중앙 상단 배치가 Excel의 '상단 좌측' 배치와 다른 점 확인 필요."
+          },
+          {
+            "type": "버전불일치",
+            "topic": "알파/베타 일정 정보",
+            "excel_says": "Excel은 각 HUD 요소별로 '알파01/알파02/베타 이후' 완료 일정을 명시. 예: 시스템 메시지(⑥)는 '베타 이후', 주변 탐지(⑤)는 '알파02 완료 예정'.",
+            "confluence_says": "Confluence는 일정 정보 없음. 문서 작성일(2025-12-08)만 기재되어 있으며, 구현 우선순위나 단계별 계획 미포함.",
+            "severity": "minor",
+            "recommendation": "Confluence에 '구현 우선순위' 섹션 추가하여 Excel의 알파/베타 일정과 동기화. 또는 Confluence를 '최종 목표 상태' 문서로 정의하고, Excel을 '단계별 구현 계획' 문서로 역할 분리."
+          },
+          {
+            "type": "정보누락",
+            "topic": "타게팅 시스템 연동",
+            "excel_says": "Excel은 'HUD 타겟 정보'(①), '타게팅 변경'(⑫) 항목에서 'PK_타게팅 시스템.xlsx' 참조 명시. 버프 중첩 표현 규칙도 타게팅 시스템 문서 참조.",
+            "confluence_says": "Confluence는 '몬스터 및 타겟 정보'를 '중앙 상단' 영역에 배치하나, 타게팅 시스템 연동 규칙이나 참조 문서 미기재.",
+            "severity": "minor",
+            "recommendation": "Confluence에 타게팅 시스템 참조 링크 추가. 또는 '중앙 상단' 영역 설명에 '타겟 정보 출력 규칙은 PK_타게팅 시스템 참조' 명시."
+          },
+          {
+            "type": "정보누락",
+            "topic": "Safe Area 및 세이프존 규칙",
+            "excel_says": "Excel은 세이프존 개념 미언급. 레이아웃 이미지에서 시각적으로만 표현.",
+            "confluence_says": "Confluence는 '세이프존(좌우 100px)' 규칙을 명시하고, 퀵슬롯 배치 시 준수 원칙으로 정의. '조작 심리학' 및 '엄지손가락 가동 범위' 고려 언급.",
+            "severity": "major",
+            "recommendation": "Excel에 세이프존 규칙 추가 필요. 특히 'HUD_전투' 시트의 퀵슬롯 배치 설명에 Confluence의 100px 규칙 반영. 모바일/PC 해상도별 세이프존 변환 테이블 작성 권장."
+          },
+          {
+            "type": "폐기후보",
+            "topic": "페이지 인디케이터(●○○○○)",
+            "excel_says": "Excel 'HUD_기본' 시트에서 '페이지 인디케이터(●○○○○) + 스킬 슬롯(Item1~Item4, Skill1~Skill4)' 언급.",
+            "confluence_says": "Confluence는 페이지 인디케이터 미언급. 퀵슬롯은 8개 스킬 + 4개 소모품으로 단일 레이아웃 구성.",
+            "severity": "minor",
+            "recommendation": "페이지 인디케이터가 폐기되었는지 확인 필요. 만약 단일 레이아웃으로 통합되었다면 Excel에서 해당 표기 삭제. 여전히 유효하다면 Confluence에 페이지 전환 규칙 추가."
+          }
+        ],
+        "summary": "Excel은 구현 중심의 상세 명세서(알파/베타 일정, 시스템 메시지 조건, 버프 정렬 로직 등)이고, Confluence는 크로스플랫폼 UX 원칙 문서(9영역 체계, 세이프존 규칙, 조작 심리학)입니다. 주요 충돌은 ①HUD 영역 분류 체계 불일치, ②퀵슬롯 자동 발사 기능 누락(Excel), ③세이프존 규칙 누락(Excel), ④슬롯 규격 수치 누락(Excel)입니다. 두 문서를 통합하거나 상호 참조 체계를 명확히 하여 구현팀 혼선을 방지해야 합니다.",
+        "_meta": {
+          "input_tokens": 18143,
+          "output_tokens": 3487,
+          "api_seconds": 72.4
+        }
+      }
+    },
+    {
+      "pair": {
+        "excel": "PK_인벤토리 시스템",
+        "confluence": "Design\\시스템 디자인\\아이템\\인벤토리",
+        "confidence": "high",
+        "overlap_topic": "인벤토리 슬롯 및 정렬 시스템",
+        "risk_reason": "Excel 인벤토리 구조와 Confluence 자동 정렬 기능 간 로직 충돌 가능"
+      },
+      "comparison": {
+        "has_conflict": true,
+        "severity": "critical",
+        "version_relationship": "Excel 문서는 상세한 인벤토리 시스템 기획서이며, Confluence 페이지는 빈 페이지 상태입니다. Excel이 실제 작업 문서이고 Confluence는 아직 작성되지 않은 것으로 보입니다.",
+        "conflicts": [
+          {
+            "type": "정보누락",
+            "topic": "인벤토리 시스템 전체 사양",
+            "excel_says": "Excel에는 인벤토리 시스템의 전체 사양이 상세히 기술되어 있습니다: (1) 개요 시트: 유사 게임 조사, PK 기본 사양, 공통 규칙, 버튼 설명, 인벤토리 사양(가방 칸 수 10칸, 보조가방 100칸, 1회 확장 시 1칸 증가, 최대 10,000칸 확장 가능) (2) 백업 시트: 강화/합성/펫 관련 확률 및 재화 소모 테이블, 의뢰 시스템, 거래소/인앱 관련 보상 체계 (3) 아이템창&슬롯 시트: UI 정보, 슬롯 정보(소모성/장비 아이템), 아이템 클릭/사용 규칙, 잠금 기능 등",
+            "confluence_says": "Confluence 페이지는 완전히 비어있습니다. 제목만 '인벤토리'로 설정되어 있고 본문 내용이 전혀 없습니다.",
+            "severity": "critical",
+            "recommendation": "Excel 문서의 내용을 Confluence로 마이그레이션해야 합니다. 특히 (1) 인벤토리 기본 사양(칸 수, 확장 규칙), (2) UI/UX 규칙(슬롯 조작, 아이템 표시), (3) 아이템 분류 및 필터 기능을 우선적으로 옮기고, 이미지 파일들도 함께 업로드해야 합니다."
+          },
+          {
+            "type": "버전불일치",
+            "topic": "문서 최신성 및 공식 버전",
+            "excel_says": "Excel 문서는 Perforce에 원본이 있으며, 2026-03-11에 변환되었습니다. 'PK_인벤토리 시스템'이라는 명확한 파일명으로 관리되고 있으며, 3개의 시트(개요, 백업, 아이템창&슬롯)로 구성된 완성된 기획서입니다.",
+            "confluence_says": "Confluence 페이지는 2026-03-09에 다운로드되었으며(Excel보다 2일 빠름), version 1 상태이고, 'Design\\시스템 디자인\\아이템\\인벤토리' 경로에 위치하지만 내용이 전혀 없습니다.",
+            "severity": "critical",
+            "recommendation": "Excel 문서가 실제 작업 문서이고 Confluence는 placeholder로 보입니다. (1) Excel을 공식 소스로 지정하고, (2) Confluence를 Excel 기반으로 업데이트하거나, (3) 둘 중 하나를 공식 문서로 확정하고 다른 하나는 참조용/폐기 처리해야 합니다. 현재 상태로는 팀원들이 어느 문서를 참조해야 할지 혼란스러울 수 있습니다."
+          },
+          {
+            "type": "구조적차이",
+            "topic": "문서 구조 및 접근성",
+            "excel_says": "Excel은 시트 기반 구조로 되어 있어 (1) 개요: 경쟁작 분석 및 기본 사양, (2) 백업: 확률/보상 데이터 테이블, (3) 아이템창&슬롯: UI/UX 상세 규칙으로 명확히 분리되어 있습니다. 이미지는 별도 파일로 참조됩니다.",
+            "confluence_says": "Confluence는 위키 기반 구조로 계층적 페이지 구성이 가능하며, 이미지 임베딩, 버전 관리, 댓글/협업 기능을 제공하지만 현재는 활용되지 않고 있습니다.",
+            "severity": "major",
+            "recommendation": "두 플랫폼의 장점을 활용한 역할 분담을 제안합니다: (1) Excel: 수치 데이터, 확률 테이블, 보상 체계 등 데이터 중심 정보 관리, (2) Confluence: 시스템 개요, UI/UX 가이드, 이미지 중심 설명, 변경 이력 관리. 또는 하나의 플랫폼으로 통합하되, Excel 데이터는 Confluence 테이블 매크로로 임베딩하는 방식을 고려하세요."
+          },
+          {
+            "type": "정보누락",
+            "topic": "이미지 및 시각 자료",
+            "excel_says": "Excel 문서에는 다수의 이미지 참조가 포함되어 있습니다: (1) 개요 시트: 유사 게임 UI 스크린샷 6개, 로그 기능 UI 2개, (2) 아이템창&슬롯 시트: 슬롯 UI 예시, 가방 전체 화면, 장비 아이템 유형별 예시, 테두리 효과, 텍스트 출력 예시, 계산기 UI 등 총 10개 이상의 이미지가 ./images/ 경로에 저장되어 있습니다.",
+            "confluence_says": "Confluence 페이지에는 이미지가 전혀 없습니다.",
+            "severity": "major",
+            "recommendation": "Excel에서 참조하는 모든 이미지 파일을 Confluence에 업로드하고 적절한 위치에 임베딩해야 합니다. 특히 UI/UX 관련 이미지는 개발팀과 디자인팀의 이해를 돕는 핵심 자료이므로 우선적으로 처리하세요. Confluence의 이미지 갤러리 기능을 활용하면 더 효과적입니다."
+          },
+          {
+            "type": "정보누락",
+            "topic": "백업 시트의 복잡한 데이터 테이블",
+            "excel_says": "Excel의 '백업' 시트에는 매우 복잡한 데이터 구조가 있습니다: (1) 강화/합성/펫 관련 확률 및 재화 소모 테이블, (2) 거래소/인앱 관련 보상 체계(대분류, 소분류, 장비 품목, 수치 형식, 보상 조건 등), (3) 스타일 수집 등급별 보상 체계, (4) 의뢰 시스템 그룹 및 확률. 이 데이터는 게임 밸런스의 핵심입니다.",
+            "confluence_says": "Confluence에는 이러한 데이터가 전혀 없습니다.",
+            "severity": "critical",
+            "recommendation": "백업 시트의 데이터는 게임 밸런스에 직접적인 영향을 미치므로 반드시 문서화되어야 합니다. Confluence로 옮길 경우 (1) 테이블 매크로를 사용하거나, (2) Excel 파일을 첨부하고 주요 내용을 요약하거나, (3) 별도의 데이터 관리 시스템(예: Google Sheets, Airtable)과 연동하는 방안을 검토하세요. 현재 상태로는 이 중요한 데이터가 Excel에만 존재하여 접근성과 버전 관리에 문제가 있습니다."
+          },
+          {
+            "type": "폐기후보",
+            "topic": "Confluence 빈 페이지 처리",
+            "excel_says": "Excel 문서는 완성된 기획서로 실제 사용 중입니다.",
+            "confluence_says": "Confluence 페이지는 빈 페이지 상태로 version 1이며, 실질적인 내용이 없어 현재로서는 사용되지 않고 있습니다.",
+            "severity": "minor",
+            "recommendation": "Confluence 페이지를 (1) Excel 내용으로 채워서 활성화하거나, (2) 사용하지 않을 경우 명시적으로 '작성 예정' 또는 '폐기' 상태로 표시하세요. 빈 페이지를 방치하면 팀원들이 문서가 존재하는지 혼란스러워할 수 있습니다. 페이지 상단에 'Excel 문서 참조' 링크를 추가하는 것도 좋은 방법입니다."
+          }
+        ],
+        "summary": "Excel 문서는 인벤토리 시스템의 완전한 기획서(개요, 데이터 테이블, UI/UX 규칙 포함)인 반면, Confluence 페이지는 완전히 비어있습니다. 이는 critical 수준의 문서 불일치로, Excel 내용을 Confluence로 마이그레이션하거나 둘 중 하나를 공식 문서로 확정해야 합니다. 특히 백업 시트의 밸런스 데이터와 10개 이상의 UI 이미지가 Confluence에 누락되어 있어 즉시 조치가 필요합니다.",
+        "_meta": {
+          "input_tokens": 13794,
+          "output_tokens": 2980,
+          "api_seconds": 54.0
+        }
+      }
+    },
+    {
+      "pair": {
+        "excel": "PK_파티 시스템",
+        "confluence": "Design\\시스템 디자인\\기반 시스템\\파티 시스템",
+        "confidence": "medium",
+        "overlap_topic": "파티 결성 및 보상 시스템",
+        "risk_reason": "Excel은 초기 파티 구조, Confluence는 세부 기능으로 보상 규칙 차이 가능"
+      },
+      "error": "document not found"
+    },
+    {
+      "pair": {
+        "excel": "PK_길드",
+        "confluence": "Design\\시스템 디자인\\길드\\길드 시스템",
+        "confidence": "medium",
+        "overlap_topic": "길드 기본 시스템",
+        "risk_reason": "Excel 길드 구조와 Confluence 길드 스킬/금고 시스템 간 기능 범위 차이"
+      },
+      "error": "document not found"
+    }
+  ]
+}

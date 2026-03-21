@@ -175,6 +175,44 @@ voyageai        # 임베딩 (또는 대안)
 networkx        # 그래프 탐색
 ```
 
+## 멀티유저 지원 현황 (2026-03-19 분석)
+
+### 현재 지원되는 것
+
+| 항목 | 상태 | 근거 |
+|------|------|------|
+| 동시 요청 처리 | O | `def` 엔드포인트 → FastAPI가 threadpool에서 실행 (`api.py:83`) |
+| 대화 격리 | O | `conversation_id`(UUID)로 분리 (`api.py:88`) |
+| 스레드 안전성 | O | `_conv_lock`으로 conversations dict 보호 (`api.py:41`) |
+| 프론트 상태 격리 | O | `localStorage` 기반 → 브라우저별 독립 (`App.tsx:94-101`) |
+
+### 현재 한계점
+
+| 항목 | 문제 | 영향 |
+|------|------|------|
+| **인메모리 대화 저장** | `conversations: dict` (`api.py:40`) — 서버 재시작 시 전체 히스토리 소실 | 스케일아웃(다중 프로세스) 시 프로세스 간 상태 공유 불가 |
+| **인증 없음** | 사용자 식별 없음 — `conversation_id`만 알면 남의 대화에 접근 가능 | 보안·감사·사용량 추적 불가 |
+| **단일 프로세스 병목** | `agent_answer()`가 Bedrock API 호출 포함 10~30초 소요. uvicorn 기본 threadpool(40개) | 동시 ~40명 한계, 실제로는 Bedrock rate limit에 먼저 도달 |
+| **리소스 격리 없음** | 한 사용자의 heavy query(Deep Research 등)가 다른 사용자의 응답 시간에 영향 | QoS 보장 불가 |
+
+### 결론
+
+**소규모(5~10명 동시)로는 작동하지만, 프로덕션 멀티유저 서비스로는 부족.**
+
+### 프로덕션 전환 시 필요 사항 (6단계 사내 서비스)
+
+| 영역 | 필요 사항 | 후보 기술 |
+|------|-----------|-----------|
+| 인증 | SSO/OAuth 연동 | SAML (사내 SSO), OAuth 2.0 |
+| 대화 영속화 | 서버 재시작·스케일아웃에도 히스토리 유지 | Redis (세션) / PostgreSQL (영구) |
+| 요청 큐잉 | 사용자별 rate limiting, 공정한 자원 분배 | FastAPI middleware / Celery task queue |
+| 다중 워커 | 동시 처리 수 확장 | gunicorn + uvicorn workers / 컨테이너 스케일아웃 |
+| 사용량 추적 | 사용자별 토큰·비용 모니터링 | 로깅 + 대시보드 (Grafana 등) |
+
+> 현재 PoC 단계에서는 위 한계가 문제되지 않음. 6단계(사내 서비스)에서 본격 대응 예정.
+
+---
+
 ## 미결정 사항
 - [ ] Headless 렌더링 방식 (LibreOffice vs Excel COM vs 클라우드 서비스)
 - [ ] 벡터 DB 선택 (로컬 Chroma vs 클라우드 Pinecone)

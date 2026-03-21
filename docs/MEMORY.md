@@ -3,20 +3,60 @@
 > 세션 간 항상성을 유지하기 위한 작업 상태 기록.
 > 세션 시작 시 반드시 이 파일을 먼저 읽는다.
 
-## 최종 업데이트: 2026-03-19
+## 최종 업데이트: 2026-03-21
 
-## 현재 단계: 2.5단계 프론트엔드 개편(Vite + React) 진행 중 (UI 레이아웃 완료)
+## 현재 단계: 데이터 파이프라인 인프라 구축 중 + 피칭 준비
 
 ---
 
-### [최근 작업 내역] 2.5단계: 프론트엔드 개편
-- **목표**: Streamlit의 UX 한계를 극복하고 상용 서비스 수준의 기획 전문 도구로 발전하기 위해 모던 웹 구조로 개편.
-- **진행 상황 (26.03.19)**:
-  - `packages/frontend/` 디렉토리에 Vite + React (TypeScript) 프로젝트 스캐폴딩.
-  - 다크 테마 기반, 글래스모피즘, 프리미엄 UI가 적용된 `App.tsx` 및 `index.css` 초기 화면 구현 완료.
-  - 사용자 직접 접속(`http://localhost:5173`)으로 UI 톤앤매너 검증 완료.
-- **다음 할 일**: Antigravity 재시작 후, FastAPI 기반 QnA 백엔드와 새로운 React 프론트엔드 통합 및 실시간 통신 연동.
-- **특이사항**: AI 브라우저 캡처 에이전트의 로컬 네트워크 타임아웃 버그가 있어, 세션 재시작(Restart) 예정.
+### [최근 작업 내역] 2026-03-21: 데이터 파이프라인 인프라 구축
+
+**완료 항목:**
+- **packages/data-pipeline/** 신규 패키지 생성
+- **DB 스키마 (SQLite)**: 6 테이블 — crawl_sources, documents, conversions, jobs, issues, index_snapshots
+- **워커 프레임워크**: 4타입 (crawl/capture/convert/index), 큐 기반, 자동 재시도
+- **크롤링 소스 설정**: YAML 기반 (config/sources.yaml), 소스별 변환 전략 (vision-first/table-parser/html-to-md)
+- **CLI 도구**: sources/docs/jobs/issues/pipeline/rollback 명령
+- **스케줄러**: daily/hourly/weekly 자동 트리거
+- **기존 데이터 임포트**: Excel 93건 + Confluence 489건 = 582 문서 DB 등록 완료
+- **DB 공유 구조**: 서버 DB(SQLite) + 개발PC는 HTTP API 경유 (remote_db.py)
+  - 개발PC: `--remote http://서버:8088` → crawl, capture (P4 권한 + Windows)
+  - 서버: 로컬 DB 직접 접근 → convert, index
+- **워커용 API 엔드포인트**: claim/start/complete/fail, upsert_document, create_conversion 등 13개
+- **Admin 대시보드 UI**: React PipelinePage.tsx — 전체현황/소스/문서/작업큐/이슈 5탭
+- **기획팀장 피드백 반영**: QnA+유관부서 기획서 추출이 1순위, 신규기획은 후순위
+
+**미커밋 상태:**
+- master 브랜치, 미커밋 파일 다수 (이전 세션 + 이번 세션)
+- packages/data-pipeline/ 전체 신규
+- packages/qna-poc/src/api.py 워커용 API 추가
+- packages/frontend/src/PipelinePage.tsx 신규
+- packages/frontend/src/AdminPage.tsx 파이프라인 탭 추가
+- packages/frontend/src/api.ts 파이프라인 API 타입/함수 추가
+
+**다음 작업 후보:**
+1. 미커밋 코드 정리 + 커밋
+2. 서버 배포 (FastAPI + 워커)
+3. 개발PC 워커 테스트 (P4 크롤링 → 서버 DB)
+4. Slack 봇 배포 (토큰 발급)
+5. 피칭 임팩트: Confluence 신규 페이지 자동 생성
+6. 데이터 품질: table-parser 전략 구현 (데이터시트용)
+
+---
+
+### [이전 작업 내역] 2026-03-20: 기획서 제안 + UX 전면 구축
+
+**완료 항목:**
+- **문서 충돌 스캐너**: 47쌍 탐지, 15쌍 심층 분석, 62건 충돌 발견 (`conflict_scanner.py`)
+- **문서 정리 현황 페이지**: `/conflicts` — 패턴/심각도/유형별 필터 UI
+- **기획서 제안(Proposal) 파이프라인**: 대화 맥락 기반 기존 문서 수정 diff + 신규 문서 생성
+- **ProposalView UI**: before/after diff 카드, 복사 버튼 (TSV 변환), Confluence/Excel 아이콘 구분
+- **대화 공유**: `/shared/:id` 읽기 전용 페이지 + 사이드바 공유 버튼
+- **Admin Fork**: 기존 대화를 복제하여 이어서 테스트
+- **textarea 줄바꿈**: Enter=줄바꿈, Ctrl+Enter=전송
+- **"기획해줘" vs "기획서 수정해줘" 구분**: Planning 프롬프트에 명확히 분리
+- **CTA 버튼**: QnA 답변 후 "이어서 기획서 수정/작성하기 →" 자동 표시
+- **ADR-016**: 기획서 수정 UX 방향 결정 (Excel=Excel 플러그인+복사, Confluence=크롬 확장, 신규=Confluence API)
 
 ---
 
@@ -166,15 +206,60 @@
 | ADR-011 | Perforce 7_System 단독 동기화 + 외부 경로 운영 | 2026-03-09 |
 | ADR-012 | 대규모 QnA 검증 500개 — 데이터 확장 후 자동 평가 | 2026-03-09 |
 | ADR-013 | QnA UX — Streamlit 개발 테스트 + Slack 봇 테스터 배포 | 2026-03-11 |
+| ADR-014 | Agent 파이프라인 + LLM-as-Judge 95% 달성 | 2026-03-13 |
+| ADR-015 | 프론트엔드 전환 — Streamlit → React(Vite) SPA | 2026-03-19 |
+| ADR-016 | 기획서 수정 UX — Excel=Excel플러그인+복사, Confluence=크롬확장 | 2026-03-20 |
 
 상세: `docs/DECISIONS.md`
 
 ---
 
-## 5. 사용자 선호
+## 5. 앞으로 할 일 (우선순위별)
+
+### [즉시] 피칭 임팩트
+
+| # | 항목 | 설명 | 상태 |
+|---|------|------|------|
+| 1 | **Confluence 신규 페이지 자동 생성** | Proposal create → Confluence REST API로 직접 페이지 생성 | 미착수 |
+| 2 | **Proposal 품질 개선** | modify before 원문 인용 정확도, 테이블 수치 구체화 | 미착수 |
+
+### [단기] 데이터 퀄리티
+
+| # | 항목 | 설명 | 상태 |
+|---|------|------|------|
+| 3 | **엑셀/Confluence 자동 크롤링** | Perforce/Confluence 변경 감지 → 자동 재변환 → 재인덱싱 | 미착수 |
+| 4 | **레벨 엑셀 파일 추가** | 레벨 디자인 관련 엑셀 변환/인덱싱 (현재 7_System만) | 미착수 |
+| 5 | **데이터시트 정보 추가** | 시트 내 수치 테이블 인덱싱 → 밸런스 관련 질문 대응 | 미착수 |
+| 6 | **주요 플로우차트 정리 요청** | 기획팀에 핵심 플로우 문서화 요청 (사람 작업) | 미착수 |
+| 7 | **기획서 자동 최신화** | conflict_scanner 정기 실행 + outdated 마킹 | 미착수 |
+
+### [중기] 피칭 후 우선
+
+| # | 항목 | 설명 | 상태 |
+|---|------|------|------|
+| 8 | **Confluence 크롬 확장** | 사이드 패널에서 기획서 수정/추가 (ADR-016) | 미착수 |
+| 9 | **기획서 리팩토링/정리 지원** | conflict_scanner 결과 기반 기획자 판정 UI | 미착수 |
+| 10 | **기획서 피드백** | 신규/기존 기획에 대한 AI 리뷰 (4단계) | 미착수 |
+| 11 | **구글 계정 로그인** | 브라우저 재시작 후에도 스레드 유지 | 미착수 |
+
+### [장기] 사내 서비스
+
+| # | 항목 | 설명 | 상태 |
+|---|------|------|------|
+| 12 | **실시간 작성 어시스턴트** | 기획 작성 중 실시간 제안 (5단계) | 미착수 |
+| 13 | **Claude Excel 플러그인 연동 강화** | Proposal → Excel 플러그인 최적화 | 미착수 |
+| 14 | **데이터시트 자동 생성/검증** | Claude로 데이터 시트 작업 | 미착수 |
+| 15 | **JIRA/Perforce/Slack 통합** | 업무 프로세스 통합 (7단계) | 미착수 |
+
+---
+
+## 6. 사용자 선호
 
 - 진행 과정을 MEMORY.md에 반드시 기록
 - 작은 데이터부터 검증하며 진행 (1시트 → 1파일 → 전체)
 - Opus 모델 사용 필수 (Vision), Sonnet은 텍스트용
 - AI 가독성 우선
 - API 키는 서브 프로젝트 내 `.env`에서 관리
+- "기획해줘" = QnA (전략/방향), "기획서 수정/작성해줘" = Proposal (문서 작업)
+- 신규 기획서는 Confluence가 기본 (기획팀 정책)
+- Excel 수정 = Claude Excel 플러그인 + 복사, Confluence 수정 = 크롬 확장 (향후)

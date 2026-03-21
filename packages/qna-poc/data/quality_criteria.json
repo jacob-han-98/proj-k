@@ -1,0 +1,110 @@
+{
+  "version": "1.0",
+  "updated_at": "2026-03-20",
+  "updated_by": "기획팀장 피드백 + AI Agent 기본 기준",
+  "reference_docs": [
+    {
+      "title": "승천의 인장(성장요소2) 시스템",
+      "url": "https://bighitcorp.atlassian.net/wiki/spaces/PK/pages/5716283831",
+      "note": "잘 작성된 기획서 (기획팀장 추천) — 개요/시스템규칙/UI상세/프로세스/연출/데이터테이블/메시지 구조"
+    }
+  ],
+  "criteria": [
+    {
+      "id": "overview",
+      "category": "개요",
+      "title": "기획 의도/목적 + 컨셉/특징 + 기대 효과",
+      "description": "개요 섹션에 기획 의도(목적), 핵심 컨셉/특징 요약, 기대 효과가 명확히 정리되어야 함",
+      "weight": 10,
+      "source": "기획팀장"
+    },
+    {
+      "id": "system_rules",
+      "category": "시스템 설계",
+      "title": "핵심 규칙 및 시스템 구조",
+      "description": "기본 구조, 속성/분류, 진화/성장 규칙, 특수 조건 등 시스템의 핵심 로직이 체계적으로 정리",
+      "weight": 10,
+      "source": "기본"
+    },
+    {
+      "id": "flowchart",
+      "category": "프로세스",
+      "title": "플로우차트/프로세스 다이어그램",
+      "description": "텍스트 서술만이 아닌, 주요 프로세스의 플로우차트(Mermaid/다이어그램)가 포함되어야 함",
+      "weight": 8,
+      "source": "기획팀장"
+    },
+    {
+      "id": "ui_detail",
+      "category": "UI/UX",
+      "title": "UI 예시 + 버튼/툴팁/Depth 상세 정의",
+      "description": "UI 레이아웃 구성, 각 버튼의 동작, 툴팁 텍스트, UI Flow(Depth) 전환이 상세히 정의. 개발자/아트 담당자가 화면 전환 없이 이해할 수 있는 수준",
+      "weight": 10,
+      "source": "기획팀장"
+    },
+    {
+      "id": "ux_behavior",
+      "category": "UI/UX",
+      "title": "UX 동작 방식 정의",
+      "description": "사용자 인터랙션별 동작 정의 (터치, 롱프레스, 스와이프 등), 상태 전이, 애니메이션 트리거",
+      "weight": 7,
+      "source": "기획팀장"
+    },
+    {
+      "id": "text_keys",
+      "category": "UI/UX",
+      "title": "텍스트 코드(TextKey) 정의",
+      "description": "시스템 메시지, UI 텍스트, 툴팁의 TextKey가 정의되어 로컬라이제이션 준비가 되어야 함",
+      "weight": 6,
+      "source": "기획팀장"
+    },
+    {
+      "id": "exception_handling",
+      "category": "예외 처리",
+      "title": "예외 처리 및 시스템 메시지",
+      "description": "시스템 메시지(에러/경고/확인), 서버 예외처리, 엣지 케이스 대응이 명시. 서술에 그치지 않고 구체적인 조건과 메시지가 정의",
+      "weight": 9,
+      "source": "기획팀장"
+    },
+    {
+      "id": "cross_system",
+      "category": "시스템 연동",
+      "title": "연관 시스템 확인 및 동기화",
+      "description": "엮여있는 시스템들을 확인하고, 동기화 및 수정이 필요한 부분을 명시",
+      "weight": 8,
+      "source": "기획팀장"
+    },
+    {
+      "id": "data_table",
+      "category": "데이터",
+      "title": "데이터 구조/테이블 칼럼 및 Value",
+      "description": "데이터 테이블 설계가 포함: 테이블명, 칼럼 정의, 예시 값, Enum 타입 등",
+      "weight": 9,
+      "source": "기획팀장"
+    },
+    {
+      "id": "vfx_sound",
+      "category": "연출",
+      "title": "연출/이펙트/사운드 정의",
+      "description": "주요 액션의 연출(VFX), 이펙트, 사운드 요구사항이 정의",
+      "weight": 5,
+      "source": "기획팀장"
+    },
+    {
+      "id": "self_contained",
+      "category": "문서 완성도",
+      "title": "자기 완결적 문서 (화면 전환 최소화)",
+      "description": "시스템/UI/Data를 별도 페이지로 분리하지 않고, 하나의 문서에서 개발자가 화면 전환 없이 모든 정보를 확인할 수 있도록 구성",
+      "weight": 8,
+      "source": "기획팀장"
+    },
+    {
+      "id": "history",
+      "category": "문서 관리",
+      "title": "변경 이력(History) 관리",
+      "description": "문서 상단 또는 하단에 변경 이력 테이블 (날짜, 작성자, 수정 내용)이 관리",
+      "weight": 4,
+      "source": "기본"
+    }
+  ]
+}

@@ -48,6 +48,25 @@ PLANNING_PROMPT = """당신은 모바일 MMORPG "Project K"의 기획 QnA 시스
 3. **검색 키워드**: 검색에 사용할 핵심 키워드 (시스템명 포함)
 4. **검색 전략**: 어떤 도구를 어떤 순서로 사용할지
 
+## ⚠️ "기획" vs "기획서" 구분 (매우 중요!)
+
+**"기획해줘", "기획 진행", "설계해줘", "어떻게 하면 좋겠어"** 같은 요청은:
+→ query_type을 **"overview" 또는 적절한 유형**으로 지정 (일반 QnA)
+→ 전략적 방향, 분석, 제안을 **답변**으로 제공
+→ 이것은 planning/design 관점의 대화이며, 문서 작업이 아님
+
+**"기획서 수정해줘", "기획서 작성해줘", "기획서에 반영해줘", "문서 수정", "문서 작성", "기획서 만들어줘"** 같은 요청은:
+→ query_type을 **"proposal"**로 지정
+→ 실제 **기획 문서의 수정안(diff)이나 신규 문서 초안**을 생성
+→ "기획서"라는 단어가 명시적으로 포함되어야 proposal
+
+proposal 질문의 특징:
+- "기획서"(문서)를 직접 수정/생성하라는 명시적 요청
+- key_systems에는 수정 대상 워크북을 넣고, search_plan에 해당 워크북의 section_search를 포함
+- 추가 필드 `proposal_action`: "modify"(기존 문서 수정) 또는 "create"(신규 문서) 또는 "both"
+- 추가 필드 `target_documents`: 수정/생성 대상 [{workbook, sheet}] 목록
+- **신규 기획서는 Confluence 페이지로 생성**하는 것이 기획팀 정책 (Excel이 아님)
+
 ## ⚠️ overview 질문 판별 (매우 중요)
 "~시스템 설명해줘", "~시스템이 뭐야?", "~시스템 전체 개요", "~에 대해 알려줘" 같은 **넓은 범위의 질문**은 query_type을 반드시 **"overview"**로 지정하세요.
 
@@ -99,14 +118,17 @@ overview 질문의 특징:
 ```json
 {
   "key_systems": ["시스템명1", "시스템명2"],
-  "query_type": "fact|cross_system|flow|balance|ui|trap",
+  "query_type": "fact|cross_system|flow|balance|ui|trap|proposal",
   "search_keywords": ["키워드1", "키워드2"],
   "search_plan": [
     {"tool": "retrieve|section_search|kg_related", "args": {"query": "검색어"}}
   ],
-  "reasoning": "1줄 판단 근거"
+  "reasoning": "1줄 판단 근거",
+  "proposal_action": "modify|create|both (proposal일 때만)",
+  "target_documents": [{"workbook": "워크북명", "sheet": "시트명"}]
 }
-```"""
+```
+※ proposal_action과 target_documents는 query_type이 "proposal"일 때만 포함"""
 
 
 # Planning에서 제외할 Excel 시트 이름 패턴
@@ -189,7 +211,8 @@ def _get_kg_summary_for_planning() -> str:
     return "\n".join(lines)
 
 
-def plan_search(query: str, role: str = None, model: str = "claude-opus-4-5") -> dict:
+def plan_search(query: str, role: str = None, model: str = "claude-opus-4-5",
+                conversation_history: list[tuple[str, str]] = None) -> dict:
     """LLM으로 질문을 분석하여 검색 전략 수립.
 
     KG 관계 정보를 함께 제공하여 시스템 간 관계를 파악할 수 있게 함.
@@ -197,6 +220,13 @@ def plan_search(query: str, role: str = None, model: str = "claude-opus-4-5") ->
     user_msg = f"질문: {query}"
     if role:
         user_msg += f"\n질문자 역할: {role}"
+
+    # proposal 판별을 위해 대화 이력 포함
+    if conversation_history:
+        history_text = "\n".join(
+            f"  Q: {q[:200]}\n  A: {a[:300]}" for q, a in conversation_history[-3:]
+        )
+        user_msg += f"\n\n이전 대화 맥락 (최근 {len(conversation_history[-3:])}턴):\n{history_text}"
 
     # 워크북 + 시트 목록 제공 (Planning 정확도 향상)
     # Excel: 노이즈 시트 필터링, Confluence: 페이지 제목 전부 포함
@@ -399,9 +429,10 @@ AGENT_ANSWER_PROMPT = """당신은 모바일 MMORPG "Project K"의 기획 전문
 
 ## [1] 핵심 원칙
 
-1. **컨텍스트 기반 완전 답변**: 컨텍스트에 관련 정보가 있으면 **반드시, 빠짐없이** 답변하세요. 부분적이라도 관련 내용이 있으면 그것을 기반으로 답하세요. 동의어/유사 표현("비활성화"="선택 불가", "Category 값"="Category 컬럼")도 같은 의미로 매칭하세요.
-2. **구체적 데이터 정확 인용**: 수치, 비용, 배율, 확률, 테이블, Enum 값은 반드시 컨텍스트에서 직접 인용하세요. 컨텍스트에 없는 구체적 수치/데이터를 절대 만들어내지 마세요. 단, 시스템 구조/관계/설계 의도에 대한 분석적 추론은 허용됩니다.
-3. **출처 명시**: 답변에 사용한 정보의 출처를 표시하세요. 형식: `[출처: 워크북명 / 시트명]`
+1. **대화 연속성**: 이전 대화가 있으면 **그 맥락을 이어서** 답변하세요. 이미 설명한 내용을 반복하지 마세요. 이전 턴에서 다룬 시스템 분석, 제안 등은 "앞서 논의한 대로" 정도로 참조하고, **새로운 관점이나 추가 내용에 집중**하세요.
+2. **컨텍스트 기반 완전 답변**: 컨텍스트에 관련 정보가 있으면 **반드시, 빠짐없이** 답변하세요. 부분적이라도 관련 내용이 있으면 그것을 기반으로 답하세요. 동의어/유사 표현("비활성화"="선택 불가", "Category 값"="Category 컬럼")도 같은 의미로 매칭하세요.
+3. **구체적 데이터 정확 인용**: 수치, 비용, 배율, 확률, 테이블, Enum 값은 반드시 컨텍스트에서 직접 인용하세요. 컨텍스트에 없는 구체적 수치/데이터를 절대 만들어내지 마세요. 단, 시스템 구조/관계/설계 의도에 대한 분석적 추론은 허용됩니다.
+4. **출처 명시**: 답변에 사용한 정보의 출처를 표시하세요. 형식: `[출처: 워크북명 / 시트명]`
 
 ## [2] 답변 구조 가이드
 
@@ -678,10 +709,9 @@ def generate_agent_answer(query: str, chunks: list[dict], role: str = None,
     # 대화 히스토리 → messages 배열 (최근 3턴)
     messages = []
     if conversation_history:
-        for prev_q, prev_a in conversation_history[-3:]:
+        for prev_q, prev_a in conversation_history[-5:]:
             messages.append({"role": "user", "content": prev_q})
-            summary = prev_a[:500] + "..." if len(prev_a) > 500 else prev_a
-            messages.append({"role": "assistant", "content": summary})
+            messages.append({"role": "assistant", "content": prev_a})
     messages.append({"role": "user", "content": user_msg})
 
     detail_cfg = _DETAIL_LEVEL_CONFIG.get(detail_level, _DETAIL_LEVEL_CONFIG["보통"])
@@ -887,6 +917,229 @@ def execute_retry_search(reflection: dict, query: str, existing_chunks: list[dic
 
 
 # ══════════════════════════════════════════════════════════
+#  Proposal — 기획서 수정/생성 제안
+# ══════════════════════════════════════════════════════════
+
+PROPOSAL_PROMPT = """당신은 모바일 MMORPG "Project K"의 수석 기획자입니다.
+사용자와의 대화 내용을 바탕으로, 기존 기획서의 수정안 또는 신규 기획서를 제안합니다.
+
+## 규칙
+1. **기존 기획서 수정(modify) 제안을 최우선으로 작성** — 아래 기존 기획서에서 변경해야 할 부분을 찾아 before/after를 반드시 제시
+2. "변경 전(before)" 내용은 반드시 아래 기존 기획서에서 **직접 인용** (Markdown 테이블, 목록 등 원본 양식 그대로 복사)
+3. "변경 후(after)" 내용은 기존 양식을 유지하면서 **구체적 수치와 함께** 수정 (예: 경험치 1/10, 레벨 조건 변경 등)
+4. **신규 기획서(create)는 반드시 Confluence 페이지로 생성** — 기획팀 정책상 신규 문서는 Confluence가 기본. workbook 필드에 "Confluence/Design/적절한 카테고리" 경로를 지정
+5. 각 제안의 이유를 **대화에서 논의한 내용**과 명확히 연결
+6. 제안은 구체적이고 실행 가능해야 함 — 모호한 "검토 필요" 수준이 아닌 **실제 수치와 테이블 포함**
+7. 관련 시스템에 미치는 사이드이펙트를 명시
+8. **테이블은 반드시 GFM Markdown 테이블 형식 사용** — `| 헤더1 | 헤더2 |` + `|---|---|` + `| 값1 | 값2 |` 형태. ASCII 박스(`+---+`, `|   |`)는 사용하지 마세요
+
+{quality_criteria_section}
+
+## 출력 형식 (JSON만 출력)
+먼저 ```json 블록 안에 제안을 출력하고, 그 아래에 요약 설명을 작성하세요.
+```json
+{
+  "summary": "전체 제안 요약 (1~2문장)",
+  "proposals": [
+    {
+      "type": "modify",
+      "workbook": "대상 워크북명",
+      "sheet": "대상 시트명",
+      "section": "대상 섹션명 (있으면)",
+      "reason": "변경 이유 (대화 맥락 참조)",
+      "before": "기존 내용 (원문 그대로 인용, Markdown 유지)",
+      "after": "변경 후 내용 (Markdown 유지)",
+      "diff_summary": "변경 핵심 요약 1줄"
+    },
+    {
+      "type": "create",
+      "workbook": "소속 워크북명 (기존 워크북에 추가하거나 신규)",
+      "sheet": "(신규) 시트/문서명",
+      "reason": "생성 이유 (대화 맥락 참조)",
+      "content": "전체 내용 (Markdown, 테이블/목록 포함)",
+      "diff_summary": "신규 문서 핵심 요약 1줄"
+    }
+  ]
+}
+```
+
+## 요약 설명
+JSON 아래에 다음 내용을 Markdown으로 작성:
+1. 전체 제안 개요
+2. 각 제안의 핵심 변경 사항
+3. 사이드이펙트 또는 추가 검토 필요 사항
+"""
+
+
+def generate_document_proposal(
+    query: str,
+    chunks: list[dict],
+    conversation_history: list[tuple[str, str]],
+    plan: dict,
+    model: str = "claude-opus-4-5",
+    status_callback=None,
+) -> dict:
+    """대화 맥락 기반 기획서 수정/생성 제안 생성.
+
+    Returns:
+        {
+            "answer": str (Markdown 요약),
+            "proposals": list[dict],
+            "tokens": int,
+            "input_tokens": int,
+            "output_tokens": int,
+        }
+    """
+    # 1. 대상 문서 전체 로드
+    if status_callback:
+        status_callback("📑 대상 기획서 전문을 로드하고 있습니다...")
+
+    full_sheet_chunks = _load_full_sheets(chunks, max_context_tokens=80000)
+
+    # 시트별로 그룹핑 (_load_full_sheets는 flat list 반환)
+    from collections import OrderedDict
+    sheet_groups = OrderedDict()
+    for c in full_sheet_chunks:
+        key = (c.get("workbook", ""), c.get("sheet", ""))
+        if key not in sheet_groups:
+            sheet_groups[key] = []
+        sheet_groups[key].append(c)
+
+    # 시트별 컨텍스트 구성
+    context_parts = []
+    for (wb, sh), group_chunks in sheet_groups.items():
+        text = "\n".join(c.get("text", "") for c in group_chunks)
+        context_parts.append(f"### {wb} / {sh}\n{text}")
+
+    doc_context = "\n\n---\n\n".join(context_parts)
+    if len(doc_context) > 120000:
+        doc_context = doc_context[:120000] + "\n...(truncated)"
+
+    # 2. 대화 이력 구성
+    history_text = ""
+    if conversation_history:
+        turns = []
+        for q, a in conversation_history:
+            turns.append(f"**질문**: {q}\n**답변**: {a}")
+        history_text = "\n\n---\n\n".join(turns)
+
+    # 3. 프롬프트 구성
+    user_msg = f"""## 대화 맥락
+{history_text}
+
+## 현재 요청
+{query}
+
+## 참조할 기존 기획서
+{doc_context}"""
+
+    if status_callback:
+        status_callback("📝 기획서 수정/생성 제안을 작성하고 있습니다...")
+
+    # 4. 품질 기준 동적 로드 → 프롬프트에 삽입
+    criteria_section = ""
+    criteria_file = Path(__file__).resolve().parent.parent / "data" / "quality_criteria.json"
+    if criteria_file.exists():
+        try:
+            criteria_data = json.loads(criteria_file.read_text(encoding="utf-8"))
+            items = criteria_data.get("criteria", [])
+            if items:
+                lines = ["## 기획서 품질 기준 (필수 준수)", "좋은 기획서의 필수 요소 — 신규 기획서(create)는 아래 항목을 최대한 포함해야 합니다:", ""]
+                for i, c in enumerate(items, 1):
+                    lines.append(f"{i}. **{c['title']}**: {c['description']}")
+                # 참고 문서 구조
+                ref_docs = criteria_data.get("reference_docs", [])
+                if ref_docs:
+                    lines.append("")
+                    lines.append(f"참고 문서: {ref_docs[0]['title']} — {ref_docs[0].get('note', '')}")
+                criteria_section = "\n".join(lines)
+        except Exception as e:
+            log.warning(f"품질 기준 로드 실패: {e}")
+
+    system_prompt = PROPOSAL_PROMPT.replace("{quality_criteria_section}", criteria_section)
+
+    # 5. LLM 호출 (큰 max_tokens — 제안은 길 수 있음)
+    result = call_bedrock(
+        messages=[{"role": "user", "content": [{"type": "text", "text": user_msg}]}],
+        system=system_prompt,
+        model=model,
+        max_tokens=16384,
+        temperature=0,
+    )
+
+    raw_text = result["text"]
+
+    # 5. JSON 파싱 (코드 펜스 / raw JSON 모두 처리)
+    proposals = []
+    summary = ""
+    answer_text = raw_text  # fallback
+
+    import re as _re
+
+    parsed = None
+    json_start = 0
+    json_end = len(raw_text)
+
+    # 시도 1: ```json ... ``` 코드 펜스
+    fence_match = _re.search(r"```json\s*(.*?)\s*```", raw_text, _re.DOTALL)
+    if fence_match:
+        try:
+            parsed = json.loads(fence_match.group(1))
+            json_start = fence_match.start()
+            json_end = fence_match.end()
+        except json.JSONDecodeError:
+            pass
+
+    # 시도 2: raw JSON — { 로 시작하는 위치에서 raw_decode 시도
+    if not parsed:
+        decoder = json.JSONDecoder()
+        for i, ch in enumerate(raw_text):
+            if ch == '{':
+                try:
+                    parsed, end_idx = decoder.raw_decode(raw_text, i)
+                    if isinstance(parsed, dict) and ("proposals" in parsed or "summary" in parsed):
+                        json_start = i
+                        json_end = i + end_idx
+                        break
+                    else:
+                        parsed = None  # proposals/summary 없으면 다음 { 시도
+                except json.JSONDecodeError:
+                    continue
+
+    if parsed:
+        proposals = parsed.get("proposals", [])
+        summary = parsed.get("summary", "")
+        before_json = raw_text[:json_start].strip()
+        after_json = raw_text[json_end:].strip()
+        # 코드 펜스 잔여물 제거 (```json, ```, --- 등)
+        before_json = _re.sub(r'```\w*\s*$', '', before_json).strip()
+        after_json = _re.sub(r'^```\s*', '', after_json).strip()
+        after_json = _re.sub(r'^---\s*', '', after_json).strip()
+        remaining = (before_json + "\n\n" + after_json).strip()
+        if remaining:
+            answer_text = remaining
+        elif summary:
+            answer_text = f"## 기획서 제안 요약\n\n{summary}"
+        log.info(f"PROPOSAL: JSON 파싱 성공 (start={json_start}, end={json_end})")
+    else:
+        log.warning("PROPOSAL: JSON 파싱 실패, 전체 텍스트를 answer로 사용")
+
+    log.info(f"PROPOSAL: {len(proposals)}건 제안 생성 ({result['input_tokens']}+{result['output_tokens']} tokens)")
+
+    return {
+        "answer": answer_text,
+        "proposals": proposals,
+        "summary": summary,
+        "tokens": result["input_tokens"] + result["output_tokens"],
+        "input_tokens": result["input_tokens"],
+        "output_tokens": result["output_tokens"],
+        "api_seconds": result["api_seconds"],
+        "_system_prompt": PROPOSAL_PROMPT[:200],
+        "_user_prompt": user_msg[:500],
+    }
+
+
+# ══════════════════════════════════════════════════════════
 #  Agent 메인 엔트리포인트
 # ══════════════════════════════════════════════════════════
 
@@ -923,7 +1176,7 @@ def agent_answer(query: str, role: str = None,
     # ── Step 1: Planning ──
     if status_callback: status_callback("🧠 질문을 분석하고 있습니다...")
     t_plan = time.time()
-    plan = plan_search(query, role)
+    plan = plan_search(query, role, conversation_history=conversation_history)
     plan_time = time.time() - t_plan
     total_tokens += plan.get("_tokens", 0)
     log.debug(f"  PLANNING: key_systems={plan.get('key_systems',[])} "
@@ -1004,6 +1257,37 @@ def agent_answer(query: str, role: str = None,
         ],
         "seconds": round(search_time, 1),
     })
+
+    # ── Proposal 분기: query_type이 proposal이면 별도 파이프라인 ──
+    if plan.get("query_type") == "proposal":
+        t_prop = time.time()
+        prop_result = generate_document_proposal(
+            query, chunks, conversation_history or [],
+            plan, model=model, status_callback=status_callback,
+        )
+        prop_time = time.time() - t_prop
+        total_tokens += prop_result.get("tokens", 0)
+
+        trace.append({
+            "step": "proposal_generation",
+            "model": model,
+            "description": "대화 맥락 기반 기획서 수정/생성 제안",
+            "proposal_count": len(prop_result.get("proposals", [])),
+            "tokens": prop_result.get("tokens", 0),
+            "seconds": round(prop_time, 1),
+        })
+
+        total_time = time.time() - t0
+        return {
+            "answer": prop_result["answer"],
+            "mode": "proposal",
+            "proposals": prop_result.get("proposals", []),
+            "chunks": chunks,
+            "trace": trace,
+            "confidence": "high",
+            "total_tokens": total_tokens,
+            "total_api_seconds": round(total_time, 1),
+        }
 
     # ── Step 3: Answer Generation ──
     if status_callback: status_callback("✍️ 답변을 생성하고 있습니다...")

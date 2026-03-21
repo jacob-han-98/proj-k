@@ -1,17 +1,8 @@
-# Project K QnA — systemd 서비스 파일
+# Project K QnA — systemd 서비스 파일 (FastAPI + uvicorn)
 # 위치: /etc/systemd/system/proj-k-agent.service
-#
-# 설치:
-#   sudo cp proj-k-agent.service /etc/systemd/system/
-#   sudo systemctl daemon-reload
-#   sudo systemctl enable proj-k-agent
-#   sudo systemctl start proj-k-agent
-#
-# 로그 확인:
-#   sudo journalctl -u proj-k-agent -f
 
 [Unit]
-Description=Project K QnA Agent (Streamlit)
+Description=Project K QnA Agent (FastAPI)
 After=network.target
 
 [Service]
@@ -19,7 +10,7 @@ Type=simple
 User=ubuntu
 WorkingDirectory=/home/ubuntu/proj-k-agent/packages/qna-poc
 EnvironmentFile=/home/ubuntu/proj-k-agent/packages/qna-poc/.env
-ExecStart=/home/ubuntu/proj-k-agent/.venv/bin/python -m streamlit run src/streamlit_app.py --server.headless true --server.port 8502
+ExecStart=/home/ubuntu/proj-k-agent/.venv/bin/python -m uvicorn src.api:app --host 127.0.0.1 --port 8088
 Restart=on-failure
 RestartSec=5
 

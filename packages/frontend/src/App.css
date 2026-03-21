@@ -1676,3 +1676,16 @@
 .unanalyzed-toggle:hover {
   color: var(--text-primary);
 }
+
+/* ── 모바일 반응형 ── */
+@media (max-width: 768px) {
+  .sidebar {
+    display: none;
+  }
+  .layout {
+    flex-direction: column;
+  }
+  .main-content {
+    width: 100% !important;
+  }
+}

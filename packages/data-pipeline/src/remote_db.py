@@ -61,11 +61,12 @@ def list_sources() -> list[dict]:
 def upsert_document(source_id: int, file_path: str, file_type: str,
                     file_hash: str = None, file_size: int = None,
                     title: str = None, metadata: dict = None) -> int:
-    result = _post("/documents/upsert", json_body={
-        "source_id": source_id, "file_path": file_path, "file_type": file_type,
-        "file_hash": file_hash, "file_size": file_size,
-        "title": title, "metadata": metadata,
-    })
+    body = {"source_id": source_id, "file_path": file_path, "file_type": file_type}
+    if file_hash is not None: body["file_hash"] = file_hash
+    if file_size is not None: body["file_size"] = file_size
+    if title is not None: body["title"] = title
+    if metadata is not None: body["metadata"] = metadata
+    result = _post("/documents/upsert", json_body=body)
     return result["document_id"]
 
 

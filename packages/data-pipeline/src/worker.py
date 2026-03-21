@@ -255,14 +255,18 @@ def _crawl_perforce(source: dict, params: dict) -> dict:
 
 def _crawl_confluence(source: dict, params: dict) -> dict:
     """Confluence 소스 크롤링 — update_sources.py 재사용."""
-    # confluence-downloader의 로직 활용
+    import importlib.util
     cd_dir = PROJECT_ROOT / "packages" / "confluence-downloader"
-    sys.path.insert(0, str(cd_dir))
 
     from dotenv import load_dotenv
     load_dotenv(cd_dir / ".env")
 
-    from src.client import ConfluenceClient
+    # src.client 충돌 방지: importlib로 직접 로드
+    spec = importlib.util.spec_from_file_location(
+        "confluence_client", str(cd_dir / "src" / "client.py"))
+    client_mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(client_mod)
+    ConfluenceClient = client_mod.ConfluenceClient
 
     url = os.getenv("CONFLUENCE_URL")
     username = os.getenv("CONFLUENCE_USERNAME")
@@ -273,7 +277,7 @@ def _crawl_confluence(source: dict, params: dict) -> dict:
     root_page_id = source["path"]
     # 페이지 목록 조회 + documents 등록
     registered = 0
-    children = client.get_child_pages(root_page_id, limit=500)
+    children = client.get_children(root_page_id, limit=500)
     for page in children:
         _db_upsert_document(
             source["id"], page["id"], "html",

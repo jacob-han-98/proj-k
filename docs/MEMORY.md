@@ -26,21 +26,21 @@
 - **Admin 대시보드 UI**: React PipelinePage.tsx — 전체현황/소스/문서/작업큐/이슈 5탭
 - **기획팀장 피드백 반영**: QnA+유관부서 기획서 추출이 1순위, 신규기획은 후순위
 
-**미커밋 상태:**
-- master 브랜치, 미커밋 파일 다수 (이전 세션 + 이번 세션)
-- packages/data-pipeline/ 전체 신규
-- packages/qna-poc/src/api.py 워커용 API 추가
-- packages/frontend/src/PipelinePage.tsx 신규
-- packages/frontend/src/AdminPage.tsx 파이프라인 탭 추가
-- packages/frontend/src/api.ts 파이프라인 API 타입/함수 추가
+**추가 완료 (같은 세션):**
+- **커밋 완료** (6커밋, master 브랜치): 모든 변경사항 커밋됨
+- **서버 배포 완료**: FastAPI + 프론트엔드 + data-pipeline 배포
+  - 모듈 충돌 2건 수정 (importlib 방식): api.py의 src.db 충돌, worker.py의 confluence client 충돌
+- **P4 + Confluence 크롤링 완료**: 개발PC에서 --remote로 서버 DB에 등록
+  - 서버 DB: 소스 2개, 문서 65건, 작업 2/2 완료
+- **모바일 반응형**: 사이드바 숨김 + 상단 탭 바 (☰ 메뉴 + 대화/품질/파이프라인 탭)
+
+**현재 git 상태:** 클린 (모든 변경 커밋됨)
 
 **다음 작업 후보:**
-1. 미커밋 코드 정리 + 커밋
-2. 서버 배포 (FastAPI + 워커)
-3. 개발PC 워커 테스트 (P4 크롤링 → 서버 DB)
-4. Slack 봇 배포 (토큰 발급)
-5. 피칭 임팩트: Confluence 신규 페이지 자동 생성
-6. 데이터 품질: table-parser 전략 구현 (데이터시트용)
+1. Slack 봇 배포 (토큰 발급)
+2. Confluence 신규 페이지 자동 생성
+3. table-parser 전략 구현 (데이터시트용)
+4. 피칭 준비
 
 ---
 

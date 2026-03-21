@@ -81,9 +81,9 @@ function PipelinePage() {
     }
   }, [tab, docFilter, jobFilter])
 
-  const handleTrigger = async (jobType: string, sourceId?: number) => {
+  const handleTrigger = async (jobType: string, sourceId?: number, documentId?: number) => {
     try {
-      await triggerPipelineJob(jobType, sourceId)
+      await triggerPipelineJob(jobType, sourceId, documentId)
       // Reload jobs
       const r = await fetchPipelineJobs()
       setJobs(r.jobs)

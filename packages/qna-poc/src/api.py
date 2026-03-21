@@ -711,88 +711,92 @@ def related_systems(name: str):
 
 # ── 데이터 파이프라인 Admin API ───────────────────────────
 
+_pipeline_db = None
+
+def _get_pipeline_db():
+    """데이터 파이프라인 DB 모듈 로드 (src.db 충돌 방지)."""
+    global _pipeline_db
+    if _pipeline_db is not None:
+        return _pipeline_db
+    import importlib.util
+    db_path = Path(__file__).resolve().parent.parent.parent / "data-pipeline" / "src" / "db.py"
+    spec = importlib.util.spec_from_file_location("pipeline_db", str(db_path))
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    mod.init_db()
+    _pipeline_db = mod
+    return mod
+
 def _get_pipeline_conn():
     """데이터 파이프라인 DB 연결."""
-    import sys as _sys
-    pipeline_dir = Path(__file__).resolve().parent.parent.parent / "data-pipeline"
-    _sys.path.insert(0, str(pipeline_dir))
-    from src.db import get_conn, init_db
-    init_db()
-    return get_conn
+    return _get_pipeline_db().get_conn
 
 
 @app.get("/admin/pipeline/status")
 def pipeline_status():
     """데이터 파이프라인 전체 현황."""
-    get_conn_fn = _get_pipeline_conn()
-    from src.db import get_pipeline_stats
-    with get_conn_fn() as conn:
-        return get_pipeline_stats(conn)
+    pdb = _get_pipeline_db()
+    with pdb.get_conn() as conn:
+        return pdb.get_pipeline_stats(conn)
 
 
 @app.get("/admin/pipeline/sources")
 def pipeline_sources():
     """크롤링 소스 목록."""
-    get_conn_fn = _get_pipeline_conn()
-    from src.db import list_sources
-    with get_conn_fn() as conn:
-        return {"sources": list_sources(conn, enabled_only=False)}
+    pdb = _get_pipeline_db()
+    with pdb.get_conn() as conn:
+        return {"sources": pdb.list_sources(conn, enabled_only=False)}
 
 
 @app.get("/admin/pipeline/documents")
 def pipeline_documents(source_id: int = None, status: str = None, limit: int = 100):
     """문서 목록."""
-    get_conn_fn = _get_pipeline_conn()
-    from src.db import list_documents
-    with get_conn_fn() as conn:
-        docs = list_documents(conn, source_id=source_id, status=status)
+    pdb = _get_pipeline_db()
+    with pdb.get_conn() as conn:
+        docs = pdb.list_documents(conn, source_id=source_id, status=status)
         return {"documents": docs[:limit], "total": len(docs)}
 
 
 @app.get("/admin/pipeline/documents/{doc_id}")
 def pipeline_document_detail(doc_id: int):
     """문서 상세 + 변환 이력."""
-    get_conn_fn = _get_pipeline_conn()
-    from src.db import get_document, list_conversion_history, list_issues
-    with get_conn_fn() as conn:
-        doc = get_document(conn, doc_id)
+    pdb = _get_pipeline_db()
+    with pdb.get_conn() as conn:
+        doc = pdb.get_document(conn, doc_id)
         if not doc:
             raise HTTPException(status_code=404, detail="Document not found")
-        conversions = list_conversion_history(conn, doc_id)
-        issues = list_issues(conn, document_id=doc_id)
+        conversions = pdb.list_conversion_history(conn, doc_id)
+        issues = pdb.list_issues(conn, document_id=doc_id)
         return {"document": doc, "conversions": conversions, "issues": issues}
 
 
 @app.get("/admin/pipeline/jobs")
 def pipeline_jobs(status: str = None, job_type: str = None, limit: int = 50):
     """작업큐 목록."""
-    get_conn_fn = _get_pipeline_conn()
-    from src.db import list_jobs, get_job_stats
-    with get_conn_fn() as conn:
-        jobs = list_jobs(conn, status=status, job_type=job_type, limit=limit)
-        stats = get_job_stats(conn)
+    pdb = _get_pipeline_db()
+    with pdb.get_conn() as conn:
+        jobs = pdb.list_jobs(conn, status=status, job_type=job_type, limit=limit)
+        stats = pdb.get_job_stats(conn)
         return {"jobs": jobs, "stats": stats}
 
 
 @app.post("/admin/pipeline/jobs/trigger")
 def pipeline_trigger_job(job_type: str, source_id: int = None, document_id: int = None):
     """작업 트리거."""
-    get_conn_fn = _get_pipeline_conn()
-    from src.db import create_job
+    pdb = _get_pipeline_db()
     worker_type = "windows" if job_type == "capture" else "any"
-    with get_conn_fn() as conn:
-        job_id = create_job(conn, job_type, source_id=source_id,
-                            document_id=document_id, worker_type=worker_type)
+    with pdb.get_conn() as conn:
+        job_id = pdb.create_job(conn, job_type, source_id=source_id,
+                                document_id=document_id, worker_type=worker_type)
         return {"job_id": job_id, "job_type": job_type, "status": "pending"}
 
 
 @app.get("/admin/pipeline/issues")
 def pipeline_issues(status: str = None):
     """품질 이슈 목록."""
-    get_conn_fn = _get_pipeline_conn()
-    from src.db import list_issues
-    with get_conn_fn() as conn:
-        return {"issues": list_issues(conn, status=status)}
+    pdb = _get_pipeline_db()
+    with pdb.get_conn() as conn:
+        return {"issues": pdb.list_issues(conn, status=status)}
 
 
 class IssueCreate(BaseModel):
@@ -807,10 +811,9 @@ class IssueCreate(BaseModel):
 @app.post("/admin/pipeline/issues")
 def pipeline_create_issue(issue: IssueCreate):
     """품질 이슈 등록 (기획자 피드백)."""
-    get_conn_fn = _get_pipeline_conn()
-    from src.db import create_issue
-    with get_conn_fn() as conn:
-        issue_id = create_issue(
+    pdb = _get_pipeline_db()
+    with pdb.get_conn() as conn:
+        issue_id = pdb.create_issue(
             conn, issue.document_id, issue.issue_type, issue.title,
             description=issue.description, reported_by=issue.reported_by,
             severity=issue.severity
@@ -821,20 +824,18 @@ def pipeline_create_issue(issue: IssueCreate):
 @app.post("/admin/pipeline/rollback/document/{doc_id}")
 def pipeline_rollback_document(doc_id: int, version: int, stage: str = "synthesize"):
     """문서 특정 버전으로 롤백."""
-    get_conn_fn = _get_pipeline_conn()
-    from src.db import rollback_conversion
-    with get_conn_fn() as conn:
-        rollback_conversion(conn, doc_id, stage, version)
+    pdb = _get_pipeline_db()
+    with pdb.get_conn() as conn:
+        pdb.rollback_conversion(conn, doc_id, stage, version)
         return {"document_id": doc_id, "rolled_back_to": version, "stage": stage}
 
 
 @app.post("/admin/pipeline/rollback/index/{snapshot_id}")
 def pipeline_rollback_index(snapshot_id: int):
     """인덱스 스냅샷으로 롤백."""
-    get_conn_fn = _get_pipeline_conn()
-    from src.db import activate_snapshot
-    with get_conn_fn() as conn:
-        activate_snapshot(conn, snapshot_id)
+    pdb = _get_pipeline_db()
+    with pdb.get_conn() as conn:
+        pdb.activate_snapshot(conn, snapshot_id)
         return {"snapshot_id": snapshot_id, "status": "activated"}
 
 
@@ -843,11 +844,10 @@ def pipeline_rollback_index(snapshot_id: int):
 @app.post("/admin/pipeline/jobs/claim")
 def pipeline_claim_job(worker_id: str, worker_types: str = "any"):
     """워커가 작업을 가져감."""
-    get_conn_fn = _get_pipeline_conn()
-    from src.db import claim_job
+    pdb = _get_pipeline_db()
     types_list = [t.strip() for t in worker_types.split(",")]
-    with get_conn_fn() as conn:
-        job = claim_job(conn, worker_id, types_list)
+    with pdb.get_conn() as conn:
+        job = pdb.claim_job(conn, worker_id, types_list)
         if not job:
             return {"job": None}
         return {"job": job}
@@ -856,30 +856,27 @@ def pipeline_claim_job(worker_id: str, worker_types: str = "any"):
 @app.post("/admin/pipeline/jobs/{job_id}/start")
 def pipeline_start_job(job_id: int):
     """작업 시작 표시."""
-    get_conn_fn = _get_pipeline_conn()
-    from src.db import start_job
-    with get_conn_fn() as conn:
-        start_job(conn, job_id)
+    pdb = _get_pipeline_db()
+    with pdb.get_conn() as conn:
+        pdb.start_job(conn, job_id)
         return {"job_id": job_id, "status": "running"}
 
 
 @app.post("/admin/pipeline/jobs/{job_id}/complete")
 def pipeline_complete_job(job_id: int, result: dict = None):
     """작업 완료."""
-    get_conn_fn = _get_pipeline_conn()
-    from src.db import complete_job
-    with get_conn_fn() as conn:
-        complete_job(conn, job_id, result)
+    pdb = _get_pipeline_db()
+    with pdb.get_conn() as conn:
+        pdb.complete_job(conn, job_id, result)
         return {"job_id": job_id, "status": "completed"}
 
 
 @app.post("/admin/pipeline/jobs/{job_id}/fail")
 def pipeline_fail_job(job_id: int, error_message: str = "unknown error"):
     """작업 실패."""
-    get_conn_fn = _get_pipeline_conn()
-    from src.db import fail_job
-    with get_conn_fn() as conn:
-        fail_job(conn, job_id, error_message)
+    pdb = _get_pipeline_db()
+    with pdb.get_conn() as conn:
+        pdb.fail_job(conn, job_id, error_message)
         return {"job_id": job_id, "status": "failed"}
 
 
@@ -896,10 +893,9 @@ class DocumentUpsert(BaseModel):
 @app.post("/admin/pipeline/documents/upsert")
 def pipeline_upsert_document(doc: DocumentUpsert):
     """문서 등록/갱신 (워커에서 호출)."""
-    get_conn_fn = _get_pipeline_conn()
-    from src.db import upsert_document
-    with get_conn_fn() as conn:
-        doc_id = upsert_document(
+    pdb = _get_pipeline_db()
+    with pdb.get_conn() as conn:
+        doc_id = pdb.upsert_document(
             conn, doc.source_id, doc.file_path, doc.file_type,
             file_hash=doc.file_hash, file_size=doc.file_size,
             title=doc.title, metadata=doc.metadata
@@ -910,10 +906,9 @@ def pipeline_upsert_document(doc: DocumentUpsert):
 @app.post("/admin/pipeline/documents/{doc_id}/status")
 def pipeline_update_doc_status(doc_id: int, status: str):
     """문서 상태 업데이트."""
-    get_conn_fn = _get_pipeline_conn()
-    from src.db import update_document_status
-    with get_conn_fn() as conn:
-        update_document_status(conn, doc_id, status)
+    pdb = _get_pipeline_db()
+    with pdb.get_conn() as conn:
+        pdb.update_document_status(conn, doc_id, status)
         return {"document_id": doc_id, "status": status}
 
 
@@ -928,10 +923,9 @@ class ConversionCreate(BaseModel):
 @app.post("/admin/pipeline/conversions")
 def pipeline_create_conversion(conv: ConversionCreate):
     """변환 이력 생성."""
-    get_conn_fn = _get_pipeline_conn()
-    from src.db import create_conversion
-    with get_conn_fn() as conn:
-        conv_id = create_conversion(
+    pdb = _get_pipeline_db()
+    with pdb.get_conn() as conn:
+        conv_id = pdb.create_conversion(
             conn, conv.document_id, conv.stage, conv.strategy,
             input_path=conv.input_path, version=conv.version
         )
@@ -947,21 +941,19 @@ class ConversionComplete(BaseModel):
 @app.post("/admin/pipeline/conversions/{conv_id}/complete")
 def pipeline_complete_conversion(conv_id: int, data: ConversionComplete):
     """변환 완료."""
-    get_conn_fn = _get_pipeline_conn()
-    from src.db import complete_conversion
-    with get_conn_fn() as conn:
-        complete_conversion(conn, conv_id, data.output_path,
-                            quality_score=data.quality_score, stats=data.stats)
+    pdb = _get_pipeline_db()
+    with pdb.get_conn() as conn:
+        pdb.complete_conversion(conn, conv_id, data.output_path,
+                                quality_score=data.quality_score, stats=data.stats)
         return {"conversion_id": conv_id, "status": "completed"}
 
 
 @app.get("/admin/pipeline/sources/{source_id}")
 def pipeline_source_detail(source_id: int):
     """소스 상세."""
-    get_conn_fn = _get_pipeline_conn()
-    from src.db import get_source
-    with get_conn_fn() as conn:
-        source = get_source(conn, source_id)
+    pdb = _get_pipeline_db()
+    with pdb.get_conn() as conn:
+        source = pdb.get_source(conn, source_id)
         if not source:
             raise HTTPException(status_code=404, detail="Source not found")
         return source

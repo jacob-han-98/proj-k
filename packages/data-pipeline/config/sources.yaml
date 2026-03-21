@@ -1,0 +1,53 @@
+# 크롤링 소스 설정
+# python -m src.cli sources sync  로 이 파일을 DB에 반영
+
+sources:
+  # ── Perforce 소스 ──────────────────────────────
+  - name: "7_System 기획서"
+    type: perforce
+    path: "//main/ProjectK/.../7_System/..."
+    convert_strategy: vision-first
+    schedule: daily
+    properties:
+      local_path: "D:/ProjectK/Design/7_System"
+      description: "핵심 시스템 기획서 (67개 xlsx)"
+      file_types: ["xlsx"]
+
+  # - name: "DataSheet"
+  #   type: perforce
+  #   path: "//main/ProjectK/.../DataSheet/..."
+  #   convert_strategy: table-parser
+  #   schedule: daily
+  #   properties:
+  #     local_path: "D:/ProjectK/Design/DataSheet"
+  #     description: "수치 데이터 시트 — 테이블 구조 정확도 우선"
+  #     file_types: ["xlsx"]
+
+  # - name: "9_MileStone"
+  #   type: perforce
+  #   path: "//main/ProjectK/.../9_MileStone/..."
+  #   convert_strategy: vision-first
+  #   schedule: weekly
+  #   properties:
+  #     local_path: "D:/ProjectK/Design/9_MileStone"
+  #     description: "마일스톤 기획서"
+  #     file_types: ["xlsx", "pptx"]
+
+  # ── Confluence 소스 ────────────────────────────
+  - name: "게임디자인 Confluence"
+    type: confluence
+    path: "225378731"                            # root_page_id
+    convert_strategy: html-to-md
+    schedule: daily
+    properties:
+      description: "Project K 게임디자인 문서"
+      enrich_images: true                        # 이미지 보강 활성화
+
+  # - name: "기술문서 Confluence"
+  #   type: confluence
+  #   path: "TECH_ROOT_PAGE_ID"
+  #   convert_strategy: html-to-md
+  #   schedule: weekly
+  #   properties:
+  #     description: "기술 문서 (프로그래밍/QA)"
+  #     enrich_images: false

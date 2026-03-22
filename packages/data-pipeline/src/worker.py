@@ -413,6 +413,22 @@ def _crawl_confluence(source: dict, params: dict) -> dict:
     root_page_id = source["path"]
     props = json.loads(source.get("properties", "{}"))
     max_depth = props.get("max_depth", 10)  # 최대 재귀 깊이
+    download_body = props.get("download_body", True)  # 본문 다운로드 여부
+
+    # Confluence 변환기 로드 (본문 다운로드 시)
+    converter_mod = None
+    if download_body:
+        try:
+            conv_spec = importlib.util.spec_from_file_location(
+                "confluence_converter", str(cd_dir / "src" / "converter.py"))
+            converter_mod = importlib.util.module_from_spec(conv_spec)
+            conv_spec.loader.exec_module(converter_mod)
+        except Exception as e:
+            log.warning(f"  변환기 로드 실패, 본문 다운로드 건너뜀: {e}")
+            download_body = False
+
+    # 출력 디렉토리
+    output_dir = cd_dir / "output"
 
     # C. 재귀 크롤링
     all_pages = []
@@ -463,6 +479,9 @@ def _crawl_confluence(source: dict, params: dict) -> dict:
                 changed_docs.append({"id": doc_info["id"], "path": page_id,
                                      "title": page_title})
                 log.info(f"  [NEW] {page_title} (v{page_version})")
+                if download_body:
+                    _download_confluence_page(client, converter_mod, page_id,
+                                               page_title, output_dir)
             elif doc_info["changed"]:
                 changed_files += 1
                 changed_docs.append({"id": doc_info["id"], "path": page_id,
@@ -472,6 +491,9 @@ def _crawl_confluence(source: dict, params: dict) -> dict:
                     "old_version": old_version, "new_version": page_version
                 })
                 log.info(f"  [CHANGED] {page_title} (v{old_version} → v{page_version})")
+                if download_body:
+                    _download_confluence_page(client, converter_mod, page_id,
+                                               page_title, output_dir)
             else:
                 unchanged_files += 1
         except Exception as e:
@@ -521,6 +543,67 @@ def _crawl_confluence_recursive(client, page_id: str, result_list: list,
 
     if depth == 0:
         log.info(f"  재귀 탐색: {len(result_list)}페이지 발견 (최대 깊이: {max_depth})")
+
+
+def _download_confluence_page(client, converter_mod, page_id: str,
+                               title: str, output_dir: Path):
+    """변경된 Confluence 페이지의 본문 + 첨부파일 다운로드."""
+    import re
+
+    try:
+        # 페이지 본문 조회
+        page_data = client.get_page(page_id, expand="body.storage,version")
+        body_html = page_data.get("body", {}).get("storage", {}).get("value", "")
+
+        if not body_html:
+            log.warning(f"    본문 비어있음: {title}")
+            return
+
+        # 안전한 폴더명 생성
+        safe_title = re.sub(r'[<>:"/\\|?*]', '_', title)[:100]
+        page_dir = output_dir / f"{page_id}_{safe_title}"
+        page_dir.mkdir(parents=True, exist_ok=True)
+        images_dir = page_dir / "images"
+        images_dir.mkdir(exist_ok=True)
+
+        # HTML → Markdown 변환
+        if converter_mod and hasattr(converter_mod, 'convert_confluence_to_markdown'):
+            markdown = converter_mod.convert_confluence_to_markdown(body_html)
+        elif converter_mod and hasattr(converter_mod, 'ConfluenceMarkdownConverter'):
+            from markdownify import markdownify
+            markdown = markdownify(body_html, convert=['ac:image'])
+        else:
+            # 변환기 없으면 raw HTML 저장
+            markdown = body_html
+
+        # content.md 저장
+        content_path = page_dir / "content.md"
+        content_path.write_text(
+            f"# {title}\n\n{markdown}",
+            encoding="utf-8"
+        )
+
+        # 첨부파일(이미지) 다운로드
+        attachments = client.get_attachments(page_id)
+        downloaded = 0
+        for att in attachments:
+            filename = att.get("title", "")
+            download_link = att.get("_links", {}).get("download", "")
+            if not download_link:
+                continue
+            # 이미지만 다운로드
+            if filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp')):
+                try:
+                    data = client.download_attachment(download_link)
+                    (images_dir / filename).write_bytes(data)
+                    downloaded += 1
+                except Exception as e:
+                    log.warning(f"    첨부파일 실패: {filename} — {e}")
+
+        log.info(f"    다운로드: {title} ({len(body_html)}자, 이미지 {downloaded}개)")
+
+    except Exception as e:
+        log.error(f"    페이지 다운로드 실패: {title} — {e}")
 
 
 @register_handler("capture")

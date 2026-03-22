@@ -1,6 +1,8 @@
 export const API_BASE_URL = import.meta.env.MODE === 'production'
   ? `${window.location.origin}/proj-k/api`
-  : 'http://127.0.0.1:8088';
+  : window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://127.0.0.1:8088'
+    : '/api';
 
 export interface Source {
   workbook: string;
@@ -308,6 +310,30 @@ export const triggerPipelineJob = async (jobType: string, sourceId?: number, doc
   if (sourceId) params.set('source_id', String(sourceId));
   if (documentId) params.set('document_id', String(documentId));
   const res = await fetch(`${API_BASE_URL}/admin/pipeline/jobs/trigger?${params}`, { method: 'POST' });
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res.json();
+};
+
+export interface CrawlLog {
+  id: number;
+  source_id: number;
+  job_id: number | null;
+  crawl_type: string;
+  total_files: number;
+  new_files: number;
+  changed_files: number;
+  unchanged_files: number;
+  deleted_files: number;
+  errors: number;
+  details: string;
+  duration_sec: number | null;
+  created_at: string;
+}
+
+export const fetchCrawlLogs = async (sourceId?: number): Promise<{ logs: CrawlLog[] }> => {
+  const params = new URLSearchParams();
+  if (sourceId) params.set('source_id', String(sourceId));
+  const res = await fetch(`${API_BASE_URL}/admin/pipeline/crawl-logs?${params}`);
   if (!res.ok) throw new Error(`API error: ${res.status}`);
   return res.json();
 };

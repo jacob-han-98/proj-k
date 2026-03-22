@@ -63,6 +63,7 @@ function AdminPage() {
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [adminTab, setAdminTab] = useState<'conversations' | 'quality' | 'pipeline'>('conversations')
+  const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const handleShare = () => {
     if (!selectedId) return
@@ -172,8 +173,18 @@ function AdminPage() {
 
   return (
     <div className="layout">
+      {/* Mobile top bar */}
+      <div className="mobile-topbar">
+        <button className="mobile-menu-btn" onClick={() => setSidebarOpen(!sidebarOpen)}>☰</button>
+        <span className="mobile-title">Admin</span>
+        <div className="mobile-tabs">
+          <button className={adminTab === 'conversations' ? 'active' : ''} onClick={() => setAdminTab('conversations')}>대화</button>
+          <button className={adminTab === 'quality' ? 'active' : ''} onClick={() => setAdminTab('quality')}>품질</button>
+          <button className={adminTab === 'pipeline' ? 'active' : ''} onClick={() => setAdminTab('pipeline')}>파이프라인</button>
+        </div>
+      </div>
       {/* Sidebar */}
-      <aside className="sidebar glass">
+      <aside className={`sidebar glass ${sidebarOpen ? 'sidebar-open' : ''}`}>
         <div className="sidebar-header">
           <h2 className="logo">Admin</h2>
         </div>

@@ -27,8 +27,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from src.db import get_conn, init_db, list_sources, now_iso
-from src.worker import trigger_job
+from src.db import get_conn, init_db, list_sources, create_job, now_iso
 
 logging.basicConfig(
     level=logging.INFO,
@@ -99,7 +98,8 @@ def check_and_trigger(dry_run: bool = False) -> list[str]:
             continue
 
         log.info(f"트리거: {name}")
-        trigger_job("crawl", source_id=source["id"], priority=3)
+        with get_conn() as conn:
+            create_job(conn, "crawl", source_id=source["id"], priority=3)
         _last_run[str(source["id"])] = now_iso()
         triggered.append(name)
 

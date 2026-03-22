@@ -1677,10 +1677,70 @@
   color: var(--text-primary);
 }
 
+/* ── 모바일 탑바 (데스크탑 숨김) ── */
+.mobile-topbar {
+  display: none;
+}
+
 /* ── 모바일 반응형 ── */
 @media (max-width: 768px) {
   .sidebar {
     display: none;
+    position: fixed;
+    top: 48px;
+    left: 0;
+    width: 280px;
+    height: calc(100% - 48px);
+    z-index: 100;
+    background: var(--bg-primary);
+    border-right: 1px solid var(--border-color);
+    box-shadow: 4px 0 16px rgba(0,0,0,0.2);
+  }
+  .sidebar.sidebar-open {
+    display: flex;
+  }
+  .mobile-topbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--bg-primary);
+    border-bottom: 1px solid var(--border-color);
+    z-index: 101;
+    flex-shrink: 0;
+  }
+  .mobile-menu-btn {
+    background: none;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 1.1rem;
+    cursor: pointer;
+    color: var(--text-primary);
+  }
+  .mobile-title {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+  }
+  .mobile-tabs {
+    display: flex;
+    gap: 4px;
+    margin-left: auto;
+  }
+  .mobile-tabs button {
+    background: none;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 0.75rem;
+    cursor: pointer;
+    color: var(--text-secondary);
+  }
+  .mobile-tabs button.active {
+    background: var(--accent-color);
+    color: #fff;
+    border-color: var(--accent-color);
   }
   .layout {
     flex-direction: column;

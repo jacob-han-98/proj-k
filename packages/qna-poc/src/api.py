@@ -1007,3 +1007,64 @@ def pipeline_create_crawl_log(data: dict):
             duration_sec=data.get("duration_sec"),
         )
         return {"log_id": log_id}
+
+
+# ── Webhook 트리거 (P4/Confluence 변경 알림) ──────────────
+
+@app.post("/webhook/perforce")
+def webhook_perforce(data: dict):
+    """Perforce trigger에서 호출. changelist 변경 시 크롤링 작업 생성.
+
+    P4 trigger 설정 예시:
+      proj-k-crawl change-commit //main/ProjectK/.../7_System/... "curl -X POST http://서버:8088/webhook/perforce -H 'Content-Type: application/json' -d '{\"changelist\": %changelist%, \"depot_path\": \"//main/ProjectK/.../7_System/...\"}"
+    """
+    pdb = _get_pipeline_db()
+    depot_path = data.get("depot_path", "")
+    changelist = data.get("changelist")
+
+    with pdb.get_conn() as conn:
+        sources = pdb.list_sources(conn, enabled_only=True)
+        matched = [s for s in sources if s["source_type"] == "perforce"
+                   and depot_path.startswith(s["path"].replace("/...", "").rstrip("/"))]
+
+        if not matched:
+            return {"status": "ignored", "reason": "no matching source"}
+
+        jobs_created = []
+        for source in matched:
+            job_id = pdb.create_job(conn, "crawl", source_id=source["id"], priority=2,
+                                     params={"trigger": "webhook", "changelist": changelist})
+            jobs_created.append({"source": source["name"], "job_id": job_id})
+
+    return {"status": "triggered", "changelist": changelist, "jobs": jobs_created}
+
+
+@app.post("/webhook/confluence")
+def webhook_confluence(data: dict):
+    """Confluence webhook에서 호출. 페이지 변경 시 크롤링 작업 생성.
+
+    Confluence webhook 설정: Admin → Webhooks → URL: http://서버:8088/webhook/confluence
+    이벤트: page_created, page_updated, page_removed
+    """
+    pdb = _get_pipeline_db()
+    # Confluence webhook payload에서 페이지 정보 추출
+    page = data.get("page", {})
+    page_id = str(page.get("id", ""))
+    event = data.get("eventType", data.get("event", "unknown"))
+    space_key = page.get("spaceKey", data.get("space", {}).get("key", ""))
+
+    with pdb.get_conn() as conn:
+        sources = pdb.list_sources(conn, enabled_only=True)
+        matched = [s for s in sources if s["source_type"] == "confluence"]
+
+        if not matched:
+            return {"status": "ignored", "reason": "no confluence source configured"}
+
+        jobs_created = []
+        for source in matched:
+            job_id = pdb.create_job(conn, "crawl", source_id=source["id"], priority=2,
+                                     params={"trigger": "webhook", "event": event,
+                                             "page_id": page_id, "space_key": space_key})
+            jobs_created.append({"source": source["name"], "job_id": job_id})
+
+    return {"status": "triggered", "event": event, "page_id": page_id, "jobs": jobs_created}

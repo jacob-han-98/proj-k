@@ -154,6 +154,23 @@ CREATE TABLE IF NOT EXISTS index_snapshots (
     created_at      TEXT DEFAULT (datetime('now'))
 );
 
+-- 크롤 히스토리 로그
+CREATE TABLE IF NOT EXISTS crawl_logs (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    source_id       INTEGER NOT NULL REFERENCES crawl_sources(id),
+    job_id          INTEGER REFERENCES jobs(id),
+    crawl_type      TEXT NOT NULL DEFAULT 'full',    -- full | incremental
+    total_files     INTEGER DEFAULT 0,               -- 전체 파일 수
+    new_files       INTEGER DEFAULT 0,               -- 신규 파일 수
+    changed_files   INTEGER DEFAULT 0,               -- 변경된 파일 수
+    unchanged_files INTEGER DEFAULT 0,               -- 변경 없는 파일 수
+    deleted_files   INTEGER DEFAULT 0,               -- 삭제된 파일 수
+    errors          INTEGER DEFAULT 0,               -- 에러 수
+    details         TEXT DEFAULT '{}',               -- JSON: 변경 파일 목록, changelist 등
+    duration_sec    REAL,                            -- 소요 시간 (초)
+    created_at      TEXT DEFAULT (datetime('now'))
+);
+
 -- 인덱스
 CREATE INDEX IF NOT EXISTS idx_documents_source ON documents(source_id);
 CREATE INDEX IF NOT EXISTS idx_documents_status ON documents(status);
@@ -163,6 +180,7 @@ CREATE INDEX IF NOT EXISTS idx_jobs_status ON jobs(status);
 CREATE INDEX IF NOT EXISTS idx_jobs_worker_type ON jobs(worker_type, status);
 CREATE INDEX IF NOT EXISTS idx_issues_document ON issues(document_id);
 CREATE INDEX IF NOT EXISTS idx_issues_status ON issues(status);
+CREATE INDEX IF NOT EXISTS idx_crawl_logs_source ON crawl_logs(source_id);
 """;
 
 
@@ -202,13 +220,16 @@ def get_source(conn, source_id: int) -> Optional[dict]:
 
 def upsert_document(conn, source_id: int, file_path: str, file_type: str,
                     file_hash: str = None, file_size: int = None,
-                    title: str = None, metadata: dict = None) -> int:
+                    title: str = None, metadata: dict = None) -> dict:
+    """문서 upsert. 반환: {"id": doc_id, "changed": bool, "is_new": bool}"""
     existing = conn.execute(
-        "SELECT id FROM documents WHERE source_id = ? AND file_path = ?",
+        "SELECT id, file_hash FROM documents WHERE source_id = ? AND file_path = ?",
         (source_id, file_path)
     ).fetchone()
 
     if existing:
+        old_hash = existing["file_hash"]
+        changed = (file_hash is not None and old_hash != file_hash)
         conn.execute(
             """UPDATE documents SET file_hash = ?, file_size = ?, title = ?,
                metadata = ?, last_crawled_at = ?, updated_at = ?
@@ -217,7 +238,7 @@ def upsert_document(conn, source_id: int, file_path: str, file_type: str,
              json.dumps(metadata or {}, ensure_ascii=False),
              now_iso(), now_iso(), existing["id"])
         )
-        return existing["id"]
+        return {"id": existing["id"], "changed": changed, "is_new": False}
     else:
         cur = conn.execute(
             """INSERT INTO documents (source_id, file_path, file_type, file_hash,
@@ -226,7 +247,7 @@ def upsert_document(conn, source_id: int, file_path: str, file_type: str,
             (source_id, file_path, file_type, file_hash, file_size, title,
              json.dumps(metadata or {}, ensure_ascii=False), now_iso())
         )
-        return cur.lastrowid
+        return {"id": cur.lastrowid, "changed": True, "is_new": True}
 
 
 def get_document(conn, doc_id: int) -> Optional[dict]:
@@ -509,6 +530,59 @@ def get_pipeline_stats(conn) -> dict:
         "issues": {r["status"]: r["cnt"] for r in issue_stats},
         "active_snapshot": active_snapshot,
     }
+
+
+# -- crawl_logs --
+
+def create_crawl_log(conn, source_id: int, job_id: int = None,
+                     crawl_type: str = "full", total_files: int = 0,
+                     new_files: int = 0, changed_files: int = 0,
+                     unchanged_files: int = 0, deleted_files: int = 0,
+                     errors: int = 0, details: dict = None,
+                     duration_sec: float = None) -> int:
+    cur = conn.execute(
+        """INSERT INTO crawl_logs (source_id, job_id, crawl_type, total_files,
+           new_files, changed_files, unchanged_files, deleted_files, errors,
+           details, duration_sec)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (source_id, job_id, crawl_type, total_files, new_files, changed_files,
+         unchanged_files, deleted_files, errors,
+         json.dumps(details or {}, ensure_ascii=False), duration_sec)
+    )
+    return cur.lastrowid
+
+
+def list_crawl_logs(conn, source_id: int = None, limit: int = 20) -> list[dict]:
+    sql = "SELECT * FROM crawl_logs WHERE 1=1"
+    params = []
+    if source_id:
+        sql += " AND source_id = ?"
+        params.append(source_id)
+    sql += " ORDER BY created_at DESC LIMIT ?"
+    params.append(limit)
+    return [dict(r) for r in conn.execute(sql, params).fetchall()]
+
+
+def update_source_properties(conn, source_id: int, properties: dict):
+    """소스 properties JSON 머지 업데이트."""
+    row = conn.execute("SELECT properties FROM crawl_sources WHERE id = ?",
+                       (source_id,)).fetchone()
+    if not row:
+        return
+    existing = json.loads(row["properties"] or "{}")
+    existing.update(properties)
+    conn.execute(
+        "UPDATE crawl_sources SET properties = ?, updated_at = ? WHERE id = ?",
+        (json.dumps(existing, ensure_ascii=False), now_iso(), source_id)
+    )
+
+
+def get_documents_by_source(conn, source_id: int) -> list[dict]:
+    """소스의 모든 문서 목록 (파일 경로 → ID 매핑용)."""
+    return [dict(r) for r in conn.execute(
+        "SELECT id, file_path, file_hash, metadata FROM documents WHERE source_id = ?",
+        (source_id,)
+    ).fetchall()]
 
 
 if __name__ == "__main__":

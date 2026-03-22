@@ -892,15 +892,17 @@ class DocumentUpsert(BaseModel):
 
 @app.post("/admin/pipeline/documents/upsert")
 def pipeline_upsert_document(doc: DocumentUpsert):
-    """문서 등록/갱신 (워커에서 호출)."""
+    """문서 등록/갱신 (워커에서 호출). changed/is_new 반환."""
     pdb = _get_pipeline_db()
     with pdb.get_conn() as conn:
-        doc_id = pdb.upsert_document(
+        result = pdb.upsert_document(
             conn, doc.source_id, doc.file_path, doc.file_type,
             file_hash=doc.file_hash, file_size=doc.file_size,
             title=doc.title, metadata=doc.metadata
         )
-        return {"document_id": doc_id}
+        return {"document_id": result["id"],
+                "changed": result["changed"],
+                "is_new": result["is_new"]}
 
 
 @app.post("/admin/pipeline/documents/{doc_id}/status")
@@ -957,3 +959,51 @@ def pipeline_source_detail(source_id: int):
         if not source:
             raise HTTPException(status_code=404, detail="Source not found")
         return source
+
+
+@app.get("/admin/pipeline/sources/{source_id}/documents")
+def pipeline_source_documents(source_id: int):
+    """소스의 모든 문서 목록."""
+    pdb = _get_pipeline_db()
+    with pdb.get_conn() as conn:
+        docs = pdb.get_documents_by_source(conn, source_id)
+        return {"documents": docs}
+
+
+@app.post("/admin/pipeline/sources/{source_id}/properties")
+def pipeline_update_source_props(source_id: int, properties: dict):
+    """소스 properties 머지 업데이트."""
+    pdb = _get_pipeline_db()
+    with pdb.get_conn() as conn:
+        pdb.update_source_properties(conn, source_id, properties)
+        return {"source_id": source_id, "status": "updated"}
+
+
+@app.get("/admin/pipeline/crawl-logs")
+def pipeline_crawl_logs(source_id: int = None, limit: int = 20):
+    """크롤 히스토리 로그."""
+    pdb = _get_pipeline_db()
+    with pdb.get_conn() as conn:
+        logs = pdb.list_crawl_logs(conn, source_id=source_id, limit=limit)
+        return {"logs": logs}
+
+
+@app.post("/admin/pipeline/crawl-logs")
+def pipeline_create_crawl_log(data: dict):
+    """크롤 로그 생성 (워커에서 호출)."""
+    pdb = _get_pipeline_db()
+    with pdb.get_conn() as conn:
+        log_id = pdb.create_crawl_log(
+            conn, data["source_id"],
+            job_id=data.get("job_id"),
+            crawl_type=data.get("crawl_type", "full"),
+            total_files=data.get("total_files", 0),
+            new_files=data.get("new_files", 0),
+            changed_files=data.get("changed_files", 0),
+            unchanged_files=data.get("unchanged_files", 0),
+            deleted_files=data.get("deleted_files", 0),
+            errors=data.get("errors", 0),
+            details=data.get("details"),
+            duration_sec=data.get("duration_sec"),
+        )
+        return {"log_id": log_id}

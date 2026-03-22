@@ -60,14 +60,19 @@ def list_sources() -> list[dict]:
 
 def upsert_document(source_id: int, file_path: str, file_type: str,
                     file_hash: str = None, file_size: int = None,
-                    title: str = None, metadata: dict = None) -> int:
+                    title: str = None, metadata: dict = None) -> dict:
+    """문서 upsert. 반환: {"id": doc_id, "changed": bool, "is_new": bool}"""
     body = {"source_id": source_id, "file_path": file_path, "file_type": file_type}
     if file_hash is not None: body["file_hash"] = file_hash
     if file_size is not None: body["file_size"] = file_size
     if title is not None: body["title"] = title
     if metadata is not None: body["metadata"] = metadata
     result = _post("/documents/upsert", json_body=body)
-    return result["document_id"]
+    return {
+        "id": result["document_id"],
+        "changed": result.get("changed", True),
+        "is_new": result.get("is_new", True),
+    }
 
 
 def get_document(doc_id: int) -> Optional[dict]:
@@ -118,6 +123,32 @@ def complete_conversion(conv_id: int, output_path: str,
     _post(f"/conversions/{conv_id}/complete", json_body={
         "output_path": output_path, "quality_score": quality_score, "stats": stats,
     })
+
+
+# ── crawl_logs ──
+
+def create_crawl_log(source_id: int, job_id: int = None,
+                     crawl_type: str = "full", total_files: int = 0,
+                     new_files: int = 0, changed_files: int = 0,
+                     unchanged_files: int = 0, deleted_files: int = 0,
+                     errors: int = 0, details: dict = None,
+                     duration_sec: float = None) -> int:
+    result = _post("/crawl-logs", json_body={
+        "source_id": source_id, "job_id": job_id, "crawl_type": crawl_type,
+        "total_files": total_files, "new_files": new_files,
+        "changed_files": changed_files, "unchanged_files": unchanged_files,
+        "deleted_files": deleted_files, "errors": errors,
+        "details": details, "duration_sec": duration_sec,
+    })
+    return result.get("log_id", 0)
+
+
+def update_source_properties(source_id: int, properties: dict):
+    _post(f"/sources/{source_id}/properties", json_body=properties)
+
+
+def get_documents_by_source(source_id: int) -> list[dict]:
+    return _get(f"/sources/{source_id}/documents").get("documents", [])
 
 
 # ── pipeline status ──

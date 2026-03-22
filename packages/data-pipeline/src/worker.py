@@ -93,7 +93,8 @@ def _db_get_source(source_id: int):
             return _db.get_source(conn, source_id)
 
 
-def _db_upsert_document(source_id, file_path, file_type, **kwargs):
+def _db_upsert_document(source_id, file_path, file_type, **kwargs) -> dict:
+    """반환: {"id": doc_id, "changed": bool, "is_new": bool}"""
     if _remote_mode:
         return _db.upsert_document(source_id, file_path, file_type, **kwargs)
     else:
@@ -182,9 +183,63 @@ def _db_create_job(job_type, **kwargs):
             return _db.create_job(conn, job_type, **kwargs)
 
 
+def _db_create_crawl_log(source_id, **kwargs):
+    if _remote_mode:
+        return _db.create_crawl_log(source_id, **kwargs)
+    else:
+        with _db.get_conn() as conn:
+            return _db.create_crawl_log(conn, source_id, **kwargs)
+
+
+def _db_update_source_properties(source_id, properties):
+    if _remote_mode:
+        _db.update_source_properties(source_id, properties)
+    else:
+        with _db.get_conn() as conn:
+            _db.update_source_properties(conn, source_id, properties)
+
+
+def _db_get_documents_by_source(source_id):
+    if _remote_mode:
+        return _db.get_documents_by_source(source_id)
+    else:
+        with _db.get_conn() as conn:
+            return _db.get_documents_by_source(conn, source_id)
+
+
+def _auto_chain_jobs(source: dict, changed_docs: list[dict]):
+    """변경된 문서에 대해 다음 파이프라인 단계 작업을 자동 생성."""
+    if not changed_docs:
+        return 0
+
+    source_type = source["source_type"]
+    created = 0
+
+    for doc in changed_docs:
+        doc_id = doc["id"]
+        if source_type == "perforce":
+            # xlsx → capture (Windows 전용)
+            _db_create_job("capture", document_id=doc_id,
+                           priority=3, worker_type="windows")
+            created += 1
+        elif source_type == "confluence":
+            # html → convert
+            _db_create_job("convert", document_id=doc_id,
+                           priority=3, worker_type="any")
+            created += 1
+
+    if created:
+        log.info(f"  자동 체이닝: {created}개 후속 작업 생성 ({source_type})")
+
+    return created
+
+
 @register_handler("crawl")
 def handle_crawl(job: dict, worker_id: str) -> dict:
-    """크롤링 작업 처리."""
+    """크롤링 작업 처리 — 변경 감지 + 자동 체이닝 + 히스토리 로그."""
+    import time as _time
+    crawl_start = _time.time()
+
     params = json.loads(job.get("params", "{}"))
     source_id = job.get("source_id")
 
@@ -200,15 +255,48 @@ def handle_crawl(job: dict, worker_id: str) -> dict:
     log.info(f"크롤링: {source['name']} ({source_type})")
 
     if source_type == "perforce":
-        return _crawl_perforce(source, params)
+        result = _crawl_perforce(source, params)
     elif source_type == "confluence":
-        return _crawl_confluence(source, params)
+        result = _crawl_confluence(source, params)
     else:
         raise ValueError(f"지원하지 않는 소스 타입: {source_type}")
 
+    # B. 자동 파이프라인 체이닝
+    changed_docs = result.get("_changed_docs", [])
+    chained = _auto_chain_jobs(source, changed_docs)
+    result["chained_jobs"] = chained
+
+    # D. 크롤 히스토리 로그
+    duration = _time.time() - crawl_start
+    _db_create_crawl_log(
+        source_id, job_id=job.get("id"),
+        crawl_type=params.get("crawl_type", "incremental"),
+        total_files=result.get("total_files", 0),
+        new_files=result.get("new_files", 0),
+        changed_files=result.get("changed_files", 0),
+        unchanged_files=result.get("unchanged_files", 0),
+        deleted_files=result.get("deleted_files", 0),
+        errors=result.get("errors", 0),
+        details={
+            "changed_list": [d.get("path", "") for d in changed_docs[:100]],
+            "p4_changelist": result.get("last_changelist"),
+            "confluence_versions": result.get("version_updates"),
+        },
+        duration_sec=round(duration, 2),
+    )
+    result.pop("_changed_docs", None)  # 내부용 필드 제거
+
+    log.info(f"크롤링 완료: 전체 {result.get('total_files', 0)}, "
+             f"신규 {result.get('new_files', 0)}, "
+             f"변경 {result.get('changed_files', 0)}, "
+             f"소요 {duration:.1f}초")
+
+    return result
+
 
 def _crawl_perforce(source: dict, params: dict) -> dict:
-    """Perforce 소스 크롤링 — update_sources.py 재사용."""
+    """Perforce 크롤링 — changelist 추적 + 해시 변경 감지 + 자동 체이닝."""
+    import hashlib
     import subprocess
 
     props = json.loads(source.get("properties", "{}"))
@@ -224,37 +312,85 @@ def _crawl_perforce(source: dict, params: dict) -> dict:
         if val:
             p4_env[key] = val
 
+    # A-1. 마지막 changelist 확인
+    last_cl = props.get("last_changelist")
+
     # p4 sync
     cmd = ["p4", "sync", depot_path]
     log.info(f"  실행: {' '.join(cmd)}")
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=300, env=p4_env)
+    sync_output = (result.stdout + result.stderr).strip()
 
-    output = (result.stdout + result.stderr).strip()
-    lines = output.split("\n") if output else []
-    updated = [l for l in lines if l.strip() and ("updating" in l.lower() or "added" in l.lower())]
+    # A-2. 최신 changelist 조회
+    cl_cmd = ["p4", "changes", "-m1", "-s", "submitted", depot_path]
+    cl_result = subprocess.run(cl_cmd, capture_output=True, text=True, timeout=30, env=p4_env)
+    new_cl = None
+    if cl_result.stdout.strip():
+        # "Change 12345 on 2026/03/22 ..." 형식에서 숫자 추출
+        parts = cl_result.stdout.strip().split()
+        if len(parts) >= 2:
+            new_cl = parts[1]
 
-    # 변경된 파일을 documents 테이블에 등록
+    # 파일 스캔 + 해시 비교
     local_path = props.get("local_path", os.getenv("P4_LOCAL_PATH", ""))
-    registered = 0
-    import hashlib
+    file_types = props.get("file_types", ["xlsx"])
+
+    new_files = 0
+    changed_files = 0
+    unchanged_files = 0
+    errors = 0
+    changed_docs = []
+    total = 0
 
     if local_path:
         base = Path(local_path)
-        for f in base.rglob("*.xlsx"):
-            file_hash = hashlib.sha256(f.read_bytes()).hexdigest()
-            rel_path = str(f.relative_to(base))
-            _db_upsert_document(
-                source["id"], rel_path, "xlsx",
-                file_hash=file_hash, file_size=f.stat().st_size,
-                title=f.stem
-            )
-            registered += 1
+        for ext in file_types:
+            for f in base.rglob(f"*.{ext}"):
+                total += 1
+                try:
+                    file_hash = hashlib.sha256(f.read_bytes()).hexdigest()
+                    rel_path = str(f.relative_to(base))
+                    doc_info = _db_upsert_document(
+                        source["id"], rel_path, ext,
+                        file_hash=file_hash, file_size=f.stat().st_size,
+                        title=f.stem
+                    )
+                    if doc_info["is_new"]:
+                        new_files += 1
+                        changed_docs.append({"id": doc_info["id"], "path": rel_path})
+                        log.info(f"  [NEW] {rel_path}")
+                    elif doc_info["changed"]:
+                        changed_files += 1
+                        changed_docs.append({"id": doc_info["id"], "path": rel_path})
+                        log.info(f"  [CHANGED] {rel_path}")
+                    else:
+                        unchanged_files += 1
+                except Exception as e:
+                    errors += 1
+                    log.error(f"  [ERROR] {f.name}: {e}")
 
-    return {"synced": len(updated), "registered": registered, "local_path": local_path}
+    # A-3. changelist 저장
+    if new_cl:
+        _db_update_source_properties(source["id"], {"last_changelist": new_cl})
+
+    log.info(f"  P4 결과: 전체 {total}, 신규 {new_files}, 변경 {changed_files}, "
+             f"불변 {unchanged_files}, CL {last_cl} → {new_cl}")
+
+    return {
+        "total_files": total,
+        "new_files": new_files,
+        "changed_files": changed_files,
+        "unchanged_files": unchanged_files,
+        "errors": errors,
+        "last_changelist": new_cl,
+        "prev_changelist": last_cl,
+        "local_path": local_path,
+        "_changed_docs": changed_docs,
+    }
 
 
 def _crawl_confluence(source: dict, params: dict) -> dict:
-    """Confluence 소스 크롤링 — update_sources.py 재사용."""
+    """Confluence 크롤링 — 재귀 탐색 + 버전 비교 + 자동 체이닝."""
     import importlib.util
     cd_dir = PROJECT_ROOT / "packages" / "confluence-downloader"
 
@@ -275,18 +411,116 @@ def _crawl_confluence(source: dict, params: dict) -> dict:
     client = ConfluenceClient(url, username, token, request_delay=0.3)
 
     root_page_id = source["path"]
-    # 페이지 목록 조회 + documents 등록
-    registered = 0
-    children = client.get_children(root_page_id, limit=500)
-    for page in children:
-        _db_upsert_document(
-            source["id"], page["id"], "html",
-            title=page.get("title", ""),
-            metadata={"version": page.get("version", {}).get("number", 0)}
-        )
-        registered += 1
+    props = json.loads(source.get("properties", "{}"))
+    max_depth = props.get("max_depth", 10)  # 최대 재귀 깊이
 
-    return {"registered": registered}
+    # C. 재귀 크롤링
+    all_pages = []
+    _crawl_confluence_recursive(client, root_page_id, all_pages,
+                                 depth=0, max_depth=max_depth)
+
+    log.info(f"  Confluence 탐색 완료: {len(all_pages)}페이지")
+
+    # 기존 문서 버전 매핑 (변경 감지용)
+    existing_docs = _db_get_documents_by_source(source["id"])
+    existing_versions = {}
+    for doc in existing_docs:
+        meta = json.loads(doc.get("metadata", "{}") or "{}")
+        existing_versions[doc["file_path"]] = meta.get("version", 0)
+    existing_paths = set(d["file_path"] for d in existing_docs)
+
+    # 페이지 등록 + 버전 비교
+    new_files = 0
+    changed_files = 0
+    unchanged_files = 0
+    errors = 0
+    changed_docs = []
+    version_updates = []
+    crawled_paths = set()
+
+    for page in all_pages:
+        page_id = str(page["id"])
+        crawled_paths.add(page_id)
+        page_version = page.get("version", {}).get("number", 0)
+        old_version = existing_versions.get(page_id, 0)
+        page_title = page.get("title", "")
+
+        try:
+            # 버전 기반 해시 (Confluence는 파일 해시 없으므로 버전을 해시 대용)
+            version_hash = f"v{page_version}"
+            doc_info = _db_upsert_document(
+                source["id"], page_id, "html",
+                file_hash=version_hash,
+                title=page_title,
+                metadata={
+                    "version": page_version,
+                    "depth": page.get("_depth", 0),
+                    "parent_id": page.get("_parent_id"),
+                }
+            )
+            if doc_info["is_new"]:
+                new_files += 1
+                changed_docs.append({"id": doc_info["id"], "path": page_id,
+                                     "title": page_title})
+                log.info(f"  [NEW] {page_title} (v{page_version})")
+            elif doc_info["changed"]:
+                changed_files += 1
+                changed_docs.append({"id": doc_info["id"], "path": page_id,
+                                     "title": page_title})
+                version_updates.append({
+                    "page_id": page_id, "title": page_title,
+                    "old_version": old_version, "new_version": page_version
+                })
+                log.info(f"  [CHANGED] {page_title} (v{old_version} → v{page_version})")
+            else:
+                unchanged_files += 1
+        except Exception as e:
+            errors += 1
+            log.error(f"  [ERROR] {page_title}: {e}")
+
+    # 삭제된 페이지 감지
+    deleted_paths = existing_paths - crawled_paths
+    deleted_files = len(deleted_paths)
+    if deleted_paths:
+        log.info(f"  삭제 감지: {deleted_files}페이지")
+
+    log.info(f"  Confluence 결과: 전체 {len(all_pages)}, 신규 {new_files}, "
+             f"변경 {changed_files}, 불변 {unchanged_files}, 삭제 {deleted_files}")
+
+    return {
+        "total_files": len(all_pages),
+        "new_files": new_files,
+        "changed_files": changed_files,
+        "unchanged_files": unchanged_files,
+        "deleted_files": deleted_files,
+        "errors": errors,
+        "version_updates": version_updates,
+        "_changed_docs": changed_docs,
+    }
+
+
+def _crawl_confluence_recursive(client, page_id: str, result_list: list,
+                                 depth: int = 0, max_depth: int = 10,
+                                 parent_id: str = None):
+    """Confluence 페이지 트리를 재귀적으로 탐색."""
+    if depth > max_depth:
+        log.warning(f"  최대 재귀 깊이 초과: depth={depth}, page={page_id}")
+        return
+
+    children = client.get_children(page_id, limit=200)
+    for child in children:
+        child["_depth"] = depth
+        child["_parent_id"] = parent_id or page_id
+        result_list.append(child)
+
+        # 하위 페이지 재귀 탐색
+        child_id = str(child["id"])
+        _crawl_confluence_recursive(client, child_id, result_list,
+                                     depth=depth + 1, max_depth=max_depth,
+                                     parent_id=child_id)
+
+    if depth == 0:
+        log.info(f"  재귀 탐색: {len(result_list)}페이지 발견 (최대 깊이: {max_depth})")
 
 
 @register_handler("capture")

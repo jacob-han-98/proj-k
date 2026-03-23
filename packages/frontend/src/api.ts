@@ -343,6 +343,59 @@ export const fetchCrawlLogs = async (sourceId?: number): Promise<{ logs: CrawlLo
   return res.json();
 };
 
+// ── Pipeline DAG ──────────────────────────────────
+
+export interface DagStage {
+  id: string;
+  label: string;
+  desc: string;
+}
+
+export interface DagEdge {
+  from: string;
+  to: string;
+}
+
+export interface DagStageStatus {
+  status: string;   // idle | pending | running | completed | failed
+  completed_at?: string | null;
+  created_at?: string | null;
+  error?: string | null;
+}
+
+export interface PipelineDagSource {
+  source_id: number;
+  source_name: string;
+  source_type: string;
+  pipeline: string;
+  stages: DagStage[];
+  edges: DagEdge[];
+  last_stage: string;
+  stage_status: Record<string, DagStageStatus>;
+}
+
+export interface PipelineDagResponse {
+  sources: PipelineDagSource[];
+  shared_stages: DagStage[];
+  shared_edges: DagEdge[];
+  shared_status: Record<string, DagStageStatus>;
+}
+
+export const fetchPipelineDag = async (): Promise<PipelineDagResponse> => {
+  const res = await fetch(`${API_BASE_URL}/admin/pipeline/dag`);
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res.json();
+};
+
+export const runPipelineDag = async (
+  sourceId: number, stage: string, mode: 'single' | 'downstream' | 'all'
+): Promise<{ source_id: number; mode: string; jobs: { job_id: number; stage: string }[] }> => {
+  const params = new URLSearchParams({ source_id: String(sourceId), stage, mode });
+  const res = await fetch(`${API_BASE_URL}/admin/pipeline/dag/run?${params}`, { method: 'POST' });
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res.json();
+};
+
 /** NDJSON 스트리밍 이벤트 타입 */
 export type StreamEvent =
   | { type: 'status'; message: string }

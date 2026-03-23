@@ -819,6 +819,169 @@ def pipeline_trigger_job(job_type: str, source_id: int = None, document_id: int 
         return {"job_id": job_id, "job_type": job_type, "status": "pending"}
 
 
+@app.get("/admin/pipeline/dag")
+def pipeline_dag():
+    """통합 파이프라인 DAG — 소스별 단계 + 공유 단계(index, kg_build).
+
+    하나의 통합 그래프로 반환:
+    - sources: 소스별 고유 단계 + 상태
+    - shared: 공유 단계 (index, kg_build) — 모든 소스의 마지막 단계에서 합류
+    """
+    pdb = _get_pipeline_db()
+
+    # 소스 타입별 고유 단계 (index/kg_build 제외)
+    SOURCE_STAGES = {
+        "perforce": {
+            "pipeline": "excel-vision",
+            "stages": [
+                {"id": "crawl", "label": "Crawl", "desc": "P4 변경 감지"},
+                {"id": "capture", "label": "Capture", "desc": "Excel COM 스크린샷"},
+                {"id": "convert", "label": "Convert", "desc": "Vision AI + OOXML"},
+            ],
+            "edges": [
+                {"from": "crawl", "to": "capture"},
+                {"from": "capture", "to": "convert"},
+            ],
+            "last_stage": "convert",  # index로 연결되는 마지막 단계
+        },
+        "confluence": {
+            "pipeline": "confluence-enrich",
+            "stages": [
+                {"id": "crawl", "label": "Crawl", "desc": "페이지 변경 감지"},
+                {"id": "download", "label": "Download", "desc": "HTML→MD 변환"},
+                {"id": "enrich", "label": "Enrich", "desc": "이미지 Vision 보강"},
+            ],
+            "edges": [
+                {"from": "crawl", "to": "download"},
+                {"from": "download", "to": "enrich"},
+            ],
+            "last_stage": "enrich",
+        },
+    }
+
+    SHARED_STAGES = [
+        {"id": "index", "label": "Index", "desc": "ChromaDB 인덱싱"},
+        {"id": "kg_build", "label": "KG Build", "desc": "지식 그래프 생성"},
+    ]
+
+    with pdb.get_conn() as conn:
+        sources = pdb.list_sources(conn, enabled_only=False)
+        source_data = []
+
+        for src in sources:
+            src_type = src["source_type"]
+            src_def = SOURCE_STAGES.get(src_type)
+            if not src_def:
+                continue
+
+            stage_status = {}
+            for stage in src_def["stages"]:
+                row = conn.execute(
+                    "SELECT status, completed_at, created_at, error_message "
+                    "FROM jobs WHERE source_id = ? AND job_type = ? "
+                    "ORDER BY created_at DESC LIMIT 1",
+                    [src["id"], stage["id"]]
+                ).fetchone()
+                stage_status[stage["id"]] = {
+                    "status": row["status"] if row else "idle",
+                    "completed_at": row["completed_at"] if row else None,
+                    "created_at": row["created_at"] if row else None,
+                    "error": row["error_message"] if row else None,
+                } if row else {"status": "idle"}
+
+            source_data.append({
+                "source_id": src["id"],
+                "source_name": src["name"],
+                "source_type": src_type,
+                "pipeline": src_def["pipeline"],
+                "stages": src_def["stages"],
+                "edges": src_def["edges"],
+                "last_stage": src_def["last_stage"],
+                "stage_status": stage_status,
+            })
+
+        # 공유 단계 상태 (소스 무관, 가장 최근 작업 기준)
+        shared_status = {}
+        for stage in SHARED_STAGES:
+            row = conn.execute(
+                "SELECT status, completed_at, created_at, error_message "
+                "FROM jobs WHERE job_type = ? "
+                "ORDER BY created_at DESC LIMIT 1",
+                [stage["id"]]
+            ).fetchone()
+            shared_status[stage["id"]] = {
+                "status": row["status"] if row else "idle",
+                "completed_at": row["completed_at"] if row else None,
+                "created_at": row["created_at"] if row else None,
+                "error": row["error_message"] if row else None,
+            } if row else {"status": "idle"}
+
+        return {
+            "sources": source_data,
+            "shared_stages": SHARED_STAGES,
+            "shared_edges": [{"from": "index", "to": "kg_build"}],
+            "shared_status": shared_status,
+        }
+
+
+@app.post("/admin/pipeline/dag/run")
+def pipeline_dag_run(source_id: int, stage: str, mode: str = "single"):
+    """파이프라인 단계 실행.
+
+    mode:
+      - single: 해당 단계만 실행
+      - downstream: 해당 단계 + 이후 모든 단계 순차 실행
+      - all: 전체 파이프라인 실행 (첫 단계부터)
+    """
+    pdb = _get_pipeline_db()
+
+    PIPELINE_DEFS = {
+        "perforce": ["crawl", "capture", "convert", "index", "kg_build"],
+        "confluence": ["crawl", "download", "enrich", "index", "kg_build"],
+    }
+
+    with pdb.get_conn() as conn:
+        src = conn.execute("SELECT * FROM crawl_sources WHERE id = ?", [source_id]).fetchone()
+        if not src:
+            from fastapi import HTTPException
+            raise HTTPException(status_code=404, detail=f"소스 {source_id} 없음")
+
+        src_type = src["source_type"]
+        stages = PIPELINE_DEFS.get(src_type, [])
+        if stage not in stages:
+            from fastapi import HTTPException
+            raise HTTPException(status_code=400, detail=f"잘못된 단계: {stage}")
+
+        # 실행할 단계 목록 결정
+        stage_idx = stages.index(stage)
+        if mode == "single":
+            run_stages = [stage]
+        elif mode == "downstream":
+            run_stages = stages[stage_idx:]
+        elif mode == "all":
+            run_stages = stages[:]
+        else:
+            from fastapi import HTTPException
+            raise HTTPException(status_code=400, detail=f"잘못된 mode: {mode}")
+
+        # 작업 생성
+        created_jobs = []
+        for i, s in enumerate(run_stages):
+            worker_type = "windows" if s == "capture" else "any"
+            job_id = pdb.create_job(
+                conn, s, source_id=source_id,
+                worker_type=worker_type,
+                priority=10 - i,  # 앞 단계가 높은 우선순위
+            )
+            created_jobs.append({"job_id": job_id, "stage": s})
+
+        return {
+            "source_id": source_id,
+            "mode": mode,
+            "jobs": created_jobs,
+        }
+
+
 @app.get("/admin/pipeline/issues")
 def pipeline_issues(status: str = None):
     """품질 이슈 목록."""

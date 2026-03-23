@@ -3,13 +3,35 @@
 > 세션 간 항상성을 유지하기 위한 작업 상태 기록.
 > 세션 시작 시 반드시 이 파일을 먼저 읽는다.
 
-## 최종 업데이트: 2026-03-21
+## 최종 업데이트: 2026-03-23
 
-## 현재 단계: 데이터 파이프라인 인프라 구축 중 + 피칭 준비
+## 현재 단계: Data Pipeline 설계 완료, 구현 대기 + 피칭 준비
 
 ---
 
-### [최근 작업 내역] 2026-03-21: 데이터 파이프라인 인프라 구축
+### [최근 작업 내역] 2026-03-23: Data Pipeline 프레임워크 설계
+
+**완료 항목:**
+- **프레임워크 결정 (ADR-017)**: 외부 프레임워크(Dagster/Prefect) 대신 **자체 data-pipeline 패키지 확장** — 이미 70% 완성, 1인 개발 규모에 적합
+- **선언적 DAG 설계**: `config/pipelines.yaml`로 소스 타입별 파이프라인 그래프 정의 (excel-vision, confluence-enrich, excel-table)
+- **DAG 엔진 설계**: `src/dag.py` — `_auto_chain_jobs()` 하드코딩을 대체, 모든 핸들러에 범용 체이닝
+- **dev/prod 모드 설계**: `config/mode.yaml` + `src/mode.py` — 개발(수동/안전) vs 서비스(자동/알림)
+- **배치 인덱싱 설계**: debounced trigger — 문서 단위가 아닌 변경 묶음 단위로 index/kg_build
+- **설계 문서 작성**: `packages/data-pipeline/docs/PIPELINE_DESIGN.md` (상세 설계서)
+- **ARCHITECTURE.md 업데이트**: KEP 섹션 추가 + 미결정 사항 대부분 해결
+- **DECISIONS.md 업데이트**: ADR-017 추가
+
+**구현 로드맵 (다음 작업)**:
+- Phase 0: DAG 엔진 + 체이닝 일반화 (`dag.py`, `pipelines.yaml`, `worker.py` 수정)
+- Phase 1: dev/prod 모드 분리 (`mode.py`, `mode.yaml`)
+- Phase 2: debounced index 트리거
+- Phase 3: Admin UI DAG 시각화
+
+**현재 git 상태:** 미커밋 (설계 문서만 추가)
+
+---
+
+### [이전 작업 내역] 2026-03-21: 데이터 파이프라인 인프라 구축
 
 **완료 항목:**
 - **packages/data-pipeline/** 신규 패키지 생성
@@ -227,7 +249,7 @@
 
 | # | 항목 | 설명 | 상태 |
 |---|------|------|------|
-| 3 | **엑셀/Confluence 자동 크롤링** | Perforce/Confluence 변경 감지 → 자동 재변환 → 재인덱싱 | 미착수 |
+| 3 | **Data Pipeline 프레임워크 구현** | DAG 엔진 + dev/prod 모드 + debounced index + Admin DAG 시각화 (ADR-017) | **설계 완료**, 구현 대기 |
 | 4 | **데이터시트 정보 추가** | 시트 내 수치 테이블 인덱싱 → 밸런스 관련 질문 대응 | 미착수 |
 | 5 | **주요 플로우차트 정리 요청** | 기획팀에 핵심 플로우 문서화 요청 (사람 작업) | 미착수 |
 | 6 | **기획서 자동 최신화** | conflict_scanner 정기 실행 + outdated 마킹 | 미착수 |

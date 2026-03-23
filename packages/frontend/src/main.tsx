@@ -13,6 +13,7 @@ createRoot(document.getElementById('root')!).render(
       <Routes>
         <Route path="/" element={<App />} />
         <Route path="/admin" element={<AdminPage />} />
+        <Route path="/admin/:tab" element={<AdminPage />} />
         <Route path="/conflicts" element={<ConflictsPage />} />
         <Route path="/shared/:id" element={<SharedPage />} />
       </Routes>

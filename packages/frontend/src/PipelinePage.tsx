@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react'
 import {
   fetchPipelineStatus, fetchPipelineSources, fetchPipelineDocuments,
   fetchPipelineJobs, fetchPipelineIssues, triggerPipelineJob, fetchCrawlLogs,
@@ -7,6 +7,8 @@ import type {
   PipelineStats, PipelineSource, PipelineDocument,
   PipelineJob, PipelineIssue, CrawlLog,
 } from './api'
+
+const PipelineGraphTab = lazy(() => import('./PipelineGraphTab'))
 
 const STATUS_COLORS: Record<string, string> = {
   new: '#6b7280', crawled: '#3b82f6', captured: '#8b5cf6',
@@ -34,10 +36,10 @@ function formatTime(iso: string | null): string {
   return d.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
-type Tab = 'overview' | 'sources' | 'documents' | 'jobs' | 'issues' | 'crawl-logs'
+type Tab = 'graph' | 'overview' | 'sources' | 'documents' | 'jobs' | 'issues' | 'crawl-logs'
 
 function PipelinePage() {
-  const [tab, setTab] = useState<Tab>('overview')
+  const [tab, setTab] = useState<Tab>('graph')
   const [stats, setStats] = useState<PipelineStats | null>(null)
   const [sources, setSources] = useState<PipelineSource[]>([])
   const [documents, setDocuments] = useState<PipelineDocument[]>([])
@@ -121,7 +123,7 @@ function PipelinePage() {
   if (error) return <div style={{ padding: 40, color: '#ef4444' }}>연결 실패: {error}</div>
 
   return (
-    <div style={{ padding: '24px 32px', maxWidth: 1200, margin: '0 auto' }}>
+    <div style={{ padding: '24px 32px' }}>
       <h2 style={{ marginBottom: 8 }}>데이터 파이프라인</h2>
       <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', marginBottom: 20 }}>
         기획서 크롤링 → 변환 → 인덱싱 현황
@@ -129,7 +131,7 @@ function PipelinePage() {
 
       {/* Tab bar */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 24, borderBottom: '1px solid var(--border-color)', paddingBottom: 4 }}>
-        {(['overview', 'sources', 'documents', 'jobs', 'issues', 'crawl-logs'] as Tab[]).map(t => (
+        {(['graph', 'overview', 'sources', 'documents', 'jobs', 'issues', 'crawl-logs'] as Tab[]).map(t => (
           <button key={t} onClick={() => setTab(t)} style={{
             padding: '8px 16px', border: 'none', cursor: 'pointer', borderRadius: '8px 8px 0 0',
             background: 'transparent',
@@ -137,11 +139,18 @@ function PipelinePage() {
             fontWeight: tab === t ? 600 : 500, fontSize: '0.85rem',
             borderBottom: tab === t ? '2px solid #2563eb' : '2px solid transparent',
           }}>
-            {t === 'overview' ? '전체 현황' : t === 'sources' ? '소스' : t === 'documents' ? '문서' : t === 'jobs' ? '작업큐' : t === 'issues' ? '이슈' : '크롤 로그'}
+            {t === 'graph' ? 'Graph' : t === 'overview' ? '전체 현황' : t === 'sources' ? '소스' : t === 'documents' ? '문서' : t === 'jobs' ? '작업큐' : t === 'issues' ? '이슈' : '크롤 로그'}
             {t === 'issues' && stats?.issues?.open ? ` (${stats.issues.open})` : ''}
           </button>
         ))}
       </div>
+
+      {/* Graph */}
+      {tab === 'graph' && (
+        <Suspense fallback={<div style={{ padding: 40, color: 'var(--text-secondary)' }}>Graph 로딩 중...</div>}>
+          <PipelineGraphTab />
+        </Suspense>
+      )}
 
       {/* Overview */}
       {tab === 'overview' && stats && (

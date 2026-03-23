@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
 import './App.css'
 import { fetchConversations, fetchConversationDetail, forkConversation } from './api'
 import type { ConversationSummary, ConversationDetail, Source, Proposal } from './api'
@@ -55,14 +56,23 @@ function formatTime(iso: string): string {
   return d.toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
+const TAB_MAP: Record<string, 'conversations' | 'quality' | 'pipeline'> = {
+  conversations: 'conversations', quality: 'quality', pipeline: 'pipeline',
+}
+
 function AdminPage() {
+  const { tab: urlTab } = useParams<{ tab?: string }>()
+  const navigate = useNavigate()
   const [convList, setConvList] = useState<ConversationSummary[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [detail, setDetail] = useState<ConversationDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
-  const [adminTab, setAdminTab] = useState<'conversations' | 'quality' | 'pipeline'>('conversations')
+  const adminTab = TAB_MAP[urlTab || ''] || 'conversations'
+  const setAdminTab = useCallback((tab: 'conversations' | 'quality' | 'pipeline') => {
+    navigate(`${import.meta.env.BASE_URL}admin/${tab}`, { replace: true })
+  }, [navigate])
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
   const handleShare = () => {

@@ -343,3 +343,35 @@
   - 5단계(실시간 어시스턴트)의 UX 방향이 구체화됨
   - 크롬 확장은 5단계의 핵심 인터페이스가 될 가능성 높음
   - Claude Cowork 연동은 "AI가 실제 파일을 수정하는" 워크플로우의 첫 사례
+
+## ADR-017: 파이프라인 프레임워크 — 자체 DAG 확장 (Dagster/Prefect 미채택)
+
+- **날짜**: 2026-03-23
+- **결정**: 현재 `packages/data-pipeline/` 패키지를 확장하여 선언적 DAG 프레임워크로 발전. 외부 프레임워크(Dagster, Prefect, Airflow) 도입하지 않음.
+- **배경**:
+  - 각 공정(Excel 변환, Confluence 다운로드, 인덱싱 등)을 PoC 방식으로 개별 구축해왔으나, 통합 파이프라인으로 정리 필요
+  - 소스 변경 감지 → DAG 기반 후속 작업 자동 트리거, dev/prod 모드 분리, Admin 모니터링 필요
+  - 전체 프로세스의 공학적 명칭: **Data Pipeline** — ETL의 확장 (비정형 문서 → AI 변환 → 구조화 지식)
+- **현재 완성도**: 약 70%
+  - DB 7테이블, 워커 6핸들러, 스케줄러, CLI, remote_db(Win↔Linux 분산), API 30개, Admin UI 5탭
+  - 부족: (a) 선언적 DAG 정의 (b) 체이닝 일반화 (c) dev/prod 모드 분리
+- **추가 구현 계획**:
+  1. `config/pipelines.yaml` — 선언적 DAG 정의 (소스 타입별 Stage 그래프)
+  2. `src/dag.py` — DAG 엔진 (pipelines.yaml 로드, 체이닝 로직)
+  3. `src/mode.py` + `config/mode.yaml` — dev/prod 모드 관리
+  4. debounced index 배치 트리거 (scheduler 확장)
+  5. Admin UI DAG 시각화 탭
+- **근거 (외부 프레임워크 미채택)**:
+  1. 이미 70% 완성 — 새로 시작하면 기존 코드 폐기
+  2. 1인 개발, 소스 2-5개, 문서 ~600개 규모에 Dagster/Prefect는 과도 (PostgreSQL + 데몬 인프라)
+  3. Windows(P4+Excel COM) + Linux 분산이 이미 remote_db.py로 구현됨
+  4. 부족한 부분이 명확하고 적음 (DAG 엔진 ~150줄, 모드 관리 ~80줄)
+- **대안 검토**:
+  - Dagster: 강력한 UI(Dagit) + Asset 의존성 네이티브 지원. 그러나 PostgreSQL 필수, 학습 곡선, 기존 코드 @asset 래핑 필요
+  - Prefect: 데코레이터 기반으로 학습 쉬움. 그러나 Prefect Server 인프라, 분산 Agent 구성 추가 작업
+  - Airflow: 엔터프라이즈급 DAG 오케스트레이터. 1인 프로젝트에 명백히 과도
+- **향후 마이그레이션**: 6단계(사내 서비스)에서 규모 증가 시 Dagster 검토 가능. 현재 핸들러가 순수 함수에 가까워 `@asset` 래핑 비용 낮음.
+- **상세 설계**: `packages/data-pipeline/docs/PIPELINE_DESIGN.md`
+- **영향**:
+  - ARCHITECTURE.md Data Pipeline 섹션 추가
+  - 구현 로드맵 4단계 (Phase 0~3)

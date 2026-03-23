@@ -3,13 +3,42 @@
 ## 전체 시스템 구조
 
 ```
-[원본 소스]              [변환 파이프라인]           [지식 베이스]          [AI 서비스]
-Perforce (Excel)    ──→  Vision-First Pipeline  ──→  _knowledge_base/  ──→  Agent API
-Confluence (PDF)    ──→  (스크린샷→Vision→보강)       + Vector DB             |
-  │                                                  + Knowledge Graph       v
-  └─ 변경 감지 → 자동 재변환                                            [사용자 인터페이스]
-                                                                        QnA / Review / Live
+[원본 소스]              [Data Pipeline]                         [지식 베이스]          [AI 서비스]
+                         (data-pipeline 패키지)
+Perforce (Excel)    ──→  E: crawl + capture                 ──→ ChromaDB (4,133청크)──→ Agent API
+Confluence (Wiki)   ──→  T: vision + parse + synthesize          + KG (405시스템)        |
+  │                      T: download + enrich                                           v
+  └─ 변경 감지 ───→      L: index + kg_build                                    [사용자 인터페이스]
+     (polling/webhook)                                                          React SPA / Slack
+                         DAG 기반 자동 체이닝
+                         dev/prod 모드 분리
 ```
+
+### Data Pipeline 개요
+
+> 상세 설계: `packages/data-pipeline/docs/PIPELINE_DESIGN.md`
+
+비정형 문서를 AI가 이해할 수 있는 구조화된 지식으로 변환하는 Data Pipeline.
+ETL 패턴을 따르되, Transform 단계에 Vision AI + LLM 해석이 포함된다.
+
+```
+E (Extract)   = crawl + download + capture         소스에서 원본 획득
+T (Transform) = vision + parse + synthesize + enrich   AI 기반 비정형 변환
+L (Load)      = index + kg_build                   벡터DB + KG 적재
+```
+
+**소스별 파이프라인 DAG**:
+
+| 소스 | 파이프라인 | 단계 |
+|------|-----------|------|
+| Perforce (Excel) | excel-vision | crawl(win) -> capture(win) -> convert -> index -> kg_build |
+| Confluence | confluence-enrich | crawl -> download -> enrich(조건부) -> index -> kg_build |
+| PPTX (향후) | pptx-vision | crawl -> capture -> convert -> index -> kg_build |
+| DataSheet (향후) | excel-table | crawl -> convert(table-parser) -> index -> kg_build |
+
+**인프라**: SQLite DB + 작업큐 워커 + 스케줄러 (자체 구축, 외부 프레임워크 미사용)
+- 프레임워크 선택 근거: ADR-017
+- Windows(P4+Excel COM capture) + Linux(나머지) 분산 지원 (`remote_db.py`)
 
 ## 1단계: 지식화 아키텍처
 
@@ -214,12 +243,13 @@ networkx        # 그래프 탐색
 ---
 
 ## 미결정 사항
-- [ ] Headless 렌더링 방식 (LibreOffice vs Excel COM vs 클라우드 서비스)
-- [ ] 벡터 DB 선택 (로컬 Chroma vs 클라우드 Pinecone)
-- [ ] 임베딩 모델 선택 (Voyage AI vs OpenAI vs 오픈소스)
-- [ ] 배포 환경 (로컬 개발 서버 vs AWS)
-- [ ] 프론트엔드 프레임워크
-- [ ] Confluence API 연동 방식 (webhook vs polling)
-- [ ] Perforce 동기화 방식 (triggers vs polling)
+- [x] Headless 렌더링 방식 → **Excel COM (Windows)** + LibreOffice (서버 백업) (ADR-006)
+- [x] 벡터 DB 선택 → **ChromaDB** (로컬, 4,133 청크)
+- [x] 임베딩 모델 선택 → **Amazon Titan v2** (Bedrock, 1024차원)
+- [x] 배포 환경 → **사내 서버** (Ubuntu, systemd + nginx)
+- [x] 프론트엔드 프레임워크 → **React + Vite SPA** (ADR-015)
+- [x] Confluence API 연동 방식 → **REST API polling** (ADR-010), webhook은 서비스 단계에서
+- [x] Perforce 동기화 방식 → **P4 sync polling** (ADR-011), triggers는 서비스 단계에서
+- [ ] 파이프라인 프레임워크 → **자체 DAG 확장** (ADR-017), 서비스 단계에서 Dagster 검토
 
 > 미결정 사항은 각 단계 착수 시 결정하고 `docs/DECISIONS.md`에 기록

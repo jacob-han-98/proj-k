@@ -358,12 +358,12 @@ def create_job(conn, job_type: str, source_id: int = None, document_id: int = No
 
 
 def claim_job(conn, worker_id: str, worker_types: list[str] = None) -> Optional[dict]:
-    """워커가 작업을 가져감. worker_types로 처리 가능한 타입 필터."""
-    if worker_types:
+    """워커가 작업을 가져감. worker_types로 job_type 필터."""
+    if worker_types and worker_types != ["any"]:
         placeholders = ",".join("?" for _ in worker_types)
         sql = f"""SELECT * FROM jobs
                   WHERE status = 'pending'
-                  AND (worker_type IN ({placeholders}) OR worker_type = 'any')
+                  AND job_type IN ({placeholders})
                   ORDER BY priority ASC, created_at ASC
                   LIMIT 1"""
         row = conn.execute(sql, worker_types).fetchone()

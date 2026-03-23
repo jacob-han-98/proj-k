@@ -794,11 +794,17 @@ def pipeline_jobs(status: str = None, job_type: str = None, limit: int = 50):
         # running crawl 작업에 실시간 progress 주입
         for j in jobs:
             if j.get("status") == "running" and j.get("job_type") == "crawl" and j.get("source_id"):
-                doc_count = conn.execute(
-                    "SELECT COUNT(*) as cnt FROM documents WHERE source_id = ?",
-                    [j["source_id"]]
-                ).fetchone()["cnt"]
-                j["progress"] = f"{doc_count}페이지 등록 중"
+                # DB에 저장된 progress가 있으면 그것 사용, 없으면 문서 수로 추정
+                if not j.get("progress"):
+                    total = conn.execute(
+                        "SELECT COUNT(*) as cnt FROM documents WHERE source_id = ?",
+                        [j["source_id"]]
+                    ).fetchone()["cnt"]
+                    converted = conn.execute(
+                        "SELECT COUNT(*) as cnt FROM documents WHERE source_id = ? AND status = 'converted'",
+                        [j["source_id"]]
+                    ).fetchone()["cnt"]
+                    j["progress"] = f"{converted}/{total} 페이지 변환 완료"
         return {"jobs": jobs, "stats": stats}
 
 

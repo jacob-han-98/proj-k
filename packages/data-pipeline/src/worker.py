@@ -232,8 +232,8 @@ def _auto_chain_jobs(source: dict, changed_docs: list[dict]):
                            priority=3, worker_type="windows")
             created += 1
         elif source_type == "confluence":
-            # html → convert
-            _db_create_job("convert", document_id=doc_id,
+            # html → download (본문 다운로드 + md 변환)
+            _db_create_job("download", document_id=doc_id,
                            priority=3, worker_type="any")
             created += 1
 
@@ -426,32 +426,30 @@ def _crawl_confluence(source: dict, params: dict, job_id: int = None) -> dict:
 
     root_page_id = source["path"]
     props = json.loads(source.get("properties", "{}"))
-    max_depth = props.get("max_depth", 10)  # 최대 재귀 깊이
-    download_body = props.get("download_body", True)  # 본문 다운로드 여부
+    max_depth = props.get("max_depth", 10)
 
-    # Confluence 변환기 로드 (본문 다운로드 시)
-    converter_mod = None
-    if download_body:
-        try:
-            conv_spec = importlib.util.spec_from_file_location(
-                "confluence_converter", str(cd_dir / "src" / "converter.py"))
-            converter_mod = importlib.util.module_from_spec(conv_spec)
-            conv_spec.loader.exec_module(converter_mod)
-        except Exception as e:
-            log.warning(f"  변환기 로드 실패, 본문 다운로드 건너뜀: {e}")
-            download_body = False
-
-    # 출력 디렉토리
-    output_dir = cd_dir / "output"
-
-    # C. 재귀 크롤링
+    # A. 재귀 크롤링 (페이지 트리 탐색만)
     all_pages = []
     _crawl_confluence_recursive(client, root_page_id, all_pages,
                                  depth=0, max_depth=max_depth)
 
     log.info(f"  Confluence 탐색 완료: {len(all_pages)}페이지")
 
-    # 기존 문서 버전 매핑 (변경 감지용)
+    # B. ancestors 경로 빌드 (계층 폴더용)
+    page_map = {str(p["id"]): p for p in all_pages}
+    def _build_path(page):
+        """페이지의 Confluence 트리 경로를 구성 (예: Design/시스템 디자인/스킬)."""
+        parts = [page.get("title", "")]
+        parent_id = str(page.get("_parent_id", ""))
+        visited = set()
+        while parent_id and parent_id in page_map and parent_id not in visited:
+            visited.add(parent_id)
+            parent = page_map[parent_id]
+            parts.insert(0, parent.get("title", ""))
+            parent_id = str(parent.get("_parent_id", ""))
+        return "/".join(parts)
+
+    # C. 기존 문서 버전 매핑 (변경 감지용)
     existing_docs = _db_get_documents_by_source(source["id"])
     existing_versions = {}
     for doc in existing_docs:
@@ -459,7 +457,7 @@ def _crawl_confluence(source: dict, params: dict, job_id: int = None) -> dict:
         existing_versions[doc["file_path"]] = meta.get("version", 0)
     existing_paths = set(d["file_path"] for d in existing_docs)
 
-    # 페이지 등록 + 버전 비교
+    # D. 페이지 등록 + 버전 비교 (다운로드 없이 DB만)
     new_files = 0
     changed_files = 0
     unchanged_files = 0
@@ -469,19 +467,21 @@ def _crawl_confluence(source: dict, params: dict, job_id: int = None) -> dict:
     crawled_paths = set()
 
     total_pages = len(all_pages)
+    if job_id:
+        _db_update_job_progress(job_id, f"0/{total_pages} 페이지 등록 시작")
+
     for idx, page in enumerate(all_pages, 1):
         page_id = str(page["id"])
         crawled_paths.add(page_id)
         page_version = page.get("version", {}).get("number", 0)
         old_version = existing_versions.get(page_id, 0)
         page_title = page.get("title", "")
+        tree_path = _build_path(page)
 
-        # 진행상황 업데이트 (10페이지마다)
-        if job_id and idx % 10 == 0:
-            _db_update_job_progress(job_id, f"{idx}/{total_pages} 페이지 처리 중")
+        if job_id and idx % 50 == 0:
+            _db_update_job_progress(job_id, f"{idx}/{total_pages} 페이지 등록 중")
 
         try:
-            # 버전 기반 해시 (Confluence는 파일 해시 없으므로 버전을 해시 대용)
             version_hash = f"v{page_version}"
             doc_info = _db_upsert_document(
                 source["id"], page_id, "html",
@@ -491,6 +491,7 @@ def _crawl_confluence(source: dict, params: dict, job_id: int = None) -> dict:
                     "version": page_version,
                     "depth": page.get("_depth", 0),
                     "parent_id": page.get("_parent_id"),
+                    "tree_path": tree_path,
                 }
             )
             if doc_info["is_new"]:
@@ -498,9 +499,6 @@ def _crawl_confluence(source: dict, params: dict, job_id: int = None) -> dict:
                 changed_docs.append({"id": doc_info["id"], "path": page_id,
                                      "title": page_title})
                 log.info(f"  [NEW] {page_title} (v{page_version})")
-                if download_body:
-                    _download_confluence_page(client, converter_mod, page_id,
-                                               page_title, output_dir)
             elif doc_info["changed"]:
                 changed_files += 1
                 changed_docs.append({"id": doc_info["id"], "path": page_id,
@@ -510,16 +508,13 @@ def _crawl_confluence(source: dict, params: dict, job_id: int = None) -> dict:
                     "old_version": old_version, "new_version": page_version
                 })
                 log.info(f"  [CHANGED] {page_title} (v{old_version} → v{page_version})")
-                if download_body:
-                    _download_confluence_page(client, converter_mod, page_id,
-                                               page_title, output_dir)
             else:
                 unchanged_files += 1
         except Exception as e:
             errors += 1
             log.error(f"  [ERROR] {page_title}: {e}")
 
-    # 삭제된 페이지 감지
+    # E. 삭제된 페이지 감지
     deleted_paths = existing_paths - crawled_paths
     deleted_files = len(deleted_paths)
     if deleted_paths:
@@ -623,6 +618,184 @@ def _download_confluence_page(client, converter_mod, page_id: str,
 
     except Exception as e:
         log.error(f"    페이지 다운로드 실패: {title} — {e}")
+
+
+@register_handler("download")
+def handle_download(job: dict, worker_id: str) -> dict:
+    """Confluence 페이지 다운로드 — 계층 구조로 본문 + 이미지 저장."""
+    import re
+    import importlib.util
+
+    document_id = job.get("document_id")
+    doc = _db_get_document(document_id)
+    source = _db_get_source(doc["source_id"])
+
+    page_id = doc["file_path"]  # Confluence page ID
+    title = doc.get("title", "")
+    meta = json.loads(doc.get("metadata", "{}") or "{}")
+    tree_path = meta.get("tree_path", title)  # 예: "시스템 디자인/스킬/스킬 강화 시스템"
+
+    log.info(f"다운로드: {title} (page={page_id}, path={tree_path})")
+
+    # Confluence 클라이언트 로드
+    cd_dir = PROJECT_ROOT / "packages" / "confluence-downloader"
+    from dotenv import load_dotenv
+    load_dotenv(cd_dir / ".env")
+
+    spec = importlib.util.spec_from_file_location(
+        "confluence_client", str(cd_dir / "src" / "client.py"))
+    client_mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(client_mod)
+    client = client_mod.ConfluenceClient(
+        os.getenv("CONFLUENCE_URL"),
+        os.getenv("CONFLUENCE_USERNAME"),
+        os.getenv("CONFLUENCE_API_TOKEN"),
+        request_delay=0.3,
+    )
+
+    # Markdown 변환기 로드
+    converter_mod = None
+    try:
+        conv_spec = importlib.util.spec_from_file_location(
+            "confluence_converter", str(cd_dir / "src" / "converter.py"))
+        converter_mod = importlib.util.module_from_spec(conv_spec)
+        conv_spec.loader.exec_module(converter_mod)
+    except Exception:
+        pass
+
+    # 페이지 본문 조회
+    page_data = client.get_page(page_id, expand="body.storage,version")
+    body_html = page_data.get("body", {}).get("storage", {}).get("value", "")
+
+    if not body_html:
+        log.warning(f"  본문 비어있음: {title}")
+        _db_update_document_status(document_id, "converted")
+        return {"status": "empty", "title": title}
+
+    # 계층 폴더 생성 (Design/시스템 디자인/스킬/스킬 강화 시스템)
+    output_dir = cd_dir / "output"
+    safe_parts = [re.sub(r'[<>:"|?*]', '_', p)[:100] for p in tree_path.split("/")]
+    page_dir = output_dir / "/".join(safe_parts)
+    page_dir.mkdir(parents=True, exist_ok=True)
+    images_dir = page_dir / "images"
+    images_dir.mkdir(exist_ok=True)
+
+    # HTML → Markdown 변환
+    image_refs = []
+    if converter_mod and hasattr(converter_mod, 'convert_storage_to_markdown'):
+        markdown, image_refs, _ = converter_mod.convert_storage_to_markdown(body_html, page_title=title)
+    elif converter_mod and hasattr(converter_mod, 'convert_confluence_to_markdown'):
+        markdown = converter_mod.convert_confluence_to_markdown(body_html)
+    else:
+        markdown = body_html
+
+    # 이미지 파일명 plain text → ![](images/) 참조로 변환
+    for img_ref in image_refs:
+        # "image-20250922-091022.png" → "![image-20250922-091022.png](images/image-20250922-091022.png)"
+        if img_ref in markdown and f"![{img_ref}]" not in markdown:
+            markdown = markdown.replace(img_ref, f"![{img_ref}](images/{img_ref})")
+
+    # content.md 저장
+    content_path = page_dir / "content.md"
+    content_path.write_text(f"# {title}\n\n{markdown}", encoding="utf-8")
+
+    # 첨부파일(이미지) 다운로드
+    attachments = client.get_attachments(page_id)
+    downloaded_images = 0
+    for att in attachments:
+        filename = att.get("title", "")
+        download_link = att.get("_links", {}).get("download", "")
+        if not download_link:
+            continue
+        if filename.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp')):
+            try:
+                data = client.download_attachment(download_link)
+                (images_dir / filename).write_bytes(data)
+                downloaded_images += 1
+            except Exception as e:
+                log.warning(f"    첨부파일 실패: {filename} — {e}")
+
+    log.info(f"  완료: {title} ({len(body_html)}자, 이미지 {downloaded_images}개) → {page_dir}")
+
+    # 문서 상태 업데이트
+    _db_update_document_status(document_id, "downloaded")
+
+    # 이미지가 있으면 enrich 작업 체이닝
+    if downloaded_images > 0:
+        _db_create_job("enrich", document_id=document_id, priority=4, worker_type="any")
+        log.info(f"  enrich 작업 체이닝 (이미지 {downloaded_images}개)")
+
+    return {
+        "title": title,
+        "body_length": len(body_html),
+        "images": downloaded_images,
+        "output_path": str(page_dir),
+    }
+
+
+@register_handler("enrich")
+def handle_enrich(job: dict, worker_id: str) -> dict:
+    """Confluence 페이지 이미지 보강 — Opus 4.6 Vision으로 이미지 설명 추가."""
+    import importlib.util
+
+    document_id = job.get("document_id")
+    doc = _db_get_document(document_id)
+    meta = json.loads(doc.get("metadata", "{}") or "{}")
+    tree_path = meta.get("tree_path", doc.get("title", ""))
+
+    # enricher 패키지를 sys.path에 추가하여 import 해결
+    enricher_dir = PROJECT_ROOT / "packages" / "confluence-enricher"
+    from dotenv import load_dotenv
+    load_dotenv(enricher_dir / ".env")
+
+    import sys
+    enricher_src = str(enricher_dir / "src")
+    if enricher_src not in sys.path:
+        sys.path.insert(0, enricher_src)
+
+    # src 패키지의 __init__.py가 있으므로 패키지로 로드
+    vc_spec = importlib.util.spec_from_file_location(
+        "vision_client", str(enricher_dir / "src" / "vision_client.py"))
+    vc_mod = importlib.util.module_from_spec(vc_spec)
+    vc_spec.loader.exec_module(vc_mod)
+    sys.modules["vision_client"] = vc_mod
+
+    spec = importlib.util.spec_from_file_location(
+        "enricher", str(enricher_dir / "src" / "enricher.py"),
+        submodule_search_locations=[enricher_src])
+    enricher_mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(enricher_mod)
+
+    # 페이지 디렉토리 찾기
+    cd_dir = PROJECT_ROOT / "packages" / "confluence-downloader"
+    output_dir = cd_dir / "output"
+    import re
+    safe_parts = [re.sub(r'[<>:"|?*]', '_', p)[:100] for p in tree_path.split("/")]
+    page_dir = output_dir / "/".join(safe_parts)
+
+    if not (page_dir / "content.md").exists():
+        raise FileNotFoundError(f"content.md 없음: {page_dir}")
+
+    log.info(f"보강: {doc.get('title', '')} ({page_dir.name})")
+
+    # Opus 4.6으로 모델 오버라이드
+    os.environ["VISION_MODEL"] = "claude-opus-4-6"
+
+    # enrich 실행
+    result = enricher_mod.enrich_page(page_dir, dry_run=False)
+
+    log.info(f"  보강 완료: 이미지 {result.get('enriched', 0)}/{result.get('total_images', 0)}, "
+             f"토큰 {result.get('total_input_tokens', 0)}+{result.get('total_output_tokens', 0)}")
+
+    _db_update_document_status(document_id, "enriched")
+
+    return {
+        "title": doc.get("title", ""),
+        "enriched_images": result.get("enriched", 0),
+        "total_images": result.get("total_images", 0),
+        "input_tokens": result.get("total_input_tokens", 0),
+        "output_tokens": result.get("total_output_tokens", 0),
+    }
 
 
 @register_handler("capture")
@@ -867,7 +1040,7 @@ def main():
                         help="폴링 간격 (초)")
     parser.add_argument("--once", action="store_true",
                         help="작업 1개만 처리 후 종료")
-    parser.add_argument("--trigger", choices=["crawl", "capture", "convert", "index", "full"],
+    parser.add_argument("--trigger", choices=["crawl", "capture", "convert", "download", "enrich", "index", "full"],
                         help="작업 트리거 (큐에 등록)")
     parser.add_argument("--source-id", type=int, help="소스 ID")
     parser.add_argument("--document-id", type=int, help="문서 ID")

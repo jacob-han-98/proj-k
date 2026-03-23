@@ -10,7 +10,7 @@ import type {
 
 const STATUS_COLORS: Record<string, string> = {
   new: '#6b7280', crawled: '#3b82f6', captured: '#8b5cf6',
-  converted: '#f59e0b', indexed: '#22c55e', error: '#ef4444',
+  downloaded: '#8b5cf6', converted: '#f59e0b', enriched: '#a855f7', indexed: '#22c55e', error: '#ef4444',
   pending: '#6b7280', assigned: '#3b82f6', running: '#f59e0b',
   completed: '#22c55e', failed: '#ef4444', cancelled: '#9ca3af',
   open: '#ef4444', in_progress: '#f59e0b', resolved: '#22c55e',
@@ -89,17 +89,20 @@ function PipelinePage() {
     }
   }, [tab, docFilter, jobFilter, crawlLogFilter])
 
-  // running 작업이 있으면 5초마다 자동 새로고침
+  // running 작업이 있으면 3초마다 자동 새로고침 (작업큐 + 전체현황)
   useEffect(() => {
     const hasRunning = jobs.some(j => j.status === 'running')
-    if (!hasRunning || tab !== 'jobs') return
+    if (!hasRunning) return
     const timer = setInterval(() => {
       fetchPipelineJobs(jobFilter)
         .then(r => { setJobs(r.jobs); setJobStats(r.stats) })
         .catch(() => {})
-    }, 5000)
+      if (tab === 'overview') {
+        loadData()
+      }
+    }, 3000)
     return () => clearInterval(timer)
-  }, [jobs, tab, jobFilter])
+  }, [jobs, tab, jobFilter, loadData])
 
   const handleTrigger = async (jobType: string, sourceId?: number, documentId?: number) => {
     try {

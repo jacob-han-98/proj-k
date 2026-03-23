@@ -14,7 +14,10 @@ import json
 import time
 from pathlib import Path
 
-from .vision_client import call_vision
+try:
+    from .vision_client import call_vision
+except ImportError:
+    from vision_client import call_vision
 
 # 이미지 참조 패턴: ![alt](images/filename.ext)
 IMAGE_REF_PATTERN = re.compile(r'!\[([^\]]*)\]\((images/[^)]+)\)')

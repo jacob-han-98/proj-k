@@ -1,5 +1,13 @@
 # Project K - AI 기획 어시스턴트 프로젝트
 
+## Telegram 설정
+
+이 프로젝트의 Telegram 채널 state는 글로벌 경로(`~/.claude/channels/telegram/`)가 아닌 **프로젝트 로컬 경로**를 사용한다:
+- **access.json**: `scripts/telegram/state/access.json`
+- **approved/**: `scripts/telegram/state/approved/`
+
+`/telegram:access` 스킬 실행 시 반드시 위 경로의 파일을 읽고 써야 한다.
+
 ## 프로젝트 개요
 
 모바일 MMORPG "Project K"의 전체 기획 지식을 AI가 완전히 이해하고 활용할 수 있도록 구조화하여,

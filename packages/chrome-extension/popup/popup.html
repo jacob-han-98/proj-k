@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Project K Settings</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="popup-container">
+    <header class="popup-header">
+      <h1>Project K Assistant</h1>
+      <span class="version">v0.1.0</span>
+    </header>
+
+    <!-- API Mode -->
+    <section class="settings-section">
+      <h2>LLM API Mode</h2>
+      <div class="radio-group">
+        <label class="radio-label">
+          <input type="radio" name="apiMode" value="bedrock" checked>
+          <span>AWS Bedrock</span>
+        </label>
+        <label class="radio-label">
+          <input type="radio" name="apiMode" value="direct">
+          <span>Claude Direct</span>
+        </label>
+        <label class="radio-label">
+          <input type="radio" name="apiMode" value="proxy">
+          <span>Backend Proxy</span>
+        </label>
+      </div>
+    </section>
+
+    <!-- Bedrock Settings -->
+    <section id="bedrock-settings" class="settings-section">
+      <h2>AWS Bedrock Settings</h2>
+      <div class="form-group">
+        <label for="bedrockToken">Bearer Token</label>
+        <input type="password" id="bedrockToken" placeholder="AWS Bearer Token">
+      </div>
+      <div class="form-group">
+        <label for="bedrockModel">Model</label>
+        <select id="bedrockModel">
+          <option value="claude-opus-4-6">Claude Opus 4.6</option>
+          <option value="claude-sonnet-4-6">Claude Sonnet 4.6</option>
+          <option value="claude-sonnet-4-5">Claude Sonnet 4.5</option>
+          <option value="claude-haiku-4-5">Claude Haiku 4.5</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="bedrockRegion">Region</label>
+        <input type="text" id="bedrockRegion" placeholder="us-east-1">
+      </div>
+      <p class="help-text">config.js에 설정된 값이 기본값으로 사용됩니다</p>
+    </section>
+
+    <!-- Direct API Settings -->
+    <section id="direct-settings" class="settings-section hidden">
+      <h2>Claude API Settings</h2>
+      <div class="form-group">
+        <label for="claudeApiKey">API Key</label>
+        <input type="password" id="claudeApiKey" placeholder="sk-ant-...">
+      </div>
+      <div class="form-group">
+        <label for="claudeModel">Model</label>
+        <select id="claudeModel">
+          <option value="claude-sonnet-4-5-20250514">Claude Sonnet 4.5</option>
+          <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5</option>
+        </select>
+      </div>
+    </section>
+
+    <!-- Proxy Settings -->
+    <section id="proxy-settings" class="settings-section hidden">
+      <h2>Backend Proxy Settings</h2>
+      <div class="form-group">
+        <label for="backendUrl">Backend URL</label>
+        <input type="text" id="backendUrl" placeholder="http://127.0.0.1:8088">
+      </div>
+    </section>
+
+    <!-- Confluence Settings -->
+    <section class="settings-section">
+      <h2>Confluence API (for page edits)</h2>
+      <div class="form-group">
+        <label for="confluenceEmail">Email</label>
+        <input type="email" id="confluenceEmail" placeholder="your-email@company.com">
+      </div>
+      <div class="form-group">
+        <label for="confluenceApiToken">API Token</label>
+        <input type="password" id="confluenceApiToken" placeholder="Confluence API token">
+      </div>
+      <p class="help-text">
+        Get your API token from
+        <a href="https://id.atlassian.com/manage-profile/security/api-tokens" target="_blank">
+          Atlassian account settings
+        </a>
+      </p>
+    </section>
+
+    <!-- Edit Safety -->
+    <section class="settings-section">
+      <h2>Edit Safety</h2>
+      <div class="form-group">
+        <label for="editableSpaces">Editable Spaces</label>
+        <input type="text" id="editableSpaces" placeholder="PKTEST, PK">
+      </div>
+      <p class="help-text">
+        Comma-separated Space Keys. Edit Suggestions are disabled on pages outside these spaces.
+      </p>
+    </section>
+
+    <!-- Actions -->
+    <div class="actions">
+      <button id="btn-save" class="btn-save">Save Settings</button>
+      <span id="save-status" class="save-status"></span>
+    </div>
+  </div>
+
+  <script src="../lib/config.js" onerror="/* config.js is optional */"></script>
+  <script src="../lib/storage.js"></script>
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Project K Assistant</title>
+  <link rel="stylesheet" href="sidebar.css">
+</head>
+<body>
+  <div class="sidebar-container">
+    <!-- Header -->
+    <header class="sidebar-header">
+      <h1>Project K</h1>
+      <button id="btn-close" class="btn-icon" title="Close">✕</button>
+    </header>
+
+    <!-- Tabs -->
+    <nav class="tabs">
+      <button class="tab active" data-tab="summary">Summary</button>
+      <button class="tab" data-tab="edit">Edit Suggestions</button>
+    </nav>
+
+    <!-- Summary Tab -->
+    <section id="tab-summary" class="tab-content active">
+      <div class="section-info" id="page-info">
+        <span class="page-title">Loading page info...</span>
+      </div>
+      <button id="btn-summarize" class="btn-primary">Summarize this page</button>
+      <div id="summary-result" class="result-area"></div>
+    </section>
+
+    <!-- Edit Tab -->
+    <section id="tab-edit" class="tab-content">
+      <div class="section-info" id="edit-page-info">
+        <span class="page-title">Loading page info...</span>
+      </div>
+      <div class="input-group">
+        <textarea id="edit-instruction" placeholder="Enter edit instructions... (e.g., 'Fix the damage values in the combat table')" rows="3"></textarea>
+        <button id="btn-suggest-edits" class="btn-primary">Suggest Edits</button>
+      </div>
+
+      <!-- Diff Review Area -->
+      <div id="diff-area" class="diff-area"></div>
+
+      <!-- Bulk Actions -->
+      <div id="bulk-actions" class="bulk-actions hidden">
+        <button id="btn-yes-all" class="btn-approve">Yes All</button>
+        <button id="btn-reject-all" class="btn-reject">Reject All</button>
+        <button id="btn-always" class="btn-always" title="Auto-approve all future changes">Always</button>
+        <span id="diff-stats" class="diff-stats"></span>
+      </div>
+
+      <!-- Confirm / Cancel -->
+      <div id="apply-area" class="apply-area hidden">
+        <div class="apply-buttons">
+          <button id="btn-confirm" class="btn-save-confluence">Save to Confluence</button>
+          <button id="btn-cancel-edits" class="btn-cancel-edits">Cancel</button>
+        </div>
+        <div id="apply-result" class="result-area"></div>
+      </div>
+    </section>
+
+    <!-- Status Bar -->
+    <footer class="status-bar">
+      <span id="status-text">Ready</span>
+      <span id="status-mode" class="status-mode"></span>
+    </footer>
+  </div>
+
+  <script src="../lib/diff-engine.js"></script>
+  <script src="sidebar.js"></script>
+</body>
+</html>

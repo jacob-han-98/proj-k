@@ -1,0 +1,326 @@
+/* Content script styles - injected into Confluence pages */
+
+/* Floating toggle button */
+#pk-assistant-toggle {
+  position: fixed;
+  top: 66px;
+  right: 16px;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: #1f2937;
+  color: white;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  z-index: 999999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+#pk-assistant-toggle:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+}
+
+/* Hide toggle button when sidebar is open */
+#pk-assistant-toggle.active {
+  display: none;
+}
+
+/* Sidebar container - pushes page content instead of overlaying */
+#pk-assistant-sidebar-wrapper {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100vh;
+  z-index: 999998;
+  display: flex;
+  transition: width 0.3s ease;
+}
+
+#pk-assistant-sidebar-wrapper.hidden {
+  width: 0 !important;
+}
+
+/* Resize handle */
+#pk-assistant-resize-handle {
+  width: 5px;
+  cursor: col-resize;
+  background: transparent;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+
+#pk-assistant-resize-handle:hover,
+#pk-assistant-resize-handle.dragging {
+  background: #2563eb;
+}
+
+/* Sidebar iframe */
+#pk-assistant-sidebar {
+  flex: 1;
+  border: none;
+  height: 100%;
+  width: 100%;
+  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Push page content when sidebar is open */
+body.pk-sidebar-open {
+  transition: margin-right 0.3s ease;
+  overflow-x: hidden !important;
+}
+
+/* Force Confluence content to respect margin */
+body.pk-sidebar-open #AkMainContent,
+body.pk-sidebar-open [data-testid="grid-main-content"],
+body.pk-sidebar-open #content {
+  transition: max-width 0.3s ease;
+}
+
+/* Inline Diff Widget - VS Code style */
+.pk-inline-diff {
+  display: inline;
+  position: relative;
+  border-radius: 3px;
+  padding: 1px 0;
+}
+
+.pk-inline-diff.pending {
+  background: rgba(37, 99, 235, 0.06);
+  outline: 1px solid rgba(37, 99, 235, 0.3);
+}
+
+/* Focused widget - current keyboard target */
+.pk-inline-diff.pk-focused {
+  outline: 2px solid #2563eb;
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
+}
+
+.pk-inline-diff.accepted {
+  background: rgba(34, 197, 94, 0.08);
+  outline: 1px solid rgba(34, 197, 94, 0.3);
+}
+
+.pk-inline-diff.rejected {
+  background: rgba(239, 68, 68, 0.05);
+  outline: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+/* Removed text (strikethrough red) */
+.pk-diff-removed {
+  text-decoration: line-through;
+  color: #dc2626;
+  background: rgba(239, 68, 68, 0.12);
+  padding: 1px 3px;
+  border-radius: 2px;
+}
+
+/* Added text (green) */
+.pk-diff-added {
+  color: #16a34a;
+  background: rgba(34, 197, 94, 0.12);
+  padding: 1px 3px;
+  border-radius: 2px;
+  font-weight: 600;
+}
+
+/* After accept - clean look */
+.pk-diff-accepted-text {
+  color: #16a34a;
+  background: rgba(34, 197, 94, 0.08);
+  padding: 1px 3px;
+  border-radius: 2px;
+}
+
+/* After reject - original restored */
+.pk-diff-rejected-text {
+  opacity: 0.7;
+}
+
+/* Floating toolbar above the diff */
+.pk-diff-toolbar {
+  display: none;
+  position: absolute;
+  top: -28px;
+  left: 0;
+  background: #1e293b;
+  border-radius: 14px;
+  padding: 2px 3px;
+  padding-bottom: 8px; /* extend hit area down to bridge gap */
+  margin-bottom: -6px;
+  gap: 2px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  z-index: 10000;
+  white-space: nowrap;
+}
+
+.pk-inline-diff:hover > .pk-diff-toolbar,
+.pk-diff-toolbar:hover {
+  display: inline-flex;
+}
+
+/* Show toolbar always for pending items */
+.pk-inline-diff.pending > .pk-diff-toolbar {
+  display: inline-flex;
+}
+
+/* Icon buttons - small, round */
+.pk-diff-icon {
+  width: 22px;
+  height: 22px;
+  border: none;
+  border-radius: 50%;
+  font-size: 13px;
+  line-height: 22px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.15s;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pk-icon-accept {
+  background: #22c55e;
+  color: white;
+}
+.pk-icon-accept:hover {
+  background: #16a34a;
+  transform: scale(1.15);
+}
+
+.pk-icon-reject {
+  background: #ef4444;
+  color: white;
+}
+.pk-icon-reject:hover {
+  background: #dc2626;
+  transform: scale(1.15);
+}
+
+.pk-icon-skip {
+  background: #6b7280;
+  color: white;
+  font-size: 11px;
+}
+.pk-icon-skip:hover {
+  background: #4b5563;
+  transform: scale(1.15);
+}
+
+.pk-icon-undo {
+  background: #6b7280;
+  color: white;
+  font-size: 12px;
+}
+.pk-icon-undo:hover {
+  background: #4b5563;
+  transform: scale(1.15);
+}
+
+/* Floating Status Bar - fixed at bottom */
+#pk-floating-bar {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 48px;
+  background: #1e293b;
+  color: #e2e8f0;
+  z-index: 999997;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.2);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 13px;
+}
+
+body.pk-sidebar-open #pk-floating-bar {
+  right: 0; /* extends under sidebar too */
+}
+
+.pk-float-stats {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pk-float-label {
+  font-weight: 700;
+  color: #60a5fa;
+  margin-right: 6px;
+}
+
+.pk-float-badge {
+  padding: 2px 10px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.pk-badge-accept { background: #052e16; color: #86efac; }
+.pk-badge-reject { background: #450a0a; color: #fca5a5; }
+.pk-badge-pending { background: #451a03; color: #fbbf24; }
+
+.pk-float-keys {
+  font-size: 11px;
+  color: #6b7280;
+  margin-left: 8px;
+}
+
+.pk-float-keys kbd {
+  display: inline-block;
+  padding: 1px 5px;
+  background: #374151;
+  border: 1px solid #4b5563;
+  border-radius: 3px;
+  font-size: 10px;
+  font-family: inherit;
+  color: #d1d5db;
+  margin: 0 1px;
+}
+
+.pk-float-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.pk-float-btn {
+  padding: 6px 16px;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+  font-family: inherit;
+}
+
+.pk-float-btn-confirm {
+  background: #22c55e;
+  color: white;
+}
+.pk-float-btn-confirm:hover {
+  background: #16a34a;
+}
+.pk-float-btn-confirm:disabled {
+  background: #374151;
+  color: #6b7280;
+  cursor: not-allowed;
+}
+
+.pk-float-btn-cancel {
+  background: #374151;
+  color: #d1d5db;
+}
+.pk-float-btn-cancel:hover {
+  background: #4b5563;
+}

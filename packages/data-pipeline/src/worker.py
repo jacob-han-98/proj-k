@@ -166,6 +166,15 @@ def _db_fail_job(job_id, error_message):
             _db.fail_job(conn, job_id, error_message)
 
 
+def _db_update_job_progress(job_id, progress: str):
+    """작업 진행상황 업데이트 (예: '120/498 페이지 처리 중')."""
+    if _remote_mode:
+        pass  # TODO: remote API
+    else:
+        with _db.get_conn() as conn:
+            conn.execute("UPDATE jobs SET progress = ? WHERE id = ?", [progress, job_id])
+
+
 def _db_create_job(job_type, **kwargs):
     if _remote_mode:
         # remote에는 create_job이 없으므로 trigger API 사용
@@ -254,10 +263,12 @@ def handle_crawl(job: dict, worker_id: str) -> dict:
     source_type = source["source_type"]
     log.info(f"크롤링: {source['name']} ({source_type})")
 
+    job_id = job.get("id")
+
     if source_type == "perforce":
-        result = _crawl_perforce(source, params)
+        result = _crawl_perforce(source, params, job_id=job_id)
     elif source_type == "confluence":
-        result = _crawl_confluence(source, params)
+        result = _crawl_confluence(source, params, job_id=job_id)
     else:
         raise ValueError(f"지원하지 않는 소스 타입: {source_type}")
 
@@ -294,7 +305,7 @@ def handle_crawl(job: dict, worker_id: str) -> dict:
     return result
 
 
-def _crawl_perforce(source: dict, params: dict) -> dict:
+def _crawl_perforce(source: dict, params: dict, job_id: int = None) -> dict:
     """Perforce 크롤링 — changelist 추적 + 해시 변경 감지 + 자동 체이닝."""
     import hashlib
     import subprocess
@@ -344,9 +355,12 @@ def _crawl_perforce(source: dict, params: dict) -> dict:
 
     if local_path:
         base = Path(local_path)
-        for ext in file_types:
-            for f in base.rglob(f"*.{ext}"):
+        all_files = [f for ext in file_types for f in base.rglob(f"*.{ext}")]
+        total_expected = len(all_files)
+        for f in all_files:
                 total += 1
+                if job_id and total % 10 == 0:
+                    _db_update_job_progress(job_id, f"{total}/{total_expected} 파일 스캔 중")
                 try:
                     file_hash = hashlib.sha256(f.read_bytes()).hexdigest()
                     rel_path = str(f.relative_to(base))
@@ -389,7 +403,7 @@ def _crawl_perforce(source: dict, params: dict) -> dict:
     }
 
 
-def _crawl_confluence(source: dict, params: dict) -> dict:
+def _crawl_confluence(source: dict, params: dict, job_id: int = None) -> dict:
     """Confluence 크롤링 — 재귀 탐색 + 버전 비교 + 자동 체이닝."""
     import importlib.util
     cd_dir = PROJECT_ROOT / "packages" / "confluence-downloader"
@@ -454,12 +468,17 @@ def _crawl_confluence(source: dict, params: dict) -> dict:
     version_updates = []
     crawled_paths = set()
 
-    for page in all_pages:
+    total_pages = len(all_pages)
+    for idx, page in enumerate(all_pages, 1):
         page_id = str(page["id"])
         crawled_paths.add(page_id)
         page_version = page.get("version", {}).get("number", 0)
         old_version = existing_versions.get(page_id, 0)
         page_title = page.get("title", "")
+
+        # 진행상황 업데이트 (10페이지마다)
+        if job_id and idx % 10 == 0:
+            _db_update_job_progress(job_id, f"{idx}/{total_pages} 페이지 처리 중")
 
         try:
             # 버전 기반 해시 (Confluence는 파일 해시 없으므로 버전을 해시 대용)

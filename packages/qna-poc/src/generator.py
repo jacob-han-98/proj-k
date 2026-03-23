@@ -91,7 +91,7 @@ def call_bedrock(
     region = os.environ.get("AWS_REGION", "us-east-1")
 
     if model is None:
-        model = os.environ.get("LLM_MODEL", "claude-sonnet-4-5")
+        model = os.environ.get("LLM_MODEL", "claude-opus-4-6")
     model_id = MODEL_MAPPING.get(model, f"global.anthropic.{model}-v1:0")
 
     url = f"https://bedrock-runtime.{region}.amazonaws.com/model/{model_id}/invoke"

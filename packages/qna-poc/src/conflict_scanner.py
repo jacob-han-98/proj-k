@@ -177,7 +177,7 @@ def detect_pairs(excel_docs, confluence_docs):
     result = call_bedrock(
         messages=[{"role": "user", "content": [{"type": "text", "text": prompt}]}],
         system="You are a game design document analyst. Respond ONLY with valid JSON array. No markdown, no explanation.",
-        model="claude-sonnet-4-5",
+        model="claude-opus-4-6",
         max_tokens=8192,
         temperature=0,
     )
@@ -288,7 +288,7 @@ def compare_pair(excel_doc, conf_doc, pair_info, pair_idx, total_pairs):
         result = call_bedrock(
             messages=[{"role": "user", "content": [{"type": "text", "text": prompt}]}],
             system="You are an expert at comparing game design documents. Be thorough, precise, and fair. Respond ONLY with valid JSON.",
-            model="claude-sonnet-4-5",
+            model="claude-opus-4-6",
             max_tokens=4096,
             temperature=0,
         )

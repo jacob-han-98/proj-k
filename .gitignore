@@ -73,3 +73,4 @@ packages/qna-poc/test_*.png
 
 # Telegram 봇 상태 (토큰, access.json)
 scripts/telegram/state/
+.venv/

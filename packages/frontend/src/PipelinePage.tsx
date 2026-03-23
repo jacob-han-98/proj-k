@@ -28,8 +28,10 @@ const StatusBadge = ({ status }: { status: string }) => (
 
 function formatTime(iso: string | null): string {
   if (!iso) return '-'
-  const d = new Date(iso)
-  return d.toLocaleString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+  // DB에 UTC로 저장됨 — 'Z' 붙여서 UTC 파싱 후 KST 변환
+  const raw = iso.includes('T') || iso.includes('Z') ? iso : iso.replace(' ', 'T') + 'Z'
+  const d = new Date(raw)
+  return d.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
 type Tab = 'overview' | 'sources' | 'documents' | 'jobs' | 'issues' | 'crawl-logs'
@@ -87,6 +89,18 @@ function PipelinePage() {
     }
   }, [tab, docFilter, jobFilter, crawlLogFilter])
 
+  // running 작업이 있으면 5초마다 자동 새로고침
+  useEffect(() => {
+    const hasRunning = jobs.some(j => j.status === 'running')
+    if (!hasRunning || tab !== 'jobs') return
+    const timer = setInterval(() => {
+      fetchPipelineJobs(jobFilter)
+        .then(r => { setJobs(r.jobs); setJobStats(r.stats) })
+        .catch(() => {})
+    }, 5000)
+    return () => clearInterval(timer)
+  }, [jobs, tab, jobFilter])
+
   const handleTrigger = async (jobType: string, sourceId?: number, documentId?: number) => {
     try {
       await triggerPipelineJob(jobType, sourceId, documentId)
@@ -115,9 +129,10 @@ function PipelinePage() {
         {(['overview', 'sources', 'documents', 'jobs', 'issues', 'crawl-logs'] as Tab[]).map(t => (
           <button key={t} onClick={() => setTab(t)} style={{
             padding: '8px 16px', border: 'none', cursor: 'pointer', borderRadius: '8px 8px 0 0',
-            background: tab === t ? 'var(--accent-color)' : 'transparent',
-            color: tab === t ? '#fff' : 'var(--text-secondary)',
-            fontWeight: tab === t ? 600 : 400, fontSize: '0.85rem',
+            background: 'transparent',
+            color: tab === t ? '#2563eb' : '#374151',
+            fontWeight: tab === t ? 600 : 500, fontSize: '0.85rem',
+            borderBottom: tab === t ? '2px solid #2563eb' : '2px solid transparent',
           }}>
             {t === 'overview' ? '전체 현황' : t === 'sources' ? '소스' : t === 'documents' ? '문서' : t === 'jobs' ? '작업큐' : t === 'issues' ? '이슈' : '크롤 로그'}
             {t === 'issues' && stats?.issues?.open ? ` (${stats.issues.open})` : ''}
@@ -129,12 +144,12 @@ function PipelinePage() {
       {tab === 'overview' && stats && (
         <div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16, marginBottom: 24 }}>
-            <StatCard label="크롤링 소스" value={stats.sources} />
-            <StatCard label="전체 문서" value={stats.documents.total} />
-            <StatCard label="인덱싱 완료" value={stats.documents.by_status?.indexed || 0} color="#22c55e" />
-            <StatCard label="오류" value={stats.documents.by_status?.error || 0} color="#ef4444" />
-            <StatCard label="대기 작업" value={stats.jobs?.pending || 0} color="#f59e0b" />
-            <StatCard label="미해결 이슈" value={stats.issues?.open || 0} color="#ef4444" />
+            <StatCard label="크롤링 소스" value={stats.sources} onClick={() => setTab('sources')} />
+            <StatCard label="전체 문서" value={stats.documents.total} onClick={() => setTab('documents')} />
+            <StatCard label="인덱싱 완료" value={stats.documents.by_status?.indexed || 0} color="#22c55e" onClick={() => { setDocFilter({ status: 'indexed' }); setTab('documents') }} />
+            <StatCard label="오류" value={stats.documents.by_status?.error || 0} color="#ef4444" onClick={() => { setDocFilter({ status: 'error' }); setTab('documents') }} />
+            <StatCard label="대기 작업" value={stats.jobs?.pending || 0} color="#f59e0b" onClick={() => { setJobFilter('pending'); setTab('jobs') }} />
+            <StatCard label="미해결 이슈" value={stats.issues?.open || 0} color="#ef4444" onClick={() => setTab('issues')} />
           </div>
 
           {/* Document status bar */}
@@ -184,6 +199,7 @@ function PipelinePage() {
                 <th style={{ padding: '8px 12px' }}>타입</th>
                 <th style={{ padding: '8px 12px' }}>변환 전략</th>
                 <th style={{ padding: '8px 12px' }}>스케줄</th>
+                <th style={{ padding: '8px 12px' }}>마지막 크롤링</th>
                 <th style={{ padding: '8px 12px' }}>액션</th>
               </tr>
             </thead>
@@ -195,6 +211,9 @@ function PipelinePage() {
                   <td style={{ padding: '8px 12px' }}><StatusBadge status={s.source_type} /></td>
                   <td style={{ padding: '8px 12px' }}>{s.convert_strategy}</td>
                   <td style={{ padding: '8px 12px' }}>{s.schedule}</td>
+                  <td style={{ padding: '8px 12px', color: 'var(--text-secondary)', fontSize: '0.8rem' }}>
+                    {s.last_crawled_at ? <>{formatTime(s.last_crawled_at)}<br/><span style={{ fontSize: '0.7rem' }}>{s.last_crawl_summary}</span></> : '-'}
+                  </td>
                   <td style={{ padding: '8px 12px' }}>
                     <button onClick={() => handleTrigger('crawl', s.id)} style={{
                       padding: '4px 10px', fontSize: '0.75rem', border: '1px solid var(--border-color)',
@@ -265,7 +284,7 @@ function PipelinePage() {
               <button key={s} onClick={() => setJobFilter(s || undefined)} style={{
                 padding: '4px 12px', fontSize: '0.8rem', borderRadius: 6, cursor: 'pointer',
                 border: '1px solid var(--border-color)',
-                background: (jobFilter || '') === s ? 'var(--accent-color)' : 'var(--bg-secondary)',
+                background: (jobFilter || '') === s ? '#2563eb' : 'var(--bg-secondary)',
                 color: (jobFilter || '') === s ? '#fff' : 'var(--text-primary)',
               }}>
                 {s || '전체'}{jobStats[s] ? ` (${jobStats[s]})` : ''}
@@ -277,6 +296,7 @@ function PipelinePage() {
               <tr style={{ borderBottom: '2px solid var(--border-color)', textAlign: 'left' }}>
                 <th style={{ padding: '6px 10px' }}>ID</th>
                 <th style={{ padding: '6px 10px' }}>타입</th>
+                <th style={{ padding: '6px 10px' }}>문서</th>
                 <th style={{ padding: '6px 10px' }}>상태</th>
                 <th style={{ padding: '6px 10px' }}>워커</th>
                 <th style={{ padding: '6px 10px' }}>생성</th>
@@ -289,7 +309,13 @@ function PipelinePage() {
                 <tr key={j.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
                   <td style={{ padding: '6px 10px' }}>#{j.id}</td>
                   <td style={{ padding: '6px 10px' }}>{j.job_type}</td>
-                  <td style={{ padding: '6px 10px' }}><StatusBadge status={j.status} /></td>
+                  <td style={{ padding: '6px 10px', maxWidth: 280, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {j.doc_title || j.doc_path || '-'}
+                  </td>
+                  <td style={{ padding: '6px 10px' }}>
+                    <StatusBadge status={j.status} />
+                    {j.progress && <span style={{ marginLeft: 6, fontSize: '0.7rem', color: '#2563eb' }}>{j.progress}</span>}
+                  </td>
                   <td style={{ padding: '6px 10px', color: 'var(--text-secondary)' }}>{j.worker_id || '-'}</td>
                   <td style={{ padding: '6px 10px', color: 'var(--text-secondary)' }}>{formatTime(j.created_at)}</td>
                   <td style={{ padding: '6px 10px', color: 'var(--text-secondary)' }}>{formatTime(j.completed_at)}</td>
@@ -298,7 +324,7 @@ function PipelinePage() {
                   </td>
                 </tr>
               ))}
-              {jobs.length === 0 && <tr><td colSpan={7} style={{ padding: 20, textAlign: 'center', color: 'var(--text-secondary)' }}>작업 없음</td></tr>}
+              {jobs.length === 0 && <tr><td colSpan={8} style={{ padding: 20, textAlign: 'center', color: 'var(--text-secondary)' }}>작업 없음</td></tr>}
             </tbody>
           </table>
         </div>
@@ -354,6 +380,7 @@ function PipelinePage() {
             <thead>
               <tr style={{ borderBottom: '2px solid var(--border-color)', textAlign: 'left' }}>
                 <th style={{ padding: '6px 10px' }}>시각</th>
+                <th style={{ padding: '6px 10px' }}>소스</th>
                 <th style={{ padding: '6px 10px' }}>타입</th>
                 <th style={{ padding: '6px 10px' }}>전체</th>
                 <th style={{ padding: '6px 10px' }}>신규</th>
@@ -366,17 +393,17 @@ function PipelinePage() {
             </thead>
             <tbody>
               {crawlLogs.map(cl => {
-                const details = (() => { try { return JSON.parse(cl.details || '{}') } catch { return {} } })()
                 return (
                   <tr key={cl.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
                     <td style={{ padding: '6px 10px', color: 'var(--text-secondary)' }}>{formatTime(cl.created_at)}</td>
+                    <td style={{ padding: '6px 10px', fontSize: '0.75rem' }}>{sources.find(s => s.id === cl.source_id)?.name || cl.source_id}</td>
                     <td style={{ padding: '6px 10px' }}><StatusBadge status={cl.crawl_type} /></td>
                     <td style={{ padding: '6px 10px' }}>{cl.total_files}</td>
                     <td style={{ padding: '6px 10px', color: cl.new_files > 0 ? '#22c55e' : 'var(--text-secondary)', fontWeight: cl.new_files > 0 ? 600 : 400 }}>
                       {cl.new_files > 0 ? `+${cl.new_files}` : '0'}
                     </td>
                     <td style={{ padding: '6px 10px', color: cl.changed_files > 0 ? '#f59e0b' : 'var(--text-secondary)', fontWeight: cl.changed_files > 0 ? 600 : 400 }}>
-                      {cl.changed_files > 0 ? `~${cl.changed_files}` : '0'}
+                      {cl.changed_files > 0 ? cl.changed_files : '0'}
                     </td>
                     <td style={{ padding: '6px 10px', color: 'var(--text-secondary)' }}>{cl.unchanged_files}</td>
                     <td style={{ padding: '6px 10px', color: cl.deleted_files > 0 ? '#ef4444' : 'var(--text-secondary)' }}>
@@ -389,7 +416,7 @@ function PipelinePage() {
                   </tr>
                 )
               })}
-              {crawlLogs.length === 0 && <tr><td colSpan={9} style={{ padding: 20, textAlign: 'center', color: 'var(--text-secondary)' }}>크롤 로그 없음</td></tr>}
+              {crawlLogs.length === 0 && <tr><td colSpan={10} style={{ padding: 20, textAlign: 'center', color: 'var(--text-secondary)' }}>크롤 로그 없음</td></tr>}
             </tbody>
           </table>
         </div>
@@ -398,9 +425,16 @@ function PipelinePage() {
   )
 }
 
-function StatCard({ label, value, color }: { label: string; value: number; color?: string }) {
+function StatCard({ label, value, color, onClick }: { label: string; value: number; color?: string; onClick?: () => void }) {
   return (
-    <div className="glass" style={{ padding: 16, borderRadius: 12, textAlign: 'center' }}>
+    <div className="glass" onClick={onClick} style={{
+      padding: 16, borderRadius: 12, textAlign: 'center',
+      cursor: onClick ? 'pointer' : 'default',
+      transition: 'transform 0.1s',
+    }}
+      onMouseEnter={e => onClick && (e.currentTarget.style.transform = 'scale(1.03)')}
+      onMouseLeave={e => onClick && (e.currentTarget.style.transform = 'scale(1)')}
+    >
       <div style={{ fontSize: '1.8rem', fontWeight: 700, color: color || 'var(--text-primary)' }}>{value}</div>
       <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginTop: 4 }}>{label}</div>
     </div>

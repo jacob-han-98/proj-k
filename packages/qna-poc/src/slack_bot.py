@@ -339,9 +339,9 @@ def _handle_question(event, say, client):
             api_seconds=result.get("total_api_seconds", 0),
             sources=sources,
             trace=result.get("trace"),
-            answer_model="claude-sonnet-4-5",
-            planning_model="claude-sonnet-4-5",
-            reflection_model="claude-haiku-4-5",
+            answer_model="claude-opus-4-6",
+            planning_model="claude-opus-4-6",
+            reflection_model="claude-opus-4-6",
         )
 
         # 대화 히스토리 저장

@@ -116,7 +116,7 @@ class AskRequest(BaseModel):
     question: str
     conversation_id: str | None = None
     role: str | None = None
-    model: str = "claude-opus-4-5"
+    model: str = "claude-opus-4-6"
     prompt_style: str = "검증세트 최적화"  # "검증세트 최적화" | "기본"
 
 
@@ -742,14 +742,28 @@ def pipeline_status():
 
 @app.get("/admin/pipeline/sources")
 def pipeline_sources():
-    """크롤링 소스 목록."""
+    """크롤링 소스 목록 + 마지막 크롤 시간."""
     pdb = _get_pipeline_db()
     with pdb.get_conn() as conn:
-        return {"sources": pdb.list_sources(conn, enabled_only=False)}
+        sources = pdb.list_sources(conn, enabled_only=False)
+        # 각 소스의 마지막 크롤 시간 조회
+        for s in sources:
+            row = conn.execute(
+                "SELECT created_at, new_files, changed_files, unchanged_files "
+                "FROM crawl_logs WHERE source_id = ? ORDER BY created_at DESC LIMIT 1",
+                [s["id"]]
+            ).fetchone()
+            if row:
+                s["last_crawled_at"] = row["created_at"]
+                s["last_crawl_summary"] = f"+{row['new_files']} ~{row['changed_files']} ={row['unchanged_files']}"
+            else:
+                s["last_crawled_at"] = None
+                s["last_crawl_summary"] = None
+        return {"sources": sources}
 
 
 @app.get("/admin/pipeline/documents")
-def pipeline_documents(source_id: int = None, status: str = None, limit: int = 100):
+def pipeline_documents(source_id: int = None, status: str = None, limit: int = 1000):
     """문서 목록."""
     pdb = _get_pipeline_db()
     with pdb.get_conn() as conn:
@@ -777,6 +791,14 @@ def pipeline_jobs(status: str = None, job_type: str = None, limit: int = 50):
     with pdb.get_conn() as conn:
         jobs = pdb.list_jobs(conn, status=status, job_type=job_type, limit=limit)
         stats = pdb.get_job_stats(conn)
+        # running crawl 작업에 실시간 progress 주입
+        for j in jobs:
+            if j.get("status") == "running" and j.get("job_type") == "crawl" and j.get("source_id"):
+                doc_count = conn.execute(
+                    "SELECT COUNT(*) as cnt FROM documents WHERE source_id = ?",
+                    [j["source_id"]]
+                ).fetchone()["cnt"]
+                j["progress"] = f"{doc_count}페이지 등록 중"
         return {"jobs": jobs, "stats": stats}
 
 

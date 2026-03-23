@@ -211,7 +211,7 @@ def _get_kg_summary_for_planning() -> str:
     return "\n".join(lines)
 
 
-def plan_search(query: str, role: str = None, model: str = "claude-opus-4-5",
+def plan_search(query: str, role: str = None, model: str = "claude-opus-4-6",
                 conversation_history: list[tuple[str, str]] = None) -> dict:
     """LLM으로 질문을 분석하여 검색 전략 수립.
 
@@ -513,8 +513,8 @@ _PROMPT_STYLE_CONFIG = {
 
 # 모델별 최대 출력 토큰
 _MODEL_MAX_OUTPUT = {
-    "claude-opus-4-5": 32768,
-    "claude-sonnet-4-5": 64000,
+    "claude-opus-4-6": 32768,
+    "claude-sonnet-4-6": 64000,
     "claude-haiku-4-5": 8192,
 }
 
@@ -655,7 +655,7 @@ def _load_full_sheets(chunks: list[dict], max_context_tokens: int = 80000) -> li
 
 
 def generate_agent_answer(query: str, chunks: list[dict], role: str = None,
-                          key_systems: list[str] = None, model: str = "claude-opus-4-5",
+                          key_systems: list[str] = None, model: str = "claude-opus-4-6",
                           conversation_history: list[tuple[str, str]] = None,
                           detail_level: str = "상세",
                           prompt_style: str = "검증세트 최적화") -> dict:
@@ -776,7 +776,7 @@ REFLECTION_PROMPT = """당신은 QnA 시스템의 품질 검증관입니다.
 ```"""
 
 
-def reflect_on_answer(query: str, answer: str, chunks: list[dict], plan: dict, model: str = "claude-opus-4-5") -> dict:
+def reflect_on_answer(query: str, answer: str, chunks: list[dict], plan: dict, model: str = "claude-opus-4-6") -> dict:
     """생성된 답변의 품질을 자체 검증.
 
     검색 실패 시 검색 컨텍스트(어떤 문서를 찾았는지, 어떤 키워드를 사용했는지)를
@@ -976,7 +976,7 @@ def generate_document_proposal(
     chunks: list[dict],
     conversation_history: list[tuple[str, str]],
     plan: dict,
-    model: str = "claude-opus-4-5",
+    model: str = "claude-opus-4-6",
     status_callback=None,
 ) -> dict:
     """대화 맥락 기반 기획서 수정/생성 제안 생성.
@@ -1145,7 +1145,7 @@ def generate_document_proposal(
 
 def agent_answer(query: str, role: str = None,
                  conversation_history: list[tuple[str, str]] = None,
-                 model: str = "claude-opus-4-5",
+                 model: str = "claude-opus-4-6",
                  prompt_style: str = "검증세트 최적화",
                  status_callback=None) -> dict:
     """Agent QnA 파이프라인.
@@ -1154,7 +1154,7 @@ def agent_answer(query: str, role: str = None,
         query: 사용자 질문
         role: 질문자 역할
         conversation_history: [(question, answer), ...] 이전 대화 (최근 3턴)
-        model: 답변 생성 모델 (claude-opus-4-5, claude-sonnet-4-5 등)
+        model: 답변 생성 모델 (claude-opus-4-6, claude-opus-4-6 등)
         prompt_style: "검증세트 최적화" (3단 구조) 또는 "기본" (최소 프롬프트)
 
     Returns:
@@ -1184,7 +1184,7 @@ def agent_answer(query: str, role: str = None,
 
     trace.append({
         "step": "planning",
-        "model": "claude-opus-4-5",
+        "model": "claude-opus-4-6",
         "description": "Opus가 질문을 분석하여 어떤 기획서(워크북)를 참고할지 결정 (KG 관계 활용)",
         "input": {"query": query, "role": role, "workbook_count": len(_build_structural_index())},
         "output": {
@@ -1332,7 +1332,7 @@ def agent_answer(query: str, role: str = None,
 
     trace.append({
         "step": "reflection",
-        "model": "claude-opus-4-5",
+        "model": "claude-opus-4-6",
         "description": "Opus가 생성된 답변의 품질을 자체 검증",
         "output": {
             "is_sufficient": reflection.get("is_sufficient", True),
@@ -1380,7 +1380,7 @@ def agent_answer(query: str, role: str = None,
 
         trace.append({
             "step": "retry",
-            "model": "claude-opus-4-5",
+            "model": "claude-opus-4-6",
             "description": "Reflection에서 부족하다고 판단 -> 재검색 + 재답변",
             "tools_used": ["retrieve(retry)", f"key_systems_search({key_systems})"],
             "extra_chunks": len(extra_chunks),
@@ -1573,7 +1573,7 @@ def _analyze_workbook_with_scratchpad(query: str, workbook: str,
         result = call_bedrock(
             messages=[{"role": "user", "content": context}],
             system=system_prompt,
-            model="claude-opus-4-5",
+            model="claude-opus-4-6",
             max_tokens=4096,
             temperature=0,
         )
@@ -1652,7 +1652,7 @@ _DIRECT_CONTEXT_LIMIT = 160000
 
 def deep_research(query: str, plan: dict, scan_result: dict,
                   progress_callback=None,
-                  model: str = "claude-opus-4-5",
+                  model: str = "claude-opus-4-6",
                   prompt_style: str = "검증세트 최적화") -> dict:
     """딥 리서치 파이프라인.
 
@@ -1801,7 +1801,7 @@ def deep_research(query: str, plan: dict, scan_result: dict,
 
         trace.append({
             "step": "deep_research_scratchpad",
-            "model": "claude-opus-4-5",
+            "model": "claude-opus-4-6",
             "description": f"{len(sorted_wbs)}개 워크북을 Scratchpad Loop로 순차 분석 ({estimated_tokens:,} 토큰 > {_DIRECT_CONTEXT_LIMIT:,} 한계)",
             "groups": [
                 {

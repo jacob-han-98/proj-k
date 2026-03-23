@@ -417,15 +417,17 @@ def fail_job(conn, job_id: int, error_message: str):
 
 
 def list_jobs(conn, status: str = None, job_type: str = None, limit: int = 50) -> list[dict]:
-    sql = "SELECT * FROM jobs WHERE 1=1"
+    sql = """SELECT j.*, d.title as doc_title, d.file_path as doc_path
+             FROM jobs j LEFT JOIN documents d ON j.document_id = d.id
+             WHERE 1=1"""
     params = []
     if status:
-        sql += " AND status = ?"
+        sql += " AND j.status = ?"
         params.append(status)
     if job_type:
-        sql += " AND job_type = ?"
+        sql += " AND j.job_type = ?"
         params.append(job_type)
-    sql += " ORDER BY created_at DESC LIMIT ?"
+    sql += " ORDER BY j.created_at DESC LIMIT ?"
     params.append(limit)
     return [dict(r) for r in conn.execute(sql, params).fetchall()]
 

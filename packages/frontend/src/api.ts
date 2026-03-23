@@ -225,6 +225,8 @@ export interface PipelineSource {
   enabled: number;
   properties: string;
   created_at: string;
+  last_crawled_at?: string | null;
+  last_crawl_summary?: string | null;
 }
 
 export interface PipelineDocument {
@@ -252,6 +254,9 @@ export interface PipelineJob {
   retry_count: number;
   created_at: string;
   completed_at: string | null;
+  doc_title: string | null;
+  doc_path: string | null;
+  progress: string | null;
 }
 
 export interface PipelineIssue {

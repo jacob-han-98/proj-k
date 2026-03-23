@@ -9,7 +9,7 @@ sources:
     convert_strategy: vision-first
     schedule: daily
     properties:
-      local_path: "D:/ProjectK/Design/7_System"
+      local_path: "/home/jacob/p4sync/Design/7_System"
       description: "핵심 시스템 기획서 (67개 xlsx)"
       file_types: ["xlsx"]
 
@@ -36,7 +36,7 @@ sources:
   # ── Confluence 소스 ────────────────────────────
   - name: "게임디자인 Confluence"
     type: confluence
-    path: "225378731"                            # root_page_id
+    path: "3666773573"                            # root_page_id (Design)
     convert_strategy: html-to-md
     schedule: daily
     properties:

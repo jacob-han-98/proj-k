@@ -34,6 +34,99 @@ from src.retriever import retrieve, extract_system_names, get_related_systems, _
 
 app = FastAPI(title="Project K QnA PoC", version="0.2.0")
 
+# ── 백그라운드 자동화 스레드 ──────────────
+_auto_threads: dict[str, threading.Thread] = {}
+_auto_stop = threading.Event()
+
+
+def _auto_scheduler():
+    """자동 크롤/다운로드/enrich 스케줄러. API 시작 시 백그라운드 실행."""
+    import time as _time
+    import subprocess
+    import sys
+
+    worker_dir = str(Path(__file__).resolve().parent.parent.parent / "data-pipeline")
+
+    log_path = Path(worker_dir).parent.parent / "logs"
+    log_path.mkdir(exist_ok=True)
+
+    while not _auto_stop.is_set():
+        workers_to_launch = []  # (job_type, worker_id) — DB 밖에서 Popen 실행
+        try:
+            pdb = _get_pipeline_db()
+            with pdb.get_conn() as conn:
+                sources = conn.execute("SELECT id, properties FROM crawl_sources WHERE enabled = 1").fetchall()
+
+                for src in sources:
+                    props = json.loads(src["properties"] or "{}")
+                    source_id = src["id"]
+
+                    # 자동 크롤
+                    interval = props.get("auto_crawl_interval", 0)
+                    if interval > 0:
+                        last = props.get("_last_auto_crawl", 0)
+                        now = _time.time()
+                        if now - last >= interval:
+                            busy = conn.execute(
+                                "SELECT COUNT(*) as c FROM jobs WHERE source_id=? AND job_type='crawl' AND status IN ('pending','running')",
+                                [source_id]
+                            ).fetchone()["c"]
+                            if busy == 0:
+                                conn.execute(
+                                    "INSERT INTO jobs (job_type, source_id, status, priority, worker_type) VALUES ('crawl', ?, 'pending', 1, 'any')",
+                                    [source_id]
+                                )
+                                workers_to_launch.append(("crawl", "auto-crawl"))
+                            props["_last_auto_crawl"] = now
+                            conn.execute("UPDATE crawl_sources SET properties = ? WHERE id = ?",
+                                         [json.dumps(props, ensure_ascii=False), source_id])
+
+                    # 자동 다운로드/enrich
+                    for job_type, setting_key in [("download", "auto_download"), ("enrich", "auto_enrich")]:
+                        if not props.get(setting_key):
+                            continue
+                        pending = conn.execute(
+                            "SELECT COUNT(*) as c FROM jobs WHERE source_id=? AND job_type=? AND status='pending'",
+                            [source_id, job_type]
+                        ).fetchone()["c"]
+                        running_w = conn.execute(
+                            "SELECT COUNT(*) as c FROM jobs WHERE job_type=? AND status='running'",
+                            [job_type]
+                        ).fetchone()["c"]
+                        if pending > 0 and running_w == 0:
+                            workers_to_launch.append((job_type, f"auto-{job_type}"))
+
+        except Exception as e:
+            print(f"[auto-scheduler] error: {e}")
+
+        # DB 커넥션 닫힌 후 워커 프로세스 실행 (DB lock 방지)
+        for job_type, worker_id in workers_to_launch:
+            try:
+                subprocess.Popen(
+                    [sys.executable, "-m", "src.worker", "--id", worker_id, "--types", job_type, "--once"],
+                    cwd=worker_dir,
+                    stdout=open(log_path / f"{worker_id}.log", "a"),
+                    stderr=subprocess.STDOUT,
+                )
+            except Exception as e:
+                print(f"[auto-scheduler] Popen error ({job_type}): {e}")
+
+        _auto_stop.wait(3)  # 3초마다 체크
+
+
+@app.on_event("startup")
+def _start_auto_scheduler():
+    t = threading.Thread(target=_auto_scheduler, daemon=True, name="auto-scheduler")
+    t.start()
+    _auto_threads["scheduler"] = t
+    print("[auto-scheduler] 시작됨")
+
+
+@app.on_event("shutdown")
+def _stop_auto_scheduler():
+    _auto_stop.set()
+
+
 # CORS — Streamlit, 로컬 개발 등에서 접근 허용
 app.add_middleware(
     CORSMiddleware,
@@ -834,22 +927,22 @@ def pipeline_dag():
         "perforce": {
             "pipeline": "excel-vision",
             "stages": [
-                {"id": "crawl", "label": "Crawl", "desc": "P4 변경 감지"},
-                {"id": "capture", "label": "Capture", "desc": "Excel COM 스크린샷"},
-                {"id": "convert", "label": "Convert", "desc": "Vision AI + OOXML"},
+                {"id": "crawl", "label": "Crawl", "desc": "P4 서버에서 7_System 폴더를 동기화하고, SHA256 해시 비교로 변경/추가된 xlsx 파일을 감지합니다."},
+                {"id": "capture", "label": "Capture", "desc": "Excel COM을 이용해 각 시트를 PNG 스크린샷으로 캡처합니다. (Windows 전용)"},
+                {"id": "convert", "label": "Convert", "desc": "Vision AI(Opus 4.6)로 스크린샷을 분석하고, OOXML 파싱 데이터로 수치를 보정하여 Markdown을 생성합니다."},
             ],
             "edges": [
                 {"from": "crawl", "to": "capture"},
                 {"from": "capture", "to": "convert"},
             ],
-            "last_stage": "convert",  # index로 연결되는 마지막 단계
+            "last_stage": "convert",
         },
         "confluence": {
             "pipeline": "confluence-enrich",
             "stages": [
-                {"id": "crawl", "label": "Crawl", "desc": "페이지 변경 감지"},
-                {"id": "download", "label": "Download", "desc": "HTML→MD 변환"},
-                {"id": "enrich", "label": "Enrich", "desc": "이미지 Vision 보강"},
+                {"id": "crawl", "label": "Crawl", "desc": "Design 하위 페이지 트리를 재귀 탐색하여 전체 목록을 수집하고, 각 페이지의 version 번호를 DB와 비교하여 신규/변경/삭제를 감지합니다. 변경된 페이지만 download 작업큐에 등록합니다."},
+                {"id": "download", "label": "Download", "desc": "Confluence REST API로 페이지 본문(HTML)을 가져와 Markdown으로 변환하고, 첨부 이미지를 다운로드합니다. Design/시스템 디자인/스킬/... 계층 구조로 저장합니다."},
+                {"id": "enrich", "label": "Enrich", "desc": "이미지가 포함된 페이지를 Opus 4.6 Vision API로 분석하여, 각 이미지 아래에 게임 기획 맥락의 설명을 자동 삽입합니다. (content_enriched.md 생성)"},
             ],
             "edges": [
                 {"from": "crawl", "to": "download"},
@@ -860,8 +953,8 @@ def pipeline_dag():
     }
 
     SHARED_STAGES = [
-        {"id": "index", "label": "Index", "desc": "ChromaDB 인덱싱"},
-        {"id": "kg_build", "label": "KG Build", "desc": "지식 그래프 생성"},
+        {"id": "index", "label": "Index", "desc": "변환 완료된 Markdown을 청크 분할 → Titan 임베딩 → ChromaDB 벡터DB에 저장합니다."},
+        {"id": "kg_build", "label": "KG Build", "desc": "시스템 간 관계를 분석하여 Knowledge Graph(NetworkX)를 생성합니다. QnA 검색 시 관련 시스템 확장에 사용됩니다."},
     ]
 
     with pdb.get_conn() as conn:
@@ -882,12 +975,44 @@ def pipeline_dag():
                     "ORDER BY created_at DESC LIMIT 1",
                     [src["id"], stage["id"]]
                 ).fetchone()
-                stage_status[stage["id"]] = {
-                    "status": row["status"] if row else "idle",
-                    "completed_at": row["completed_at"] if row else None,
-                    "created_at": row["created_at"] if row else None,
-                    "error": row["error_message"] if row else None,
-                } if row else {"status": "idle"}
+                if row:
+                    stage_status[stage["id"]] = {
+                        "status": row["status"],
+                        "completed_at": row["completed_at"],
+                        "created_at": row["created_at"],
+                        "error": row["error_message"],
+                    }
+                elif stage["id"] == "crawl":
+                    # jobs에 없으면 crawl_logs에서 가져오기
+                    cl = conn.execute(
+                        "SELECT created_at, total_files, new_files, changed_files "
+                        "FROM crawl_logs WHERE source_id = ? ORDER BY id DESC LIMIT 1",
+                        [src["id"]]
+                    ).fetchone()
+                    stage_status["crawl"] = {
+                        "status": "completed" if cl else "idle",
+                        "completed_at": cl["created_at"] if cl else None,
+                        "created_at": cl["created_at"] if cl else None,
+                    } if cl else {"status": "idle"}
+                else:
+                    stage_status[stage["id"]] = {"status": "idle"}
+
+                # pending/running 카운트 추가
+                counts = conn.execute(
+                    "SELECT status, COUNT(*) as c FROM jobs "
+                    "WHERE source_id = ? AND job_type = ? AND status IN ('pending','running') "
+                    "GROUP BY status",
+                    [src["id"], stage["id"]]
+                ).fetchall()
+                for c in counts:
+                    stage_status[stage["id"]][c["status"] + "_count"] = c["c"]
+
+            # 자동 크롤 상태 보정: auto_crawl이 ON이면 status를 "auto" 표시
+            src_props = json.loads(src.get("properties", "{}") or "{}")
+            if src_props.get("auto_crawl_interval", 0) > 0 and "crawl" in stage_status:
+                cs = stage_status["crawl"]
+                if cs.get("status") not in ("running", "pending"):
+                    cs["status"] = "auto"  # 자동 실행 중 (주기적)
 
             source_data.append({
                 "source_id": src["id"],
@@ -898,6 +1023,11 @@ def pipeline_dag():
                 "edges": src_def["edges"],
                 "last_stage": src_def["last_stage"],
                 "stage_status": stage_status,
+                "settings": {
+                    "auto_crawl_interval": src_props.get("auto_crawl_interval", 0),
+                    "auto_download": src_props.get("auto_download", False),
+                    "auto_enrich": src_props.get("auto_enrich", False),
+                },
             })
 
         # 공유 단계 상태 (소스 무관, 가장 최근 작업 기준)
@@ -922,6 +1052,31 @@ def pipeline_dag():
             "shared_edges": [{"from": "index", "to": "kg_build"}],
             "shared_status": shared_status,
         }
+
+
+@app.post("/admin/pipeline/settings")
+def pipeline_settings(source_id: int, auto_crawl_interval: int = None,
+                      auto_download: bool = None, auto_enrich: bool = None):
+    """소스별 자동화 설정 저장."""
+    pdb = _get_pipeline_db()
+    with pdb.get_conn() as conn:
+        row = conn.execute("SELECT properties FROM crawl_sources WHERE id = ?", [source_id]).fetchone()
+        if not row:
+            return {"error": "소스 없음"}, 404
+        props = json.loads(row["properties"] or "{}")
+        if auto_crawl_interval is not None:
+            props["auto_crawl_interval"] = auto_crawl_interval
+        if auto_download is not None:
+            props["auto_download"] = auto_download
+        if auto_enrich is not None:
+            props["auto_enrich"] = auto_enrich
+        conn.execute("UPDATE crawl_sources SET properties = ? WHERE id = ?",
+                     [json.dumps(props, ensure_ascii=False), source_id])
+        return {"ok": True, "settings": {
+            "auto_crawl_interval": props.get("auto_crawl_interval", 0),
+            "auto_download": props.get("auto_download", False),
+            "auto_enrich": props.get("auto_enrich", False),
+        }}
 
 
 @app.post("/admin/pipeline/dag/run")

@@ -1,0 +1,739 @@
+12:15:46 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:15:46 [worker] INFO 작업 수령: #1977 (crawl)
+12:15:46 [worker] INFO 크롤링: Confluence (confluence)
+12:15:46 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:14" ORDER BY lastModified DESC
+12:15:47 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:15:48 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:15:48 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 1.7초
+12:15:48 [worker] INFO 작업 완료: #1977
+12:15:58 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:15:58 [worker] INFO 작업 수령: #1978 (crawl)
+12:15:58 [worker] INFO 크롤링: Confluence (confluence)
+12:15:59 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:15" ORDER BY lastModified DESC
+12:15:59 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:15:59 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:15:59 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:15:59 [worker] INFO 작업 완료: #1978
+12:16:09 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:16:09 [worker] INFO 작업 수령: #1979 (crawl)
+12:16:09 [worker] INFO 크롤링: Confluence (confluence)
+12:16:09 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:15" ORDER BY lastModified DESC
+12:16:10 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:16:10 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:16:10 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:16:10 [worker] INFO 작업 완료: #1979
+12:16:21 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:16:21 [worker] INFO 작업 수령: #1980 (crawl)
+12:16:22 [worker] INFO 크롤링: Confluence (confluence)
+12:16:22 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:16" ORDER BY lastModified DESC
+12:16:22 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:16:22 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:16:23 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:16:23 [worker] INFO 작업 완료: #1980
+12:16:34 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:16:34 [worker] INFO 작업 수령: #1981 (crawl)
+12:16:34 [worker] INFO 크롤링: Confluence (confluence)
+12:16:36 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:16" ORDER BY lastModified DESC
+12:16:36 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:16:36 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:16:36 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 2.2초
+12:16:36 [worker] INFO 작업 완료: #1981
+12:16:45 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:16:45 [worker] INFO 작업 수령: #1982 (crawl)
+12:16:45 [worker] INFO 크롤링: Confluence (confluence)
+12:16:45 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:16" ORDER BY lastModified DESC
+12:16:45 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:16:46 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:16:46 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:16:46 [worker] INFO 작업 완료: #1982
+12:16:57 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:16:57 [worker] INFO 작업 수령: #1983 (crawl)
+12:16:57 [worker] INFO 크롤링: Confluence (confluence)
+12:16:57 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:16" ORDER BY lastModified DESC
+12:16:57 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:16:58 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:16:58 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:16:58 [worker] INFO 작업 완료: #1983
+12:17:11 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:17:11 [worker] INFO 작업 수령: #1984 (crawl)
+12:17:11 [worker] INFO 크롤링: Confluence (confluence)
+12:17:11 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:16" ORDER BY lastModified DESC
+12:17:12 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:17:12 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:17:12 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 1.1초
+12:17:12 [worker] INFO 작업 완료: #1984
+12:17:23 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:17:23 [worker] INFO 작업 수령: #1985 (crawl)
+12:17:23 [worker] INFO 크롤링: Confluence (confluence)
+12:17:24 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:17" ORDER BY lastModified DESC
+12:17:24 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:17:24 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:17:24 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:17:24 [worker] INFO 작업 완료: #1985
+12:17:36 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:17:36 [worker] INFO 작업 수령: #1986 (crawl)
+12:17:36 [worker] INFO 크롤링: Confluence (confluence)
+12:17:36 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:17" ORDER BY lastModified DESC
+12:17:36 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:17:37 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:17:37 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.9초
+12:17:37 [worker] INFO 작업 완료: #1986
+12:17:46 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:17:46 [worker] INFO 작업 수령: #1987 (crawl)
+12:17:47 [worker] INFO 크롤링: Confluence (confluence)
+12:17:47 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:17" ORDER BY lastModified DESC
+12:17:47 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:17:47 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:17:47 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:17:48 [worker] INFO 작업 완료: #1987
+12:17:59 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:17:59 [worker] INFO 작업 수령: #1988 (crawl)
+12:17:59 [worker] INFO 크롤링: Confluence (confluence)
+12:17:59 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:17" ORDER BY lastModified DESC
+12:17:59 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:18:00 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:18:00 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:18:00 [worker] INFO 작업 완료: #1988
+12:18:11 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:18:11 [worker] INFO 작업 수령: #1989 (crawl)
+12:18:11 [worker] INFO 크롤링: Confluence (confluence)
+12:18:11 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:17" ORDER BY lastModified DESC
+12:18:12 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:18:12 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:18:12 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:18:12 [worker] INFO 작업 완료: #1989
+12:18:22 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:18:22 [worker] INFO 작업 수령: #1990 (crawl)
+12:18:22 [worker] INFO 크롤링: Confluence (confluence)
+12:18:22 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:18" ORDER BY lastModified DESC
+12:18:23 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:18:23 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:18:23 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:18:23 [worker] INFO 작업 완료: #1990
+12:18:34 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:18:34 [worker] INFO 작업 수령: #1991 (crawl)
+12:18:35 [worker] INFO 크롤링: Confluence (confluence)
+12:18:35 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:18" ORDER BY lastModified DESC
+12:18:35 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:18:35 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:18:35 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:18:35 [worker] INFO 작업 완료: #1991
+12:18:47 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:18:47 [worker] INFO 작업 수령: #1992 (crawl)
+12:18:47 [worker] INFO 크롤링: Confluence (confluence)
+12:18:47 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:18" ORDER BY lastModified DESC
+12:18:47 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:18:48 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:18:48 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.6초
+12:18:48 [worker] INFO 작업 완료: #1992
+12:18:58 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:18:58 [worker] INFO 작업 수령: #1993 (crawl)
+12:18:58 [worker] INFO 크롤링: Confluence (confluence)
+12:18:58 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:18" ORDER BY lastModified DESC
+12:18:58 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:18:59 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:18:59 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:18:59 [worker] INFO 작업 완료: #1993
+12:19:10 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:19:10 [worker] INFO 작업 수령: #1994 (crawl)
+12:19:10 [worker] INFO 크롤링: Confluence (confluence)
+12:19:11 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:18" ORDER BY lastModified DESC
+12:19:11 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:19:11 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:19:11 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:19:11 [worker] INFO 작업 완료: #1994
+12:19:22 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:19:22 [worker] INFO 작업 수령: #1995 (crawl)
+12:19:23 [worker] INFO 크롤링: Confluence (confluence)
+12:19:23 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:19" ORDER BY lastModified DESC
+12:19:23 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:19:23 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:19:25 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:19:25 [worker] INFO 작업 완료: #1995
+12:19:33 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:19:33 [worker] INFO 작업 수령: #1996 (crawl)
+12:19:33 [worker] INFO 크롤링: Confluence (confluence)
+12:19:34 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-23 00:00" ORDER BY lastModified DESC
+12:19:34 [worker] INFO   CQL 증분 결과: 11페이지 변경됨
+12:19:35 [worker] INFO   [CHANGED] 인터서버 던전 고도화(UI/UX 및 던전 기능) 관련 - 컨셉 (v13 → v14)
+12:19:35 [worker] INFO   [NEW] 월드맵 개선 (v3)
+12:19:36 [worker] INFO   Confluence 결과 (incremental): 전체 11, 신규 1, 변경 1, 불변 9, 삭제 0
+12:19:39 [worker] INFO   자동 체이닝: 2개 후속 작업 생성 (confluence)
+12:19:41 [worker] INFO 크롤링 완료: 전체 11, 신규 1, 변경 1, 소요 5.6초
+12:19:44 [worker] INFO 작업 완료: #1996
+12:19:45 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:19:46 [worker] INFO 작업 수령: #1999 (crawl)
+12:19:46 [worker] INFO 크롤링: Confluence (confluence)
+12:19:46 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:19" ORDER BY lastModified DESC
+12:19:46 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:19:47 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:19:47 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 1.0초
+12:19:47 [worker] INFO 작업 완료: #1999
+12:22:18 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:22:18 [worker] INFO 작업 수령: #2016 (crawl)
+12:22:18 [worker] INFO 크롤링: Confluence (confluence)
+12:22:19 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:21" ORDER BY lastModified DESC
+12:22:19 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:22:19 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:22:19 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.9초
+12:22:20 [worker] INFO 작업 완료: #2016
+12:22:31 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:22:31 [worker] INFO 작업 수령: #2017 (crawl)
+12:22:31 [worker] INFO 크롤링: Confluence (confluence)
+12:22:31 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:22" ORDER BY lastModified DESC
+12:22:31 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:22:32 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:22:32 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:22:32 [worker] INFO 작업 완료: #2017
+12:22:43 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:22:43 [worker] INFO 작업 수령: #2018 (crawl)
+12:22:43 [worker] INFO 크롤링: Confluence (confluence)
+12:22:43 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:22" ORDER BY lastModified DESC
+12:22:44 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:22:44 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:22:44 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:22:44 [worker] INFO 작업 완료: #2018
+12:22:54 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:22:54 [worker] INFO 작업 수령: #2019 (crawl)
+12:22:54 [worker] INFO 크롤링: Confluence (confluence)
+12:22:54 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:22" ORDER BY lastModified DESC
+12:22:55 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:22:55 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:22:55 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.8초
+12:22:55 [worker] INFO 작업 완료: #2019
+12:23:06 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:23:06 [worker] INFO 작업 수령: #2022 (crawl)
+12:23:07 [worker] INFO 크롤링: Confluence (confluence)
+12:23:07 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:22" ORDER BY lastModified DESC
+12:23:07 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:23:07 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:23:07 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:23:08 [worker] INFO 작업 완료: #2022
+12:23:19 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:23:19 [worker] INFO 작업 수령: #2023 (crawl)
+12:23:19 [worker] INFO 크롤링: Confluence (confluence)
+12:23:19 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:23" ORDER BY lastModified DESC
+12:23:19 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:23:20 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:23:20 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:23:20 [worker] INFO 작업 완료: #2023
+12:23:29 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:23:30 [worker] INFO 작업 수령: #2024 (crawl)
+12:23:30 [worker] INFO 크롤링: Confluence (confluence)
+12:23:30 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:23" ORDER BY lastModified DESC
+12:23:30 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:23:31 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:23:31 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:23:31 [worker] INFO 작업 완료: #2024
+12:23:42 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:23:42 [worker] INFO 작업 수령: #2025 (crawl)
+12:23:42 [worker] INFO 크롤링: Confluence (confluence)
+12:23:42 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:23" ORDER BY lastModified DESC
+12:23:43 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:23:43 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:23:43 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:23:43 [worker] INFO 작업 완료: #2025
+12:23:56 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:23:57 [worker] INFO 작업 수령: #2026 (crawl)
+12:23:57 [worker] INFO 크롤링: Confluence (confluence)
+12:23:57 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:23" ORDER BY lastModified DESC
+12:23:57 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:23:57 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:23:58 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:23:58 [worker] INFO 작업 완료: #2026
+12:24:06 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:24:06 [worker] INFO 작업 수령: #2027 (crawl)
+12:24:07 [worker] INFO 크롤링: Confluence (confluence)
+12:24:07 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:23" ORDER BY lastModified DESC
+12:24:07 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:24:07 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:24:07 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:24:08 [worker] INFO 작업 완료: #2027
+12:24:18 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:24:18 [worker] INFO 작업 수령: #2028 (crawl)
+12:24:19 [worker] INFO 크롤링: Confluence (confluence)
+12:24:19 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:24" ORDER BY lastModified DESC
+12:24:19 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:24:19 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:24:19 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:24:20 [worker] INFO 작업 완료: #2028
+12:24:32 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:24:32 [worker] INFO 작업 수령: #2029 (crawl)
+12:24:33 [worker] INFO 크롤링: Confluence (confluence)
+12:24:33 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:24" ORDER BY lastModified DESC
+12:24:33 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:24:33 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:24:34 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.9초
+12:24:34 [worker] INFO 작업 완료: #2029
+12:24:45 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:24:45 [worker] INFO 작업 수령: #2031 (crawl)
+12:24:45 [worker] INFO 크롤링: Confluence (confluence)
+12:24:45 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:24" ORDER BY lastModified DESC
+12:24:45 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:24:46 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:24:46 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.8초
+12:24:46 [worker] INFO 작업 완료: #2031
+12:24:57 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:24:57 [worker] INFO 작업 수령: #2032 (crawl)
+12:24:57 [worker] INFO 크롤링: Confluence (confluence)
+12:24:58 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:24" ORDER BY lastModified DESC
+12:24:58 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:24:58 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:24:58 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:24:59 [worker] INFO 작업 완료: #2032
+12:25:09 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:25:10 [worker] INFO 작업 수령: #2033 (crawl)
+12:25:10 [worker] INFO 크롤링: Confluence (confluence)
+12:25:10 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:24" ORDER BY lastModified DESC
+12:25:10 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:25:11 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:25:11 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 1.5초
+12:25:12 [worker] INFO 작업 완료: #2033
+12:25:19 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:25:19 [worker] INFO 작업 수령: #2034 (crawl)
+12:25:19 [worker] INFO 크롤링: Confluence (confluence)
+12:25:19 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:25" ORDER BY lastModified DESC
+12:25:19 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:25:20 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:25:20 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 1.0초
+12:25:20 [worker] INFO 작업 완료: #2034
+12:25:32 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:25:32 [worker] INFO 작업 수령: #2035 (crawl)
+12:25:32 [worker] INFO 크롤링: Confluence (confluence)
+12:25:32 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:25" ORDER BY lastModified DESC
+12:25:33 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:25:33 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:25:33 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:25:33 [worker] INFO 작업 완료: #2035
+12:25:43 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:25:43 [worker] INFO 작업 수령: #2036 (crawl)
+12:25:44 [worker] INFO 크롤링: Confluence (confluence)
+12:25:44 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:25" ORDER BY lastModified DESC
+12:25:45 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:25:45 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:25:45 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.8초
+12:25:45 [worker] INFO 작업 완료: #2036
+12:25:55 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:25:56 [worker] INFO 작업 수령: #2037 (crawl)
+12:25:56 [worker] INFO 크롤링: Confluence (confluence)
+12:25:56 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:25" ORDER BY lastModified DESC
+12:25:56 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:25:57 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:25:57 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 1.0초
+12:25:57 [worker] INFO 작업 완료: #2037
+12:26:08 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:26:08 [worker] INFO 작업 수령: #2038 (crawl)
+12:26:08 [worker] INFO 크롤링: Confluence (confluence)
+12:26:08 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:25" ORDER BY lastModified DESC
+12:26:09 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:26:09 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:26:09 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.8초
+12:26:10 [worker] INFO 작업 완료: #2038
+12:26:19 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:26:19 [worker] INFO 작업 수령: #2039 (crawl)
+12:26:19 [worker] INFO 크롤링: Confluence (confluence)
+12:26:20 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:26" ORDER BY lastModified DESC
+12:26:20 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:26:20 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:26:20 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:26:20 [worker] INFO 작업 완료: #2039
+12:26:32 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:26:32 [worker] INFO 작업 수령: #2040 (crawl)
+12:26:33 [worker] INFO 크롤링: Confluence (confluence)
+12:26:33 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:26" ORDER BY lastModified DESC
+12:26:33 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:26:33 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:26:33 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:26:34 [worker] INFO 작업 완료: #2040
+12:26:47 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:26:47 [worker] INFO 작업 수령: #2041 (crawl)
+12:26:47 [worker] INFO 크롤링: Confluence (confluence)
+12:26:47 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:26" ORDER BY lastModified DESC
+12:26:47 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:26:48 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:26:48 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 1.0초
+12:26:48 [worker] INFO 작업 완료: #2041
+12:26:56 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:26:56 [worker] INFO 작업 수령: #2042 (crawl)
+12:26:56 [worker] INFO 크롤링: Confluence (confluence)
+12:26:56 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:26" ORDER BY lastModified DESC
+12:26:57 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:26:57 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:26:57 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.8초
+12:26:57 [worker] INFO 작업 완료: #2042
+12:27:08 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:27:09 [worker] INFO 작업 수령: #2043 (crawl)
+12:27:09 [worker] INFO 크롤링: Confluence (confluence)
+12:27:09 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:26" ORDER BY lastModified DESC
+12:27:09 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:27:09 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:27:10 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:27:10 [worker] INFO 작업 완료: #2043
+12:27:22 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:27:22 [worker] INFO 작업 수령: #2045 (crawl)
+12:27:23 [worker] INFO 크롤링: Confluence (confluence)
+12:27:23 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:27" ORDER BY lastModified DESC
+12:27:23 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:27:23 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:27:23 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:27:24 [worker] INFO 작업 완료: #2045
+12:27:35 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:27:35 [worker] INFO 작업 수령: #2046 (crawl)
+12:27:35 [worker] INFO 크롤링: Confluence (confluence)
+12:27:35 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:27" ORDER BY lastModified DESC
+12:27:35 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:27:36 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:27:36 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:27:36 [worker] INFO 작업 완료: #2046
+12:27:47 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:27:47 [worker] INFO 작업 수령: #2047 (crawl)
+12:27:47 [worker] INFO 크롤링: Confluence (confluence)
+12:27:48 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:27" ORDER BY lastModified DESC
+12:27:48 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:27:48 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:27:48 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:27:48 [worker] INFO 작업 완료: #2047
+12:27:58 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:27:58 [worker] INFO 작업 수령: #2048 (crawl)
+12:27:59 [worker] INFO 크롤링: Confluence (confluence)
+12:27:59 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:27" ORDER BY lastModified DESC
+12:27:59 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:27:59 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:27:59 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:28:00 [worker] INFO 작업 완료: #2048
+12:28:11 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:28:11 [worker] INFO 작업 수령: #2049 (crawl)
+12:28:11 [worker] INFO 크롤링: Confluence (confluence)
+12:28:11 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:27" ORDER BY lastModified DESC
+12:28:11 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:28:12 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:28:12 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.9초
+12:28:12 [worker] INFO 작업 완료: #2049
+12:28:23 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:28:23 [worker] INFO 작업 수령: #2050 (crawl)
+12:28:23 [worker] INFO 크롤링: Confluence (confluence)
+12:28:23 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:28" ORDER BY lastModified DESC
+12:28:24 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:28:24 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:28:24 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:28:24 [worker] INFO 작업 완료: #2050
+12:28:34 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:28:34 [worker] INFO 작업 수령: #2052 (crawl)
+12:28:34 [worker] INFO 크롤링: Confluence (confluence)
+12:28:34 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:28" ORDER BY lastModified DESC
+12:28:35 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:28:35 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:28:35 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.8초
+12:28:35 [worker] INFO 작업 완료: #2052
+12:28:46 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:28:47 [worker] INFO 작업 수령: #2053 (crawl)
+12:28:47 [worker] INFO 크롤링: Confluence (confluence)
+12:28:47 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:28" ORDER BY lastModified DESC
+12:28:47 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:28:47 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:28:48 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:28:48 [worker] INFO 작업 완료: #2053
+12:28:59 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:28:59 [worker] INFO 작업 수령: #2054 (crawl)
+12:28:59 [worker] INFO 크롤링: Confluence (confluence)
+12:28:59 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:28" ORDER BY lastModified DESC
+12:29:00 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:29:00 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:29:00 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:29:00 [worker] INFO 작업 완료: #2054
+12:29:10 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:29:10 [worker] INFO 작업 수령: #2055 (crawl)
+12:29:10 [worker] INFO 크롤링: Confluence (confluence)
+12:29:10 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:29" ORDER BY lastModified DESC
+12:29:11 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:29:11 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:29:11 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:29:11 [worker] INFO 작업 완료: #2055
+12:29:22 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:29:22 [worker] INFO 작업 수령: #2056 (crawl)
+12:29:23 [worker] INFO 크롤링: Confluence (confluence)
+12:29:23 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:29" ORDER BY lastModified DESC
+12:29:23 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:29:23 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:29:24 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:29:24 [worker] INFO 작업 완료: #2056
+12:29:37 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:29:37 [worker] INFO 작업 수령: #2057 (crawl)
+12:29:37 [worker] INFO 크롤링: Confluence (confluence)
+12:29:37 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:29" ORDER BY lastModified DESC
+12:29:38 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:29:38 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:29:39 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 1.3초
+12:29:39 [worker] INFO 작업 완료: #2057
+12:29:46 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:29:46 [worker] INFO 작업 수령: #2058 (crawl)
+12:29:46 [worker] INFO 크롤링: Confluence (confluence)
+12:29:46 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:29" ORDER BY lastModified DESC
+12:29:47 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:29:47 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:29:47 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:29:48 [worker] INFO 작업 완료: #2058
+12:29:59 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:29:59 [worker] INFO 작업 수령: #2060 (crawl)
+12:29:59 [worker] INFO 크롤링: Confluence (confluence)
+12:29:59 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:29" ORDER BY lastModified DESC
+12:30:00 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:30:00 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:30:00 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.8초
+12:30:00 [worker] INFO 작업 완료: #2060
+12:30:13 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:30:13 [worker] INFO 작업 수령: #2061 (crawl)
+12:30:13 [worker] INFO 크롤링: Confluence (confluence)
+12:30:14 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:30" ORDER BY lastModified DESC
+12:30:14 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:30:14 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:30:15 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.9초
+12:30:15 [worker] INFO 작업 완료: #2061
+12:30:26 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:30:26 [worker] INFO 작업 수령: #2062 (crawl)
+12:30:26 [worker] INFO 크롤링: Confluence (confluence)
+12:30:26 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:30" ORDER BY lastModified DESC
+12:30:26 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:30:27 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:30:27 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:30:27 [worker] INFO 작업 완료: #2062
+12:30:38 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:30:38 [worker] INFO 작업 수령: #2063 (crawl)
+12:30:38 [worker] INFO 크롤링: Confluence (confluence)
+12:30:39 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:30" ORDER BY lastModified DESC
+12:30:39 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:30:39 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:30:39 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:30:39 [worker] INFO 작업 완료: #2063
+12:30:49 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:30:49 [worker] INFO 작업 수령: #2064 (crawl)
+12:30:49 [worker] INFO 크롤링: Confluence (confluence)
+12:30:49 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:30" ORDER BY lastModified DESC
+12:30:50 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:30:50 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:30:50 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.8초
+12:30:51 [worker] INFO 작업 완료: #2064
+12:31:01 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:31:02 [worker] INFO 작업 수령: #2065 (crawl)
+12:31:02 [worker] INFO 크롤링: Confluence (confluence)
+12:31:02 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:30" ORDER BY lastModified DESC
+12:31:02 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:31:02 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:31:03 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:31:03 [worker] INFO 작업 완료: #2065
+12:31:14 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:31:14 [worker] INFO 작업 수령: #2066 (crawl)
+12:31:14 [worker] INFO 크롤링: Confluence (confluence)
+12:31:14 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:31" ORDER BY lastModified DESC
+12:31:14 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:31:15 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:31:15 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 1.0초
+12:31:15 [worker] INFO 작업 완료: #2066
+12:31:24 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:31:25 [worker] INFO 작업 수령: #2068 (crawl)
+12:31:25 [worker] INFO 크롤링: Confluence (confluence)
+12:31:25 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:31" ORDER BY lastModified DESC
+12:31:25 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:31:25 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:31:26 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:31:26 [worker] INFO 작업 완료: #2068
+12:31:37 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:31:37 [worker] INFO 작업 수령: #2069 (crawl)
+12:31:37 [worker] INFO 크롤링: Confluence (confluence)
+12:31:38 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:31" ORDER BY lastModified DESC
+12:31:38 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:31:38 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:31:38 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.8초
+12:31:39 [worker] INFO 작업 완료: #2069
+12:31:49 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:31:50 [worker] INFO 작업 수령: #2070 (crawl)
+12:31:50 [worker] INFO 크롤링: Confluence (confluence)
+12:31:50 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:31" ORDER BY lastModified DESC
+12:31:50 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:31:51 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:31:51 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.8초
+12:31:51 [worker] INFO 작업 완료: #2070
+12:32:01 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:32:01 [worker] INFO 작업 수령: #2071 (crawl)
+12:32:01 [worker] INFO 크롤링: Confluence (confluence)
+12:32:01 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:31" ORDER BY lastModified DESC
+12:32:02 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:32:02 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:32:02 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.8초
+12:32:02 [worker] INFO 작업 완료: #2071
+12:32:13 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:32:14 [worker] INFO 작업 수령: #2072 (crawl)
+12:32:14 [worker] INFO 크롤링: Confluence (confluence)
+12:32:14 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:32" ORDER BY lastModified DESC
+12:32:14 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:32:14 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:32:15 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:32:15 [worker] INFO 작업 완료: #2072
+12:32:36 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:32:36 [worker] INFO 작업 수령: #2073 (crawl)
+12:32:37 [worker] INFO 크롤링: Confluence (confluence)
+12:32:37 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:32" ORDER BY lastModified DESC
+12:32:37 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:32:37 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:32:38 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.8초
+12:32:38 [worker] INFO 작업 완료: #2073
+12:32:49 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:32:49 [worker] INFO 작업 수령: #2074 (crawl)
+12:32:49 [worker] INFO 크롤링: Confluence (confluence)
+12:32:49 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:32" ORDER BY lastModified DESC
+12:32:50 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:32:51 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:32:51 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 1.3초
+12:32:51 [worker] INFO 작업 완료: #2074
+12:33:02 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:33:03 [worker] INFO 작업 수령: #2076 (crawl)
+12:33:03 [worker] INFO 크롤링: Confluence (confluence)
+12:33:03 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:32" ORDER BY lastModified DESC
+12:33:03 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:33:04 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:33:04 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.8초
+12:33:04 [worker] INFO 작업 완료: #2076
+12:33:15 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:33:15 [worker] INFO 작업 수령: #2077 (crawl)
+12:33:15 [worker] INFO 크롤링: Confluence (confluence)
+12:33:15 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:33" ORDER BY lastModified DESC
+12:33:16 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:33:16 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:33:16 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:33:16 [worker] INFO 작업 완료: #2077
+12:33:27 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:33:28 [worker] INFO 작업 수령: #2078 (crawl)
+12:33:28 [worker] INFO 크롤링: Confluence (confluence)
+12:33:28 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:33" ORDER BY lastModified DESC
+12:33:28 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:33:29 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:33:29 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.8초
+12:33:29 [worker] INFO 작업 완료: #2078
+12:33:38 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:33:39 [worker] INFO 작업 수령: #2079 (crawl)
+12:33:39 [worker] INFO 크롤링: Confluence (confluence)
+12:33:39 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:33" ORDER BY lastModified DESC
+12:33:39 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:33:39 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:33:40 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:33:40 [worker] INFO 작업 완료: #2079
+12:33:51 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:33:51 [worker] INFO 작업 수령: #2080 (crawl)
+12:33:51 [worker] INFO 크롤링: Confluence (confluence)
+12:33:51 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:33" ORDER BY lastModified DESC
+12:33:52 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:33:52 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:33:52 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.8초
+12:33:52 [worker] INFO 작업 완료: #2080
+12:34:03 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:34:04 [worker] INFO 작업 수령: #2081 (crawl)
+12:34:04 [worker] INFO 크롤링: Confluence (confluence)
+12:34:04 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:33" ORDER BY lastModified DESC
+12:34:04 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:34:05 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:34:05 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:34:05 [worker] INFO 작업 완료: #2081
+12:34:15 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:34:15 [worker] INFO 작업 수령: #2082 (crawl)
+12:34:15 [worker] INFO 크롤링: Confluence (confluence)
+12:34:15 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:34" ORDER BY lastModified DESC
+12:34:15 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:34:16 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:34:16 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.8초
+12:34:16 [worker] INFO 작업 완료: #2082
+12:34:27 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:34:27 [worker] INFO 작업 수령: #2084 (crawl)
+12:34:27 [worker] INFO 크롤링: Confluence (confluence)
+12:34:28 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:34" ORDER BY lastModified DESC
+12:34:28 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:34:28 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:34:28 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:34:28 [worker] INFO 작업 완료: #2084
+12:34:40 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:34:40 [worker] INFO 작업 수령: #2085 (crawl)
+12:34:40 [worker] INFO 크롤링: Confluence (confluence)
+12:34:40 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:34" ORDER BY lastModified DESC
+12:34:40 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:34:41 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:34:42 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:34:42 [worker] INFO 작업 완료: #2085
+12:34:50 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:34:51 [worker] INFO 작업 수령: #2086 (crawl)
+12:34:51 [worker] INFO 크롤링: Confluence (confluence)
+12:34:51 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:34" ORDER BY lastModified DESC
+12:34:51 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:34:52 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:34:52 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:34:52 [worker] INFO 작업 완료: #2086
+12:35:03 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:35:03 [worker] INFO 작업 수령: #2087 (crawl)
+12:35:03 [worker] INFO 크롤링: Confluence (confluence)
+12:35:03 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:34" ORDER BY lastModified DESC
+12:35:04 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:35:04 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:35:04 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:35:04 [worker] INFO 작업 완료: #2087
+12:35:17 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:35:17 [worker] INFO 작업 수령: #2088 (crawl)
+12:35:17 [worker] INFO 크롤링: Confluence (confluence)
+12:35:17 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:35" ORDER BY lastModified DESC
+12:35:17 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:35:18 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:35:18 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:35:18 [worker] INFO 작업 완료: #2088
+12:35:29 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:35:29 [worker] INFO 작업 수령: #2089 (crawl)
+12:35:30 [worker] INFO 크롤링: Confluence (confluence)
+12:35:30 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:35" ORDER BY lastModified DESC
+12:35:30 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:35:30 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:35:30 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.8초
+12:35:31 [worker] INFO 작업 완료: #2089
+12:35:42 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:35:42 [worker] INFO 작업 수령: #2090 (crawl)
+12:35:42 [worker] INFO 크롤링: Confluence (confluence)
+12:35:42 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:35" ORDER BY lastModified DESC
+12:35:42 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:35:43 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:35:43 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:35:43 [worker] INFO 작업 완료: #2090
+12:35:52 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:35:53 [worker] INFO 작업 수령: #2091 (crawl)
+12:35:53 [worker] INFO 크롤링: Confluence (confluence)
+12:35:53 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:35" ORDER BY lastModified DESC
+12:35:54 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:35:54 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:35:54 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 1.0초
+12:35:55 [worker] INFO 작업 완료: #2091
+12:36:05 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:36:05 [worker] INFO 작업 수령: #2094 (crawl)
+12:36:05 [worker] INFO 크롤링: Confluence (confluence)
+12:36:05 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:35" ORDER BY lastModified DESC
+12:36:06 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:36:06 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:36:06 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:36:06 [worker] INFO 작업 완료: #2094
+12:36:18 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:36:18 [worker] INFO 작업 수령: #2095 (crawl)
+12:36:18 [worker] INFO 크롤링: Confluence (confluence)
+12:36:18 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:36" ORDER BY lastModified DESC
+12:36:18 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:36:19 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:36:19 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
+12:36:19 [worker] INFO 작업 완료: #2095
+12:36:29 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:36:29 [worker] INFO 작업 수령: #2096 (crawl)
+12:36:29 [worker] INFO 크롤링: Confluence (confluence)
+12:36:29 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:36" ORDER BY lastModified DESC
+12:36:29 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:36:30 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:36:30 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 1.0초
+12:36:30 [worker] INFO 작업 완료: #2096
+12:36:41 [worker] INFO DB 모드: local (SQLite 직접 접근)
+12:36:41 [worker] INFO 작업 수령: #2097 (crawl)
+12:36:41 [worker] INFO 크롤링: Confluence (confluence)
+12:36:42 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:36" ORDER BY lastModified DESC
+12:36:42 [worker] INFO   CQL 증분 결과: 0페이지 변경됨
+12:36:42 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
+12:36:42 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.8초
+12:36:43 [worker] INFO 작업 완료: #2097

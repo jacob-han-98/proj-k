@@ -361,6 +361,14 @@ export interface DagStageStatus {
   completed_at?: string | null;
   created_at?: string | null;
   error?: string | null;
+  pending_count?: number;
+  running_count?: number;
+}
+
+export interface PipelineSettings {
+  auto_crawl_interval: number;  // 0=수동, >0=초 단위
+  auto_download: boolean;
+  auto_enrich: boolean;
 }
 
 export interface PipelineDagSource {
@@ -372,6 +380,7 @@ export interface PipelineDagSource {
   edges: DagEdge[];
   last_stage: string;
   stage_status: Record<string, DagStageStatus>;
+  settings?: PipelineSettings;
 }
 
 export interface PipelineDagResponse {
@@ -392,6 +401,18 @@ export const runPipelineDag = async (
 ): Promise<{ source_id: number; mode: string; jobs: { job_id: number; stage: string }[] }> => {
   const params = new URLSearchParams({ source_id: String(sourceId), stage, mode });
   const res = await fetch(`${API_BASE_URL}/admin/pipeline/dag/run?${params}`, { method: 'POST' });
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res.json();
+};
+
+export const savePipelineSettings = async (
+  sourceId: number, settings: Partial<PipelineSettings>
+): Promise<{ ok: boolean; settings: PipelineSettings }> => {
+  const params = new URLSearchParams({ source_id: String(sourceId) });
+  if (settings.auto_crawl_interval !== undefined) params.set('auto_crawl_interval', String(settings.auto_crawl_interval));
+  if (settings.auto_download !== undefined) params.set('auto_download', String(settings.auto_download));
+  if (settings.auto_enrich !== undefined) params.set('auto_enrich', String(settings.auto_enrich));
+  const res = await fetch(`${API_BASE_URL}/admin/pipeline/settings?${params}`, { method: 'POST' });
   if (!res.ok) throw new Error(`API error: ${res.status}`);
   return res.json();
 };

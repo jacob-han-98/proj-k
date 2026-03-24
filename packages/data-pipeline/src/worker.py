@@ -93,6 +93,16 @@ def _db_get_source(source_id: int):
             return _db.get_source(conn, source_id)
 
 
+def _db_update_source_properties(source_id: int, props: dict):
+    """소스의 properties JSON을 업데이트."""
+    if _remote_mode:
+        pass  # TODO: remote API
+    else:
+        with _db.get_conn() as conn:
+            conn.execute("UPDATE crawl_sources SET properties = ?, updated_at = datetime('now') WHERE id = ?",
+                         [json.dumps(props, ensure_ascii=False), source_id])
+
+
 def _db_upsert_document(source_id, file_path, file_type, **kwargs) -> dict:
     """반환: {"id": doc_id, "changed": bool, "is_new": bool}"""
     if _remote_mode:
@@ -224,16 +234,15 @@ def _auto_chain_jobs(source: dict, changed_docs: list[dict]):
     source_type = source["source_type"]
     created = 0
 
+    source_id = source["id"]
     for doc in changed_docs:
         doc_id = doc["id"]
         if source_type == "perforce":
-            # xlsx → capture (Windows 전용)
-            _db_create_job("capture", document_id=doc_id,
+            _db_create_job("capture", source_id=source_id, document_id=doc_id,
                            priority=3, worker_type="windows")
             created += 1
         elif source_type == "confluence":
-            # html → download (본문 다운로드 + md 변환)
-            _db_create_job("download", document_id=doc_id,
+            _db_create_job("download", source_id=source_id, document_id=doc_id,
                            priority=3, worker_type="any")
             created += 1
 
@@ -404,8 +413,9 @@ def _crawl_perforce(source: dict, params: dict, job_id: int = None) -> dict:
 
 
 def _crawl_confluence(source: dict, params: dict, job_id: int = None) -> dict:
-    """Confluence 크롤링 — 재귀 탐색 + 버전 비교 + 자동 체이닝."""
+    """Confluence 크롤링 — CQL 증분 또는 전체 재귀 탐색 + 버전 비교 + 자동 체이닝."""
     import importlib.util
+    import requests as _requests
     cd_dir = PROJECT_ROOT / "packages" / "confluence-downloader"
 
     from dotenv import load_dotenv
@@ -427,13 +437,56 @@ def _crawl_confluence(source: dict, params: dict, job_id: int = None) -> dict:
     root_page_id = source["path"]
     props = json.loads(source.get("properties", "{}"))
     max_depth = props.get("max_depth", 10)
+    crawl_type = params.get("crawl_type", "incremental")
 
-    # A. 재귀 크롤링 (페이지 트리 탐색만)
+    # 기존 문서가 없으면 무조건 full crawl
+    existing_docs = _db_get_documents_by_source(source["id"])
+    if not existing_docs:
+        crawl_type = "full"
+        log.info("  기존 문서 없음 → full crawl로 전환")
+
+    # A. 페이지 수집 — CQL 증분 또는 전체 재귀
     all_pages = []
-    _crawl_confluence_recursive(client, root_page_id, all_pages,
-                                 depth=0, max_depth=max_depth)
+    if crawl_type == "incremental":
+        # CQL로 마지막 크롤 이후 변경된 페이지만 검색
+        last_crawl = props.get("last_crawl_at")
+        if not last_crawl:
+            crawl_type = "full"
+            log.info("  last_crawl_at 없음 → full crawl로 전환")
+        else:
+            # ISO → Confluence CQL 날짜 형식 (yyyy-MM-dd HH:mm)
+            cql_date = last_crawl[:16].replace("T", " ")
+            cql = f'ancestor = {root_page_id} AND lastModified > "{cql_date}" ORDER BY lastModified DESC'
+            log.info(f"  CQL 증분 크롤: {cql}")
 
-    log.info(f"  Confluence 탐색 완료: {len(all_pages)}페이지")
+            # CQL 검색 (페이징)
+            start = 0
+            while True:
+                resp = _requests.get(f"{url}/rest/api/content/search", params={
+                    "cql": cql, "limit": 200, "start": start,
+                    "expand": "version,ancestors"
+                }, auth=(username, token))
+                if not resp.ok:
+                    log.error(f"  CQL 검색 실패: {resp.status_code} {resp.text[:200]}")
+                    break
+                data = resp.json()
+                results = data.get("results", [])
+                for p in results:
+                    # ancestors에서 depth/parent 추출
+                    ancestors = p.get("ancestors", [])
+                    p["_depth"] = len(ancestors)
+                    p["_parent_id"] = str(ancestors[-1]["id"]) if ancestors else root_page_id
+                    all_pages.append(p)
+                if len(results) < 200:
+                    break
+                start += 200
+
+            log.info(f"  CQL 증분 결과: {len(all_pages)}페이지 변경됨")
+
+    if crawl_type == "full":
+        _crawl_confluence_recursive(client, root_page_id, all_pages,
+                                     depth=0, max_depth=max_depth)
+        log.info(f"  전체 탐색 완료: {len(all_pages)}페이지")
 
     # B. ancestors 경로 빌드 (계층 폴더용)
     page_map = {str(p["id"]): p for p in all_pages}
@@ -494,12 +547,17 @@ def _crawl_confluence(source: dict, params: dict, job_id: int = None) -> dict:
                     "tree_path": tree_path,
                 }
             )
+
+            # CQL 증분: CQL이 반환한 페이지는 lastModified 기준으로 이미 변경 확인됨
+            # DB hash와 무관하게 무조건 re-download 대상
+            force_changed = (crawl_type == "incremental" and not doc_info["is_new"])
+
             if doc_info["is_new"]:
                 new_files += 1
                 changed_docs.append({"id": doc_info["id"], "path": page_id,
                                      "title": page_title})
                 log.info(f"  [NEW] {page_title} (v{page_version})")
-            elif doc_info["changed"]:
+            elif doc_info["changed"] or force_changed:
                 changed_files += 1
                 changed_docs.append({"id": doc_info["id"], "path": page_id,
                                      "title": page_title})
@@ -514,13 +572,21 @@ def _crawl_confluence(source: dict, params: dict, job_id: int = None) -> dict:
             errors += 1
             log.error(f"  [ERROR] {page_title}: {e}")
 
-    # E. 삭제된 페이지 감지
-    deleted_paths = existing_paths - crawled_paths
-    deleted_files = len(deleted_paths)
-    if deleted_paths:
-        log.info(f"  삭제 감지: {deleted_files}페이지")
+    # E. 삭제된 페이지 감지 (full crawl 에서만)
+    deleted_files = 0
+    if crawl_type == "full":
+        deleted_paths = existing_paths - crawled_paths
+        deleted_files = len(deleted_paths)
+        if deleted_paths:
+            log.info(f"  삭제 감지: {deleted_files}페이지")
 
-    log.info(f"  Confluence 결과: 전체 {len(all_pages)}, 신규 {new_files}, "
+    # F. last_crawl_at 저장 (다음 증분 크롤 기준점)
+    from datetime import datetime, timezone
+    now_iso = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S")
+    props["last_crawl_at"] = now_iso
+    _db_update_source_properties(source["id"], props)
+
+    log.info(f"  Confluence 결과 ({crawl_type}): 전체 {len(all_pages)}, 신규 {new_files}, "
              f"변경 {changed_files}, 불변 {unchanged_files}, 삭제 {deleted_files}")
 
     return {
@@ -530,6 +596,7 @@ def _crawl_confluence(source: dict, params: dict, job_id: int = None) -> dict:
         "unchanged_files": unchanged_files,
         "deleted_files": deleted_files,
         "errors": errors,
+        "crawl_type": crawl_type,
         "version_updates": version_updates,
         "_changed_docs": changed_docs,
     }
@@ -722,7 +789,7 @@ def handle_download(job: dict, worker_id: str) -> dict:
 
     # 이미지가 있으면 enrich 작업 체이닝
     if downloaded_images > 0:
-        _db_create_job("enrich", document_id=document_id, priority=4, worker_type="any")
+        _db_create_job("enrich", source_id=doc["source_id"], document_id=document_id, priority=4, worker_type="any")
         log.info(f"  enrich 작업 체이닝 (이미지 {downloaded_images}개)")
 
     return {

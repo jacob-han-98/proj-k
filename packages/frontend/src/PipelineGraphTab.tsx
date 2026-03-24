@@ -1,13 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { fetchPipelineDag, runPipelineDag, type PipelineDagResponse } from './api'
+import { fetchPipelineDag, runPipelineDag, savePipelineSettings, type PipelineDagResponse } from './api'
 
 // ── Status theme (uses CSS vars at runtime) ───────
 
 const ST: Record<string, { label: string; cssClass: string }> = {
   idle:      { label: 'IDLE',      cssClass: 'st-idle' },
-  pending:   { label: 'PENDING',   cssClass: 'st-pending' },
+  queued:    { label: 'QUEUED',    cssClass: 'st-queued' },
   running:   { label: 'RUNNING',   cssClass: 'st-running' },
-  completed: { label: 'COMPLETED', cssClass: 'st-completed' },
+  auto:      { label: 'AUTO',      cssClass: 'st-auto' },
   failed:    { label: 'FAILED',    cssClass: 'st-failed' },
 }
 
@@ -45,6 +45,8 @@ const STATUS_COLORS = {
   idle:      { fill: 'var(--bg-secondary)', stroke: 'var(--border-color)', text: 'var(--text-secondary)' },
   pending:   { fill: '#2d2200', stroke: '#ca8a04', text: '#fbbf24' },
   running:   { fill: '#0a2540', stroke: '#0ea5e9', text: '#0ea5e9' },
+  queued:    { fill: '#2d2200', stroke: '#ca8a04', text: '#fbbf24' },
+  auto:      { fill: '#052e16', stroke: '#22c55e', text: '#4ade80' },
   completed: { fill: '#052e16', stroke: '#22c55e', text: '#22c55e' },
   failed:    { fill: '#450a0a', stroke: '#ef4444', text: '#ef4444' },
 } as Record<string, { fill: string; stroke: string; text: string }>
@@ -54,7 +56,7 @@ const STATUS_COLORS = {
 interface NodePos { x: number; y: number; id: string; sourceId: number; stageId: string; shared?: boolean }
 
 function buildSvg(dag: PipelineDagResponse, theme: ReturnType<typeof getThemeColors>): { svg: string; positions: NodePos[]; w: number; h: number } {
-  const NODE_W = 160, NODE_H = 68, GAP_X = 60, GAP_Y = 24
+  const NODE_W = 160, NODE_H = 78, GAP_X = 60, GAP_Y = 24
   const LABEL_W = 180
   const positions: NodePos[] = []
 
@@ -115,6 +117,7 @@ function buildSvg(dag: PipelineDagResponse, theme: ReturnType<typeof getThemeCol
   dag.sources.forEach((src, ri) => {
     const x = 10, y = GAP_Y + ri * rowH
     const c = SOURCE_COLS[src.source_type] || SOURCE_COLS.perforce
+    positions.push({ x, y, id: `src-${src.source_id}`, sourceId: src.source_id, stageId: '', shared: false })
     svg += `<g class="dag-node" data-id="src-${src.source_id}">
       <rect x="${x}" y="${y}" width="${LABEL_W - 30}" height="${NODE_H}" rx="10" fill="${c.fill}" stroke="${c.stroke}" stroke-width="1.5"/>
       <text x="${x + (LABEL_W - 30) / 2}" y="${y + NODE_H / 2 + 4}" text-anchor="middle" fill="${c.text}" font-size="12" font-weight="700">${esc(src.source_name)}</text>
@@ -122,21 +125,71 @@ function buildSvg(dag: PipelineDagResponse, theme: ReturnType<typeof getThemeCol
   })
 
   // -- Stage nodes --
+  const AUTO_KEY_MAP: Record<string, string> = { crawl: 'auto_crawl_interval', download: 'auto_download', enrich: 'auto_enrich' }
   dag.sources.forEach((src, ri) => {
     src.stages.forEach((stage, ci) => {
       const x = LABEL_W + GAP_X / 2 + ci * (NODE_W + GAP_X)
       const y = GAP_Y + ri * rowH
       const status = src.stage_status[stage.id] || { status: 'idle' }
-      const sc = STATUS_COLORS[status.status] || STATUS_COLORS.idle
-      const isRunning = status.status === 'running'
+      const pendingCount = (status.pending_count || 0)
+      const runningCount = (status.running_count || 0)
+
+      // 표시 상태 결정: running > queued > auto > idle (completed는 idle로 통합)
+      let displayStatus = status.status
+      if (runningCount > 0) displayStatus = 'running'
+      else if (pendingCount > 0) displayStatus = 'queued'
+      else if (displayStatus === 'completed') displayStatus = 'idle'
+
+      const sc = STATUS_COLORS[displayStatus] || STATUS_COLORS.idle
+      const isRunning = displayStatus === 'running' || displayStatus === 'auto'
 
       positions.push({ x, y, id: `${src.source_id}-${stage.id}`, sourceId: src.source_id, stageId: stage.id })
 
+      const badgeR = 10
+
+      // 자동화 설정
+      const autoKey = AUTO_KEY_MAP[stage.id]
+      const settings = src.settings || {}
+      const isAuto = autoKey ? (autoKey === 'auto_crawl_interval' ? (settings as any)[autoKey] > 0 : !!(settings as any)[autoKey]) : false
+      const autoInterval = autoKey === 'auto_crawl_interval' ? (settings as any)[autoKey] || 0 : 0
+      const autoTooltip = isAuto ? (autoInterval ? `자동: ${autoInterval}초마다` : '자동: ON') : '자동: OFF'
+
+      // 하단 아이콘 Y 위치
+      const btnY = y + NODE_H - 16
+      const isBusy = displayStatus === 'running'
+      const disabledOpacity = 0.2
+
       svg += `<g class="dag-node ${isRunning ? 'running' : ''}" data-id="${src.source_id}-${stage.id}">
+        <title>${esc(stage.label)}: ${esc(stage.desc || '')}${pendingCount ? `\n대기: ${pendingCount}건` : ''}</title>
         <rect class="node-bg" x="${x}" y="${y}" width="${NODE_W}" height="${NODE_H}" rx="10" fill="${sc.fill}" stroke="${sc.stroke}" stroke-width="1.5"/>
-        <text x="${x + NODE_W / 2}" y="${y + 20}" text-anchor="middle" fill="${theme.text}" font-size="12" font-weight="600">${esc(stage.label)}</text>
-        <text x="${x + NODE_W / 2}" y="${y + 35}" text-anchor="middle" fill="${theme.text2}" font-size="9">${timeAgo(status.completed_at || status.created_at)}</text>
-        <text x="${x + NODE_W / 2}" y="${y + 50}" text-anchor="middle" fill="${sc.text}" font-size="9" font-weight="600">${stOf(status.status).label}</text>
+        <text x="${x + NODE_W / 2}" y="${y + 18}" text-anchor="middle" fill="${theme.text}" font-size="12" font-weight="600">${esc(stage.label)}</text>
+        <text x="${x + NODE_W / 2}" y="${y + 33}" text-anchor="middle" fill="${theme.text2}" font-size="9">${timeAgo(status.completed_at || status.created_at)}</text>
+        <text x="${x + NODE_W / 2}" y="${y + 46}" text-anchor="middle" fill="${sc.text}" font-size="9" font-weight="600">${
+          displayStatus === 'running' ? 'RUNNING' + (runningCount > 1 ? ` (${runningCount})` : '') :
+          displayStatus === 'queued' ? `QUEUED ${pendingCount}` :
+          displayStatus === 'auto' ? 'AUTO' :
+          displayStatus === 'failed' ? 'FAILED' :
+          displayStatus === 'pending' ? 'PENDING' :
+          status.completed_at ? '' : 'IDLE'
+        }</text>
+        ${''/* pending count는 status 텍스트에 통합 */}
+        <g class="node-action" ${!isBusy ? `data-run="${src.source_id}-${stage.id}"` : ''} style="opacity:${isBusy ? disabledOpacity : 1}${isBusy ? ';pointer-events:none' : ''}">
+          <title>${isBusy ? '실행 중...' : '이 단계 실행'}</title>
+          <circle cx="${x + NODE_W / 2 - 24}" cy="${btnY}" r="9" fill="rgba(59,130,246,0.15)" stroke="#3b82f6" stroke-width="0.8"/>
+          <text x="${x + NODE_W / 2 - 24}" y="${btnY + 4}" text-anchor="middle" fill="#60a5fa" font-size="10">▶</text>
+        </g>
+        <g class="node-action" ${!isBusy ? `data-run-downstream="${src.source_id}-${stage.id}"` : ''} style="opacity:${isBusy ? disabledOpacity : 1}${isBusy ? ';pointer-events:none' : ''}">
+          <title>${isBusy ? '실행 중...' : '여기부터 끝까지 실행'}</title>
+          <circle cx="${x + NODE_W / 2}" cy="${btnY}" r="9" fill="rgba(234,179,8,0.15)" stroke="#ca8a04" stroke-width="0.8"/>
+          <text x="${x + NODE_W / 2}" y="${btnY + 4}" text-anchor="middle" fill="#fbbf24" font-size="8">▶▶</text>
+        </g>
+        ${autoKey ? (() => {
+          const acx = x + NODE_W / 2 + 24, acy = btnY
+          return `<g class="node-action" data-auto="${src.source_id}-${stage.id}">
+          <title>${autoTooltip}</title>
+          <circle cx="${acx}" cy="${acy}" r="9" fill="${isAuto ? '#052e16' : 'rgba(255,255,255,0.08)'}" stroke="${isAuto ? '#22c55e' : theme.border}" stroke-width="${isAuto ? '1.5' : '0.5'}"/>
+          <text x="${acx}" y="${acy + 4}" text-anchor="middle" fill="${isAuto ? '#4ade80' : theme.text2}" font-size="11">⟳${isAuto ? `<animateTransform attributeName="transform" type="rotate" from="0 ${acx} ${acy}" to="360 ${acx} ${acy}" dur="2s" repeatCount="indefinite"/>` : ''}</text>
+        </g>`})() : ''}
       </g>`
     })
   })
@@ -152,6 +205,7 @@ function buildSvg(dag: PipelineDagResponse, theme: ReturnType<typeof getThemeCol
     positions.push({ x, y, id: `shared-${stage.id}`, sourceId: 0, stageId: stage.id, shared: true })
 
     svg += `<g class="dag-node" data-id="shared-${stage.id}">
+      <title>${esc(stage.label)}: ${esc(stage.desc || '')}</title>
       <rect class="node-bg" x="${x}" y="${y}" width="${NODE_W}" height="${NODE_H}" rx="12" fill="${sc.fill}" stroke="${sc.stroke}" stroke-width="2"/>
       <text x="${x + NODE_W / 2}" y="${y + 20}" text-anchor="middle" fill="${theme.text}" font-size="13" font-weight="700">${esc(stage.label)}</text>
       <text x="${x + NODE_W / 2}" y="${y + 35}" text-anchor="middle" fill="${theme.text2}" font-size="9">${timeAgo(status.completed_at || status.created_at)}</text>
@@ -196,10 +250,11 @@ export default function PipelineGraphTab() {
 
   useEffect(() => {
     if (!dag) return
-    const active = dag.sources.some(src => Object.values(src.stage_status).some(x => x.status === 'running' || x.status === 'pending'))
-      || Object.values(dag.shared_status).some(x => x.status === 'running' || x.status === 'pending')
-    if (!active) return
-    const t = setInterval(load, 3000)
+    const hasActiveJobs = dag.sources.some(src => Object.values(src.stage_status).some(x => x.status === 'running' || (x.pending_count || 0) > 0))
+      || Object.values(dag.shared_status).some(x => x.status === 'running')
+    const hasAutoSettings = dag.sources.some(src => src.settings?.auto_crawl_interval)
+    if (!hasActiveJobs && !hasAutoSettings) return
+    const t = setInterval(load, hasActiveJobs ? 3000 : 10000)
     return () => clearInterval(t)
   }, [dag, load])
 
@@ -217,16 +272,58 @@ export default function PipelineGraphTab() {
     }
   }, [dag, load])
 
-  const handleSvgClick = useCallback((e: React.MouseEvent) => {
+  const handleSvgClick = useCallback(async (e: React.MouseEvent) => {
+    // ▶▶ 여기부터 끝까지
+    const dsTarget = (e.target as HTMLElement).closest('[data-run-downstream]') as HTMLElement | null
+    if (dsTarget) {
+      const [sid, ...rest] = (dsTarget.dataset.runDownstream || '').split('-')
+      const stage = rest.join('-')
+      if (sid && stage) onRun(Number(sid), stage, 'downstream')
+      return
+    }
+    // ▶ 이 단계만 실행
+    const runTarget = (e.target as HTMLElement).closest('[data-run]') as HTMLElement | null
+    if (runTarget) {
+      const [sid, ...rest] = (runTarget.dataset.run || '').split('-')
+      const stage = rest.join('-')
+      if (sid && stage) onRun(Number(sid), stage, 'single')
+      return
+    }
+    // ⟳ 자동 토글 클릭
+    const autoTarget = (e.target as HTMLElement).closest('[data-auto]') as HTMLElement | null
+    if (autoTarget) {
+      const [sid, ...autoRest] = (autoTarget.dataset.auto || '').split('-')
+      const stage = autoRest.join('-')
+      if (sid && stage && dag) {
+        const src = dag.sources.find(s => s.source_id === Number(sid))
+        const settings = src?.settings || {} as any
+        const keyMap: Record<string, string> = { crawl: 'auto_crawl_interval', download: 'auto_download', enrich: 'auto_enrich' }
+        const key = keyMap[stage]
+        if (key) {
+          const update: any = {}
+          if (key === 'auto_crawl_interval') {
+            update[key] = settings[key] > 0 ? 0 : 10  // 토글: 0↔10초
+          } else {
+            update[key] = !settings[key]
+          }
+          try {
+            await savePipelineSettings(Number(sid), update)
+            setToast(`${stage} 자동화: ${update[key] ? 'ON' : 'OFF'}`)
+            setTimeout(() => setToast(null), 2000)
+            load()
+          } catch (err) {
+            setToast('설정 실패')
+            setTimeout(() => setToast(null), 3000)
+          }
+        }
+      }
+      return
+    }
+    // 일반 노드 클릭 — 팝업 (소스 노드 등)
     const target = (e.target as HTMLElement).closest('.dag-node') as HTMLElement | null
     if (!target) { setPopup(null); return }
-    const nodeId = target.dataset.id
-    if (!nodeId || nodeId.startsWith('src-')) return  // source labels are not clickable
-    const pos = positionsRef.current.find(p => p.id === nodeId)
-    if (!pos) return
-    const scrollLeft = containerRef.current?.scrollLeft || 0
-    setPopup({ x: pos.x + 170 + scrollLeft, y: pos.y + 10, nodeId, sourceId: pos.sourceId, stageId: pos.stageId, shared: !!pos.shared })
-  }, [])
+    setPopup(null)
+  }, [dag, load, onRun])
 
   useEffect(() => {
     const h = (e: MouseEvent) => {
@@ -287,34 +384,36 @@ export default function PipelineGraphTab() {
         <div onClick={handleSvgClick} dangerouslySetInnerHTML={{ __html: fullSvg }} />
 
         {/* Popup */}
-        {popup && (
-          <div style={{
-            position: 'absolute', zIndex: 50, left: popup.x, top: popup.y,
-            background: 'var(--bg-secondary)', border: '1px solid var(--border-color)',
-            borderRadius: 12, padding: 12, minWidth: 180,
-            boxShadow: `0 8px 32px rgba(0,0,0,var(--shadow-intensity, 0.3))`,
-          }}>
-            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8, color: 'var(--text-primary)' }}>{popup.stageId}</div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              <PopupBtn label="▶ 이 단계만 실행" onClick={() => onRun(popup.sourceId, popup.stageId, 'single')} />
-              {!popup.shared && (
-                <>
-                  <PopupBtn label="▶▶ 여기부터 끝까지" color="#ca8a04" onClick={() => onRun(popup.sourceId, popup.stageId, 'downstream')} />
-                  <PopupBtn label="▶▶▶ 전체 파이프라인" color="#0ea5e9" onClick={() => onRun(popup.sourceId, popup.stageId, 'all')} />
-                </>
-              )}
-            </div>
-          </div>
-        )}
+        {/* 팝업 제거 — 노드 하단 아이콘으로 직접 제어 */}
       </div>
 
       <style>{`
         .dag-node { cursor: pointer; }
-        .dag-node:hover rect { stroke-width: 2.5; }
+        .dag-node:hover rect.node-bg { stroke-width: 2.5; }
         .dag-node.running rect.node-bg { animation: dagpulse 2s ease-in-out infinite; }
+        .node-action:hover circle { fill: rgba(255,255,255,0.2) !important; }
         @keyframes dagpulse { 0%,100%{stroke-opacity:1} 50%{stroke-opacity:.4} }
       `}</style>
     </div>
+  )
+}
+
+function SettingToggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.8rem', color: 'var(--text-primary)', cursor: 'pointer', padding: '4px 0' }}>
+      <div onClick={(e) => { e.preventDefault(); onChange(!checked) }} style={{
+        width: 36, height: 20, borderRadius: 10, position: 'relative',
+        background: checked ? '#22c55e' : 'var(--bg-tertiary, #334155)',
+        transition: 'background 0.2s', cursor: 'pointer',
+      }}>
+        <div style={{
+          width: 16, height: 16, borderRadius: 8, background: '#fff',
+          position: 'absolute', top: 2, left: checked ? 18 : 2,
+          transition: 'left 0.2s',
+        }} />
+      </div>
+      {label}
+    </label>
   )
 }
 

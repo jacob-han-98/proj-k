@@ -52,7 +52,8 @@ function PipelinePage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [docFilter, setDocFilter] = useState<{ sourceId?: number; status?: string }>({})
-  const [jobFilter, setJobFilter] = useState<string | undefined>()
+  const [jobStatusFilter, setJobStatusFilter] = useState<Set<string>>(new Set())
+  const [jobTypeFilter, setJobTypeFilter] = useState<Set<string>>(new Set())
 
   const loadData = useCallback(async () => {
     try {
@@ -77,7 +78,7 @@ function PipelinePage() {
         .then(r => { setDocuments(r.documents); setDocTotal(r.total) })
         .catch(() => {})
     } else if (tab === 'jobs') {
-      fetchPipelineJobs(jobFilter)
+      fetchPipelineJobs()
         .then(r => { setJobs(r.jobs); setJobStats(r.stats) })
         .catch(() => {})
     } else if (tab === 'issues') {
@@ -89,14 +90,14 @@ function PipelinePage() {
         .then(r => setCrawlLogs(r.logs))
         .catch(() => {})
     }
-  }, [tab, docFilter, jobFilter, crawlLogFilter])
+  }, [tab, docFilter, jobStatusFilter, jobTypeFilter, crawlLogFilter])
 
   // running 작업이 있으면 3초마다 자동 새로고침 (작업큐 + 전체현황)
   useEffect(() => {
     const hasRunning = jobs.some(j => j.status === 'running')
     if (!hasRunning) return
     const timer = setInterval(() => {
-      fetchPipelineJobs(jobFilter)
+      fetchPipelineJobs()
         .then(r => { setJobs(r.jobs); setJobStats(r.stats) })
         .catch(() => {})
       if (tab === 'overview') {
@@ -104,7 +105,7 @@ function PipelinePage() {
       }
     }, 3000)
     return () => clearInterval(timer)
-  }, [jobs, tab, jobFilter, loadData])
+  }, [jobs, tab, loadData])
 
   const handleTrigger = async (jobType: string, sourceId?: number, documentId?: number) => {
     try {
@@ -289,19 +290,35 @@ function PipelinePage() {
       )}
 
       {/* Jobs */}
-      {tab === 'jobs' && (
+      {tab === 'jobs' && (() => {
+        const toggleSet = (set: Set<string>, val: string, setter: (s: Set<string>) => void) => {
+          const next = new Set(set)
+          next.has(val) ? next.delete(val) : next.add(val)
+          setter(next)
+        }
+        const filteredJobs = jobs.filter(j =>
+          (jobStatusFilter.size === 0 || jobStatusFilter.has(j.status)) &&
+          (jobTypeFilter.size === 0 || jobTypeFilter.has(j.job_type))
+        )
+        const jobTypes = [...new Set(jobs.map(j => j.job_type))]
+        return (
         <div>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-            {['', 'pending', 'running', 'completed', 'failed'].map(s => (
-              <button key={s} onClick={() => setJobFilter(s || undefined)} style={{
-                padding: '4px 12px', fontSize: '0.8rem', borderRadius: 6, cursor: 'pointer',
-                border: '1px solid var(--border-color)',
-                background: (jobFilter || '') === s ? '#2563eb' : 'var(--bg-secondary)',
-                color: (jobFilter || '') === s ? '#fff' : 'var(--text-primary)',
-              }}>
-                {s || '전체'}{jobStats[s] ? ` (${jobStats[s]})` : ''}
-              </button>
+          <div style={{ display: 'flex', gap: 16, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>상태:</span>
+            {['pending', 'running', 'completed', 'failed'].map(s => (
+              <label key={s} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8rem', cursor: 'pointer', color: 'var(--text-primary)' }}>
+                <input type="checkbox" checked={jobStatusFilter.has(s)} onChange={() => toggleSet(jobStatusFilter, s, setJobStatusFilter)} />
+                {s}{jobStats[s] ? ` (${jobStats[s]})` : ''}
+              </label>
             ))}
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginLeft: 12 }}>타입:</span>
+            {jobTypes.map(t => (
+              <label key={t} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.8rem', cursor: 'pointer', color: 'var(--text-primary)' }}>
+                <input type="checkbox" checked={jobTypeFilter.has(t)} onChange={() => toggleSet(jobTypeFilter, t, setJobTypeFilter)} />
+                {t}
+              </label>
+            ))}
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginLeft: 8 }}>{filteredJobs.length}건</span>
           </div>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
             <thead>
@@ -317,7 +334,7 @@ function PipelinePage() {
               </tr>
             </thead>
             <tbody>
-              {jobs.map(j => (
+              {filteredJobs.map(j => (
                 <tr key={j.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
                   <td style={{ padding: '6px 10px' }}>#{j.id}</td>
                   <td style={{ padding: '6px 10px' }}>{j.job_type}</td>
@@ -336,11 +353,12 @@ function PipelinePage() {
                   </td>
                 </tr>
               ))}
-              {jobs.length === 0 && <tr><td colSpan={8} style={{ padding: 20, textAlign: 'center', color: 'var(--text-secondary)' }}>작업 없음</td></tr>}
+              {filteredJobs.length === 0 && <tr><td colSpan={8} style={{ padding: 20, textAlign: 'center', color: 'var(--text-secondary)' }}>작업 없음</td></tr>}
             </tbody>
           </table>
         </div>
-      )}
+        )
+      })()}
 
       {/* Issues */}
       {tab === 'issues' && (

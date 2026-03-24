@@ -76,7 +76,9 @@ function PipelinePage() {
         .then(r => { setDocuments(r.documents); setDocTotal(r.total) })
         .catch(() => {})
     } else if (tab === 'jobs') {
-      fetchPipelineJobs()
+      const ss = [...jobStatusFilter]
+      const tt = [...jobTypeFilter]
+      fetchPipelineJobs(ss.length ? ss : undefined, tt.length ? tt : undefined)
         .then(r => { setJobs(r.jobs); setJobStats(r.stats) })
         .catch(() => {})
     } else if (tab === 'issues') {
@@ -290,11 +292,7 @@ function PipelinePage() {
           next.has(val) ? next.delete(val) : next.add(val)
           setter(next)
         }
-        const filteredJobs = jobs.filter(j =>
-          (jobStatusFilter.size === 0 || jobStatusFilter.has(j.status)) &&
-          (jobTypeFilter.size === 0 || jobTypeFilter.has(j.job_type))
-        )
-        const jobTypes = [...new Set(jobs.map(j => j.job_type))]
+        const jobTypes = ['crawl', 'download', 'enrich', 'capture', 'convert', 'index']
         return (
         <div>
           <div style={{ display: 'flex', gap: 16, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
@@ -312,7 +310,7 @@ function PipelinePage() {
                 {t}
               </label>
             ))}
-            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginLeft: 8 }}>{filteredJobs.length}건</span>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginLeft: 8 }}>{jobs.length}건</span>
           </div>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
             <thead>
@@ -328,7 +326,7 @@ function PipelinePage() {
               </tr>
             </thead>
             <tbody>
-              {filteredJobs.map(j => (
+              {jobs.map(j => (
                 <tr key={j.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
                   <td style={{ padding: '6px 10px' }}>#{j.id}</td>
                   <td style={{ padding: '6px 10px' }}>{j.job_type}</td>
@@ -347,7 +345,7 @@ function PipelinePage() {
                   </td>
                 </tr>
               ))}
-              {filteredJobs.length === 0 && <tr><td colSpan={8} style={{ padding: 20, textAlign: 'center', color: 'var(--text-secondary)' }}>작업 없음</td></tr>}
+              {jobs.length === 0 && <tr><td colSpan={8} style={{ padding: 20, textAlign: 'center', color: 'var(--text-secondary)' }}>작업 없음</td></tr>}
             </tbody>
           </table>
         </div>

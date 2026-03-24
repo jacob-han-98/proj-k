@@ -416,17 +416,28 @@ def fail_job(conn, job_id: int, error_message: str):
         )
 
 
-def list_jobs(conn, status: str = None, job_type: str = None, limit: int = 50) -> list[dict]:
+def list_jobs(conn, status: str = None, job_type: str = None, limit: int = 1000) -> list[dict]:
     sql = """SELECT j.*, d.title as doc_title, d.file_path as doc_path
              FROM jobs j LEFT JOIN documents d ON j.document_id = d.id
              WHERE 1=1"""
     params = []
     if status:
-        sql += " AND j.status = ?"
-        params.append(status)
+        # 콤마 구분 다중 필터 지원: "pending,running"
+        statuses = [s.strip() for s in status.split(",") if s.strip()]
+        if len(statuses) == 1:
+            sql += " AND j.status = ?"
+            params.append(statuses[0])
+        elif statuses:
+            sql += f" AND j.status IN ({','.join('?' for _ in statuses)})"
+            params.extend(statuses)
     if job_type:
-        sql += " AND j.job_type = ?"
-        params.append(job_type)
+        types = [t.strip() for t in job_type.split(",") if t.strip()]
+        if len(types) == 1:
+            sql += " AND j.job_type = ?"
+            params.append(types[0])
+        elif types:
+            sql += f" AND j.job_type IN ({','.join('?' for _ in types)})"
+            params.extend(types)
     sql += " ORDER BY j.created_at DESC LIMIT ?"
     params.append(limit)
     return [dict(r) for r in conn.execute(sql, params).fetchall()]

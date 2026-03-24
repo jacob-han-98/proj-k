@@ -151,16 +151,17 @@
   }
 
   function setSidebarMargin(width) {
-    // Use setProperty with !important to override Confluence styles
     if (width) {
       document.body.style.setProperty('margin-right', width + 'px', 'important');
-      // Also shrink the main content area (#content-body or main)
       const main = document.querySelector('#AkMainContent, [data-testid="grid-main-content"], #content');
       if (main) main.style.setProperty('max-width', `calc(100% - ${width}px)`, 'important');
+      // Adjust floating bar so it doesn't hide behind sidebar
+      if (floatingBar) floatingBar.style.setProperty('right', width + 'px');
     } else {
       document.body.style.removeProperty('margin-right');
       const main = document.querySelector('#AkMainContent, [data-testid="grid-main-content"], #content');
       if (main) main.style.removeProperty('max-width');
+      if (floatingBar) floatingBar.style.setProperty('right', '0');
     }
   }
 
@@ -383,12 +384,25 @@
   }
 
   function advanceFocus() {
-    const pending = [...document.querySelectorAll('.pk-inline-diff.pending')];
-    if (pending.length === 0) { setFocusedWidget(null); return; }
+    const allWidgets = [...document.querySelectorAll('.pk-inline-diff')];
+    const currentIdx = allWidgets.findIndex(w => w.dataset.changeId === focusedWidgetId);
 
-    const currentIdx = pending.findIndex(w => w.dataset.changeId === focusedWidgetId);
-    const next = pending[currentIdx + 1] || pending[0];
-    if (next) setFocusedWidget(next.dataset.changeId);
+    // First: look downward from current position
+    for (let i = currentIdx + 1; i < allWidgets.length; i++) {
+      if (allWidgets[i].classList.contains('pending')) {
+        setFocusedWidget(allWidgets[i].dataset.changeId);
+        return;
+      }
+    }
+    // Then: wrap to top and search from beginning (but stop before current)
+    for (let i = 0; i <= currentIdx; i++) {
+      if (allWidgets[i].classList.contains('pending')) {
+        setFocusedWidget(allWidgets[i].dataset.changeId);
+        return;
+      }
+    }
+    // No pending left at all
+    setFocusedWidget(null);
   }
 
   let keyboardActive = false;
@@ -413,11 +427,9 @@
     if (e.key === 'y' || e.key === 'Y') {
       e.preventDefault();
       applyInlineDecision(focusedWidgetId, 'accepted');
-      advanceFocus();
     } else if (e.key === 'n' || e.key === 'N') {
       e.preventDefault();
       applyInlineDecision(focusedWidgetId, 'rejected');
-      advanceFocus();
     } else if (e.key === ' ') {
       e.preventDefault();
       advanceFocus();
@@ -428,11 +440,23 @@
   }
 
   function scrollToNextPending(currentChangeId) {
-    const allWidgets = [...document.querySelectorAll('.pk-inline-diff.pending')];
+    // Go downward first, then wrap to top
+    const allWidgets = [...document.querySelectorAll('.pk-inline-diff')];
     const currentIdx = allWidgets.findIndex(w => w.dataset.changeId === currentChangeId);
-    const next = allWidgets[currentIdx + 1] || allWidgets[0];
-    if (next && next.dataset.changeId !== currentChangeId) {
-      next.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    // Downward from current
+    for (let i = currentIdx + 1; i < allWidgets.length; i++) {
+      if (allWidgets[i].classList.contains('pending')) {
+        setFocusedWidget(allWidgets[i].dataset.changeId);
+        return;
+      }
+    }
+    // Wrap to top
+    for (let i = 0; i < currentIdx; i++) {
+      if (allWidgets[i].classList.contains('pending')) {
+        setFocusedWidget(allWidgets[i].dataset.changeId);
+        return;
+      }
     }
   }
 
@@ -541,6 +565,8 @@
 
     const bar = createFloatingBar();
     bar.style.display = 'flex';
+    // Ensure bar doesn't hide behind sidebar
+    bar.style.right = isOpen ? sidebarWidth + 'px' : '0';
 
     bar.querySelector('#pk-float-accepted').textContent = `${accepted} accepted`;
     bar.querySelector('#pk-float-rejected').textContent = `${rejected} rejected`;
@@ -548,7 +574,14 @@
 
     const confirmBtn = bar.querySelector('#pk-float-confirm');
     confirmBtn.disabled = accepted === 0;
-    confirmBtn.textContent = accepted > 0 ? `Save ${accepted} Change(s)` : 'Save to Confluence';
+    confirmBtn.textContent = accepted > 0 ? `Save ${accepted} Change(s) to Confluence` : 'Save to Confluence';
+
+    // Highlight save button when all reviewed
+    if (pending === 0 && accepted > 0) {
+      confirmBtn.classList.add('pk-float-btn-ready');
+    } else {
+      confirmBtn.classList.remove('pk-float-btn-ready');
+    }
   }
 
   function hideFloatingBar() {

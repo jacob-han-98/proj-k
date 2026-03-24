@@ -605,12 +605,21 @@
   }
 
   function setupStatusBar() {
-    // Show API mode in status bar
-    // We can't directly access chrome.storage from iframe, but we get it from background
     $('#status-mode').textContent = 'Loading...';
-    // Will be updated when we get settings info
     callBackground('PING', {}).then(() => {
       $('#status-mode').textContent = 'Connected';
+      // Re-sync floating bar if we have an active edit session
+      if (editSession.changes.length > 0) {
+        const pending = editSession.changes.filter((c) => !editSession.decisions[c.id]);
+        const accepted = editSession.changes.filter((c) => editSession.decisions[c.id] === 'accepted');
+        const rejected = editSession.changes.filter((c) => editSession.decisions[c.id] === 'rejected');
+        sendToContent('UPDATE_COUNTS', {
+          total: editSession.changes.length,
+          accepted: accepted.length,
+          rejected: rejected.length,
+          pending: pending.length,
+        });
+      }
     }).catch(() => {
       $('#status-mode').textContent = 'Disconnected';
     });

@@ -16,6 +16,8 @@ import json
 import os
 import queue
 import re
+import subprocess
+import sys
 import threading
 import uuid
 from pathlib import Path
@@ -42,8 +44,6 @@ _auto_stop = threading.Event()
 def _auto_scheduler():
     """자동 크롤/다운로드/enrich 스케줄러. API 시작 시 백그라운드 실행."""
     import time as _time
-    import subprocess
-    import sys
 
     worker_dir = str(Path(__file__).resolve().parent.parent.parent / "data-pipeline")
 

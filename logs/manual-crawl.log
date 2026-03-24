@@ -1,0 +1,9 @@
+16:31:25 [worker] INFO DB 모드: local (SQLite 직접 접근)
+16:31:25 [worker] INFO 작업 수령: #2177 (crawl)
+16:31:25 [worker] INFO 크롤링: Confluence (confluence)
+16:31:25 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 07:16" ORDER BY lastModified DESC
+16:31:26 [worker] INFO   CQL 증분 결과: 1페이지 변경됨
+16:31:26 [worker] INFO   [CHANGED] 공허의 틈새(인터서버던전) 시스템 고도화 (v1 → v2)
+16:31:26 [worker] INFO   Confluence 결과 (incremental): 전체 1, 신규 0, 변경 1, 불변 0, 삭제 0
+16:31:26 [worker] INFO 크롤링 완료: 전체 1, 신규 0, 변경 1, 소요 1.0초
+16:31:26 [worker] INFO 작업 완료: #2177

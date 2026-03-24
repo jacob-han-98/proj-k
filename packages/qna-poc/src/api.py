@@ -1126,15 +1126,29 @@ def pipeline_dag_run(source_id: int, stage: str, mode: str = "single"):
             job_id = pdb.create_job(
                 conn, s, source_id=source_id,
                 worker_type=worker_type,
-                priority=10 - i,  # 앞 단계가 높은 우선순위
+                priority=10 - i,
             )
             created_jobs.append({"job_id": job_id, "stage": s})
 
-        return {
-            "source_id": source_id,
-            "mode": mode,
-            "jobs": created_jobs,
-        }
+    # DB 밖에서 첫 번째 단계 워커 실행
+    if created_jobs:
+        first_stage = created_jobs[0]["stage"]
+        if first_stage != "capture":  # capture는 Windows 전용
+            worker_dir = str(Path(__file__).resolve().parent.parent.parent / "data-pipeline")
+            log_path = Path(worker_dir).parent.parent / "logs"
+            log_path.mkdir(exist_ok=True)
+            subprocess.Popen(
+                [sys.executable, "-m", "src.worker", "--id", f"manual-{first_stage}", "--types", first_stage, "--once"],
+                cwd=worker_dir,
+                stdout=open(log_path / f"manual-{first_stage}.log", "a"),
+                stderr=subprocess.STDOUT,
+            )
+
+    return {
+        "source_id": source_id,
+        "mode": mode,
+        "jobs": created_jobs,
+    }
 
 
 @app.get("/admin/pipeline/issues")

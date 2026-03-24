@@ -294,9 +294,10 @@ export const fetchPipelineDocuments = async (sourceId?: number, status?: string)
   return res.json();
 };
 
-export const fetchPipelineJobs = async (status?: string): Promise<{ jobs: PipelineJob[]; stats: Record<string, number> }> => {
+export const fetchPipelineJobs = async (statuses?: string[], jobTypes?: string[]): Promise<{ jobs: PipelineJob[]; stats: Record<string, number>; total: number }> => {
   const params = new URLSearchParams();
-  if (status) params.set('status', status);
+  if (statuses?.length) params.set('status', statuses.join(','));
+  if (jobTypes?.length) params.set('job_type', jobTypes.join(','));
   const res = await fetch(`${API_BASE_URL}/admin/pipeline/jobs?${params}`);
   if (!res.ok) throw new Error(`API error: ${res.status}`);
   return res.json();

@@ -141,6 +141,8 @@ function buildSvg(dag: PipelineDagResponse, theme: ReturnType<typeof getThemeCol
       else if (displayStatus === 'completed') displayStatus = 'idle'
 
       const sc = STATUS_COLORS[displayStatus] || STATUS_COLORS.idle
+      const nodeFill = theme.bg2
+      const nodeStroke = theme.border
       const isRunning = displayStatus === 'running' || displayStatus === 'auto'
 
       positions.push({ x, y, id: `${src.source_id}-${stage.id}`, sourceId: src.source_id, stageId: stage.id })
@@ -161,7 +163,7 @@ function buildSvg(dag: PipelineDagResponse, theme: ReturnType<typeof getThemeCol
 
       svg += `<g class="dag-node ${isRunning ? 'running' : ''}" data-id="${src.source_id}-${stage.id}">
         <title>${esc(stage.label)}: ${esc(stage.desc || '')}${pendingCount ? `\n대기: ${pendingCount}건` : ''}</title>
-        <rect class="node-bg" x="${x}" y="${y}" width="${NODE_W}" height="${NODE_H}" rx="10" fill="${sc.fill}" stroke="${sc.stroke}" stroke-width="1.5"/>
+        <rect class="node-bg" x="${x}" y="${y}" width="${NODE_W}" height="${NODE_H}" rx="10" fill="${nodeFill}" stroke="${nodeStroke}" stroke-width="1.5"/>
         <text x="${x + NODE_W / 2}" y="${y + 18}" text-anchor="middle" fill="${theme.text}" font-size="12" font-weight="600">${esc(stage.label)}</text>
         <text x="${x + NODE_W / 2}" y="${y + 33}" text-anchor="middle" fill="${theme.text2}" font-size="9">${timeAgo(status.completed_at || status.created_at)}</text>
         <text x="${x + NODE_W / 2}" y="${y + 46}" text-anchor="middle" fill="${sc.text}" font-size="9" font-weight="600">${

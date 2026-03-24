@@ -878,7 +878,7 @@ def pipeline_document_detail(doc_id: int):
 
 
 @app.get("/admin/pipeline/jobs")
-def pipeline_jobs(status: str = None, job_type: str = None, limit: int = 50):
+def pipeline_jobs(status: str = None, job_type: str = None, limit: int = 200):
     """작업큐 목록."""
     pdb = _get_pipeline_db()
     with pdb.get_conn() as conn:

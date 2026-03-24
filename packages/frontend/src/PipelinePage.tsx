@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback, lazy, Suspense } from 'react'
 import {
   fetchPipelineStatus, fetchPipelineSources, fetchPipelineDocuments,
-  fetchPipelineJobs, fetchPipelineIssues, triggerPipelineJob, fetchCrawlLogs,
+  fetchPipelineJobs, fetchPipelineIssues, triggerPipelineJob,
 } from './api'
 import type {
   PipelineStats, PipelineSource, PipelineDocument,
-  PipelineJob, PipelineIssue, CrawlLog,
+  PipelineJob, PipelineIssue,
 } from './api'
 
 const PipelineGraphTab = lazy(() => import('./PipelineGraphTab'))
@@ -36,7 +36,7 @@ function formatTime(iso: string | null): string {
   return d.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
-type Tab = 'graph' | 'overview' | 'sources' | 'documents' | 'jobs' | 'issues' | 'crawl-logs'
+type Tab = 'graph' | 'overview' | 'sources' | 'documents' | 'jobs' | 'issues'
 
 function PipelinePage() {
   const [tab, setTab] = useState<Tab>('graph')
@@ -47,8 +47,6 @@ function PipelinePage() {
   const [jobs, setJobs] = useState<PipelineJob[]>([])
   const [jobStats, setJobStats] = useState<Record<string, number>>({})
   const [issues, setIssues] = useState<PipelineIssue[]>([])
-  const [crawlLogs, setCrawlLogs] = useState<CrawlLog[]>([])
-  const [crawlLogFilter, setCrawlLogFilter] = useState<number | undefined>()
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [docFilter, setDocFilter] = useState<{ sourceId?: number; status?: string }>({})
@@ -85,12 +83,8 @@ function PipelinePage() {
       fetchPipelineIssues()
         .then(r => setIssues(r.issues))
         .catch(() => {})
-    } else if (tab === 'crawl-logs') {
-      fetchCrawlLogs(crawlLogFilter)
-        .then(r => setCrawlLogs(r.logs))
-        .catch(() => {})
     }
-  }, [tab, docFilter, jobStatusFilter, jobTypeFilter, crawlLogFilter])
+  }, [tab, docFilter, jobStatusFilter, jobTypeFilter])
 
   // running 작업이 있으면 3초마다 자동 새로고침 (작업큐 + 전체현황)
   useEffect(() => {
@@ -132,7 +126,7 @@ function PipelinePage() {
 
       {/* Tab bar */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 24, borderBottom: '1px solid var(--border-color)', paddingBottom: 4 }}>
-        {(['graph', 'overview', 'sources', 'documents', 'jobs', 'issues', 'crawl-logs'] as Tab[]).map(t => (
+        {(['graph', 'overview', 'sources', 'documents', 'jobs', 'issues'] as Tab[]).map(t => (
           <button key={t} onClick={() => setTab(t)} style={{
             padding: '8px 16px', border: 'none', cursor: 'pointer', borderRadius: '8px 8px 0 0',
             background: 'transparent',
@@ -140,7 +134,7 @@ function PipelinePage() {
             fontWeight: tab === t ? 600 : 500, fontSize: '0.85rem',
             borderBottom: tab === t ? '2px solid #2563eb' : '2px solid transparent',
           }}>
-            {t === 'graph' ? 'Graph' : t === 'overview' ? '전체 현황' : t === 'sources' ? '소스' : t === 'documents' ? '문서' : t === 'jobs' ? '작업큐' : t === 'issues' ? '이슈' : '크롤 로그'}
+            {t === 'graph' ? 'Graph' : t === 'overview' ? '전체 현황' : t === 'sources' ? '소스' : t === 'documents' ? '문서' : t === 'jobs' ? '작업 내역' : '이슈'}
             {t === 'issues' && stats?.issues?.open ? ` (${stats.issues.open})` : ''}
           </button>
         ))}
@@ -395,62 +389,7 @@ function PipelinePage() {
         </div>
       )}
 
-      {/* Crawl Logs */}
-      {tab === 'crawl-logs' && (
-        <div>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-            <select value={crawlLogFilter || ''} onChange={e => setCrawlLogFilter(e.target.value ? Number(e.target.value) : undefined)}
-              style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border-color)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '0.8rem' }}>
-              <option value="">모든 소스</option>
-              {sources.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', alignSelf: 'center' }}>{crawlLogs.length}건</span>
-          </div>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
-            <thead>
-              <tr style={{ borderBottom: '2px solid var(--border-color)', textAlign: 'left' }}>
-                <th style={{ padding: '6px 10px' }}>시각</th>
-                <th style={{ padding: '6px 10px' }}>소스</th>
-                <th style={{ padding: '6px 10px' }}>타입</th>
-                <th style={{ padding: '6px 10px' }}>전체</th>
-                <th style={{ padding: '6px 10px' }}>신규</th>
-                <th style={{ padding: '6px 10px' }}>변경</th>
-                <th style={{ padding: '6px 10px' }}>불변</th>
-                <th style={{ padding: '6px 10px' }}>삭제</th>
-                <th style={{ padding: '6px 10px' }}>에러</th>
-                <th style={{ padding: '6px 10px' }}>소요</th>
-              </tr>
-            </thead>
-            <tbody>
-              {crawlLogs.map(cl => {
-                return (
-                  <tr key={cl.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                    <td style={{ padding: '6px 10px', color: 'var(--text-secondary)' }}>{formatTime(cl.created_at)}</td>
-                    <td style={{ padding: '6px 10px', fontSize: '0.75rem' }}>{sources.find(s => s.id === cl.source_id)?.name || cl.source_id}</td>
-                    <td style={{ padding: '6px 10px' }}><StatusBadge status={cl.crawl_type} /></td>
-                    <td style={{ padding: '6px 10px' }}>{cl.total_files}</td>
-                    <td style={{ padding: '6px 10px', color: cl.new_files > 0 ? '#22c55e' : 'var(--text-secondary)', fontWeight: cl.new_files > 0 ? 600 : 400 }}>
-                      {cl.new_files > 0 ? `+${cl.new_files}` : '0'}
-                    </td>
-                    <td style={{ padding: '6px 10px', color: cl.changed_files > 0 ? '#f59e0b' : 'var(--text-secondary)', fontWeight: cl.changed_files > 0 ? 600 : 400 }}>
-                      {cl.changed_files > 0 ? cl.changed_files : '0'}
-                    </td>
-                    <td style={{ padding: '6px 10px', color: 'var(--text-secondary)' }}>{cl.unchanged_files}</td>
-                    <td style={{ padding: '6px 10px', color: cl.deleted_files > 0 ? '#ef4444' : 'var(--text-secondary)' }}>
-                      {cl.deleted_files > 0 ? `-${cl.deleted_files}` : '0'}
-                    </td>
-                    <td style={{ padding: '6px 10px', color: cl.errors > 0 ? '#ef4444' : 'var(--text-secondary)' }}>{cl.errors}</td>
-                    <td style={{ padding: '6px 10px', color: 'var(--text-secondary)' }}>
-                      {cl.duration_sec != null ? `${cl.duration_sec.toFixed(1)}s` : '-'}
-                    </td>
-                  </tr>
-                )
-              })}
-              {crawlLogs.length === 0 && <tr><td colSpan={10} style={{ padding: 20, textAlign: 'center', color: 'var(--text-secondary)' }}>크롤 로그 없음</td></tr>}
-            </tbody>
-          </table>
-        </div>
-      )}
+      {/* Crawl Logs 탭 제거 — 작업 내역에 통합 */}
     </div>
   )
 }

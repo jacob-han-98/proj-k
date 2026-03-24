@@ -227,24 +227,35 @@ def _db_get_documents_by_source(source_id):
 
 
 def _auto_chain_jobs(source: dict, changed_docs: list[dict]):
-    """변경된 문서에 대해 다음 파이프라인 단계 작업을 자동 생성."""
+    """변경된 문서에 대해 다음 파이프라인 단계 작업을 자동 생성. 중복 방지."""
     if not changed_docs:
         return 0
 
     source_type = source["source_type"]
+    next_type = "capture" if source_type == "perforce" else "download"
     created = 0
+
+    # 이미 pending/running인 문서는 스킵
+    existing = set()
+    if _remote_mode:
+        pass
+    else:
+        with _db.get_conn() as conn:
+            rows = conn.execute(
+                "SELECT document_id FROM jobs WHERE job_type = ? AND status IN ('pending','running') AND document_id IS NOT NULL",
+                [next_type]
+            ).fetchall()
+            existing = {r["document_id"] for r in rows}
 
     source_id = source["id"]
     for doc in changed_docs:
         doc_id = doc["id"]
-        if source_type == "perforce":
-            _db_create_job("capture", source_id=source_id, document_id=doc_id,
-                           priority=3, worker_type="windows")
-            created += 1
-        elif source_type == "confluence":
-            _db_create_job("download", source_id=source_id, document_id=doc_id,
-                           priority=3, worker_type="any")
-            created += 1
+        if doc_id in existing:
+            continue
+        worker_type = "windows" if source_type == "perforce" else "any"
+        _db_create_job(next_type, source_id=source_id, document_id=doc_id,
+                       priority=3, worker_type=worker_type)
+        created += 1
 
     if created:
         log.info(f"  자동 체이닝: {created}개 후속 작업 생성 ({source_type})")

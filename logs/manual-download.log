@@ -1,0 +1,12 @@
+17:09:16 [worker] INFO DB 모드: local (SQLite 직접 접근)
+17:09:17 [worker] INFO 작업 수령: #2156 (download)
+17:09:17 [worker] INFO 다운로드: [Beta3] 퀘스트 개선 (page=5626496318, path=[Beta3] 퀘스트 개선)
+17:10:38 [worker] INFO   완료: [Beta3] 퀘스트 개선 (69974자, 이미지 80개) → /home/jacob/repos/proj-k/packages/confluence-downloader/output/[Beta3] 퀘스트 개선
+17:10:39 [worker] INFO   enrich 작업 체이닝 (이미지 80개)
+17:10:39 [worker] INFO 작업 완료: #2156
+17:13:18 [worker] INFO DB 모드: local (SQLite 직접 접근)
+17:13:18 [worker] INFO 작업 수령: #2157 (download)
+17:13:18 [worker] INFO 다운로드: [Beta3] 서대륙 컷신 제작 (page=5579440187, path=컷신/[Beta3] 서대륙 컷신 제작)
+17:14:46 [worker] INFO   완료: [Beta3] 서대륙 컷신 제작 (61545자, 이미지 66개) → /home/jacob/repos/proj-k/packages/confluence-downloader/output/컷신/[Beta3] 서대륙 컷신 제작
+17:14:48 [worker] INFO   enrich 작업 체이닝 (이미지 66개)
+17:14:49 [worker] INFO 작업 완료: #2157

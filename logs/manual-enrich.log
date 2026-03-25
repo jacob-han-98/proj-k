@@ -1,0 +1,379 @@
+14:56:47 [worker] INFO DB 모드: local (SQLite 직접 접근)
+14:56:48 [worker] INFO 작업 수령: #3082 (enrich)
+14:56:48 [worker] INFO 보강: DOF (Depth of Field) 임시 변경방법 (DOF (Depth of Field) 임시 변경방법)
+  [1/1] image-20241212-105329.png14:57:00 [worker] INFO   보강 완료: 이미지 0/1, 토큰 2476+516
+14:57:01 [worker] INFO 작업 완료: #3082
+ → OK (516 tokens, 12.6s)
+  → content_enriched.md 저장 완료
+15:01:46 [worker] INFO DB 모드: local (SQLite 직접 접근)
+15:01:46 [worker] INFO DB 모드: local (SQLite 직접 접근)
+15:01:46 [worker] INFO DB 모드: local (SQLite 직접 접근)
+15:01:46 [worker] INFO DB 모드: local (SQLite 직접 접근)
+15:01:46 [worker] INFO DB 모드: local (SQLite 직접 접근)
+15:01:46 [worker] INFO 작업 수령: #3083 (enrich)
+15:01:47 [worker] INFO 작업 수령: #3083 (enrich)
+15:01:47 [worker] INFO 보강: 공허의 틈새(인터서버던전) 시스템 고도화 (공허의 틈새(인터서버던전) 시스템 고도화)
+15:01:47 [worker] INFO 작업 수령: #3083 (enrich)
+  [1/5] image-20260324-074627.png15:01:47 [worker] INFO 보강: 공허의 틈새(인터서버던전) 시스템 고도화 (공허의 틈새(인터서버던전) 시스템 고도화)
+  [1/5] image-20260324-074627.png15:01:47 [worker] INFO 작업 수령: #3083 (enrich)
+15:01:47 [worker] INFO 보강: 공허의 틈새(인터서버던전) 시스템 고도화 (공허의 틈새(인터서버던전) 시스템 고도화)
+  [1/5] image-20260324-074627.png15:01:47 [worker] INFO 작업 수령: #3083 (enrich)
+15:01:47 [worker] INFO 보강: 공허의 틈새(인터서버던전) 시스템 고도화 (공허의 틈새(인터서버던전) 시스템 고도화)
+  [1/5] image-20260324-074627.png15:01:47 [worker] INFO 보강: 공허의 틈새(인터서버던전) 시스템 고도화 (공허의 틈새(인터서버던전) 시스템 고도화)
+  [1/5] image-20260324-074627.png  [resize] image-20260324-074627.png: 2901x1370 -> 2901x1370 (500KB)
+ → OK (576 tokens, 14.8s)
+  [2/5] image-20260324-074605.png  [resize] image-20260324-074627.png: 2901x1370 -> 2901x1370 (500KB)
+ → OK (570 tokens, 15.3s)
+  [2/5] image-20260324-074605.png  [resize] image-20260324-074627.png: 2901x1370 -> 2901x1370 (500KB)
+ → OK (560 tokens, 16.0s)
+  [2/5] image-20260324-074605.png  [resize] image-20260324-074627.png: 2901x1370 -> 2901x1370 (500KB)
+ → OK (586 tokens, 16.1s)
+  [2/5] image-20260324-074605.png  [resize] image-20260324-074627.png: 2901x1370 -> 2901x1370 (500KB)
+ → OK (671 tokens, 17.5s)
+  [2/5] image-20260324-074605.png  [resize] image-20260324-074605.png: 2903x1371 -> 2903x1371 (458KB)
+ → OK (489 tokens, 11.6s)
+  [3/5] image-20260324-081925.png  [resize] image-20260324-074605.png: 2903x1371 -> 2903x1371 (458KB)
+ → OK (485 tokens, 12.9s)
+  [3/5] image-20260324-081925.png  [resize] image-20260324-074605.png: 2903x1371 -> 2903x1371 (458KB)
+ → OK (569 tokens, 14.1s)
+  [3/5] image-20260324-081925.png  [resize] image-20260324-074605.png: 2903x1371 -> 2903x1371 (458KB)
+ → OK (598 tokens, 12.7s)
+  [3/5] image-20260324-081925.png  [resize] image-20260324-074605.png: 2903x1371 -> 2903x1371 (458KB)
+ → OK (543 tokens, 14.3s)
+  [3/5] image-20260324-081925.png  [resize] image-20260324-081925.png: 2910x1377 -> 2910x1377 (592KB)
+ → OK (566 tokens, 10.1s)
+  [4/5] image-20260324-081413.png  [resize] image-20260324-081925.png: 2910x1377 -> 2910x1377 (592KB)
+ → OK (610 tokens, 11.0s)
+  [4/5] image-20260324-081413.png  [resize] image-20260324-081925.png: 2910x1377 -> 2910x1377 (592KB)
+ → OK (624 tokens, 10.7s)
+  [4/5] image-20260324-081413.png  [resize] image-20260324-081925.png: 2910x1377 -> 2910x1377 (592KB)
+ → OK (695 tokens, 12.2s)
+  [4/5] image-20260324-081413.png → OK (244 tokens, 6.1s)
+  [5/5] image-20260324-081515.png  [resize] image-20260324-081925.png: 2910x1377 -> 2910x1377 (592KB)
+ → OK (598 tokens, 13.7s)
+  [4/5] image-20260324-081413.png → OK (235 tokens, 6.5s)
+  [5/5] image-20260324-081515.png → OK (252 tokens, 6.4s)
+  [5/5] image-20260324-081515.png → OK (291 tokens, 7.1s)
+  [5/5] image-20260324-081515.png → OK (257 tokens, 7.2s)
+  [5/5] image-20260324-081515.png15:02:39 [worker] INFO   보강 완료: 이미지 0/5, 토큰 32856+2247
+15:02:39 [worker] INFO 작업 완료: #3083
+ → OK (372 tokens, 8.5s)
+  → content_enriched.md 저장 완료
+15:02:41 [worker] INFO   보강 완료: 이미지 0/5, 토큰 32899+2250
+15:02:42 [worker] INFO 작업 완료: #3083
+ → OK (350 tokens, 8.2s)
+  → content_enriched.md 저장 완료
+15:02:44 [worker] INFO   보강 완료: 이미지 0/5, 토큰 33687+2539
+15:02:45 [worker] INFO 작업 완료: #3083
+ → OK (394 tokens, 9.6s)
+  → content_enriched.md 저장 완료
+15:02:47 [worker] INFO   보강 완료: 이미지 0/5, 토큰 33337+2550
+15:02:47 [worker] INFO 작업 완료: #3083
+ → OK (435 tokens, 10.0s)
+  → content_enriched.md 저장 완료
+15:02:48 [worker] INFO   보강 완료: 이미지 0/5, 토큰 33135+2372
+15:02:48 [worker] INFO 작업 완료: #3083
+ → OK (388 tokens, 9.4s)
+  → content_enriched.md 저장 완료
+15:03:07 [worker] INFO DB 모드: local (SQLite 직접 접근)
+15:03:07 [worker] INFO DB 모드: local (SQLite 직접 접근)
+15:03:07 [worker] INFO DB 모드: local (SQLite 직접 접근)
+15:03:07 [worker] INFO DB 모드: local (SQLite 직접 접근)
+15:03:07 [worker] INFO 작업 수령: #3084 (enrich)
+15:03:08 [worker] INFO 작업 수령: #3084 (enrich)
+15:03:08 [worker] INFO 작업 수령: #3084 (enrich)
+15:03:08 [worker] INFO 보강: 월드맵 개선 (월드맵 개선)
+  [1/5] image-20260323-082941.png15:03:08 [worker] INFO 작업 수령: #3084 (enrich)
+15:03:08 [worker] INFO 보강: 월드맵 개선 (월드맵 개선)
+15:03:08 [worker] INFO 보강: 월드맵 개선 (월드맵 개선)
+  [1/5] image-20260323-082941.png  [1/5] image-20260323-082941.png15:03:08 [worker] INFO 보강: 월드맵 개선 (월드맵 개선)
+  [1/5] image-20260323-082941.png → OK (293 tokens, 7.9s)
+  [2/5] image-20260323-082516.png → OK (292 tokens, 7.9s)
+  [2/5] image-20260323-082516.png → OK (329 tokens, 8.9s)
+  [2/5] image-20260323-082516.png → OK (308 tokens, 9.2s)
+  [2/5] image-20260323-082516.png → OK (348 tokens, 9.1s)
+  [3/5] image-20260323-083737.png → OK (379 tokens, 9.2s)
+  [3/5] image-20260323-083737.png → OK (397 tokens, 8.8s)
+  [3/5] image-20260323-083737.png → OK (385 tokens, 9.3s)
+  [3/5] image-20260323-083737.png → OK (400 tokens, 10.2s)
+  [4/5] image-20260323-083914.png → OK (456 tokens, 10.8s)
+  [4/5] image-20260323-083914.png → OK (468 tokens, 12.2s)
+  [4/5] image-20260323-083914.png → OK (474 tokens, 12.6s)
+  [4/5] image-20260323-083914.png → OK (295 tokens, 8.4s)
+  [5/5] image-20260323-085308.png → OK (347 tokens, 8.6s)
+  [5/5] image-20260323-085308.png → OK (319 tokens, 9.2s)
+  [5/5] image-20260323-085308.png → OK (321 tokens, 8.1s)
+  [5/5] image-20260323-085308.png15:03:54 [worker] INFO   보강 완료: 이미지 0/5, 토큰 22401+1851
+15:03:55 [worker] INFO 작업 완료: #3084
+  [resize] image-20260323-085308.png: 2000x967 -> 2000x967 (359KB)
+ → OK (484 tokens, 10.7s)
+  → content_enriched.md 저장 완료
+15:03:56 [worker] INFO   보강 완료: 이미지 0/5, 토큰 22468+1881
+15:03:56 [worker] INFO 작업 완료: #3084
+  [resize] image-20260323-085308.png: 2000x967 -> 2000x967 (359KB)
+ → OK (438 tokens, 11.4s)
+  → content_enriched.md 저장 완료
+15:03:59 [worker] INFO   보강 완료: 이미지 0/5, 토큰 22759+2042
+15:04:00 [worker] INFO 작업 완료: #3084
+  [resize] image-20260323-085308.png: 2000x967 -> 2000x967 (359KB)
+ → OK (529 tokens, 12.2s)
+  → content_enriched.md 저장 완료
+15:04:02 [worker] INFO   보강 완료: 이미지 0/5, 토큰 22653+1972
+15:04:02 [worker] INFO 작업 완료: #3084
+  [resize] image-20260323-085308.png: 2000x967 -> 2000x967 (359KB)
+ → OK (484 tokens, 14.3s)
+  → content_enriched.md 저장 완료
+15:04:10 [worker] INFO DB 모드: local (SQLite 직접 접근)
+15:04:10 [worker] INFO DB 모드: local (SQLite 직접 접근)
+15:04:10 [worker] INFO DB 모드: local (SQLite 직접 접근)
+15:04:11 [worker] INFO 작업 수령: #3085 (enrich)
+15:04:11 [worker] INFO 작업 수령: #3085 (enrich)
+15:04:11 [worker] INFO 보강: [개인 성장4] 점성술 시스템 컨셉 ([개인 성장4] 점성술 시스템 컨셉)
+  [1/2] image-20260324-070227.png15:04:11 [worker] INFO 작업 수령: #3085 (enrich)
+15:04:11 [worker] INFO 보강: [개인 성장4] 점성술 시스템 컨셉 ([개인 성장4] 점성술 시스템 컨셉)
+  [1/2] image-20260324-070227.png15:04:11 [worker] INFO 보강: [개인 성장4] 점성술 시스템 컨셉 ([개인 성장4] 점성술 시스템 컨셉)
+  [1/2] image-20260324-070227.png → OK (396 tokens, 11.1s)
+  [2/2] image-20260324-070237.png → OK (397 tokens, 12.4s)
+  [2/2] image-20260324-070237.png → OK (400 tokens, 13.2s)
+  [2/2] image-20260324-070237.png15:04:34 [worker] INFO   보강 완료: 이미지 0/2, 토큰 13973+859
+15:04:34 [worker] INFO 작업 완료: #3085
+ → OK (463 tokens, 11.6s)
+  → content_enriched.md 저장 완료
+15:04:35 [worker] INFO   보강 완료: 이미지 0/2, 토큰 13974+875
+15:04:36 [worker] INFO 작업 완료: #3085
+ → OK (478 tokens, 12.0s)
+  → content_enriched.md 저장 완료
+15:04:40 [worker] INFO   보강 완료: 이미지 0/2, 토큰 13977+893
+15:04:42 [worker] INFO 작업 완료: #3085
+ → OK (493 tokens, 16.0s)
+  → content_enriched.md 저장 완료
+15:15:57 [worker] INFO DB 모드: local (SQLite 직접 접근)
+15:15:57 [worker] INFO DB 모드: local (SQLite 직접 접근)
+15:15:57 [worker] INFO 작업 수령: #3086 (enrich)
+15:15:57 [worker] INFO 보강: 필드 및 던전 테리토리 정책 (필드 및 던전 테리토리 정책)
+  [1/1] image-20250424-072307.png15:15:57 [worker] INFO 작업 수령: #3086 (enrich)
+15:15:57 [worker] INFO 보강: 필드 및 던전 테리토리 정책 (필드 및 던전 테리토리 정책)
+  [1/1] image-20250424-072307.png15:16:07 [worker] INFO   보강 완료: 이미지 0/1, 토큰 4553+372
+15:16:08 [worker] INFO   보강 완료: 이미지 0/1, 토큰 4553+368
+15:16:08 [worker] INFO 작업 완료: #3086
+ → OK (372 tokens, 10.2s)
+  → content_enriched.md 저장 완료
+15:16:08 [worker] INFO 작업 완료: #3086
+ → OK (368 tokens, 10.4s)
+  → content_enriched.md 저장 완료
+15:26:48 [worker] INFO DB 모드: local (SQLite 직접 접근)
+15:26:50 [worker] INFO 작업 수령: #3087 (enrich)
+15:26:50 [worker] ERROR 작업 실패: #3087 — 'NoneType' object has no attribute 'get'
+15:26:59 [worker] INFO DB 모드: local (SQLite 직접 접근)
+15:27:00 [worker] INFO 작업 수령: #3087 (enrich)
+15:27:00 [worker] ERROR 작업 실패: #3087 — 'NoneType' object has no attribute 'get'
+15:33:18 [worker] INFO DB 모드: local (SQLite 직접 접근)
+15:33:18 [worker] INFO DB 모드: local (SQLite 직접 접근)
+15:33:18 [worker] INFO DB 모드: local (SQLite 직접 접근)
+15:33:18 [worker] INFO DB 모드: local (SQLite 직접 접근)
+15:33:18 [worker] INFO DB 모드: local (SQLite 직접 접근)
+15:33:18 [worker] INFO 작업 수령: #3082 (enrich)
+15:33:18 [worker] INFO 작업 수령: #3082 (enrich)
+15:33:18 [worker] INFO 보강: DOF (Depth of Field) 임시 변경방법 (DOF (Depth of Field) 임시 변경방법)
+  [1/1] image-20241212-105329.png15:33:18 [worker] INFO 작업 수령: #3082 (enrich)
+15:33:18 [worker] INFO 보강: DOF (Depth of Field) 임시 변경방법 (DOF (Depth of Field) 임시 변경방법)
+  [1/1] image-20241212-105329.png15:33:18 [worker] INFO 작업 수령: #3082 (enrich)
+15:33:18 [worker] INFO 보강: DOF (Depth of Field) 임시 변경방법 (DOF (Depth of Field) 임시 변경방법)
+  [1/1] image-20241212-105329.png15:33:18 [worker] INFO 보강: DOF (Depth of Field) 임시 변경방법 (DOF (Depth of Field) 임시 변경방법)
+  [1/1] image-20241212-105329.png15:33:18 [worker] INFO 작업 수령: #3082 (enrich)
+15:33:19 [worker] INFO 보강: DOF (Depth of Field) 임시 변경방법 (DOF (Depth of Field) 임시 변경방법)
+  [1/1] image-20241212-105329.png15:33:30 [worker] INFO   보강 완료: 이미지 0/1, 토큰 2476+472
+15:33:30 [worker] INFO   보강 완료: 이미지 0/1, 토큰 2476+487
+15:33:30 [worker] INFO 작업 완료: #3082
+ → OK (472 tokens, 11.1s)
+  → content_enriched.md 저장 완료
+15:33:30 [worker] INFO 작업 완료: #3082
+ → OK (487 tokens, 11.5s)
+  → content_enriched.md 저장 완료
+15:33:30 [worker] INFO   보강 완료: 이미지 0/1, 토큰 2476+476
+15:33:31 [worker] INFO 작업 완료: #3082
+ → OK (476 tokens, 12.1s)
+  → content_enriched.md 저장 완료
+15:33:31 [worker] INFO   보강 완료: 이미지 0/1, 토큰 2476+437
+15:33:31 [worker] INFO 작업 완료: #3082
+ → OK (437 tokens, 12.0s)
+  → content_enriched.md 저장 완료
+15:33:33 [worker] INFO   보강 완료: 이미지 0/1, 토큰 2476+452
+15:33:33 [worker] INFO 작업 완료: #3082
+ → OK (452 tokens, 14.7s)
+  → content_enriched.md 저장 완료
+15:34:19 [worker] INFO DB 모드: local (SQLite 직접 접근)
+15:34:19 [worker] INFO DB 모드: local (SQLite 직접 접근)
+15:34:19 [worker] INFO DB 모드: local (SQLite 직접 접근)
+15:34:19 [worker] INFO DB 모드: local (SQLite 직접 접근)
+15:34:20 [worker] INFO 작업 수령: #3083 (enrich)
+15:34:20 [worker] INFO 작업 수령: #3083 (enrich)
+15:34:20 [worker] INFO 보강: 공허의 틈새(인터서버던전) 시스템 고도화 (공허의 틈새(인터서버던전) 시스템 고도화)
+15:34:20 [worker] INFO 작업 수령: #3083 (enrich)
+  [1/5] image-20260324-074627.png15:34:20 [worker] INFO 보강: 공허의 틈새(인터서버던전) 시스템 고도화 (공허의 틈새(인터서버던전) 시스템 고도화)
+  [1/5] image-20260324-074627.png15:34:20 [worker] INFO 작업 수령: #3083 (enrich)
+15:34:20 [worker] INFO 보강: 공허의 틈새(인터서버던전) 시스템 고도화 (공허의 틈새(인터서버던전) 시스템 고도화)
+  [1/5] image-20260324-074627.png15:34:20 [worker] INFO 보강: 공허의 틈새(인터서버던전) 시스템 고도화 (공허의 틈새(인터서버던전) 시스템 고도화)
+  [1/5] image-20260324-074627.png  [resize] image-20260324-074627.png: 2901x1370 -> 2901x1370 (500KB)
+ → OK (575 tokens, 15.1s)
+  [2/5] image-20260324-074605.png  [resize] image-20260324-074627.png: 2901x1370 -> 2901x1370 (500KB)
+ → OK (552 tokens, 14.8s)
+  [2/5] image-20260324-074605.png  [resize] image-20260324-074627.png: 2901x1370 -> 2901x1370 (500KB)
+ → OK (564 tokens, 15.5s)
+  [2/5] image-20260324-074605.png  [resize] image-20260324-074627.png: 2901x1370 -> 2901x1370 (500KB)
+ → OK (615 tokens, 15.5s)
+  [2/5] image-20260324-074605.png  [resize] image-20260324-074605.png: 2903x1371 -> 2903x1371 (458KB)
+ → OK (488 tokens, 11.0s)
+  [3/5] image-20260324-081925.png  [resize] image-20260324-074605.png: 2903x1371 -> 2903x1371 (458KB)
+ → OK (491 tokens, 11.6s)
+  [3/5] image-20260324-081925.png  [resize] image-20260324-074605.png: 2903x1371 -> 2903x1371 (458KB)
+ → OK (512 tokens, 11.8s)
+  [3/5] image-20260324-081925.png  [resize] image-20260324-074605.png: 2903x1371 -> 2903x1371 (458KB)
+ → OK (585 tokens, 14.0s)
+  [3/5] image-20260324-081925.png  [resize] image-20260324-081925.png: 2910x1377 -> 2910x1377 (592KB)
+ → OK (612 tokens, 11.1s)
+  [4/5] image-20260324-081413.png  [resize] image-20260324-081925.png: 2910x1377 -> 2910x1377 (592KB)
+ → OK (623 tokens, 10.7s)
+  [4/5] image-20260324-081413.png  [resize] image-20260324-081925.png: 2910x1377 -> 2910x1377 (592KB)
+ → OK (577 tokens, 11.5s)
+  [4/5] image-20260324-081413.png  [resize] image-20260324-081925.png: 2910x1377 -> 2910x1377 (592KB)
+ → OK (598 tokens, 10.9s)
+  [4/5] image-20260324-081413.png → OK (298 tokens, 7.4s)
+  [5/5] image-20260324-081515.png → OK (294 tokens, 8.0s)
+  [5/5] image-20260324-081515.png → OK (315 tokens, 8.2s)
+  [5/5] image-20260324-081515.png → OK (302 tokens, 7.8s)
+  [5/5] image-20260324-081515.png15:35:15 [worker] INFO   보강 완료: 이미지 0/5, 토큰 32903+2407
+15:35:16 [worker] INFO 작업 완료: #3083
+ → OK (457 tokens, 10.0s)
+  → content_enriched.md 저장 완료
+15:35:16 [worker] INFO   보강 완료: 이미지 0/5, 토큰 33245+2462
+15:35:17 [worker] INFO 작업 완료: #3083
+ → OK (418 tokens, 9.8s)
+  → content_enriched.md 저장 완료
+15:35:17 [worker] INFO   보강 완료: 이미지 0/5, 토큰 32951+2442
+15:35:18 [worker] INFO 작업 완료: #3083
+ → OK (484 tokens, 10.5s)
+  → content_enriched.md 저장 완료
+15:35:19 [worker] INFO   보강 완료: 이미지 0/5, 토큰 33218+2532
+15:35:20 [worker] INFO 작업 완료: #3083
+ → OK (483 tokens, 10.2s)
+  → content_enriched.md 저장 완료
+15:39:14 [worker] INFO DB 모드: local (SQLite 직접 접근)
+15:39:14 [worker] INFO DB 모드: local (SQLite 직접 접근)
+15:39:14 [worker] INFO DB 모드: local (SQLite 직접 접근)
+15:39:15 [worker] INFO 작업 수령: #3084 (enrich)
+15:39:15 [worker] INFO 작업 수령: #3084 (enrich)
+15:39:15 [worker] INFO 작업 수령: #3084 (enrich)
+15:39:15 [worker] INFO 보강: 월드맵 개선 (월드맵 개선)
+  [1/5] image-20260323-082941.png15:39:15 [worker] INFO 보강: 월드맵 개선 (월드맵 개선)
+  [1/5] image-20260323-082941.png15:39:15 [worker] INFO 보강: 월드맵 개선 (월드맵 개선)
+  [1/5] image-20260323-082941.png → OK (291 tokens, 8.1s)
+  [2/5] image-20260323-082516.png → OK (308 tokens, 8.5s)
+  [2/5] image-20260323-082516.png → OK (330 tokens, 10.2s)
+  [2/5] image-20260323-082516.png → OK (392 tokens, 8.9s)
+  [3/5] image-20260323-083737.png → OK (331 tokens, 7.9s)
+  [3/5] image-20260323-083737.png → OK (287 tokens, 10.9s)
+  [3/5] image-20260323-083737.png → OK (417 tokens, 10.1s)
+  [4/5] image-20260323-083914.png → OK (423 tokens, 11.0s)
+  [4/5] image-20260323-083914.png → OK (494 tokens, 12.6s)
+  [4/5] image-20260323-083914.png → OK (303 tokens, 7.8s)
+  [5/5] image-20260323-085308.png → OK (331 tokens, 8.3s)
+  [5/5] image-20260323-085308.png → OK (312 tokens, 8.7s)
+  [5/5] image-20260323-085308.png15:40:01 [worker] INFO   보강 완료: 이미지 0/5, 토큰 22447+1752
+15:40:01 [worker] INFO 작업 완료: #3084
+  [resize] image-20260323-085308.png: 2000x967 -> 2000x967 (359KB)
+ → OK (371 tokens, 9.6s)
+  → content_enriched.md 저장 완료
+15:40:02 [worker] INFO   보강 완료: 이미지 0/5, 토큰 22582+1874
+15:40:02 [worker] INFO 작업 완료: #3084
+  [resize] image-20260323-085308.png: 2000x967 -> 2000x967 (359KB)
+ → OK (420 tokens, 10.3s)
+  → content_enriched.md 저장 완료
+15:40:09 [worker] INFO   보강 완료: 이미지 0/5, 토큰 22322+1891
+15:40:10 [worker] INFO 작업 완료: #3084
+  [resize] image-20260323-085308.png: 2000x967 -> 2000x967 (359KB)
+ → OK (507 tokens, 13.4s)
+  → content_enriched.md 저장 완료
+15:41:48 [worker] INFO DB 모드: local (SQLite 직접 접근)
+15:41:48 [worker] INFO DB 모드: local (SQLite 직접 접근)
+15:41:48 [worker] INFO DB 모드: local (SQLite 직접 접근)
+15:41:48 [worker] INFO DB 모드: local (SQLite 직접 접근)
+15:41:48 [worker] INFO DB 모드: local (SQLite 직접 접근)
+15:41:48 [worker] INFO 작업 수령: #3082 (enrich)
+15:41:48 [worker] INFO 작업 수령: #3082 (enrich)
+15:41:48 [worker] INFO 작업 수령: #3082 (enrich)
+15:41:49 [worker] INFO 보강: DOF (Depth of Field) 임시 변경방법 (DOF (Depth of Field) 임시 변경방법)
+  [1/1] image-20241212-105329.png15:41:49 [worker] INFO 보강: DOF (Depth of Field) 임시 변경방법 (DOF (Depth of Field) 임시 변경방법)
+  [1/1] image-20241212-105329.png15:41:49 [worker] INFO 보강: DOF (Depth of Field) 임시 변경방법 (DOF (Depth of Field) 임시 변경방법)
+15:41:49 [worker] INFO 작업 수령: #3082 (enrich)
+  [1/1] image-20241212-105329.png15:41:49 [worker] INFO 작업 수령: #3082 (enrich)
+15:41:49 [worker] INFO 보강: DOF (Depth of Field) 임시 변경방법 (DOF (Depth of Field) 임시 변경방법)
+  [1/1] image-20241212-105329.png15:41:49 [worker] INFO 보강: DOF (Depth of Field) 임시 변경방법 (DOF (Depth of Field) 임시 변경방법)
+  [1/1] image-20241212-105329.png15:42:00 [worker] INFO   보강 완료: 이미지 0/1, 토큰 2476+432
+15:42:00 [worker] INFO   보강 완료: 이미지 0/1, 토큰 2476+459
+15:42:00 [worker] INFO 작업 완료: #3082
+ → OK (432 tokens, 11.3s)
+  → content_enriched.md 저장 완료
+15:42:00 [worker] INFO 작업 완료: #3082
+ → OK (459 tokens, 11.1s)
+  → content_enriched.md 저장 완료
+15:42:01 [worker] INFO   보강 완료: 이미지 0/1, 토큰 2476+479
+15:42:01 [worker] INFO   보강 완료: 이미지 0/1, 토큰 2476+513
+15:42:01 [worker] INFO 작업 완료: #3082
+ → OK (479 tokens, 11.8s)
+  → content_enriched.md 저장 완료
+15:42:01 [worker] INFO 작업 완료: #3082
+ → OK (513 tokens, 12.2s)
+  → content_enriched.md 저장 완료
+15:42:04 [worker] INFO   보강 완료: 이미지 0/1, 토큰 2476+439
+15:42:05 [worker] INFO 작업 완료: #3082
+ → OK (439 tokens, 15.2s)
+  → content_enriched.md 저장 완료
+15:43:29 [worker] INFO DB 모드: local (SQLite 직접 접근)
+15:43:29 [worker] INFO DB 모드: local (SQLite 직접 접근)
+15:43:29 [worker] INFO DB 모드: local (SQLite 직접 접근)
+15:43:29 [worker] INFO DB 모드: local (SQLite 직접 접근)
+15:43:29 [worker] INFO DB 모드: local (SQLite 직접 접근)
+15:43:29 [worker] INFO 작업 수령: #3082 (enrich)
+15:43:30 [worker] INFO 보강: DOF (Depth of Field) 임시 변경방법 (DOF (Depth of Field) 임시 변경방법)
+15:43:30 [worker] INFO 작업 수령: #3083 (enrich)
+  [1/1] image-20241212-105329.png15:43:30 [worker] INFO 작업 수령: #3084 (enrich)
+15:43:30 [worker] INFO 보강: 공허의 틈새(인터서버던전) 시스템 고도화 (공허의 틈새(인터서버던전) 시스템 고도화)
+  [1/5] image-20260324-074627.png15:43:30 [worker] INFO 작업 수령: #3085 (enrich)
+15:43:30 [worker] INFO 보강: 월드맵 개선 (월드맵 개선)
+  [1/5] image-20260323-082941.png15:43:30 [worker] INFO 작업 수령: #3086 (enrich)
+15:43:30 [worker] INFO 보강: [개인 성장4] 점성술 시스템 컨셉 ([개인 성장4] 점성술 시스템 컨셉)
+  [1/2] image-20260324-070227.png15:43:30 [worker] INFO 보강: 필드 및 던전 테리토리 정책 (필드 및 던전 테리토리 정책)
+  [1/1] image-20250424-072307.png → OK (323 tokens, 9.0s)
+  [2/5] image-20260323-082516.png15:43:41 [worker] INFO   보강 완료: 이미지 0/1, 토큰 4553+373
+15:43:41 [worker] INFO 작업 완료: #3086
+ → OK (373 tokens, 10.7s)
+  → content_enriched.md 저장 완료
+15:43:42 [worker] INFO   보강 완료: 이미지 0/1, 토큰 2476+481
+15:43:42 [worker] INFO 작업 완료: #3082
+ → OK (481 tokens, 12.0s)
+  → content_enriched.md 저장 완료
+  [resize] image-20260324-074627.png: 2901x1370 -> 2901x1370 (500KB)
+ → OK (541 tokens, 14.3s)
+  [2/5] image-20260324-074605.png → OK (371 tokens, 15.2s)
+  [2/2] image-20260324-070237.png → OK (348 tokens, 8.6s)
+  [3/5] image-20260323-083737.png15:43:57 [worker] INFO   보강 완료: 이미지 0/2, 토큰 13948+851
+  [resize] image-20260324-074605.png: 2903x1371 -> 2903x1371 (458KB)
+ → OK (485 tokens, 13.8s)
+  [3/5] image-20260324-081925.png → OK (431 tokens, 11.3s)
+  [4/5] image-20260323-083914.png15:43:59 [worker] INFO 작업 완료: #3085
+ → OK (480 tokens, 12.0s)
+  → content_enriched.md 저장 완료
+ → OK (335 tokens, 8.3s)
+  [5/5] image-20260323-085308.png  [resize] image-20260324-081925.png: 2910x1377 -> 2910x1377 (592KB)
+ → OK (650 tokens, 15.4s)
+  [4/5] image-20260324-081413.png15:44:17 [worker] INFO   보강 완료: 이미지 0/5, 토큰 22530+1866
+15:44:18 [worker] INFO 작업 완료: #3084
+  [resize] image-20260323-085308.png: 2000x967 -> 2000x967 (359KB)
+ → OK (429 tokens, 10.1s)
+  → content_enriched.md 저장 완료
+ → OK (243 tokens, 6.2s)
+  [5/5] image-20260324-081515.png15:44:30 [worker] INFO   보강 완료: 이미지 0/5, 토큰 32871+2347
+15:44:30 [worker] INFO 작업 완료: #3083
+ → OK (428 tokens, 9.8s)
+  → content_enriched.md 저장 완료

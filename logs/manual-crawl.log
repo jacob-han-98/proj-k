@@ -23,3 +23,61 @@
 16:43:44 [worker] INFO   Confluence 결과 (incremental): 전체 0, 신규 0, 변경 0, 불변 0, 삭제 0
 16:43:45 [worker] INFO 크롤링 완료: 전체 0, 신규 0, 변경 0, 소요 0.7초
 16:43:45 [worker] INFO 작업 완료: #2179
+17:51:09 [worker] INFO DB 모드: local (SQLite 직접 접근)
+17:51:09 [worker] INFO 작업 수령: #2184 (crawl)
+17:51:09 [worker] INFO 크롤링: Confluence (confluence)
+17:51:09 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 00:00" ORDER BY lastModified DESC
+17:51:10 [worker] INFO   CQL 증분 결과: 14페이지 변경됨
+17:51:10 [worker] INFO   [CHANGED] 복수의 여정 시스템 (v14 → v17)
+17:51:10 [worker] INFO   [CHANGED] 스킬 자동 사용 및 주기 설정 (v15 → v16)
+17:51:10 [worker] INFO   [CHANGED] 공허의 틈새(인터서버던전) 시스템 고도화 (v2 → v2)
+17:51:11 [worker] INFO   [CHANGED] [개인 성장4] 점성술 시스템 (v2 → v2)
+17:51:11 [worker] INFO   [CHANGED] [Beta3] 서버 이동(탐험/침공) 콘텐츠 개선 (v13 → v13)
+17:51:11 [worker] INFO   [CHANGED] IBT 전용 (v1 → v1)
+17:51:11 [worker] INFO   [CHANGED] 자동 전투 시스템 (v6 → v6)
+17:51:11 [worker] INFO   [CHANGED] [Beta3] 퀘스트 개선 (v21 → v21)
+17:51:11 [worker] INFO   [CHANGED] [Beta3] 서대륙 컷신 제작 (v22 → v22)
+17:51:12 [worker] INFO   [CHANGED] 컷신 (v35 → v35)
+17:51:12 [worker] INFO   [CHANGED] 인터서버 던전 고도화(UI/UX 및 던전 기능) 관련 - 컨셉 (v15 → v15)
+17:51:12 [worker] INFO   [CHANGED] ID 대역대 정리 (v24 → v24)
+17:51:12 [worker] INFO   [CHANGED] 오프라인 자동 사냥 시스템 (v28 → v28)
+17:51:12 [worker] INFO   [CHANGED] 콘텐츠 별 재화 비중 (v9 → v9)
+17:51:12 [worker] INFO   Confluence 결과 (incremental): 전체 14, 신규 0, 변경 14, 불변 0, 삭제 0
+17:51:15 [worker] INFO   자동 체이닝: 14개 후속 작업 생성 (confluence)
+17:51:15 [worker] INFO 크롤링 완료: 전체 14, 신규 0, 변경 14, 소요 5.4초
+17:51:15 [worker] INFO 작업 완료: #2184
+18:00:22 [worker] INFO DB 모드: local (SQLite 직접 접근)
+18:00:22 [worker] INFO 작업 수령: #2199 (crawl)
+18:00:23 [worker] INFO 크롤링: Confluence (confluence)
+18:00:23 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 00:00" ORDER BY lastModified DESC
+18:00:23 [worker] INFO   CQL 증분 결과: 14페이지 변경됨
+18:00:23 [worker] INFO   [CHANGED] 복수의 여정 시스템 (v17 → v17)
+18:00:26 [worker] INFO   [CHANGED] 스킬 자동 사용 및 주기 설정 (v16 → v16)
+18:00:26 [worker] INFO   [CHANGED] 공허의 틈새(인터서버던전) 시스템 고도화 (v2 → v2)
+18:00:26 [worker] INFO   [CHANGED] [개인 성장4] 점성술 시스템 (v2 → v2)
+18:00:26 [worker] INFO   [CHANGED] [Beta3] 서버 이동(탐험/침공) 콘텐츠 개선 (v13 → v13)
+18:00:26 [worker] INFO   [CHANGED] IBT 전용 (v1 → v1)
+18:00:26 [worker] INFO   [CHANGED] 자동 전투 시스템 (v6 → v6)
+18:00:26 [worker] INFO   [CHANGED] [Beta3] 퀘스트 개선 (v21 → v21)
+18:00:27 [worker] INFO   [CHANGED] [Beta3] 서대륙 컷신 제작 (v22 → v22)
+18:00:27 [worker] INFO   [CHANGED] 컷신 (v35 → v35)
+18:00:27 [worker] INFO   [CHANGED] 인터서버 던전 고도화(UI/UX 및 던전 기능) 관련 - 컨셉 (v15 → v15)
+18:00:27 [worker] INFO   [CHANGED] ID 대역대 정리 (v24 → v24)
+18:00:27 [worker] INFO   [CHANGED] 오프라인 자동 사냥 시스템 (v28 → v28)
+18:00:27 [worker] INFO   [CHANGED] 콘텐츠 별 재화 비중 (v9 → v9)
+18:00:28 [worker] INFO   Confluence 결과 (incremental): 전체 14, 신규 0, 변경 14, 불변 0, 삭제 0
+18:00:55 [worker] INFO   자동 체이닝: 14개 후속 작업 생성 (confluence)
+18:00:55 [worker] INFO 크롤링 완료: 전체 14, 신규 0, 변경 14, 소요 32.0초
+18:00:55 [worker] INFO 작업 완료: #2199
+10:48:51 [worker] INFO DB 모드: local (SQLite 직접 접근)
+10:48:51 [worker] INFO 작업 수령: #2683 (crawl)
+10:48:52 [worker] INFO 크롤링: Confluence (confluence)
+10:48:52 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 10:13" ORDER BY lastModified DESC
+10:48:52 [worker] INFO   CQL 증분 결과: 3페이지 변경됨
+10:48:52 [worker] INFO   [CHANGED] 퀘스트 구성 정책 (v16 → v17)
+10:48:52 [worker] INFO   [CHANGED] 복수의 여정 시스템 (v20 → v32)
+10:48:53 [worker] INFO   [NEW] 필드 및 던전 테리토리 정책 (v1)
+10:48:53 [worker] INFO   Confluence 결과 (incremental): 전체 3, 신규 1, 변경 2, 불변 0, 삭제 0
+10:48:53 [worker] INFO   자동 체이닝: 3개 후속 작업 생성 (confluence)
+10:48:53 [worker] INFO 크롤링 완료: 전체 3, 신규 1, 변경 2, 소요 1.8초
+10:48:54 [worker] INFO 작업 완료: #2683

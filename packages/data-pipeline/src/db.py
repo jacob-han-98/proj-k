@@ -366,30 +366,38 @@ def create_job(conn, job_type: str, source_id: int = None, document_id: int = No
 
 
 def claim_job(conn, worker_id: str, worker_types: list[str] = None) -> Optional[dict]:
-    """워커가 작업을 가져감. worker_types로 job_type 필터."""
+    """워커가 작업을 원자적으로 가져감 (race condition 방지).
+
+    단일 UPDATE 문으로 pending → assigned 전환 + 대상 ID 획득.
+    여러 워커가 동시 호출해도 하나만 성공한다.
+    """
+    ts = now_iso()
     if worker_types and worker_types != ["any"]:
         placeholders = ",".join("?" for _ in worker_types)
-        sql = f"""SELECT * FROM jobs
-                  WHERE status = 'pending'
-                  AND job_type IN ({placeholders})
-                  ORDER BY priority ASC, created_at ASC
-                  LIMIT 1"""
-        row = conn.execute(sql, worker_types).fetchone()
+        sql = f"""UPDATE jobs SET status = 'assigned', worker_id = ?, assigned_at = ?
+                  WHERE id = (
+                      SELECT id FROM jobs
+                      WHERE status = 'pending' AND job_type IN ({placeholders})
+                      ORDER BY priority ASC, created_at ASC LIMIT 1
+                  ) AND status = 'pending'"""
+        conn.execute(sql, [worker_id, ts] + worker_types)
     else:
-        row = conn.execute(
-            """SELECT * FROM jobs WHERE status = 'pending'
-               ORDER BY priority ASC, created_at ASC LIMIT 1"""
-        ).fetchone()
+        conn.execute(
+            """UPDATE jobs SET status = 'assigned', worker_id = ?, assigned_at = ?
+               WHERE id = (
+                   SELECT id FROM jobs WHERE status = 'pending'
+                   ORDER BY priority ASC, created_at ASC LIMIT 1
+               ) AND status = 'pending'""",
+            (worker_id, ts)
+        )
 
-    if not row:
-        return None
+    # 방금 할당된 작업 조회
+    row = conn.execute(
+        "SELECT * FROM jobs WHERE worker_id = ? AND status = 'assigned' AND assigned_at = ?",
+        (worker_id, ts)
+    ).fetchone()
 
-    conn.execute(
-        """UPDATE jobs SET status = 'assigned', worker_id = ?, assigned_at = ?
-           WHERE id = ? AND status = 'pending'""",
-        (worker_id, now_iso(), row["id"])
-    )
-    return dict(row)
+    return dict(row) if row else None
 
 
 def start_job(conn, job_id: int):

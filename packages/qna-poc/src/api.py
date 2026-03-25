@@ -946,9 +946,9 @@ def pipeline_dag():
         "perforce": {
             "pipeline": "excel-vision",
             "stages": [
-                {"id": "crawl", "label": "Crawl", "desc": "P4 서버에서 7_System 폴더를 동기화하고, SHA256 해시 비교로 변경/추가된 xlsx 파일을 감지합니다."},
-                {"id": "capture", "label": "Capture", "desc": "Excel COM을 이용해 각 시트를 PNG 스크린샷으로 캡처합니다. (Windows 전용)"},
-                {"id": "convert", "label": "Convert", "desc": "Vision AI(Opus 4.6)로 스크린샷을 분석하고, OOXML 파싱 데이터로 수치를 보정하여 Markdown을 생성합니다."},
+                {"id": "crawl", "label": "P4 Download", "desc": "P4 서버에서 7_System 폴더를 동기화하고, SHA256 해시 비교로 변경/추가된 xlsx 파일을 감지합니다."},
+                {"id": "capture", "label": "ScreenShot (Excel COM)", "desc": "Excel COM을 이용해 각 시트를 PNG 스크린샷으로 캡처합니다. (Windows 전용)"},
+                {"id": "convert", "label": "Vision Convert (Opus 4.6)", "desc": "Vision AI(Opus 4.6)로 스크린샷을 분석하고, OOXML 파싱 데이터로 수치를 보정하여 Markdown을 생성합니다."},
             ],
             "edges": [
                 {"from": "crawl", "to": "capture"},
@@ -959,9 +959,9 @@ def pipeline_dag():
         "confluence": {
             "pipeline": "confluence-enrich",
             "stages": [
-                {"id": "crawl", "label": "Crawl", "desc": "Design 하위 페이지 트리를 재귀 탐색하여 전체 목록을 수집하고, 각 페이지의 version 번호를 DB와 비교하여 신규/변경/삭제를 감지합니다. 변경된 페이지만 download 작업큐에 등록합니다."},
-                {"id": "download", "label": "Download", "desc": "Confluence REST API로 페이지 본문(HTML)을 가져와 Markdown으로 변환하고, 첨부 이미지를 다운로드합니다. Design/시스템 디자인/스킬/... 계층 구조로 저장합니다."},
-                {"id": "enrich", "label": "Enrich", "desc": "이미지가 포함된 페이지를 Opus 4.6 Vision API로 분석하여, 각 이미지 아래에 게임 기획 맥락의 설명을 자동 삽입합니다. (content_enriched.md 생성)"},
+                {"id": "crawl", "label": "Web Scan", "desc": "Design 하위 페이지 트리를 재귀 탐색하여 전체 목록을 수집하고, 각 페이지의 version 번호를 DB와 비교하여 신규/변경/삭제를 감지합니다. 변경된 페이지만 download 작업큐에 등록합니다."},
+                {"id": "download", "label": "Web Download", "desc": "Confluence REST API로 페이지 본문(HTML)을 가져와 Markdown으로 변환하고, 첨부 이미지를 다운로드합니다. Design/시스템 디자인/스킬/... 계층 구조로 저장합니다."},
+                {"id": "enrich", "label": "Image Vision (Opus 4.6)", "desc": "이미지가 포함된 페이지를 Opus 4.6 Vision API로 분석하여, 각 이미지 아래에 게임 기획 맥락의 설명을 자동 삽입합니다. (content_enriched.md 생성)"},
             ],
             "edges": [
                 {"from": "crawl", "to": "download"},
@@ -972,7 +972,7 @@ def pipeline_dag():
     }
 
     SHARED_STAGES = [
-        {"id": "index", "label": "Index", "desc": "변환 완료된 Markdown을 청크 분할 → Titan 임베딩 → ChromaDB 벡터DB에 저장합니다."},
+        {"id": "index", "label": "Vector Indexing", "desc": "변환 완료된 Markdown을 청크 분할 → Titan 임베딩 → ChromaDB 벡터DB에 저장합니다."},
         {"id": "kg_build", "label": "KG Build", "desc": "시스템 간 관계를 분석하여 Knowledge Graph(NetworkX)를 생성합니다. QnA 검색 시 관련 시스템 확장에 사용됩니다."},
     ]
 
@@ -1075,13 +1075,16 @@ def pipeline_dag():
 
         # 가동 중인 워커 정보
         active_workers = pdb.get_active_workers(conn, timeout_sec=15)
+        all_job_types = ["crawl", "download", "enrich", "capture", "convert", "index"]
         # job_type별 워커 수 집계
         workers_by_type: dict[str, int] = {}
         for w in active_workers:
-            for jt in (w.get("job_types") or "").split(","):
-                jt = jt.strip()
-                if jt:
-                    workers_by_type[jt] = workers_by_type.get(jt, 0) + 1
+            job_types = [jt.strip() for jt in (w.get("job_types") or "").split(",") if jt.strip()]
+            # "any" 타입은 모든 job_type에 해당
+            if "any" in job_types:
+                job_types = all_job_types
+            for jt in job_types:
+                workers_by_type[jt] = workers_by_type.get(jt, 0) + 1
 
         return {
             "sources": source_data,
@@ -1157,35 +1160,37 @@ def pipeline_dag_run(source_id: int, stage: str, mode: str = "single"):
             from fastapi import HTTPException
             raise HTTPException(status_code=400, detail=f"잘못된 mode: {mode}")
 
-        # 작업 생성
-        created_jobs = []
-        for i, s in enumerate(run_stages):
-            worker_type = "windows" if s == "capture" else "any"
-            job_id = pdb.create_job(
-                conn, s, source_id=source_id,
-                worker_type=worker_type,
-                priority=10 - i,
-            )
-            created_jobs.append({"job_id": job_id, "stage": s})
+        # pending 작업 수 확인
+        pending_counts = {}
+        for s in run_stages:
+            cnt = conn.execute(
+                "SELECT COUNT(*) FROM jobs WHERE job_type=? AND source_id=? AND status='pending'",
+                [s, source_id]
+            ).fetchone()[0]
+            pending_counts[s] = cnt
 
-    # DB 밖에서 첫 번째 단계 워커 실행
-    if created_jobs:
-        first_stage = created_jobs[0]["stage"]
-        if first_stage != "capture":  # capture는 Windows 전용
-            worker_dir = str(Path(__file__).resolve().parent.parent.parent / "data-pipeline")
-            log_path = Path(worker_dir).parent.parent / "logs"
-            log_path.mkdir(exist_ok=True)
+        total_pending = sum(pending_counts.values())
+
+    # 워커 실행: pending 작업을 처리할 워커만 띄움
+    target_stage = run_stages[0] if run_stages else stage
+    if target_stage != "capture" and total_pending > 0:
+        worker_dir = str(Path(__file__).resolve().parent.parent.parent / "data-pipeline")
+        log_path = Path(worker_dir).parent.parent / "logs"
+        log_path.mkdir(exist_ok=True)
+        worker_count = min(total_pending, 5)
+        for wi in range(worker_count):
             subprocess.Popen(
-                [sys.executable, "-m", "src.worker", "--id", f"manual-{first_stage}", "--types", first_stage, "--once"],
+                [sys.executable, "-m", "src.worker", "--id", f"manual-{target_stage}-{wi}", "--types", target_stage, "--once"],
                 cwd=worker_dir,
-                stdout=open(log_path / f"manual-{first_stage}.log", "a"),
+                stdout=open(log_path / f"manual-{target_stage}.log", "a"),
                 stderr=subprocess.STDOUT,
             )
 
     return {
         "source_id": source_id,
         "mode": mode,
-        "jobs": created_jobs,
+        "pending": pending_counts,
+        "workers_launched": min(total_pending, 5) if total_pending > 0 else 0,
     }
 
 

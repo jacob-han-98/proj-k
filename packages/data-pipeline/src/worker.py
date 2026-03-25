@@ -1170,9 +1170,8 @@ class Worker:
     def _heartbeat(self):
         """하트비트 전송 — 이 워커가 가동 중임을 DB에 기록."""
         try:
-            job_types = list(_handlers.keys())
             with _db.get_conn() as conn:
-                _db.worker_heartbeat(conn, self.worker_id, self.worker_types, job_types)
+                _db.worker_heartbeat(conn, self.worker_id, self.worker_types, self.worker_types)
         except Exception:
             pass  # 하트비트 실패는 무시
 

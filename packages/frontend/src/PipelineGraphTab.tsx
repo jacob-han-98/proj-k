@@ -107,7 +107,7 @@ function buildSvg(dag: PipelineDagResponse, theme: ReturnType<typeof getThemeCol
   dag.sources.forEach((src, ri) => {
     const y = GAP_Y + ri * rowH + NODE_H / 2
 
-    svg += bezier(LABEL_W - 10, y, LABEL_W + GAP_X / 2, y, theme.border, false)
+    // 소스 라벨 → Crawl 엣지는 표시하지 않음 (pending 정보가 없고 시각적 노이즈)
 
     src.edges.forEach(e => {
       const fi = src.stages.findIndex(s => s.id === e.from)
@@ -115,25 +115,30 @@ function buildSvg(dag: PipelineDagResponse, theme: ReturnType<typeof getThemeCol
       if (fi < 0 || ti < 0) return
       const fx = LABEL_W + GAP_X / 2 + fi * (NODE_W + GAP_X) + NODE_W
       const tx = LABEL_W + GAP_X / 2 + ti * (NODE_W + GAP_X)
-      const fs = src.stage_status[e.from]?.status
-      const color = fs === 'completed' ? '#22c55e' : fs === 'running' ? '#0ea5e9' : theme.border
-      svg += bezier(fx, y, tx, y, color, false)
+      const toStatus = src.stage_status[e.to] || { status: 'idle' }
+      const pending = (toStatus.pending_count || 0) + (toStatus.running_count || 0)
+      const color = pending > 0 ? '#22c55e' : theme.border
+      svg += bezier(fx, y, tx, y, color, false, pending)
     })
 
+    // last stage → shared index
     const lastIdx = src.stages.findIndex(s => s.id === src.last_stage)
     if (lastIdx >= 0) {
       const fx = LABEL_W + GAP_X / 2 + lastIdx * (NODE_W + GAP_X) + NODE_W
       const sharedCY = (contentH - GAP_Y) / 2 + GAP_Y / 2
-      const ls = src.stage_status[src.last_stage]?.status
-      svg += bezier(fx, y, sharedX, sharedCY, ls === 'completed' ? '#22c55e88' : '#ca8a04', true)
+      const indexPending = (dag.shared_status['index']?.pending_count || 0) + (dag.shared_status['index']?.running_count || 0)
+      const color = indexPending > 0 ? '#22c55e' : theme.border
+      svg += bezier(fx, y, sharedX, sharedCY, color, true, indexPending)
     }
   })
 
   // shared internal edges
   dag.shared_edges.forEach(e => {
     const sharedCY = (contentH - GAP_Y) / 2 + GAP_Y / 2
-    const fs = dag.shared_status[e.from]?.status
-    svg += bezier(sharedX + NODE_W, sharedCY, sharedX + NODE_W + GAP_X, sharedCY, fs === 'completed' ? '#22c55e' : theme.border, false)
+    const toStatus = dag.shared_status[e.to] || { status: 'idle' }
+    const pending = (toStatus.pending_count || 0) + (toStatus.running_count || 0)
+    const color = pending > 0 ? '#22c55e' : theme.border
+    svg += bezier(sharedX + NODE_W, sharedCY, sharedX + NODE_W + GAP_X, sharedCY, color, false, pending)
   })
 
   // -- Source labels --
@@ -243,10 +248,20 @@ function buildSvg(dag: PipelineDagResponse, theme: ReturnType<typeof getThemeCol
   return { svg, positions, w: svgW, h: svgH }
 }
 
-function bezier(x1: number, y1: number, x2: number, y2: number, color: string, dashed: boolean): string {
+function bezier(x1: number, y1: number, x2: number, y2: number, color: string, dashed: boolean, pendingCount?: number): string {
   const cx1 = x1 + (x2 - x1) * 0.4
   const cx2 = x2 - (x2 - x1) * 0.4
-  return `<path d="M${x1},${y1} C${cx1},${y1} ${cx2},${y2} ${x2},${y2}" fill="none" stroke="${color}" stroke-width="1.5" ${dashed ? 'stroke-dasharray="6 3"' : ''} marker-end="url(#arrowhead)"/>`
+  let svg = `<path d="M${x1},${y1} C${cx1},${y1} ${cx2},${y2} ${x2},${y2}" fill="none" stroke="${color}" stroke-width="1.5" ${dashed ? 'stroke-dasharray="6 3"' : ''} marker-end="url(#arrowhead)"/>`
+  if (pendingCount && pendingCount > 0) {
+    // 엣지 중간점에 pending 배지 표시
+    const mx = (x1 + x2) / 2
+    const my = (y1 + y2) / 2 - 10
+    svg += `<g>
+      <rect x="${mx - 14}" y="${my - 8}" width="28" height="16" rx="8" fill="#ca8a04" opacity="0.9"/>
+      <text x="${mx}" y="${my + 4}" text-anchor="middle" fill="#fff" font-size="9" font-weight="700">${pendingCount}</text>
+    </g>`
+  }
+  return svg
 }
 
 function esc(s: string) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }
@@ -277,7 +292,7 @@ export default function PipelineGraphTab() {
   const [jobs, setJobs] = useState<PipelineJob[]>([])
   const [jobTotal, setJobTotal] = useState(0)
   const [jobPage, setJobPage] = useState(0)
-  const [jobStatusFilter, setJobStatusFilter] = useState<string | null>(null)
+  const [jobStatusFilter, setJobStatusFilter] = useState<Set<string>>(new Set())
   const [jobPageSize, setJobPageSize] = useState(50)
 
   const load = useCallback(async () => {
@@ -309,7 +324,7 @@ export default function PipelineGraphTab() {
     const sourceId = selected?.sourceId
     const jobType = selected?.stageId || undefined
     fetchPipelineJobs(
-      jobStatusFilter ? [jobStatusFilter] : undefined,
+      jobStatusFilter.size > 0 ? [...jobStatusFilter] : undefined,
       jobType ? [jobType] : undefined,
       jobPageSize,
       jobPage * jobPageSize,
@@ -326,7 +341,7 @@ export default function PipelineGraphTab() {
     const sourceId = selected?.sourceId
     const jobType = selected?.stageId || undefined
     const t = setInterval(() => {
-      fetchPipelineJobs(jobStatusFilter ? [jobStatusFilter] : undefined, jobType ? [jobType] : undefined, jobPageSize, jobPage * jobPageSize, sourceId || undefined)
+      fetchPipelineJobs(jobStatusFilter.size > 0 ? [...jobStatusFilter] : undefined, jobType ? [jobType] : undefined, jobPageSize, jobPage * jobPageSize, sourceId || undefined)
         .then(r => { setJobs(r.jobs); setJobTotal(r.total) })
         .catch(() => {})
     }, 3000)
@@ -336,8 +351,12 @@ export default function PipelineGraphTab() {
   const onRun = useCallback(async (sourceId: number, stage: string, mode: 'single' | 'downstream' | 'all') => {
     try {
       const sid = sourceId || dag?.sources[0]?.source_id || 1
-      const r = await runPipelineDag(sid, stage, mode)
-      setToast(`${mode === 'single' ? '단일' : mode === 'downstream' ? '순차' : '전체'} 실행: ${r.jobs.length}개 작업`)
+      // 노드 자동 선택
+      setSelected({ sourceId: sid, stageId: stage, label: stage })
+      const r = await runPipelineDag(sid, stage, mode) as any
+      const launched = r.workers_launched || 0
+      const pendingTotal = r.pending ? Object.values(r.pending as Record<string, number>).reduce((a: number, b: number) => a + b, 0) : 0
+      setToast(launched > 0 ? `워커 ${launched}개 실행 (대기 ${pendingTotal}건)` : '대기 작업 없음')
       setTimeout(() => setToast(null), 3000)
       load()
     } catch (e) {
@@ -348,17 +367,19 @@ export default function PipelineGraphTab() {
 
   const handleSvgClick = useCallback(async (e: React.MouseEvent) => {
     // ▶▶ 여기부터 끝까지
-    const dsTarget = (e.target as HTMLElement).closest('[data-run-downstream]') as HTMLElement | null
+    const dsTarget = (e.target as Element).closest('[data-run-downstream]') as Element | null
     if (dsTarget) {
-      const [sid, ...rest] = (dsTarget.dataset.runDownstream || '').split('-')
+      const val = dsTarget.getAttribute('data-run-downstream') || ''
+      const [sid, ...rest] = val.split('-')
       const stage = rest.join('-')
       if (sid && stage) onRun(Number(sid), stage, 'downstream')
       return
     }
     // ▶ 이 단계만 실행
-    const runTarget = (e.target as HTMLElement).closest('[data-run]') as HTMLElement | null
-    if (runTarget) {
-      const [sid, ...rest] = (runTarget.dataset.run || '').split('-')
+    const runTarget = (e.target as Element).closest('[data-run]') as Element | null
+    if (runTarget && !runTarget.hasAttribute('data-run-downstream')) {
+      const val = runTarget.getAttribute('data-run') || ''
+      const [sid, ...rest] = val.split('-')
       const stage = rest.join('-')
       if (sid && stage) onRun(Number(sid), stage, 'single')
       return
@@ -366,7 +387,7 @@ export default function PipelineGraphTab() {
     // ⟳ 자동 토글 클릭
     const autoTarget = (e.target as HTMLElement).closest('[data-auto]') as HTMLElement | null
     if (autoTarget) {
-      const [sid, ...autoRest] = (autoTarget.dataset.auto || '').split('-')
+      const [sid, ...autoRest] = (autoTarget.getAttribute('data-auto') || '').split('-')
       const stage = autoRest.join('-')
       if (sid && stage && dag) {
         const src = dag.sources.find(s => s.source_id === Number(sid))
@@ -397,8 +418,8 @@ export default function PipelineGraphTab() {
     const target = (e.target as HTMLElement).closest('.dag-node') as HTMLElement | null
     if (!target) { setSelected(null); setJobPage(0); return }
 
-    const sourceId = Number(target.dataset.source || '0')
-    const stageId = target.dataset.stage || ''
+    const sourceId = Number(target.getAttribute('data-source') || '0')
+    const stageId = target.getAttribute('data-stage') || ''
 
     // 같은 노드 클릭 시 선택 해제
     if (selected && selected.sourceId === sourceId && selected.stageId === stageId) {
@@ -495,19 +516,29 @@ export default function PipelineGraphTab() {
             <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>전체</span>
           )}
           <div style={{ display: 'flex', gap: 4, marginLeft: 12 }}>
-            {['pending', 'running', 'completed', 'failed'].map(s => (
-              <button
-                key={s}
-                onClick={() => { setJobStatusFilter(f => f === s ? null : s); setJobPage(0) }}
-                style={{
-                  padding: '2px 8px', fontSize: '0.7rem', borderRadius: 10, cursor: 'pointer',
-                  border: `1px solid ${jobStatusFilter === s ? JOB_STATUS_COLORS[s] : 'var(--border-color)'}`,
-                  background: jobStatusFilter === s ? (JOB_STATUS_COLORS[s] || '#6b7280') + '22' : 'transparent',
-                  color: jobStatusFilter === s ? JOB_STATUS_COLORS[s] : 'var(--text-secondary)',
-                  fontWeight: jobStatusFilter === s ? 600 : 400,
-                }}
-              >{s}</button>
-            ))}
+            {['pending', 'running', 'completed', 'failed'].map(s => {
+              const active = jobStatusFilter.has(s)
+              return (
+                <button
+                  key={s}
+                  onClick={() => {
+                    setJobStatusFilter(prev => {
+                      const next = new Set(prev)
+                      if (next.has(s)) next.delete(s); else next.add(s)
+                      return next
+                    })
+                    setJobPage(0)
+                  }}
+                  style={{
+                    padding: '2px 8px', fontSize: '0.7rem', borderRadius: 10, cursor: 'pointer',
+                    border: `1px solid ${active ? JOB_STATUS_COLORS[s] : 'var(--border-color)'}`,
+                    background: active ? (JOB_STATUS_COLORS[s] || '#6b7280') + '22' : 'transparent',
+                    color: active ? JOB_STATUS_COLORS[s] : 'var(--text-secondary)',
+                    fontWeight: active ? 600 : 400,
+                  }}
+                >{s}</button>
+              )
+            })}
           </div>
           <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginLeft: 'auto' }}>{jobTotal}건</span>
           <select
@@ -538,6 +569,12 @@ export default function PipelineGraphTab() {
                 <td style={{ padding: '4px 8px' }}>{j.job_type}</td>
                 <td style={{ padding: '4px 8px', maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {j.doc_title || j.doc_path || (j.source_name ? `[${j.source_name}]` : '-')}
+                  {j.doc_path && /^\d+$/.test(j.doc_path) && (
+                    <a href={`https://bighitcorp.atlassian.net/wiki/pages/viewpage.action?pageId=${j.doc_path}`}
+                       target="_blank" rel="noreferrer"
+                       style={{ marginLeft: 6, fontSize: '0.65rem', color: '#2563eb', textDecoration: 'none' }}
+                       title="Confluence에서 보기">↗</a>
+                  )}
                 </td>
                 <td style={{ padding: '4px 8px' }}>
                   <JobStatusBadge status={j.status} />

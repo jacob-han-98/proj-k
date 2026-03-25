@@ -328,6 +328,12 @@ export const fetchSheetContent = async (docId: number, sheetName: string): Promi
   return res.json();
 };
 
+export const retryJob = async (jobId: number): Promise<{ job_id: number; status: string }> => {
+  const res = await fetch(`${API_BASE_URL}/admin/pipeline/jobs/${jobId}/retry`, { method: 'POST' });
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res.json();
+};
+
 export const getDocumentDownloadUrl = (docId: number): string =>
   `${API_BASE_URL}/admin/pipeline/documents/${docId}/download`;
 

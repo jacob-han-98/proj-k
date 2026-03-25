@@ -1519,6 +1519,24 @@ def pipeline_fail_job(job_id: int, error_message: str = "unknown error"):
         return {"job_id": job_id, "status": "failed"}
 
 
+@app.post("/admin/pipeline/jobs/{job_id}/retry")
+def pipeline_retry_job(job_id: int):
+    """실패한 작업을 pending으로 재시도."""
+    pdb = _get_pipeline_db()
+    with pdb.get_conn() as conn:
+        job = conn.execute("SELECT * FROM jobs WHERE id=?", [job_id]).fetchone()
+        if not job:
+            raise HTTPException(status_code=404, detail="Job not found")
+        if dict(job)["status"] not in ("failed", "completed"):
+            raise HTTPException(status_code=400, detail=f"재시도 불가: status={dict(job)['status']}")
+        conn.execute(
+            "UPDATE jobs SET status='pending', worker_id=NULL, error_message=NULL, "
+            "completed_at=NULL, assigned_at=NULL, retry_count=retry_count+1 WHERE id=?",
+            [job_id]
+        )
+        return {"job_id": job_id, "status": "pending", "retry": True}
+
+
 class DocumentUpsert(BaseModel):
     source_id: int
     file_path: str

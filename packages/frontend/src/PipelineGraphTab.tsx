@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { fetchPipelineDag, fetchPipelineJobs, runPipelineDag, savePipelineSettings, type PipelineDagResponse, type PipelineJob } from './api'
+import { fetchPipelineDag, fetchPipelineJobs, runPipelineDag, savePipelineSettings, retryJob, type PipelineDagResponse, type PipelineJob } from './api'
 
 // ── Status theme (uses CSS vars at runtime) ───────
 
@@ -595,8 +595,39 @@ export default function PipelineGraphTab() {
                 </td>
                 <td style={{ padding: '4px 8px', color: 'var(--text-secondary)', fontSize: '0.72rem' }}>{formatTime(j.created_at)}</td>
                 <td style={{ padding: '4px 8px', color: 'var(--text-secondary)', fontSize: '0.72rem' }}>{formatTime(j.completed_at)}</td>
-                <td style={{ padding: '4px 8px', color: '#ef4444', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.72rem' }}>
+                <td style={{ padding: '4px 8px', color: '#ef4444', maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.72rem' }}>
                   {j.error_message || ''}
+                  {j.status === 'failed' && (
+                    <button
+                      onClick={async (e) => {
+                        e.stopPropagation()
+                        try {
+                          await retryJob(j.id)
+                          setToast('재시도: pending으로 이동')
+                          setTimeout(() => setToast(null), 2000)
+                          // 작업 목록 새로고침
+                          const sourceId = selected?.sourceId
+                          const jobType = selected?.stageId || undefined
+                          const r = await fetchPipelineJobs(
+                            jobStatusFilter.size > 0 ? [...jobStatusFilter] : undefined,
+                            jobType ? [jobType] : undefined, jobPageSize, jobPage * jobPageSize, sourceId || undefined
+                          )
+                          setJobs(r.jobs); setJobTotal(r.total)
+                          load()
+                        } catch (err) {
+                          setToast('재시도 실패: ' + (err instanceof Error ? err.message : String(err)))
+                          setTimeout(() => setToast(null), 3000)
+                        }
+                      }}
+                      style={{
+                        marginLeft: 6, padding: '1px 6px', fontSize: '0.65rem',
+                        border: '1px solid #f97316', borderRadius: 4,
+                        background: 'transparent', color: '#f97316',
+                        cursor: 'pointer', whiteSpace: 'nowrap',
+                      }}
+                      title="pending으로 재시도"
+                    >재시도</button>
+                  )}
                 </td>
               </tr>
             ))}

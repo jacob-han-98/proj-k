@@ -1067,10 +1067,33 @@ def _convert_vision_first(doc: dict, source: dict, params: dict) -> dict:
 
 
 def _convert_table_parser(doc: dict, source: dict, params: dict) -> dict:
-    """테이블 파서 변환 — 수치/테이블 구조 우선."""
-    # TODO: 데이터시트용 테이블 파서 구현
-    log.warning("table-parser 전략은 아직 구현 중")
-    return {"status": "not_implemented"}
+    """테이블 파서 변환 — 데이터시트를 SQLite로 인제스트."""
+    props = json.loads(source.get("properties", "{}"))
+    local_path = props.get("local_path", "")
+
+    if not local_path:
+        raise ValueError("table-parser: local_path 속성 필요")
+
+    design_dir = Path(local_path)
+    if not design_dir.exists():
+        raise FileNotFoundError(f"데이터시트 디렉토리 없음: {design_dir}")
+
+    conv_id = _db_create_conversion(doc["id"], "convert", "table-parser",
+                                     input_path=str(design_dir))
+
+    # game_data 모듈로 인제스트
+    from src.game_data import ingest_all, get_db_path
+
+    db_path = get_db_path()
+    report = ingest_all(str(design_dir), db_path)
+
+    _db_complete_conversion(conv_id, str(db_path), stats=report)
+    _db_update_document_status(doc["id"], "converted")
+
+    log.info(f"  table-parser 완료: {report.get('tables_created', 0)}개 테이블, "
+             f"{report.get('total_rows', 0)}행, {report.get('db_size_mb', 0)}MB")
+
+    return report
 
 
 def _convert_confluence(doc: dict, source: dict, strategy: str, params: dict) -> dict:

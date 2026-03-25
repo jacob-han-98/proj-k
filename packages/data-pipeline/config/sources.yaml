@@ -13,15 +13,15 @@ sources:
       description: "핵심 시스템 기획서 (67개 xlsx)"
       file_types: ["xlsx"]
 
-  # - name: "DataSheet"
-  #   type: perforce
-  #   path: "//main/ProjectK/.../DataSheet/..."
-  #   convert_strategy: table-parser
-  #   schedule: daily
-  #   properties:
-  #     local_path: "D:/ProjectK/Design/DataSheet"
-  #     description: "수치 데이터 시트 — 테이블 구조 정확도 우선"
-  #     file_types: ["xlsx"]
+  - name: "DataSheet"
+    type: perforce
+    path: "//main/ProjectK/.../DataSheet/..."
+    convert_strategy: table-parser
+    schedule: daily
+    properties:
+      local_path: "/mnt/d/projectk/resource/design"
+      description: "게임 데이터시트 — 클라/서버 실제 사용 수치 데이터 (tool calling용)"
+      file_types: ["xlsx"]
 
   # - name: "9_MileStone"
   #   type: perforce

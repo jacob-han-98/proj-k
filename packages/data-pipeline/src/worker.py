@@ -82,6 +82,25 @@ def register_handler(job_type: str):
     return decorator
 
 
+def _safe_dir_parts(tree_path: str, title: str = "") -> list[str]:
+    """tree_path를 안전한 디렉토리 parts로 변환.
+
+    제목에 '/'가 포함된 경우 tree_path.split('/')이 잘못 분리되므로,
+    제목 부분의 '/'는 '_'로 치환한다.
+    """
+    import re as _re
+    def _sanitize(s):
+        return _re.sub(r'[<>:"/\\|?*]', '_', s)[:100]
+
+    if title and '/' in title and tree_path.endswith(title):
+        parent = tree_path[:-len(title)].rstrip('/')
+        parts = [_sanitize(p) for p in parent.split('/') if p]
+        parts.append(_sanitize(title))
+        return parts
+
+    return [_sanitize(p) for p in tree_path.split('/')]
+
+
 # ── 내장 핸들러 ───────────────────────────────────────────
 
 def _db_get_source(source_id: int):
@@ -208,6 +227,18 @@ def _db_create_crawl_log(source_id, **kwargs):
     else:
         with _db.get_conn() as conn:
             return _db.create_crawl_log(conn, source_id, **kwargs)
+
+
+def _db_create_issue(document_id, issue_type, severity, title, description="", reported_by="system"):
+    if _remote_mode:
+        return _db.create_issue(document_id=document_id, issue_type=issue_type,
+                                severity=severity, title=title,
+                                description=description, reported_by=reported_by)
+    else:
+        with _db.get_conn() as conn:
+            return _db.create_issue(conn, document_id=document_id, issue_type=issue_type,
+                                    severity=severity, title=title,
+                                    description=description, reported_by=reported_by)
 
 
 def _db_update_source_properties(source_id, properties):
@@ -501,8 +532,43 @@ def _crawl_confluence(source: dict, params: dict, job_id: int = None) -> dict:
 
     # B. ancestors 경로 빌드 (계층 폴더용)
     page_map = {str(p["id"]): p for p in all_pages}
+
+    # 증분 크롤 시 기존 DB의 tree_path를 fallback으로 사용
+    existing_tree_paths = {}
+    for doc in existing_docs:
+        doc_meta = json.loads(doc.get("metadata", "{}") or "{}")
+        if doc_meta.get("tree_path") and "/" in doc_meta["tree_path"]:
+            existing_tree_paths[doc["file_path"]] = doc_meta["tree_path"]
+
+    # root_page_id 와 그 상위(스페이스 루트 등)를 모두 제외하기 위한 세트
+    # CQL ancestors에는 [스페이스루트, Design루트, 중간카테고리, ...] 순서로 나옴
+    # root_page_id (Design) 자체와 그 위의 ancestor는 모두 제외해야 함
+    _exclude_ancestor_ids = {root_page_id}
+    try:
+        resp = _requests.get(f"{url}/rest/api/content/{root_page_id}",
+                             params={"expand": "ancestors"}, auth=(username, token))
+        if resp.ok:
+            for a in resp.json().get("ancestors", []):
+                _exclude_ancestor_ids.add(str(a["id"]))
+    except Exception:
+        pass
+    log.info(f"  ancestors 제외 ID: {_exclude_ancestor_ids}")
+
     def _build_path(page):
-        """페이지의 Confluence 트리 경로를 구성 (예: Design/시스템 디자인/스킬)."""
+        """페이지의 Confluence 트리 경로를 구성 (예: 시스템 디자인/스킬/스킬 강화 시스템)."""
+        page_id = str(page["id"])
+
+        # 방법 1: ancestors 필드 활용 (CQL 응답에 포함)
+        ancestors = page.get("ancestors", [])
+        if ancestors:
+            # ancestors는 [스페이스루트, Design루트, ..., direct_parent] 순서
+            # root_page와 그 상위 모두 제외
+            parts = [a.get("title", "") for a in ancestors if str(a["id"]) not in _exclude_ancestor_ids]
+            parts.append(page.get("title", ""))
+            if len(parts) > 1:
+                return "/".join(parts)
+
+        # 방법 2: page_map에서 부모 타고 올라가기 (full crawl 시)
         parts = [page.get("title", "")]
         parent_id = str(page.get("_parent_id", ""))
         visited = set()
@@ -511,7 +577,14 @@ def _crawl_confluence(source: dict, params: dict, job_id: int = None) -> dict:
             parent = page_map[parent_id]
             parts.insert(0, parent.get("title", ""))
             parent_id = str(parent.get("_parent_id", ""))
-        return "/".join(parts)
+        if len(parts) > 1:
+            return "/".join(parts)
+
+        # 방법 3: 기존 DB의 tree_path fallback
+        if page_id in existing_tree_paths:
+            return existing_tree_paths[page_id]
+
+        return page.get("title", "")
 
     # C. 기존 문서 버전 매핑 (변경 감지용)
     existing_docs = _db_get_documents_by_source(source["id"])
@@ -713,6 +786,10 @@ def handle_download(job: dict, worker_id: str) -> dict:
     meta = json.loads(doc.get("metadata", "{}") or "{}")
     tree_path = meta.get("tree_path", title)  # 예: "시스템 디자인/스킬/스킬 강화 시스템"
 
+    # tree_path 검증: 빈 문자열이거나 제목만 있으면 crawl 단계에서 경로가 누락된 것
+    if not tree_path or tree_path == title:
+        log.warning(f"  tree_path 누락 — 제목으로 fallback: {title}")
+
     log.info(f"다운로드: {title} (page={page_id}, path={tree_path})")
 
     # Confluence 클라이언트 로드
@@ -742,40 +819,70 @@ def handle_download(job: dict, worker_id: str) -> dict:
         pass
 
     # 페이지 본문 조회
-    page_data = client.get_page(page_id, expand="body.storage,version")
+    try:
+        page_data = client.get_page(page_id, expand="body.storage,version")
+    except Exception as e:
+        err = str(e)
+        if "403" in err or "401" in err:
+            # 권한 없음 → issue 자동 등록
+            log.warning(f"  권한 없음: {title} (page={page_id})")
+            _db_update_document_status(document_id, "error")
+            try:
+                _db_create_issue(
+                    document_id=document_id,
+                    issue_type="access_denied",
+                    severity="medium",
+                    title=f"Confluence 접근 권한 없음: {title}",
+                    description=f"API 토큰으로 page {page_id} 접근 불가. 페이지 권한 조정 또는 API 토큰 권한 확대 필요.",
+                    reported_by="system",
+                )
+            except Exception:
+                pass  # 이슈 생성 실패해도 다운로드 실패 처리
+            return {"status": "access_denied", "title": title, "error": err[:200]}
+        raise
+
     body_html = page_data.get("body", {}).get("storage", {}).get("value", "")
 
     if not body_html:
-        log.warning(f"  본문 비어있음: {title}")
-        _db_update_document_status(document_id, "converted")
-        return {"status": "empty", "title": title}
+        # 빈 페이지 → placeholder content.md 생성
+        log.info(f"  빈 페이지 (본문 없음): {title}")
+        output_dir = cd_dir / "output"
+        safe_parts = _safe_dir_parts(tree_path, title)
+        page_dir = output_dir / "/".join(safe_parts)
+        page_dir.mkdir(parents=True, exist_ok=True)
+        page_version = page_data.get("version", {}).get("number", 0)
+        confluence_url = os.getenv("CONFLUENCE_URL", "").rstrip("/")
+        page_link = f"{confluence_url}/wiki/pages/viewpage.action?pageId={page_id}"
+        (page_dir / "content.md").write_text(
+            f"# {title}\n\n"
+            f"> 이 페이지는 Confluence에 본문이 비어있습니다. (v{page_version})\n"
+            f"> [Confluence에서 보기]({page_link})\n",
+            encoding="utf-8",
+        )
+        _db_update_document_status(document_id, "downloaded")
+        return {"status": "empty", "title": title, "placeholder_created": True}
 
     # 계층 폴더 생성 (Design/시스템 디자인/스킬/스킬 강화 시스템)
     output_dir = cd_dir / "output"
-    safe_parts = [re.sub(r'[<>:"|?*]', '_', p)[:100] for p in tree_path.split("/")]
+    safe_parts = _safe_dir_parts(tree_path, title)
     page_dir = output_dir / "/".join(safe_parts)
     page_dir.mkdir(parents=True, exist_ok=True)
     images_dir = page_dir / "images"
     images_dir.mkdir(exist_ok=True)
 
+    # 원본 HTML 저장 (재변환 가능하도록)
+    (page_dir / "content.html").write_text(body_html, encoding="utf-8")
+
     # HTML → Markdown 변환
-    image_refs = []
     if converter_mod and hasattr(converter_mod, 'convert_storage_to_markdown'):
         markdown, image_refs, _ = converter_mod.convert_storage_to_markdown(body_html, page_title=title)
-    elif converter_mod and hasattr(converter_mod, 'convert_confluence_to_markdown'):
-        markdown = converter_mod.convert_confluence_to_markdown(body_html)
     else:
-        markdown = body_html
-
-    # 이미지 파일명 plain text → ![](images/) 참조로 변환
-    for img_ref in image_refs:
-        # "image-20250922-091022.png" → "![image-20250922-091022.png](images/image-20250922-091022.png)"
-        if img_ref in markdown and f"![{img_ref}]" not in markdown:
-            markdown = markdown.replace(img_ref, f"![{img_ref}](images/{img_ref})")
+        markdown = f"# {title}\n\n{body_html}"
+        image_refs = []
 
     # content.md 저장
     content_path = page_dir / "content.md"
-    content_path.write_text(f"# {title}\n\n{markdown}", encoding="utf-8")
+    content_path.write_text(markdown, encoding="utf-8")
 
     # 첨부파일(이미지) 다운로드
     attachments = client.get_attachments(page_id)
@@ -848,7 +955,7 @@ def handle_enrich(job: dict, worker_id: str) -> dict:
     cd_dir = PROJECT_ROOT / "packages" / "confluence-downloader"
     output_dir = cd_dir / "output"
     import re
-    safe_parts = [re.sub(r'[<>:"|?*]', '_', p)[:100] for p in tree_path.split("/")]
+    safe_parts = _safe_dir_parts(tree_path, title)
     page_dir = output_dir / "/".join(safe_parts)
 
     if not (page_dir / "content.md").exists():
@@ -1020,7 +1127,7 @@ def handle_index(job: dict, worker_id: str) -> dict:
 
 class Worker:
     def __init__(self, worker_id: str, worker_types: list[str] = None,
-                 poll_interval: int = 10):
+                 poll_interval: int = 3):
         self.worker_id = worker_id
         self.worker_types = worker_types or ["any"]
         self.poll_interval = poll_interval
@@ -1059,6 +1166,15 @@ class Worker:
 
         return True
 
+    def _heartbeat(self):
+        """하트비트 전송 — 이 워커가 가동 중임을 DB에 기록."""
+        try:
+            job_types = list(_handlers.keys())
+            with _db.get_conn() as conn:
+                _db.worker_heartbeat(conn, self.worker_id, self.worker_types, job_types)
+        except Exception:
+            pass  # 하트비트 실패는 무시
+
     def run(self):
         """작업 루프 (Ctrl+C로 중지)."""
         signal.signal(signal.SIGINT, self.stop)
@@ -1067,8 +1183,11 @@ class Worker:
         log.info(f"워커 시작: {self.worker_id} (타입: {self.worker_types})")
         log.info(f"폴링 간격: {self.poll_interval}s")
 
+        self._heartbeat()
+
         while self.running:
             try:
+                self._heartbeat()
                 had_work = self.run_once()
                 if not had_work:
                     time.sleep(self.poll_interval)

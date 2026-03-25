@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { fetchPipelineDag, runPipelineDag, savePipelineSettings, type PipelineDagResponse } from './api'
+import { fetchPipelineDag, fetchPipelineJobs, runPipelineDag, savePipelineSettings, type PipelineDagResponse, type PipelineJob } from './api'
 
 // ── Status theme (uses CSS vars at runtime) ───────
 
@@ -23,6 +23,13 @@ function timeAgo(iso: string | null | undefined) {
   const h = Math.floor(m / 60)
   if (h < 24) return `${h}h ago`
   return `${Math.floor(h / 24)}d ago`
+}
+
+function formatTime(iso: string | null): string {
+  if (!iso) return '-'
+  const raw = iso.includes('T') || iso.includes('Z') ? iso : iso.replace(' ', 'T') + 'Z'
+  const d = new Date(raw)
+  return d.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
 // ── Read CSS variables at render time ─────────────
@@ -51,11 +58,22 @@ const STATUS_COLORS = {
   failed:    { fill: '#450a0a', stroke: '#ef4444', text: '#ef4444' },
 } as Record<string, { fill: string; stroke: string; text: string }>
 
+const JOB_STATUS_COLORS: Record<string, string> = {
+  pending: '#6b7280', running: '#f59e0b', completed: '#22c55e', failed: '#ef4444', cancelled: '#9ca3af',
+}
+
 // ── Build SVG ─────────────────────────────────────
 
 interface NodePos { x: number; y: number; id: string; sourceId: number; stageId: string; shared?: boolean }
 
-function buildSvg(dag: PipelineDagResponse, theme: ReturnType<typeof getThemeColors>): { svg: string; positions: NodePos[]; w: number; h: number } {
+/** 노드 선택 정보 */
+interface NodeSelection {
+  sourceId: number   // 0 = shared
+  stageId: string    // '' = source label selected (all jobs for that source)
+  label: string
+}
+
+function buildSvg(dag: PipelineDagResponse, theme: ReturnType<typeof getThemeColors>, selected: NodeSelection | null, workers: Record<string, number>): { svg: string; positions: NodePos[]; w: number; h: number } {
   const NODE_W = 160, NODE_H = 78, GAP_X = 60, GAP_Y = 24
   const LABEL_W = 180
   const positions: NodePos[] = []
@@ -77,14 +95,20 @@ function buildSvg(dag: PipelineDagResponse, theme: ReturnType<typeof getThemeCol
     confluence: { fill: '#2d1b69', stroke: '#7c3aed', text: '#c4b5fd' },
   }
 
+  // helper: is this node selected?
+  const isSelected = (sourceId: number, stageId: string, shared?: boolean) => {
+    if (!selected) return false
+    if (shared) return selected.sourceId === 0 && selected.stageId === stageId
+    if (!stageId) return selected.sourceId === sourceId && selected.stageId === ''
+    return selected.sourceId === sourceId && selected.stageId === stageId
+  }
+
   // -- Edges --
   dag.sources.forEach((src, ri) => {
     const y = GAP_Y + ri * rowH + NODE_H / 2
 
-    // label → first stage
     svg += bezier(LABEL_W - 10, y, LABEL_W + GAP_X / 2, y, theme.border, false)
 
-    // between stages
     src.edges.forEach(e => {
       const fi = src.stages.findIndex(s => s.id === e.from)
       const ti = src.stages.findIndex(s => s.id === e.to)
@@ -96,7 +120,6 @@ function buildSvg(dag: PipelineDagResponse, theme: ReturnType<typeof getThemeCol
       svg += bezier(fx, y, tx, y, color, false)
     })
 
-    // last stage → shared index
     const lastIdx = src.stages.findIndex(s => s.id === src.last_stage)
     if (lastIdx >= 0) {
       const fx = LABEL_W + GAP_X / 2 + lastIdx * (NODE_W + GAP_X) + NODE_W
@@ -117,9 +140,10 @@ function buildSvg(dag: PipelineDagResponse, theme: ReturnType<typeof getThemeCol
   dag.sources.forEach((src, ri) => {
     const x = 10, y = GAP_Y + ri * rowH
     const c = SOURCE_COLS[src.source_type] || SOURCE_COLS.perforce
+    const sel = isSelected(src.source_id, '')
     positions.push({ x, y, id: `src-${src.source_id}`, sourceId: src.source_id, stageId: '', shared: false })
-    svg += `<g class="dag-node" data-id="src-${src.source_id}">
-      <rect x="${x}" y="${y}" width="${LABEL_W - 30}" height="${NODE_H}" rx="10" fill="${c.fill}" stroke="${c.stroke}" stroke-width="1.5"/>
+    svg += `<g class="dag-node" data-id="src-${src.source_id}" data-source="${src.source_id}" data-stage="">
+      <rect x="${x}" y="${y}" width="${LABEL_W - 30}" height="${NODE_H}" rx="10" fill="${c.fill}" stroke="${sel ? '#fff' : c.stroke}" stroke-width="${sel ? 2.5 : 1.5}"/>
       <text x="${x + (LABEL_W - 30) / 2}" y="${y + NODE_H / 2 + 4}" text-anchor="middle" fill="${c.text}" font-size="12" font-weight="700">${esc(src.source_name)}</text>
     </g>`
   })
@@ -134,7 +158,6 @@ function buildSvg(dag: PipelineDagResponse, theme: ReturnType<typeof getThemeCol
       const pendingCount = (status.pending_count || 0)
       const runningCount = (status.running_count || 0)
 
-      // 표시 상태 결정: running > queued > auto > idle (completed는 idle로 통합)
       let displayStatus = status.status
       if (runningCount > 0) displayStatus = 'running'
       else if (pendingCount > 0) displayStatus = 'queued'
@@ -144,26 +167,28 @@ function buildSvg(dag: PipelineDagResponse, theme: ReturnType<typeof getThemeCol
       const nodeFill = theme.bg2
       const nodeStroke = theme.border
       const isRunning = displayStatus === 'running' || displayStatus === 'auto'
+      const sel = isSelected(src.source_id, stage.id)
 
       positions.push({ x, y, id: `${src.source_id}-${stage.id}`, sourceId: src.source_id, stageId: stage.id })
 
-      const badgeR = 10
-
-      // 자동화 설정
       const autoKey = AUTO_KEY_MAP[stage.id]
       const settings = src.settings || {}
       const isAuto = autoKey ? (autoKey === 'auto_crawl_interval' ? (settings as any)[autoKey] > 0 : !!(settings as any)[autoKey]) : false
       const autoInterval = autoKey === 'auto_crawl_interval' ? (settings as any)[autoKey] || 0 : 0
       const autoTooltip = isAuto ? (autoInterval ? `자동: ${autoInterval}초마다` : '자동: ON') : '자동: OFF'
 
-      // 하단 아이콘 Y 위치
       const btnY = y + NODE_H - 16
       const isBusy = displayStatus === 'running'
       const disabledOpacity = 0.2
 
-      svg += `<g class="dag-node ${isRunning ? 'running' : ''}" data-id="${src.source_id}-${stage.id}">
-        <title>${esc(stage.label)}: ${esc(stage.desc || '')}${pendingCount ? `\n대기: ${pendingCount}건` : ''}</title>
-        <rect class="node-bg" x="${x}" y="${y}" width="${NODE_W}" height="${NODE_H}" rx="10" fill="${nodeFill}" stroke="${nodeStroke}" stroke-width="1.5"/>
+      const wCount = workers[stage.id] || 0
+
+      svg += `<g class="dag-node ${isRunning ? 'running' : ''}" data-id="${src.source_id}-${stage.id}" data-source="${src.source_id}" data-stage="${stage.id}">
+        <title>${esc(stage.label)}: ${esc(stage.desc || '')}${pendingCount ? `\n대기: ${pendingCount}건` : ''}${wCount ? `\n워커: ${wCount}대` : ''}</title>
+        <rect class="node-bg" x="${x}" y="${y}" width="${NODE_W}" height="${NODE_H}" rx="10" fill="${nodeFill}" stroke="${sel ? '#2563eb' : nodeStroke}" stroke-width="${sel ? 2.5 : 1.5}"/>
+        ${wCount > 0 ? `<g><circle cx="${x + NODE_W - 8}" cy="${y + 8}" r="8" fill="#052e16" stroke="#22c55e" stroke-width="1"/>
+          <text x="${x + NODE_W - 8}" y="${y + 12}" text-anchor="middle" fill="#4ade80" font-size="9" font-weight="700">${wCount}</text></g>`
+        : `<circle cx="${x + NODE_W - 8}" cy="${y + 8}" r="5" fill="none" stroke="${theme.border}" stroke-width="0.8" stroke-dasharray="2 2"/>`}
         <text x="${x + NODE_W / 2}" y="${y + 18}" text-anchor="middle" fill="${theme.text}" font-size="12" font-weight="600">${esc(stage.label)}</text>
         <text x="${x + NODE_W / 2}" y="${y + 33}" text-anchor="middle" fill="${theme.text2}" font-size="9">${timeAgo(status.completed_at || status.created_at)}</text>
         <text x="${x + NODE_W / 2}" y="${y + 46}" text-anchor="middle" fill="${sc.text}" font-size="9" font-weight="600">${
@@ -174,7 +199,6 @@ function buildSvg(dag: PipelineDagResponse, theme: ReturnType<typeof getThemeCol
           displayStatus === 'pending' ? 'PENDING' :
           status.completed_at ? '' : 'IDLE'
         }</text>
-        ${''/* pending count는 status 텍스트에 통합 */}
         <g class="node-action" ${!isBusy ? `data-run="${src.source_id}-${stage.id}"` : ''} style="opacity:${isBusy ? disabledOpacity : 1}${isBusy ? ';pointer-events:none' : ''}">
           <title>${isBusy ? '실행 중...' : '이 단계 실행'}</title>
           <circle cx="${x + NODE_W / 2 - 24}" cy="${btnY}" r="9" fill="rgba(59,130,246,0.15)" stroke="#3b82f6" stroke-width="0.8"/>
@@ -203,12 +227,13 @@ function buildSvg(dag: PipelineDagResponse, theme: ReturnType<typeof getThemeCol
     const y = sharedCY
     const status = dag.shared_status[stage.id] || { status: 'idle' }
     const sc = STATUS_COLORS[status.status] || STATUS_COLORS.idle
+    const sel = isSelected(0, stage.id, true)
 
     positions.push({ x, y, id: `shared-${stage.id}`, sourceId: 0, stageId: stage.id, shared: true })
 
-    svg += `<g class="dag-node" data-id="shared-${stage.id}">
+    svg += `<g class="dag-node" data-id="shared-${stage.id}" data-source="0" data-stage="${stage.id}">
       <title>${esc(stage.label)}: ${esc(stage.desc || '')}</title>
-      <rect class="node-bg" x="${x}" y="${y}" width="${NODE_W}" height="${NODE_H}" rx="12" fill="${sc.fill}" stroke="${sc.stroke}" stroke-width="2"/>
+      <rect class="node-bg" x="${x}" y="${y}" width="${NODE_W}" height="${NODE_H}" rx="12" fill="${sc.fill}" stroke="${sel ? '#2563eb' : sc.stroke}" stroke-width="${sel ? 3 : 2}"/>
       <text x="${x + NODE_W / 2}" y="${y + 20}" text-anchor="middle" fill="${theme.text}" font-size="13" font-weight="700">${esc(stage.label)}</text>
       <text x="${x + NODE_W / 2}" y="${y + 35}" text-anchor="middle" fill="${theme.text2}" font-size="9">${timeAgo(status.completed_at || status.created_at)}</text>
       <text x="${x + NODE_W / 2}" y="${y + 50}" text-anchor="middle" fill="${sc.text}" font-size="10" font-weight="600">${stOf(status.status).label}</text>
@@ -226,6 +251,17 @@ function bezier(x1: number, y1: number, x2: number, y2: number, color: string, d
 
 function esc(s: string) { return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') }
 
+// ── Job Log StatusBadge ────────────────────────────
+
+const JobStatusBadge = ({ status }: { status: string }) => (
+  <span style={{
+    display: 'inline-block', padding: '1px 6px', borderRadius: 10,
+    fontSize: '0.7rem', fontWeight: 600,
+    background: (JOB_STATUS_COLORS[status] || '#6b7280') + '22',
+    color: JOB_STATUS_COLORS[status] || '#6b7280',
+  }}>{status}</span>
+)
+
 // ── Main component ────────────────────────────────
 
 export default function PipelineGraphTab() {
@@ -233,9 +269,16 @@ export default function PipelineGraphTab() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [toast, setToast] = useState<string | null>(null)
-  const [popup, setPopup] = useState<{ x: number; y: number; nodeId: string; sourceId: number; stageId: string; shared: boolean } | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const positionsRef = useRef<NodePos[]>([])
+
+  // Node selection & job log
+  const [selected, setSelected] = useState<NodeSelection | null>(null)
+  const [jobs, setJobs] = useState<PipelineJob[]>([])
+  const [jobTotal, setJobTotal] = useState(0)
+  const [jobPage, setJobPage] = useState(0)
+  const [jobStatusFilter, setJobStatusFilter] = useState<string | null>(null)
+  const [jobPageSize, setJobPageSize] = useState(50)
 
   const load = useCallback(async () => {
     try {
@@ -250,6 +293,7 @@ export default function PipelineGraphTab() {
 
   useEffect(() => { load() }, [load])
 
+  // Auto-refresh when jobs are active
   useEffect(() => {
     if (!dag) return
     const hasActiveJobs = dag.sources.some(src => Object.values(src.stage_status).some(x => x.status === 'running' || (x.pending_count || 0) > 0))
@@ -260,12 +304,40 @@ export default function PipelineGraphTab() {
     return () => clearInterval(t)
   }, [dag, load])
 
+  // Load jobs when selection, page, or status filter changes
+  useEffect(() => {
+    const sourceId = selected?.sourceId
+    const jobType = selected?.stageId || undefined
+    fetchPipelineJobs(
+      jobStatusFilter ? [jobStatusFilter] : undefined,
+      jobType ? [jobType] : undefined,
+      jobPageSize,
+      jobPage * jobPageSize,
+      sourceId || undefined,
+    )
+      .then(r => { setJobs(r.jobs); setJobTotal(r.total) })
+      .catch(() => {})
+  }, [selected, jobPage, jobStatusFilter, jobPageSize])
+
+  // Auto-refresh jobs when running jobs exist
+  useEffect(() => {
+    const hasRunning = jobs.some(j => j.status === 'running' || j.status === 'pending')
+    if (!hasRunning) return
+    const sourceId = selected?.sourceId
+    const jobType = selected?.stageId || undefined
+    const t = setInterval(() => {
+      fetchPipelineJobs(jobStatusFilter ? [jobStatusFilter] : undefined, jobType ? [jobType] : undefined, jobPageSize, jobPage * jobPageSize, sourceId || undefined)
+        .then(r => { setJobs(r.jobs); setJobTotal(r.total) })
+        .catch(() => {})
+    }, 3000)
+    return () => clearInterval(t)
+  }, [jobs, selected, jobPage, jobStatusFilter, jobPageSize])
+
   const onRun = useCallback(async (sourceId: number, stage: string, mode: 'single' | 'downstream' | 'all') => {
     try {
       const sid = sourceId || dag?.sources[0]?.source_id || 1
       const r = await runPipelineDag(sid, stage, mode)
       setToast(`${mode === 'single' ? '단일' : mode === 'downstream' ? '순차' : '전체'} 실행: ${r.jobs.length}개 작업`)
-      setPopup(null)
       setTimeout(() => setToast(null), 3000)
       load()
     } catch (e) {
@@ -304,7 +376,7 @@ export default function PipelineGraphTab() {
         if (key) {
           const update: any = {}
           if (key === 'auto_crawl_interval') {
-            update[key] = settings[key] > 0 ? 0 : 10  // 토글: 0↔10초
+            update[key] = settings[key] > 0 ? 0 : 10
           } else {
             update[key] = !settings[key]
           }
@@ -313,7 +385,7 @@ export default function PipelineGraphTab() {
             setToast(`${stage} 자동화: ${update[key] ? 'ON' : 'OFF'}`)
             setTimeout(() => setToast(null), 2000)
             load()
-          } catch (err) {
+          } catch {
             setToast('설정 실패')
             setTimeout(() => setToast(null), 3000)
           }
@@ -321,35 +393,52 @@ export default function PipelineGraphTab() {
       }
       return
     }
-    // 일반 노드 클릭 — 팝업 (소스 노드 등)
+    // 일반 노드 클릭 → 선택 (작업 로그 필터링)
     const target = (e.target as HTMLElement).closest('.dag-node') as HTMLElement | null
-    if (!target) { setPopup(null); return }
-    setPopup(null)
-  }, [dag, load, onRun])
+    if (!target) { setSelected(null); setJobPage(0); return }
 
-  useEffect(() => {
-    const h = (e: MouseEvent) => {
-      const t = e.target as HTMLElement
-      if (!t.closest('.node-popup') && !t.closest('.dag-node')) setPopup(null)
+    const sourceId = Number(target.dataset.source || '0')
+    const stageId = target.dataset.stage || ''
+
+    // 같은 노드 클릭 시 선택 해제
+    if (selected && selected.sourceId === sourceId && selected.stageId === stageId) {
+      setSelected(null)
+      setJobPage(0)
+      return
     }
-    const k = (e: KeyboardEvent) => { if (e.key === 'Escape') setPopup(null) }
-    document.addEventListener('mousedown', h)
-    document.addEventListener('keydown', k)
-    return () => { document.removeEventListener('mousedown', h); document.removeEventListener('keydown', k) }
-  }, [])
+
+    // 노드 라벨 결정
+    let label = ''
+    if (dag) {
+      if (sourceId === 0) {
+        label = dag.shared_stages.find(s => s.id === stageId)?.label || stageId
+      } else if (!stageId) {
+        label = dag.sources.find(s => s.source_id === sourceId)?.source_name || `Source #${sourceId}`
+      } else {
+        const src = dag.sources.find(s => s.source_id === sourceId)
+        const stage = src?.stages.find(s => s.id === stageId)
+        label = `${src?.source_name || ''} > ${stage?.label || stageId}`
+      }
+    }
+
+    setSelected({ sourceId, stageId, label })
+    setJobPage(0)
+  }, [dag, load, onRun, selected])
 
   if (loading) return <div style={{ padding: 40, color: 'var(--text-secondary)' }}>로딩 중...</div>
   if (error) return <div style={{ padding: 40, color: '#ef4444' }}>실패: {error}</div>
   if (!dag) return null
 
   const theme = getThemeColors()
-  const { svg, positions, w, h } = buildSvg(dag, theme)
+  const { svg, positions, w, h } = buildSvg(dag, theme, selected, dag.workers || {})
   positionsRef.current = positions
 
   const fullSvg = `<svg class="dag-svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">
     <defs><marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><polygon points="0 0, 8 3, 0 6" fill="${theme.border}"/></marker></defs>
     ${svg}
   </svg>`
+
+  const totalPages = Math.ceil(jobTotal / jobPageSize)
 
   return (
     <div>
@@ -365,7 +454,7 @@ export default function PipelineGraphTab() {
 
       {/* Legend */}
       <div style={{ display: 'flex', gap: 16, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
-        <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>노드 클릭 → 실행 메뉴</span>
+        <span style={{ fontSize: '0.7rem', color: 'var(--text-secondary)' }}>노드 클릭 → 작업 로그 필터</span>
         <div style={{ flex: 1 }} />
         {Object.entries(STATUS_COLORS).map(([k, v]) => (
           <span key={k} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: '0.65rem', color: 'var(--text-secondary)' }}>
@@ -384,9 +473,102 @@ export default function PipelineGraphTab() {
         style={{ position: 'relative', overflowX: 'auto', padding: '16px 0', background: 'var(--bg-primary)', borderRadius: 12, border: '1px solid var(--border-color)' }}
       >
         <div onClick={handleSvgClick} dangerouslySetInnerHTML={{ __html: fullSvg }} />
+      </div>
 
-        {/* Popup */}
-        {/* 팝업 제거 — 노드 하단 아이콘으로 직접 제어 */}
+      {/* Job Log */}
+      <div style={{ marginTop: 24 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+          <h3 style={{ margin: 0, fontSize: '1rem' }}>작업 로그</h3>
+          {selected ? (
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: 6,
+              padding: '3px 10px', borderRadius: 16,
+              background: '#2563eb22', color: '#2563eb', fontSize: '0.75rem', fontWeight: 600,
+            }}>
+              {selected.label}
+              <span
+                onClick={() => { setSelected(null); setJobPage(0) }}
+                style={{ cursor: 'pointer', fontSize: '0.85rem', lineHeight: 1 }}
+              >×</span>
+            </span>
+          ) : (
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>전체</span>
+          )}
+          <div style={{ display: 'flex', gap: 4, marginLeft: 12 }}>
+            {['pending', 'running', 'completed', 'failed'].map(s => (
+              <button
+                key={s}
+                onClick={() => { setJobStatusFilter(f => f === s ? null : s); setJobPage(0) }}
+                style={{
+                  padding: '2px 8px', fontSize: '0.7rem', borderRadius: 10, cursor: 'pointer',
+                  border: `1px solid ${jobStatusFilter === s ? JOB_STATUS_COLORS[s] : 'var(--border-color)'}`,
+                  background: jobStatusFilter === s ? (JOB_STATUS_COLORS[s] || '#6b7280') + '22' : 'transparent',
+                  color: jobStatusFilter === s ? JOB_STATUS_COLORS[s] : 'var(--text-secondary)',
+                  fontWeight: jobStatusFilter === s ? 600 : 400,
+                }}
+              >{s}</button>
+            ))}
+          </div>
+          <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginLeft: 'auto' }}>{jobTotal}건</span>
+          <select
+            value={jobPageSize}
+            onChange={e => { setJobPageSize(Number(e.target.value)); setJobPage(0) }}
+            style={{ padding: '2px 6px', fontSize: '0.7rem', borderRadius: 4, border: '1px solid var(--border-color)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', marginLeft: 8 }}
+          >
+            {[50, 100, 200].map(n => <option key={n} value={n}>{n}개씩</option>)}
+          </select>
+        </div>
+
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.78rem' }}>
+          <thead>
+            <tr style={{ borderBottom: '2px solid var(--border-color)', textAlign: 'left' }}>
+              <th style={{ padding: '5px 8px', width: 50 }}>ID</th>
+              <th style={{ padding: '5px 8px', width: 70 }}>타입</th>
+              <th style={{ padding: '5px 8px' }}>문서</th>
+              <th style={{ padding: '5px 8px', width: 80 }}>상태</th>
+              <th style={{ padding: '5px 8px', width: 110 }}>생성</th>
+              <th style={{ padding: '5px 8px', width: 110 }}>완료</th>
+              <th style={{ padding: '5px 8px' }}>에러</th>
+            </tr>
+          </thead>
+          <tbody>
+            {jobs.map(j => (
+              <tr key={j.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                <td style={{ padding: '4px 8px', color: 'var(--text-secondary)' }}>#{j.id}</td>
+                <td style={{ padding: '4px 8px' }}>{j.job_type}</td>
+                <td style={{ padding: '4px 8px', maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {j.doc_title || j.doc_path || (j.source_name ? `[${j.source_name}]` : '-')}
+                </td>
+                <td style={{ padding: '4px 8px' }}>
+                  <JobStatusBadge status={j.status} />
+                  {j.progress && <span style={{ marginLeft: 4, fontSize: '0.65rem', color: '#2563eb' }}>{j.progress}</span>}
+                </td>
+                <td style={{ padding: '4px 8px', color: 'var(--text-secondary)', fontSize: '0.72rem' }}>{formatTime(j.created_at)}</td>
+                <td style={{ padding: '4px 8px', color: 'var(--text-secondary)', fontSize: '0.72rem' }}>{formatTime(j.completed_at)}</td>
+                <td style={{ padding: '4px 8px', color: '#ef4444', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.72rem' }}>
+                  {j.error_message || ''}
+                </td>
+              </tr>
+            ))}
+            {jobs.length === 0 && <tr><td colSpan={7} style={{ padding: 20, textAlign: 'center', color: 'var(--text-secondary)' }}>작업 없음</td></tr>}
+          </tbody>
+        </table>
+
+        {totalPages > 1 && (
+          <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 12, fontSize: '0.78rem' }}>
+            <button
+              disabled={jobPage === 0}
+              onClick={() => setJobPage(p => p - 1)}
+              style={{ padding: '3px 10px', border: '1px solid var(--border-color)', borderRadius: 4, background: 'var(--bg-secondary)', color: 'var(--text-primary)', cursor: jobPage === 0 ? 'not-allowed' : 'pointer', opacity: jobPage === 0 ? 0.4 : 1 }}
+            >이전</button>
+            <span style={{ color: 'var(--text-secondary)' }}>{jobPage + 1} / {totalPages}</span>
+            <button
+              disabled={jobPage >= totalPages - 1}
+              onClick={() => setJobPage(p => p + 1)}
+              style={{ padding: '3px 10px', border: '1px solid var(--border-color)', borderRadius: 4, background: 'var(--bg-secondary)', color: 'var(--text-primary)', cursor: jobPage >= totalPages - 1 ? 'not-allowed' : 'pointer', opacity: jobPage >= totalPages - 1 ? 0.4 : 1 }}
+            >다음</button>
+          </div>
+        )}
       </div>
 
       <style>{`
@@ -397,37 +579,5 @@ export default function PipelineGraphTab() {
         @keyframes dagpulse { 0%,100%{stroke-opacity:1} 50%{stroke-opacity:.4} }
       `}</style>
     </div>
-  )
-}
-
-function SettingToggle({ label, checked, onChange }: { label: string; checked: boolean; onChange: (v: boolean) => void }) {
-  return (
-    <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: '0.8rem', color: 'var(--text-primary)', cursor: 'pointer', padding: '4px 0' }}>
-      <div onClick={(e) => { e.preventDefault(); onChange(!checked) }} style={{
-        width: 36, height: 20, borderRadius: 10, position: 'relative',
-        background: checked ? '#22c55e' : 'var(--bg-tertiary, #334155)',
-        transition: 'background 0.2s', cursor: 'pointer',
-      }}>
-        <div style={{
-          width: 16, height: 16, borderRadius: 8, background: '#fff',
-          position: 'absolute', top: 2, left: checked ? 18 : 2,
-          transition: 'left 0.2s',
-        }} />
-      </div>
-      {label}
-    </label>
-  )
-}
-
-function PopupBtn({ label, color, onClick }: { label: string; color?: string; onClick: () => void }) {
-  return (
-    <button onClick={onClick} style={{
-      padding: '8px 14px', border: `1px solid ${color || 'var(--border-color)'}`, borderRadius: 8,
-      background: 'transparent', cursor: 'pointer', color: color || 'var(--text-primary)',
-      fontSize: '0.8rem', fontWeight: 500, textAlign: 'left', transition: 'background 0.1s',
-    }}
-      onMouseEnter={e => (e.currentTarget.style.background = 'var(--bg-tertiary, #334155)')}
-      onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-    >{label}</button>
   )
 }

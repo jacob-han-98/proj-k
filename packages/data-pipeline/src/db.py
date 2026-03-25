@@ -181,6 +181,14 @@ CREATE INDEX IF NOT EXISTS idx_jobs_worker_type ON jobs(worker_type, status);
 CREATE INDEX IF NOT EXISTS idx_issues_document ON issues(document_id);
 CREATE INDEX IF NOT EXISTS idx_issues_status ON issues(status);
 CREATE INDEX IF NOT EXISTS idx_crawl_logs_source ON crawl_logs(source_id);
+
+-- 워커 하트비트 (가동 중인 워커 추적)
+CREATE TABLE IF NOT EXISTS worker_heartbeats (
+    worker_id       TEXT PRIMARY KEY,
+    worker_types    TEXT NOT NULL DEFAULT 'any',   -- 쉼표 구분: "any" 또는 "windows"
+    job_types       TEXT NOT NULL DEFAULT '',       -- 처리 가능한 job_type 목록 (쉼표 구분)
+    last_seen       TEXT NOT NULL DEFAULT (datetime('now'))
+);
 """;
 
 
@@ -416,31 +424,51 @@ def fail_job(conn, job_id: int, error_message: str):
         )
 
 
-def list_jobs(conn, status: str = None, job_type: str = None, limit: int = 1000) -> list[dict]:
-    sql = """SELECT j.*, d.title as doc_title, d.file_path as doc_path
-             FROM jobs j LEFT JOIN documents d ON j.document_id = d.id
-             WHERE 1=1"""
-    params = []
+def _build_job_filter(status: str = None, job_type: str = None, source_id: int = None):
+    """status/job_type/source_id 필터용 WHERE 절 빌드."""
+    clauses, params = [], []
+    if source_id:
+        clauses.append("j.source_id = ?")
+        params.append(source_id)
     if status:
-        # 콤마 구분 다중 필터 지원: "pending,running"
         statuses = [s.strip() for s in status.split(",") if s.strip()]
         if len(statuses) == 1:
-            sql += " AND j.status = ?"
+            clauses.append("j.status = ?")
             params.append(statuses[0])
         elif statuses:
-            sql += f" AND j.status IN ({','.join('?' for _ in statuses)})"
+            clauses.append(f"j.status IN ({','.join('?' for _ in statuses)})")
             params.extend(statuses)
     if job_type:
         types = [t.strip() for t in job_type.split(",") if t.strip()]
         if len(types) == 1:
-            sql += " AND j.job_type = ?"
+            clauses.append("j.job_type = ?")
             params.append(types[0])
         elif types:
-            sql += f" AND j.job_type IN ({','.join('?' for _ in types)})"
+            clauses.append(f"j.job_type IN ({','.join('?' for _ in types)})")
             params.extend(types)
-    sql += " ORDER BY j.created_at DESC LIMIT ?"
-    params.append(limit)
+    return clauses, params
+
+
+def list_jobs(conn, status: str = None, job_type: str = None, limit: int = 50, offset: int = 0, source_id: int = None) -> list[dict]:
+    sql = """SELECT j.*, d.title as doc_title, d.file_path as doc_path,
+                    cs.name as source_name
+             FROM jobs j LEFT JOIN documents d ON j.document_id = d.id
+                         LEFT JOIN crawl_sources cs ON j.source_id = cs.id
+             WHERE 1=1"""
+    clauses, params = _build_job_filter(status, job_type, source_id)
+    for c in clauses:
+        sql += " AND " + c
+    sql += " ORDER BY j.created_at DESC LIMIT ? OFFSET ?"
+    params.extend([limit, offset])
     return [dict(r) for r in conn.execute(sql, params).fetchall()]
+
+
+def count_jobs(conn, status: str = None, job_type: str = None, source_id: int = None) -> int:
+    sql = "SELECT COUNT(*) as cnt FROM jobs j WHERE 1=1"
+    clauses, params = _build_job_filter(status, job_type, source_id)
+    for c in clauses:
+        sql += " AND " + c
+    return conn.execute(sql, params).fetchone()["cnt"]
 
 
 def get_job_stats(conn) -> dict:
@@ -448,6 +476,31 @@ def get_job_stats(conn) -> dict:
         "SELECT status, COUNT(*) as cnt FROM jobs GROUP BY status"
     ).fetchall()
     return {r["status"]: r["cnt"] for r in rows}
+
+
+# -- worker heartbeats --
+
+def worker_heartbeat(conn, worker_id: str, worker_types: list[str], job_types: list[str]):
+    """워커 하트비트 업데이트 (upsert)."""
+    conn.execute(
+        """INSERT INTO worker_heartbeats (worker_id, worker_types, job_types, last_seen)
+           VALUES (?, ?, ?, datetime('now'))
+           ON CONFLICT(worker_id) DO UPDATE SET
+               worker_types = excluded.worker_types,
+               job_types = excluded.job_types,
+               last_seen = datetime('now')""",
+        (worker_id, ",".join(worker_types), ",".join(job_types))
+    )
+
+
+def get_active_workers(conn, timeout_sec: int = 15) -> list[dict]:
+    """최근 timeout_sec 이내에 하트비트를 보낸 워커 목록."""
+    rows = conn.execute(
+        "SELECT worker_id, worker_types, job_types, last_seen "
+        "FROM worker_heartbeats WHERE last_seen >= datetime('now', ?)",
+        [f"-{timeout_sec} seconds"]
+    ).fetchall()
+    return [dict(r) for r in rows]
 
 
 # -- issues --

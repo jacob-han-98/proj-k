@@ -878,16 +878,15 @@ def pipeline_document_detail(doc_id: int):
 
 
 @app.get("/admin/pipeline/jobs")
-def pipeline_jobs(status: str = None, job_type: str = None, limit: int = 1000):
-    """작업큐 목록."""
+def pipeline_jobs(status: str = None, job_type: str = None, limit: int = 50, offset: int = 0, source_id: int = None):
+    """작업 내역 목록 (페이징 지원)."""
     pdb = _get_pipeline_db()
     with pdb.get_conn() as conn:
-        jobs = pdb.list_jobs(conn, status=status, job_type=job_type, limit=limit)
+        jobs = pdb.list_jobs(conn, status=status, job_type=job_type, limit=limit, offset=offset, source_id=source_id)
         stats = pdb.get_job_stats(conn)
-        # running crawl 작업에 실시간 progress 주입
+        # 작업별 progress 주입
         for j in jobs:
             if j.get("status") == "running" and j.get("job_type") == "crawl" and j.get("source_id"):
-                # DB에 저장된 progress가 있으면 그것 사용, 없으면 문서 수로 추정
                 if not j.get("progress"):
                     total = conn.execute(
                         "SELECT COUNT(*) as cnt FROM documents WHERE source_id = ?",
@@ -898,7 +897,27 @@ def pipeline_jobs(status: str = None, job_type: str = None, limit: int = 1000):
                         [j["source_id"]]
                     ).fetchone()["cnt"]
                     j["progress"] = f"{converted}/{total} 페이지 변환 완료"
-        return {"jobs": jobs, "stats": stats}
+            # 완료된 크롤링 작업: result 요약을 doc_title(문서 컬럼)에 표시
+            if j.get("job_type") == "crawl" and j.get("result"):
+                try:
+                    r = json.loads(j["result"]) if isinstance(j["result"], str) else j["result"]
+                    parts = []
+                    if r.get("new_files"):
+                        parts.append(f"생성 {r['new_files']}")
+                    if r.get("changed_files"):
+                        parts.append(f"변경 {r['changed_files']}")
+                    if r.get("deleted_files"):
+                        parts.append(f"삭제 {r['deleted_files']}")
+                    if r.get("unchanged_files"):
+                        parts.append(f"유지 {r['unchanged_files']}")
+                    if not parts and not r.get("total_files"):
+                        parts.append("변경 없음")
+                    if parts:
+                        j["doc_title"] = f"[{j.get('source_name', '')}] {', '.join(parts)}"
+                except Exception:
+                    pass
+        total_count = pdb.count_jobs(conn, status=status, job_type=job_type, source_id=source_id)
+        return {"jobs": jobs, "stats": stats, "total": total_count}
 
 
 @app.post("/admin/pipeline/jobs/trigger")
@@ -1007,8 +1026,16 @@ def pipeline_dag():
                 for c in counts:
                     stage_status[stage["id"]][c["status"] + "_count"] = c["c"]
 
-            # 자동 크롤 상태 보정: auto_crawl이 ON이면 status를 "auto" 표시
+            # crawl 노드 시간: last_crawl_at vs job completed_at 중 최신
             src_props = json.loads(src.get("properties", "{}") or "{}")
+            lca = src_props.get("last_crawl_at")
+            if lca and "crawl" in stage_status:
+                job_completed = stage_status["crawl"].get("completed_at") or ""
+                # 둘 중 더 최신 시간 사용
+                if lca > job_completed:
+                    stage_status["crawl"]["completed_at"] = lca
+
+            # 자동 크롤 상태 보정: auto_crawl이 ON이면 status를 "auto" 표시
             if src_props.get("auto_crawl_interval", 0) > 0 and "crawl" in stage_status:
                 cs = stage_status["crawl"]
                 if cs.get("status") not in ("running", "pending"):
@@ -1046,11 +1073,22 @@ def pipeline_dag():
                 "error": row["error_message"] if row else None,
             } if row else {"status": "idle"}
 
+        # 가동 중인 워커 정보
+        active_workers = pdb.get_active_workers(conn, timeout_sec=15)
+        # job_type별 워커 수 집계
+        workers_by_type: dict[str, int] = {}
+        for w in active_workers:
+            for jt in (w.get("job_types") or "").split(","):
+                jt = jt.strip()
+                if jt:
+                    workers_by_type[jt] = workers_by_type.get(jt, 0) + 1
+
         return {
             "sources": source_data,
             "shared_stages": SHARED_STAGES,
             "shared_edges": [{"from": "index", "to": "kg_build"}],
             "shared_status": shared_status,
+            "workers": workers_by_type,
         }
 
 

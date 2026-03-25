@@ -256,6 +256,7 @@ export interface PipelineJob {
   completed_at: string | null;
   doc_title: string | null;
   doc_path: string | null;
+  source_name: string | null;
   progress: string | null;
 }
 
@@ -294,10 +295,13 @@ export const fetchPipelineDocuments = async (sourceId?: number, status?: string)
   return res.json();
 };
 
-export const fetchPipelineJobs = async (statuses?: string[], jobTypes?: string[]): Promise<{ jobs: PipelineJob[]; stats: Record<string, number>; total: number }> => {
+export const fetchPipelineJobs = async (statuses?: string[], jobTypes?: string[], limit?: number, offset?: number, sourceId?: number): Promise<{ jobs: PipelineJob[]; stats: Record<string, number>; total: number }> => {
   const params = new URLSearchParams();
   if (statuses?.length) params.set('status', statuses.join(','));
   if (jobTypes?.length) params.set('job_type', jobTypes.join(','));
+  if (limit) params.set('limit', String(limit));
+  if (offset) params.set('offset', String(offset));
+  if (sourceId) params.set('source_id', String(sourceId));
   const res = await fetch(`${API_BASE_URL}/admin/pipeline/jobs?${params}`);
   if (!res.ok) throw new Error(`API error: ${res.status}`);
   return res.json();
@@ -389,6 +393,7 @@ export interface PipelineDagResponse {
   shared_stages: DagStage[];
   shared_edges: DagEdge[];
   shared_status: Record<string, DagStageStatus>;
+  workers?: Record<string, number>;
 }
 
 export const fetchPipelineDag = async (): Promise<PipelineDagResponse> => {

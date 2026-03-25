@@ -877,6 +877,139 @@ def pipeline_document_detail(doc_id: int):
         return {"document": doc, "conversions": conversions, "issues": issues}
 
 
+@app.get("/admin/pipeline/documents/{doc_id}/content")
+def pipeline_document_content(doc_id: int):
+    """문서의 변환된 MD 콘텐츠 + 메타 정보 반환."""
+    import re as _re
+    pdb = _get_pipeline_db()
+    with pdb.get_conn() as conn:
+        doc = pdb.get_document(conn, doc_id)
+        if not doc:
+            raise HTTPException(status_code=404, detail="Document not found")
+
+        meta = json.loads(doc.get("metadata", "{}") or "{}")
+        tree_path = meta.get("tree_path", doc.get("title", ""))
+        title = doc.get("title", "")
+        source = conn.execute("SELECT * FROM crawl_sources WHERE id=?", [doc["source_id"]]).fetchone()
+        source_type = dict(source)["source_type"] if source else ""
+
+        # 안전한 경로 생성
+        def safe_name(s):
+            return _re.sub(r'[<>:"/\\|?*]', '_', s)[:100]
+
+        if '/' in title and tree_path.endswith(title):
+            parent = tree_path[:-len(title)].rstrip('/')
+            parts = [safe_name(p) for p in parent.split('/') if p]
+            parts.append(safe_name(title))
+        else:
+            parts = [safe_name(p) for p in tree_path.split('/')]
+
+        # 콘텐츠 파일 경로 결정
+        project_root = Path(__file__).resolve().parent.parent.parent.parent
+        if source_type == "confluence":
+            base = project_root / "packages" / "confluence-downloader" / "output"
+            page_dir = base / "/".join(parts)
+            # enriched가 있으면 우선
+            enriched = page_dir / "content_enriched.md"
+            content_md = page_dir / "content.md"
+            md_path = enriched if enriched.exists() else content_md
+            confluence_url = f"https://bighitcorp.atlassian.net/wiki/pages/viewpage.action?pageId={doc['file_path']}"
+        elif source_type == "perforce":
+            base = project_root / "packages" / "xlsx-extractor" / "output"
+            # Excel: workbook명으로 폴더
+            wb_name = title.replace('.xlsx', '').replace('.xlsm', '')
+            page_dir = base / wb_name / "_final"
+            content_md = page_dir / "content.md"
+            md_path = content_md
+            confluence_url = None
+        else:
+            return {"error": "unknown source type"}
+
+        md_content = ""
+        if md_path.exists():
+            md_content = md_path.read_text(encoding="utf-8")
+
+        return {
+            "doc_id": doc_id,
+            "title": title,
+            "source_type": source_type,
+            "tree_path": tree_path,
+            "storage_path": str(page_dir.relative_to(project_root)) if page_dir.exists() else None,
+            "md_file": md_path.name if md_path.exists() else None,
+            "md_content": md_content,
+            "confluence_url": confluence_url,
+            "file_path": doc.get("file_path", ""),
+            "status": doc.get("status", ""),
+            "images_count": len(re.findall(r'!\[[^\]]*\]\(images/', md_content)),  # MD에서 참조하는 이미지 수
+        }
+
+
+@app.get("/admin/pipeline/documents/{doc_id}/images/{filename:path}")
+def pipeline_document_image(doc_id: int, filename: str):
+    """문서의 이미지 파일 서빙."""
+    import re as _re
+    from fastapi.responses import FileResponse
+    pdb = _get_pipeline_db()
+    with pdb.get_conn() as conn:
+        doc = pdb.get_document(conn, doc_id)
+        if not doc:
+            raise HTTPException(status_code=404, detail="Document not found")
+        meta = json.loads(doc.get("metadata", "{}") or "{}")
+        tree_path = meta.get("tree_path", doc.get("title", ""))
+        title = doc.get("title", "")
+        source = conn.execute("SELECT * FROM crawl_sources WHERE id=?", [doc["source_id"]]).fetchone()
+        source_type = dict(source)["source_type"] if source else ""
+
+        def safe_name(s):
+            return _re.sub(r'[<>:"/\\|?*]', '_', s)[:100]
+
+        if '/' in title and tree_path.endswith(title):
+            parent = tree_path[:-len(title)].rstrip('/')
+            parts = [safe_name(p) for p in parent.split('/') if p]
+            parts.append(safe_name(title))
+        else:
+            parts = [safe_name(p) for p in tree_path.split('/')]
+
+        project_root = Path(__file__).resolve().parent.parent.parent.parent
+        if source_type == "confluence":
+            base = project_root / "packages" / "confluence-downloader" / "output"
+        else:
+            base = project_root / "packages" / "xlsx-extractor" / "output"
+
+        img_path = base / "/".join(parts) / "images" / filename
+        if not img_path.exists():
+            raise HTTPException(status_code=404, detail=f"Image not found: {filename}")
+
+        # MIME type
+        suffix = img_path.suffix.lower()
+        mime = {"png": "image/png", "jpg": "image/jpeg", "jpeg": "image/jpeg",
+                "gif": "image/gif", "svg": "image/svg+xml", "webp": "image/webp"
+                }.get(suffix.lstrip('.'), "application/octet-stream")
+        return FileResponse(str(img_path), media_type=mime)
+
+
+@app.get("/admin/pipeline/documents/{doc_id}/download")
+def pipeline_document_download(doc_id: int):
+    """Excel 원본 파일 다운로드."""
+    from fastapi.responses import FileResponse
+    pdb = _get_pipeline_db()
+    with pdb.get_conn() as conn:
+        doc = pdb.get_document(conn, doc_id)
+        if not doc:
+            raise HTTPException(status_code=404, detail="Document not found")
+        meta = json.loads(doc.get("metadata", "{}") or "{}")
+        source = conn.execute("SELECT * FROM crawl_sources WHERE id=?", [doc["source_id"]]).fetchone()
+        if not source or dict(source)["source_type"] != "perforce":
+            raise HTTPException(status_code=400, detail="Excel 다운로드는 Perforce 소스만 지원")
+        props = json.loads(dict(source).get("properties", "{}"))
+        local_path = props.get("local_path", "")
+        file_path = Path(local_path) / doc.get("file_path", "")
+        if not file_path.exists():
+            raise HTTPException(status_code=404, detail=f"파일 없음: {file_path}")
+        return FileResponse(str(file_path), filename=file_path.name,
+                            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
+
+
 @app.get("/admin/pipeline/jobs")
 def pipeline_jobs(status: str = None, job_type: str = None, limit: int = 50, offset: int = 0, source_id: int = None):
     """작업 내역 목록 (페이징 지원)."""
@@ -1074,7 +1207,7 @@ def pipeline_dag():
             } if row else {"status": "idle"}
 
         # 가동 중인 워커 정보
-        active_workers = pdb.get_active_workers(conn, timeout_sec=15)
+        active_workers = pdb.get_active_workers(conn, timeout_sec=120)
         all_job_types = ["crawl", "download", "enrich", "capture", "convert", "index"]
         # job_type별 워커 수 집계
         workers_by_type: dict[str, int] = {}

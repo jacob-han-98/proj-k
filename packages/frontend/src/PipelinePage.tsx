@@ -1,8 +1,11 @@
 import { useState, useEffect, useCallback, lazy, Suspense } from 'react'
 import {
-  fetchPipelineSources, fetchPipelineDocuments, triggerPipelineJob,
+  fetchPipelineSources, fetchPipelineDocuments, fetchDocumentContent, getDocumentDownloadUrl,
+  API_BASE_URL,
 } from './api'
-import type { PipelineSource, PipelineDocument } from './api'
+import type { PipelineSource, PipelineDocument, DocumentContent } from './api'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 const PipelineGraphTab = lazy(() => import('./PipelineGraphTab'))
 
@@ -20,13 +23,6 @@ const StatusBadge = ({ status }: { status: string }) => (
   }}>{status}</span>
 )
 
-function formatTime(iso: string | null): string {
-  if (!iso) return '-'
-  const raw = iso.includes('T') || iso.includes('Z') ? iso : iso.replace(' ', 'T') + 'Z'
-  const d = new Date(raw)
-  return d.toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
-}
-
 type Tab = 'graph' | 'documents'
 
 function PipelinePage() {
@@ -37,17 +33,17 @@ function PipelinePage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [docFilter, setDocFilter] = useState<{ sourceId?: number; status?: string }>({})
+  const [selectedDoc, setSelectedDoc] = useState<DocumentContent | null>(null)
+  const [docLoading, setDocLoading] = useState(false)
 
   const loadSources = useCallback(async () => {
     try {
-      setLoading(true)
-      setError(null)
+      setLoading(true); setError(null)
       const src = await fetchPipelineSources()
       setSources(src.sources)
       setLoading(false)
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
-      setLoading(false)
+      setError(e instanceof Error ? e.message : String(e)); setLoading(false)
     }
   }, [])
 
@@ -61,19 +57,16 @@ function PipelinePage() {
     }
   }, [tab, docFilter])
 
-  const handleTrigger = async (jobType: string, _sourceId?: number, documentId?: number) => {
+  const openDoc = useCallback(async (docId: number) => {
+    setDocLoading(true)
     try {
-      await triggerPipelineJob(jobType, _sourceId, documentId)
-      // 문서 목록 리로드
-      if (tab === 'documents') {
-        const r = await fetchPipelineDocuments(docFilter.sourceId, docFilter.status)
-        setDocuments(r.documents)
-        setDocTotal(r.total)
-      }
-    } catch (e) {
-      alert('트리거 실패: ' + (e instanceof Error ? e.message : String(e)))
+      const content = await fetchDocumentContent(docId)
+      setSelectedDoc(content)
+    } catch {
+      setSelectedDoc(null)
     }
-  }
+    setDocLoading(false)
+  }, [])
 
   if (loading && !sources.length) return <div style={{ padding: 40, color: 'var(--text-secondary)' }}>로딩 중...</div>
   if (error) return <div style={{ padding: 40, color: '#ef4444' }}>연결 실패: {error}</div>
@@ -88,10 +81,10 @@ function PipelinePage() {
       {/* Tab bar */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 24, borderBottom: '1px solid var(--border-color)', paddingBottom: 4 }}>
         {(['graph', 'documents'] as Tab[]).map(t => (
-          <button key={t} onClick={() => setTab(t)} style={{
+          <button key={t} onClick={() => { setTab(t); setSelectedDoc(null) }} style={{
             padding: '8px 16px', border: 'none', cursor: 'pointer', borderRadius: '8px 8px 0 0',
             background: 'transparent',
-            color: tab === t ? '#2563eb' : '#374151',
+            color: tab === t ? '#2563eb' : 'var(--text-secondary)',
             fontWeight: tab === t ? 600 : 500, fontSize: '0.85rem',
             borderBottom: tab === t ? '2px solid #2563eb' : '2px solid transparent',
           }}>
@@ -100,7 +93,7 @@ function PipelinePage() {
         ))}
       </div>
 
-      {/* Graph + Job Log */}
+      {/* Graph */}
       {tab === 'graph' && (
         <Suspense fallback={<div style={{ padding: 40, color: 'var(--text-secondary)' }}>Graph 로딩 중...</div>}>
           <PipelineGraphTab />
@@ -109,56 +102,160 @@ function PipelinePage() {
 
       {/* Documents */}
       {tab === 'documents' && (
-        <div>
-          <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-            <select value={docFilter.sourceId || ''} onChange={e => setDocFilter(f => ({ ...f, sourceId: e.target.value ? Number(e.target.value) : undefined }))}
-              style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border-color)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '0.8rem' }}>
-              <option value="">모든 소스</option>
-              {sources.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
-            <select value={docFilter.status || ''} onChange={e => setDocFilter(f => ({ ...f, status: e.target.value || undefined }))}
-              style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border-color)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '0.8rem' }}>
-              <option value="">모든 상태</option>
-              {['new', 'crawled', 'captured', 'downloaded', 'converted', 'enriched', 'indexed', 'error'].map(s => <option key={s} value={s}>{s}</option>)}
-            </select>
-            <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', alignSelf: 'center' }}>{docTotal}건</span>
-          </div>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem' }}>
-            <thead>
-              <tr style={{ borderBottom: '2px solid var(--border-color)', textAlign: 'left' }}>
-                <th style={{ padding: '6px 10px' }}>ID</th>
-                <th style={{ padding: '6px 10px' }}>제목</th>
-                <th style={{ padding: '6px 10px' }}>타입</th>
-                <th style={{ padding: '6px 10px' }}>상태</th>
-                <th style={{ padding: '6px 10px' }}>최근 크롤링</th>
-                <th style={{ padding: '6px 10px' }}>액션</th>
-              </tr>
-            </thead>
-            <tbody>
+        <div style={{ display: 'flex', gap: 24, minHeight: 'calc(100vh - 250px)' }}>
+          {/* Left: Document list */}
+          <div style={{ width: selectedDoc ? 360 : '100%', flexShrink: 0, transition: 'width 0.2s' }}>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+              <select value={docFilter.sourceId || ''} onChange={e => { setDocFilter(f => ({ ...f, sourceId: e.target.value ? Number(e.target.value) : undefined })); setSelectedDoc(null) }}
+                style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border-color)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '0.8rem' }}>
+                <option value="">모든 소스</option>
+                {sources.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+              </select>
+              <select value={docFilter.status || ''} onChange={e => { setDocFilter(f => ({ ...f, status: e.target.value || undefined })); setSelectedDoc(null) }}
+                style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border-color)', background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '0.8rem' }}>
+                <option value="">모든 상태</option>
+                {['enriched', 'downloaded', 'converted', 'indexed', 'error'].map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+              <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', alignSelf: 'center' }}>{docTotal}건</span>
+            </div>
+
+            <div style={{ maxHeight: 'calc(100vh - 320px)', overflowY: 'auto' }}>
               {documents.map(d => (
-                <tr key={d.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                  <td style={{ padding: '6px 10px' }}>{d.id}</td>
-                  <td style={{ padding: '6px 10px' }}>{d.title || d.file_path}</td>
-                  <td style={{ padding: '6px 10px' }}>{d.file_type}</td>
-                  <td style={{ padding: '6px 10px' }}><StatusBadge status={d.status} /></td>
-                  <td style={{ padding: '6px 10px', color: 'var(--text-secondary)' }}>{formatTime(d.last_crawled_at)}</td>
-                  <td style={{ padding: '6px 10px', display: 'flex', gap: 4 }}>
-                    <button onClick={() => handleTrigger('download', d.source_id, d.id)} style={{
-                      padding: '3px 8px', fontSize: '0.7rem', border: '1px solid var(--border-color)',
-                      borderRadius: 4, cursor: 'pointer', background: 'var(--bg-secondary)', color: 'var(--text-primary)',
-                    }}>다운로드</button>
-                    <button onClick={() => handleTrigger('convert', undefined, d.id)} style={{
-                      padding: '3px 8px', fontSize: '0.7rem', border: '1px solid var(--border-color)',
-                      borderRadius: 4, cursor: 'pointer', background: 'var(--bg-secondary)', color: 'var(--text-primary)',
-                    }}>변환</button>
-                  </td>
-                </tr>
+                <div
+                  key={d.id}
+                  onClick={() => openDoc(d.id)}
+                  style={{
+                    padding: '10px 14px', borderBottom: '1px solid var(--border-color)',
+                    cursor: 'pointer', transition: 'background 0.1s',
+                    background: selectedDoc?.doc_id === d.id ? 'var(--bg-secondary)' : 'transparent',
+                  }}
+                  onMouseEnter={e => { if (selectedDoc?.doc_id !== d.id) e.currentTarget.style.background = 'var(--bg-secondary)' }}
+                  onMouseLeave={e => { if (selectedDoc?.doc_id !== d.id) e.currentTarget.style.background = 'transparent' }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-primary)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {d.title || d.file_path}
+                    </span>
+                    <StatusBadge status={d.status} />
+                  </div>
+                  {!selectedDoc && (
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-secondary)', marginTop: 4 }}>
+                      {d.file_type} · ID {d.id}
+                    </div>
+                  )}
+                </div>
               ))}
-              {documents.length === 0 && <tr><td colSpan={6} style={{ padding: 20, textAlign: 'center', color: 'var(--text-secondary)' }}>문서 없음</td></tr>}
-            </tbody>
-          </table>
+              {documents.length === 0 && (
+                <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-secondary)' }}>문서 없음</div>
+              )}
+            </div>
+          </div>
+
+          {/* Right: Document detail panel */}
+          {selectedDoc && (
+            <div style={{ flex: 1, minWidth: 0 }}>
+              {docLoading ? (
+                <div style={{ padding: 40, color: 'var(--text-secondary)' }}>로딩 중...</div>
+              ) : (
+                <DocumentViewer doc={selectedDoc} onClose={() => setSelectedDoc(null)} />
+              )}
+            </div>
+          )}
         </div>
       )}
+    </div>
+  )
+}
+
+function DocumentViewer({ doc, onClose }: { doc: DocumentContent; onClose: () => void }) {
+  const isConfluence = doc.source_type === 'confluence'
+  const isExcel = doc.source_type === 'perforce'
+
+  return (
+    <div style={{ border: '1px solid var(--border-color)', borderRadius: 12, overflow: 'hidden' }}>
+      {/* Header */}
+      <div style={{
+        padding: '16px 20px', background: 'var(--bg-secondary)',
+        borderBottom: '1px solid var(--border-color)',
+        display: 'flex', alignItems: 'flex-start', gap: 12,
+      }}>
+        <div style={{ flex: 1 }}>
+          <h3 style={{ margin: 0, fontSize: '1rem', color: 'var(--text-primary)' }}>{doc.title}</h3>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: 6, display: 'flex', flexWrap: 'wrap', gap: '6px 16px' }}>
+            {doc.tree_path && (
+              <span title="트리 경로">📁 {doc.tree_path}</span>
+            )}
+            {doc.storage_path && (
+              <span title="저장 위치">💾 {doc.storage_path}</span>
+            )}
+            {doc.images_count > 0 && (
+              <span>🖼 이미지 {doc.images_count}개</span>
+            )}
+            {doc.md_file && (
+              <span>📄 {doc.md_file}</span>
+            )}
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+          {/* Confluence link */}
+          {isConfluence && doc.confluence_url && (
+            <a href={doc.confluence_url} target="_blank" rel="noreferrer" style={{
+              padding: '6px 12px', borderRadius: 6, fontSize: '0.75rem', fontWeight: 500,
+              background: '#1868DB', color: '#fff', textDecoration: 'none',
+              display: 'flex', alignItems: 'center', gap: 4,
+            }}>
+              Confluence ↗
+            </a>
+          )}
+          {/* Excel download */}
+          {isExcel && (
+            <a href={getDocumentDownloadUrl(doc.doc_id)} style={{
+              padding: '6px 12px', borderRadius: 6, fontSize: '0.75rem', fontWeight: 500,
+              background: '#217346', color: '#fff', textDecoration: 'none',
+              display: 'flex', alignItems: 'center', gap: 4,
+            }}>
+              Excel ↓
+            </a>
+          )}
+          <button onClick={onClose} style={{
+            padding: '6px 10px', border: '1px solid var(--border-color)', borderRadius: 6,
+            background: 'transparent', cursor: 'pointer', color: 'var(--text-secondary)', fontSize: '0.8rem',
+          }}>✕</button>
+        </div>
+      </div>
+
+      {/* Markdown content */}
+      <div style={{
+        padding: '20px 24px', maxHeight: 'calc(100vh - 380px)', overflowY: 'auto',
+        fontSize: '0.85rem', lineHeight: 1.7, color: 'var(--text-primary)',
+      }}>
+        {doc.md_content ? (
+          <div className="markdown-body">
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                img: ({ src, alt, ...props }) => {
+                  // images/xxx.png → API URL로 변환
+                  const apiSrc = src?.startsWith('images/')
+                    ? `${API_BASE_URL}/admin/pipeline/documents/${doc.doc_id}/images/${src.replace('images/', '')}`
+                    : src
+                  return <img src={apiSrc} alt={alt || ''} {...props} style={{
+                    maxWidth: '100%', borderRadius: 8, margin: '8px 0',
+                    border: '1px solid var(--border-color)',
+                  }} />
+                }
+              }}
+            >
+              {doc.md_content}
+            </ReactMarkdown>
+          </div>
+        ) : (
+          <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-secondary)' }}>
+            콘텐츠 없음
+          </div>
+        )}
+      </div>
     </div>
   )
 }

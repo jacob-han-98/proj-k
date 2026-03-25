@@ -295,6 +295,29 @@ export const fetchPipelineDocuments = async (sourceId?: number, status?: string)
   return res.json();
 };
 
+export interface DocumentContent {
+  doc_id: number;
+  title: string;
+  source_type: string;
+  tree_path: string;
+  storage_path: string | null;
+  md_file: string | null;
+  md_content: string;
+  confluence_url: string | null;
+  file_path: string;
+  status: string;
+  images_count: number;
+}
+
+export const fetchDocumentContent = async (docId: number): Promise<DocumentContent> => {
+  const res = await fetch(`${API_BASE_URL}/admin/pipeline/documents/${docId}/content`);
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res.json();
+};
+
+export const getDocumentDownloadUrl = (docId: number): string =>
+  `${API_BASE_URL}/admin/pipeline/documents/${docId}/download`;
+
 export const fetchPipelineJobs = async (statuses?: string[], jobTypes?: string[], limit?: number, offset?: number, sourceId?: number): Promise<{ jobs: PipelineJob[]; stats: Record<string, number>; total: number }> => {
   const params = new URLSearchParams();
   if (statuses?.length) params.set('status', statuses.join(','));

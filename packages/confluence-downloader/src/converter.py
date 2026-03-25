@@ -48,21 +48,45 @@ def _preprocess_confluence_html(html: str) -> tuple[str, list[str], list[str]]:
     videos_to_download = []
 
     # 1) ac:image → <img> 태그로 변환
+    #    테이블 셀 안의 <img>는 markdownify가 alt 텍스트만 남기므로,
+    #    테이블 안에서는 마크다운 이미지 문법 텍스트로 직접 치환한다.
     for img_tag in soup.find_all("ac:image"):
         attachment = img_tag.find("ri:attachment")
+        url_el = img_tag.find("ri:url")
+        caption_el = img_tag.find("ac:caption")
+
         if attachment:
             filename = attachment.get("ri:filename", "image.png")
             images_to_download.append(filename)
-            new_img = soup.new_tag("img", src=f"images/{filename}", alt=filename)
-            img_tag.replace_with(new_img)
+            src = f"images/{filename}"
+            alt = caption_el.get_text().strip() if caption_el else filename
+        elif url_el:
+            src = url_el.get("ri:value", "")
+            alt = caption_el.get_text().strip() if caption_el else "image"
+        else:
+            img_tag.decompose()
             continue
-        url_el = img_tag.find("ri:url")
-        if url_el:
-            url = url_el.get("ri:value", "")
-            new_img = soup.new_tag("img", src=url, alt="image")
+
+        # 테이블 셀 안인지 확인
+        in_table = img_tag.find_parent("td") is not None or img_tag.find_parent("th") is not None
+
+        if in_table:
+            # markdownify가 테이블 셀의 <img>를 무시하므로 텍스트로 직접 삽입
+            md_text = f"![{alt}]({src})"
+            if caption_el:
+                md_text += f" *{caption_el.get_text().strip()}*"
+            replacement = NavigableString(md_text)
+            img_tag.replace_with(replacement)
+        else:
+            new_img = soup.new_tag("img", src=src, alt=alt)
             img_tag.replace_with(new_img)
-            continue
-        img_tag.decompose()
+            # 캡션이 있으면 이미지 아래에 이탤릭으로 추가
+            if caption_el and caption_el.get_text().strip():
+                caption_p = soup.new_tag("p")
+                caption_em = soup.new_tag("em")
+                caption_em.string = caption_el.get_text().strip()
+                caption_p.append(caption_em)
+                new_img.insert_after(caption_p)
 
     # 2) ac:structured-macro → 적절한 HTML로 변환
     for macro in soup.find_all("ac:structured-macro"):

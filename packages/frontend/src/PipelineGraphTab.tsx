@@ -188,9 +188,13 @@ function buildSvg(dag: PipelineDagResponse, theme: ReturnType<typeof getThemeCol
 
       const wCount = workers[stage.id] || 0
 
+      const isWindowsOnly = stage.id === 'capture'
+      const winStroke = isWindowsOnly ? '#f97316' : nodeStroke  // 오렌지 테두리
+      const winTooltip = isWindowsOnly ? '\n⊞ Windows 전용 — PC에서 워커 실행 필요' : ''
+
       svg += `<g class="dag-node ${isRunning ? 'running' : ''}" data-id="${src.source_id}-${stage.id}" data-source="${src.source_id}" data-stage="${stage.id}">
-        <title>${esc(stage.label)}: ${esc(stage.desc || '')}${pendingCount ? `\n대기: ${pendingCount}건` : ''}${wCount ? `\n워커: ${wCount}대` : ''}</title>
-        <rect class="node-bg" x="${x}" y="${y}" width="${NODE_W}" height="${NODE_H}" rx="10" fill="${nodeFill}" stroke="${sel ? '#2563eb' : nodeStroke}" stroke-width="${sel ? 2.5 : 1.5}"/>
+        <title>${esc(stage.label)}: ${esc(stage.desc || '')}${winTooltip}${pendingCount ? `\n대기: ${pendingCount}건` : ''}${wCount ? `\n워커: ${wCount}대` : ''}</title>
+        <rect class="node-bg" x="${x}" y="${y}" width="${NODE_W}" height="${NODE_H}" rx="10" fill="${nodeFill}" stroke="${sel ? '#2563eb' : winStroke}" stroke-width="${sel ? 2.5 : isWindowsOnly ? 2 : 1.5}" ${isWindowsOnly ? 'stroke-dasharray="4 2"' : ''}/>
         ${wCount > 0 ? `<g><circle cx="${x + NODE_W - 8}" cy="${y + 8}" r="8" fill="#052e16" stroke="#22c55e" stroke-width="1"/>
           <text x="${x + NODE_W - 8}" y="${y + 12}" text-anchor="middle" fill="#4ade80" font-size="9" font-weight="700">${wCount}</text></g>`
         : `<circle cx="${x + NODE_W - 8}" cy="${y + 8}" r="5" fill="none" stroke="${theme.border}" stroke-width="0.8" stroke-dasharray="2 2"/>`}
@@ -360,7 +364,12 @@ export default function PipelineGraphTab() {
       const r = await runPipelineDag(sid, stage, mode) as any
       const launched = r.workers_launched || 0
       const pendingTotal = r.pending ? Object.values(r.pending as Record<string, number>).reduce((a: number, b: number) => a + b, 0) : 0
-      setToast(launched > 0 ? `워커 ${launched}개 실행 (대기 ${pendingTotal}건)` : '대기 작업 없음')
+      if (r.windows_only) {
+        setToast(`Windows 전용 작업 (대기 ${pendingTotal}건) — Windows PC에서 워커를 실행하세요`)
+        setTimeout(() => setToast(null), 5000)
+      } else {
+        setToast(launched > 0 ? `워커 ${launched}개 실행 (대기 ${pendingTotal}건)` : '대기 작업 없음')
+      }
       setTimeout(() => setToast(null), 3000)
       load()
     } catch (e) {

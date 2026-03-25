@@ -1380,9 +1380,12 @@ def pipeline_dag_run(source_id: int, stage: str, mode: str = "single"):
                 stderr=subprocess.STDOUT,
             )
 
+    windows_only = target_stage == "capture"
+
     return {
         "source_id": source_id,
         "mode": mode,
+        "windows_only": windows_only,
         "pending": pending_counts,
         "workers_launched": min(total_pending, 5) if total_pending > 0 else 0,
     }

@@ -1018,11 +1018,7 @@ def handle_capture(job: dict, worker_id: str) -> dict:
     _db_complete_conversion(conv_id, str(output_dir), stats=result)
     _db_update_document_status(document_id, "captured")
 
-    # convert(Vision) 작업 자동 체이닝
-    _db_create_job("convert", source_id=doc["source_id"], document_id=document_id,
-                   priority=4, worker_type="any")
-    log.info(f"  convert 작업 체이닝")
-
+    # 체이닝은 서버 API의 complete_job에서 처리 (capture→convert, download→enrich)
     return {"capture_dir": str(output_dir), "sheets": result.get("sheet_count", 0)}
 
 

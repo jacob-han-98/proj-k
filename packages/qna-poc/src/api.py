@@ -1475,11 +1475,39 @@ def pipeline_start_job(job_id: int):
 
 @app.post("/admin/pipeline/jobs/{job_id}/complete")
 def pipeline_complete_job(job_id: int, result: dict = None):
-    """작업 완료."""
+    """작업 완료 + 다음 단계 자동 체이닝."""
     pdb = _get_pipeline_db()
+    chained = None
     with pdb.get_conn() as conn:
+        # 완료 처리
         pdb.complete_job(conn, job_id, result)
-        return {"job_id": job_id, "status": "completed"}
+
+        # 체이닝: capture → convert, download → enrich
+        job = conn.execute("SELECT * FROM jobs WHERE id=?", [job_id]).fetchone()
+        if job:
+            job = dict(job)
+            job_type = job.get("job_type")
+            doc_id = job.get("document_id")
+            source_id = job.get("source_id")
+
+            CHAIN_MAP = {
+                "capture": "convert",
+                "download": "enrich",
+            }
+            next_type = CHAIN_MAP.get(job_type)
+            if next_type and doc_id:
+                # 중복 방지
+                existing = conn.execute(
+                    "SELECT id FROM jobs WHERE job_type=? AND document_id=? AND status IN ('pending','running','assigned')",
+                    [next_type, doc_id]
+                ).fetchone()
+                if not existing:
+                    worker_type = "any"
+                    new_job_id = pdb.create_job(conn, next_type, source_id=source_id,
+                                                document_id=doc_id, worker_type=worker_type, priority=4)
+                    chained = {"job_type": next_type, "job_id": new_job_id}
+
+        return {"job_id": job_id, "status": "completed", "chained": chained}
 
 
 @app.post("/admin/pipeline/jobs/{job_id}/fail")

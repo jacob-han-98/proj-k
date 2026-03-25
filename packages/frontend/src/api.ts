@@ -295,6 +295,12 @@ export const fetchPipelineDocuments = async (sourceId?: number, status?: string)
   return res.json();
 };
 
+export interface SheetInfo {
+  name: string;
+  md_size: number;
+  images_count: number;
+}
+
 export interface DocumentContent {
   doc_id: number;
   title: string;
@@ -307,10 +313,17 @@ export interface DocumentContent {
   file_path: string;
   status: string;
   images_count: number;
+  sheets?: SheetInfo[];  // Excel only
 }
 
 export const fetchDocumentContent = async (docId: number): Promise<DocumentContent> => {
   const res = await fetch(`${API_BASE_URL}/admin/pipeline/documents/${docId}/content`);
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res.json();
+};
+
+export const fetchSheetContent = async (docId: number, sheetName: string): Promise<{ sheet_name: string; md_content: string; images_count: number }> => {
+  const res = await fetch(`${API_BASE_URL}/admin/pipeline/documents/${docId}/sheet/${encodeURIComponent(sheetName)}`);
   if (!res.ok) throw new Error(`API error: ${res.status}`);
   return res.json();
 };

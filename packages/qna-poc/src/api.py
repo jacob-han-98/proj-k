@@ -916,31 +916,86 @@ def pipeline_document_content(doc_id: int):
             confluence_url = f"https://bighitcorp.atlassian.net/wiki/pages/viewpage.action?pageId={doc['file_path']}"
         elif source_type == "perforce":
             base = project_root / "packages" / "xlsx-extractor" / "output"
-            # Excel: workbook명으로 폴더
             wb_name = title.replace('.xlsx', '').replace('.xlsm', '')
-            page_dir = base / wb_name / "_final"
-            content_md = page_dir / "content.md"
-            md_path = content_md
+            wb_dir = base / wb_name
+            if not wb_dir.exists():
+                wb_dir = base / f"PK_{wb_name}"
+            page_dir = wb_dir
             confluence_url = None
+
+            # 시트별 content.md 수집
+            sheets_data = []
+            if wb_dir.exists():
+                for sheet_dir in sorted(wb_dir.iterdir()):
+                    if not sheet_dir.is_dir() or sheet_dir.name.startswith('_'):
+                        continue
+                    final_md = sheet_dir / "_final" / "content.md"
+                    if final_md.exists():
+                        img_dir = sheet_dir / "_final" / "images"
+                        img_count = len(list(img_dir.iterdir())) if img_dir.exists() else 0
+                        sheets_data.append({
+                            "name": sheet_dir.name,
+                            "md_size": final_md.stat().st_size,
+                            "images_count": img_count,
+                        })
+
+            # 첫 번째 시트를 기본 표시
+            md_path = None
+            if sheets_data:
+                md_path = wb_dir / sheets_data[0]["name"] / "_final" / "content.md"
         else:
             return {"error": "unknown source type"}
 
         md_content = ""
-        if md_path.exists():
+        if md_path and md_path.exists():
             md_content = md_path.read_text(encoding="utf-8")
 
-        return {
+        result = {
             "doc_id": doc_id,
             "title": title,
             "source_type": source_type,
             "tree_path": tree_path,
             "storage_path": str(page_dir.relative_to(project_root)) if page_dir.exists() else None,
-            "md_file": md_path.name if md_path.exists() else None,
+            "md_file": md_path.name if md_path and md_path.exists() else None,
             "md_content": md_content,
             "confluence_url": confluence_url,
             "file_path": doc.get("file_path", ""),
             "status": doc.get("status", ""),
-            "images_count": len(re.findall(r'!\[[^\]]*\]\(images/', md_content)),  # MD에서 참조하는 이미지 수
+            "images_count": len(_re.findall(r'!\[[^\]]*\]\(images/', md_content)),
+        }
+        # Excel: 시트 목록 추가
+        if source_type == "perforce" and sheets_data:
+            result["sheets"] = sheets_data
+        return result
+
+
+@app.get("/admin/pipeline/documents/{doc_id}/sheet/{sheet_name}")
+def pipeline_document_sheet(doc_id: int, sheet_name: str):
+    """Excel 워크북의 특정 시트 콘텐츠 반환."""
+    import re as _re
+    pdb = _get_pipeline_db()
+    with pdb.get_conn() as conn:
+        doc = pdb.get_document(conn, doc_id)
+        if not doc:
+            raise HTTPException(status_code=404, detail="Document not found")
+        title = doc.get("title", "")
+        project_root = Path(__file__).resolve().parent.parent.parent.parent
+        base = project_root / "packages" / "xlsx-extractor" / "output"
+        wb_name = title.replace('.xlsx', '').replace('.xlsm', '')
+        wb_dir = base / wb_name
+        if not wb_dir.exists():
+            wb_dir = base / f"PK_{wb_name}"
+
+        md_path = wb_dir / sheet_name / "_final" / "content.md"
+        if not md_path.exists():
+            raise HTTPException(status_code=404, detail=f"Sheet not found: {sheet_name}")
+
+        md_content = md_path.read_text(encoding="utf-8")
+        img_count = len(_re.findall(r'!\[[^\]]*\]\(images/', md_content))
+        return {
+            "sheet_name": sheet_name,
+            "md_content": md_content,
+            "images_count": img_count,
         }
 
 
@@ -973,10 +1028,16 @@ def pipeline_document_image(doc_id: int, filename: str):
         project_root = Path(__file__).resolve().parent.parent.parent.parent
         if source_type == "confluence":
             base = project_root / "packages" / "confluence-downloader" / "output"
+            img_path = base / "/".join(parts) / "images" / filename
         else:
+            # Excel: filename에 "시트명/이미지파일" 형태
             base = project_root / "packages" / "xlsx-extractor" / "output"
+            wb_name = title.replace('.xlsx', '').replace('.xlsm', '')
+            wb_dir = base / wb_name
+            if not wb_dir.exists():
+                wb_dir = base / f"PK_{wb_name}"
+            img_path = wb_dir / filename  # 예: 변신/_final/images/xxx.png
 
-        img_path = base / "/".join(parts) / "images" / filename
         if not img_path.exists():
             raise HTTPException(status_code=404, detail=f"Image not found: {filename}")
 
@@ -1079,7 +1140,7 @@ def pipeline_dag():
         "perforce": {
             "pipeline": "excel-vision",
             "stages": [
-                {"id": "crawl", "label": "P4 Download", "desc": "P4 서버에서 7_System 폴더를 동기화하고, SHA256 해시 비교로 변경/추가된 xlsx 파일을 감지합니다."},
+                {"id": "crawl", "label": "P4 Get Latest", "desc": "P4 서버에서 7_System 폴더를 동기화하고, SHA256 해시 비교로 변경/추가된 xlsx 파일을 감지합니다."},
                 {"id": "capture", "label": "ScreenShot (Excel COM)", "desc": "Excel COM을 이용해 각 시트를 PNG 스크린샷으로 캡처합니다. (Windows 전용)"},
                 {"id": "convert", "label": "Vision Convert (Opus 4.6)", "desc": "Vision AI(Opus 4.6)로 스크린샷을 분석하고, OOXML 파싱 데이터로 수치를 보정하여 Markdown을 생성합니다."},
             ],

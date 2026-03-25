@@ -377,3 +377,99 @@
 15:44:30 [worker] INFO 작업 완료: #3083
  → OK (428 tokens, 9.8s)
   → content_enriched.md 저장 완료
+15:50:07 [worker] INFO DB 모드: local (SQLite 직접 접근)
+15:50:07 [worker] INFO DB 모드: local (SQLite 직접 접근)
+15:50:07 [worker] INFO DB 모드: local (SQLite 직접 접근)
+15:50:07 [worker] INFO DB 모드: local (SQLite 직접 접근)
+15:50:07 [worker] INFO DB 모드: local (SQLite 직접 접근)
+15:50:08 [worker] INFO 작업 수령: #3082 (enrich)
+15:50:08 [worker] INFO 작업 수령: #3083 (enrich)
+15:50:08 [worker] INFO 보강: DOF (Depth of Field) 임시 변경방법 (DOF (Depth of Field) 임시 변경방법)
+  [1/1] image-20241212-105329.png15:50:08 [worker] INFO 작업 수령: #3084 (enrich)
+15:50:08 [worker] INFO 보강: 공허의 틈새(인터서버던전) 시스템 고도화 (공허의 틈새(인터서버던전) 시스템 고도화)
+  [1/5] image-20260324-074627.png15:50:08 [worker] INFO 작업 수령: #3085 (enrich)
+15:50:08 [worker] INFO 보강: 월드맵 개선 (월드맵 개선)
+  [1/5] image-20260323-082941.png15:50:08 [worker] INFO 작업 수령: #3086 (enrich)
+15:50:08 [worker] INFO 보강: [개인 성장4] 점성술 시스템 컨셉 ([개인 성장4] 점성술 시스템 컨셉)
+  [1/2] image-20260324-070227.png15:50:08 [worker] INFO 보강: 필드 및 던전 테리토리 정책 (필드 및 던전 테리토리 정책)
+  [1/1] image-20250424-072307.png → OK (289 tokens, 8.8s)
+  [2/5] image-20260323-082516.png15:50:19 [worker] INFO   보강 완료: 이미지 0/1, 토큰 4553+387
+15:50:19 [worker] INFO 작업 완료: #3086
+ → OK (387 tokens, 10.4s)
+  → content_enriched.md 저장 완료
+ → OK (429 tokens, 11.4s)
+  [2/2] image-20260324-070237.png15:50:20 [worker] INFO   보강 완료: 이미지 0/1, 토큰 2476+460
+15:50:20 [worker] INFO 작업 완료: #3082
+ → OK (460 tokens, 11.9s)
+  → content_enriched.md 저장 완료
+  [resize] image-20260324-074627.png: 2901x1370 -> 2901x1370 (500KB)
+ → OK (561 tokens, 15.0s)
+  [2/5] image-20260324-074605.png → OK (394 tokens, 10.5s)
+  [3/5] image-20260323-083737.png15:50:33 [worker] INFO   보강 완료: 이미지 0/2, 토큰 14006+983
+15:50:34 [worker] INFO 작업 완료: #3085
+ → OK (554 tokens, 13.9s)
+  → content_enriched.md 저장 완료
+  [resize] image-20260324-074605.png: 2903x1371 -> 2903x1371 (458KB)
+ → OK (539 tokens, 16.3s)
+  [3/5] image-20260324-081925.png → OK (474 tokens, 15.0s)
+  [4/5] image-20260323-083914.png → OK (344 tokens, 8.9s)
+  [5/5] image-20260323-085308.png  [resize] image-20260324-081925.png: 2910x1377 -> 2910x1377 (592KB)
+ → OK (700 tokens, 12.9s)
+  [4/5] image-20260324-081413.png15:51:01 [worker] INFO   보강 완료: 이미지 0/5, 토큰 22627+1924
+ → OK (340 tokens, 9.2s)
+  [5/5] image-20260324-081515.png15:51:02 [worker] INFO 작업 완료: #3084
+  [resize] image-20260323-085308.png: 2000x967 -> 2000x967 (359KB)
+ → OK (423 tokens, 10.0s)
+  → content_enriched.md 저장 완료
+15:51:11 [worker] INFO   보강 완료: 이미지 0/5, 토큰 33310+2573
+15:51:12 [worker] INFO 작업 완료: #3083
+ → OK (433 tokens, 9.7s)
+  → content_enriched.md 저장 완료
+15:58:31 [worker] INFO DB 모드: local (SQLite 직접 접근)
+15:58:31 [worker] INFO DB 모드: local (SQLite 직접 접근)
+15:58:31 [worker] INFO DB 모드: local (SQLite 직접 접근)
+15:58:31 [worker] INFO DB 모드: local (SQLite 직접 접근)
+15:58:31 [worker] INFO DB 모드: local (SQLite 직접 접근)
+15:58:31 [worker] INFO 작업 수령: #3082 (enrich)
+15:58:31 [worker] INFO 작업 수령: #3083 (enrich)
+15:58:31 [worker] INFO 보강: DOF (Depth of Field) 임시 변경방법 (DOF (Depth of Field) 임시 변경방법)
+  [1/1] image-20241212-105329.png15:58:31 [worker] INFO 보강: 공허의 틈새(인터서버던전) 시스템 고도화 (공허의 틈새(인터서버던전) 시스템 고도화)
+15:58:31 [worker] INFO 작업 수령: #3084 (enrich)
+  [1/5] image-20260324-074627.png15:58:31 [worker] INFO 보강: 월드맵 개선 (월드맵 개선)
+  [1/5] image-20260323-082941.png15:58:31 [worker] INFO 작업 수령: #3085 (enrich)
+15:58:32 [worker] INFO 보강: [개인 성장4] 점성술 시스템 컨셉 ([개인 성장4] 점성술 시스템 컨셉)
+  [1/2] image-20260324-070227.png15:58:32 [worker] INFO 작업 수령: #3086 (enrich)
+15:58:32 [worker] INFO 보강: 필드 및 던전 테리토리 정책 (필드 및 던전 테리토리 정책)
+  [1/1] image-20250424-072307.png → OK (333 tokens, 8.2s)
+  [2/5] image-20260323-082516.png → OK (334 tokens, 10.4s)
+  [2/2] image-20260324-070237.png15:58:43 [worker] INFO   보강 완료: 이미지 0/1, 토큰 2476+456
+15:58:43 [worker] INFO 작업 완료: #3082
+ → OK (456 tokens, 11.6s)
+  → content_enriched.md 저장 완료
+15:58:43 [worker] INFO   보강 완료: 이미지 0/1, 토큰 4553+366
+15:58:43 [worker] INFO 작업 완료: #3086
+ → OK (366 tokens, 11.1s)
+  → content_enriched.md 저장 완료
+  [resize] image-20260324-074627.png: 2901x1370 -> 2901x1370 (500KB)
+ → OK (600 tokens, 15.5s)
+  [2/5] image-20260324-074605.png → OK (376 tokens, 9.9s)
+  [3/5] image-20260323-083737.png15:58:55 [worker] INFO   보강 완료: 이미지 0/2, 토큰 13911+822
+15:58:56 [worker] INFO 작업 완료: #3085
+ → OK (488 tokens, 13.2s)
+  → content_enriched.md 저장 완료
+ → OK (434 tokens, 10.3s)
+  [4/5] image-20260323-083914.png  [resize] image-20260324-074605.png: 2903x1371 -> 2903x1371 (458KB)
+ → OK (552 tokens, 13.2s)
+  [3/5] image-20260324-081925.png → OK (327 tokens, 9.2s)
+  [5/5] image-20260323-085308.png  [resize] image-20260324-081925.png: 2910x1377 -> 2910x1377 (592KB)
+ → OK (723 tokens, 13.0s)
+  [4/5] image-20260324-081413.png15:59:20 [worker] INFO   보강 완료: 이미지 0/5, 토큰 22652+1934
+15:59:20 [worker] INFO 작업 완료: #3084
+  [resize] image-20260323-085308.png: 2000x967 -> 2000x967 (359KB)
+ → OK (464 tokens, 10.7s)
+  → content_enriched.md 저장 완료
+ → OK (276 tokens, 7.5s)
+  [5/5] image-20260324-081515.png15:59:30 [worker] INFO   보강 완료: 이미지 0/5, 토큰 33487+2613
+15:59:31 [worker] INFO 작업 완료: #3083
+ → OK (462 tokens, 9.5s)
+  → content_enriched.md 저장 완료

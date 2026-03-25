@@ -202,7 +202,7 @@ function buildSvg(dag: PipelineDagResponse, theme: ReturnType<typeof getThemeCol
           displayStatus === 'auto' ? 'AUTO' :
           displayStatus === 'failed' ? 'FAILED' :
           displayStatus === 'pending' ? 'PENDING' :
-          status.completed_at ? '' : 'IDLE'
+          status.completed_at ? '' : ''
         }</text>
         <g class="node-action" ${!isBusy ? `data-run="${src.source_id}-${stage.id}"` : ''} style="opacity:${isBusy ? disabledOpacity : 1}${isBusy ? ';pointer-events:none' : ''}">
           <title>${isBusy ? '실행 중...' : '이 단계 실행'}</title>
@@ -308,14 +308,16 @@ export default function PipelineGraphTab() {
 
   useEffect(() => { load() }, [load])
 
-  // Auto-refresh when jobs are active
+  // Auto-refresh when jobs are active — 2초 간격
   useEffect(() => {
     if (!dag) return
-    const hasActiveJobs = dag.sources.some(src => Object.values(src.stage_status).some(x => x.status === 'running' || (x.pending_count || 0) > 0))
-      || Object.values(dag.shared_status).some(x => x.status === 'running')
+    const hasActiveJobs = dag.sources.some(src => Object.values(src.stage_status).some(x =>
+      x.status === 'running' || (x.pending_count || 0) > 0 || (x.running_count || 0) > 0
+    )) || Object.values(dag.shared_status).some(x => x.status === 'running' || (x.pending_count || 0) > 0)
+    const hasWorkers = dag.workers && Object.values(dag.workers).some(v => v > 0)
     const hasAutoSettings = dag.sources.some(src => src.settings?.auto_crawl_interval)
-    if (!hasActiveJobs && !hasAutoSettings) return
-    const t = setInterval(load, hasActiveJobs ? 3000 : 10000)
+    if (!hasActiveJobs && !hasWorkers && !hasAutoSettings) return
+    const t = setInterval(load, 2000)
     return () => clearInterval(t)
   }, [dag, load])
 
@@ -351,8 +353,10 @@ export default function PipelineGraphTab() {
   const onRun = useCallback(async (sourceId: number, stage: string, mode: 'single' | 'downstream' | 'all') => {
     try {
       const sid = sourceId || dag?.sources[0]?.source_id || 1
-      // 노드 자동 선택
+      // 노드 자동 선택 + running 필터 자동 활성화
       setSelected({ sourceId: sid, stageId: stage, label: stage })
+      setJobStatusFilter(new Set(['running']))
+      setJobPage(0)
       const r = await runPipelineDag(sid, stage, mode) as any
       const launched = r.workers_launched || 0
       const pendingTotal = r.pending ? Object.values(r.pending as Record<string, number>).reduce((a: number, b: number) => a + b, 0) : 0

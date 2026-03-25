@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, lazy, Suspense } from 'react'
 import {
-  fetchPipelineSources, fetchPipelineDocuments, fetchDocumentContent, getDocumentDownloadUrl,
+  fetchPipelineSources, fetchPipelineDocuments, fetchDocumentContent, fetchSheetContent, getDocumentDownloadUrl,
   API_BASE_URL,
 } from './api'
 import type { PipelineSource, PipelineDocument, DocumentContent } from './api'
@@ -170,6 +170,33 @@ function PipelinePage() {
 function DocumentViewer({ doc, onClose }: { doc: DocumentContent; onClose: () => void }) {
   const isConfluence = doc.source_type === 'confluence'
   const isExcel = doc.source_type === 'perforce'
+  const sheets = doc.sheets || []
+
+  const [activeSheet, setActiveSheet] = useState(sheets[0]?.name || '')
+  const [sheetMd, setSheetMd] = useState(doc.md_content)
+  const [sheetImgBase, setSheetImgBase] = useState('')  // Excel 시트별 이미지 경로 prefix
+
+  // Excel 시트 전환
+  const loadSheet = useCallback(async (sheetName: string) => {
+    setActiveSheet(sheetName)
+    try {
+      const r = await fetchSheetContent(doc.doc_id, sheetName)
+      setSheetMd(r.md_content)
+      setSheetImgBase(`${sheetName}/_final/`)
+    } catch {
+      setSheetMd('시트 로딩 실패')
+    }
+  }, [doc.doc_id])
+
+  // 초기 로드 시 Excel 첫 시트 이미지 경로 설정
+  useEffect(() => {
+    if (isExcel && sheets.length > 0) {
+      setSheetImgBase(`${sheets[0].name}/_final/`)
+      setActiveSheet(sheets[0].name)
+    }
+  }, [doc.doc_id])
+
+  const mdContent = isExcel ? sheetMd : doc.md_content
 
   return (
     <div style={{ border: '1px solid var(--border-color)', borderRadius: 12, overflow: 'hidden' }}>
@@ -182,41 +209,30 @@ function DocumentViewer({ doc, onClose }: { doc: DocumentContent; onClose: () =>
         <div style={{ flex: 1 }}>
           <h3 style={{ margin: 0, fontSize: '1rem', color: 'var(--text-primary)' }}>{doc.title}</h3>
           <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: 6, display: 'flex', flexWrap: 'wrap', gap: '6px 16px' }}>
-            {doc.tree_path && (
-              <span title="트리 경로">📁 {doc.tree_path}</span>
-            )}
             {doc.storage_path && (
               <span title="저장 위치">💾 {doc.storage_path}</span>
             )}
-            {doc.images_count > 0 && (
-              <span>🖼 이미지 {doc.images_count}개</span>
+            {isExcel && sheets.length > 0 && (
+              <span>📊 {sheets.length}개 시트</span>
             )}
-            {doc.md_file && (
-              <span>📄 {doc.md_file}</span>
+            {!isExcel && doc.images_count > 0 && (
+              <span>🖼 이미지 {doc.images_count}개</span>
             )}
           </div>
         </div>
 
         <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-          {/* Confluence link */}
           {isConfluence && doc.confluence_url && (
             <a href={doc.confluence_url} target="_blank" rel="noreferrer" style={{
               padding: '6px 12px', borderRadius: 6, fontSize: '0.75rem', fontWeight: 500,
               background: '#1868DB', color: '#fff', textDecoration: 'none',
-              display: 'flex', alignItems: 'center', gap: 4,
-            }}>
-              Confluence ↗
-            </a>
+            }}>Confluence ↗</a>
           )}
-          {/* Excel download */}
           {isExcel && (
             <a href={getDocumentDownloadUrl(doc.doc_id)} style={{
               padding: '6px 12px', borderRadius: 6, fontSize: '0.75rem', fontWeight: 500,
               background: '#217346', color: '#fff', textDecoration: 'none',
-              display: 'flex', alignItems: 'center', gap: 4,
-            }}>
-              Excel ↓
-            </a>
+            }}>Excel ↓</a>
           )}
           <button onClick={onClose} style={{
             padding: '6px 10px', border: '1px solid var(--border-color)', borderRadius: 6,
@@ -225,21 +241,48 @@ function DocumentViewer({ doc, onClose }: { doc: DocumentContent; onClose: () =>
         </div>
       </div>
 
+      {/* Excel: Sheet tabs */}
+      {isExcel && sheets.length > 0 && (
+        <div style={{
+          display: 'flex', gap: 2, padding: '0 16px', background: 'var(--bg-secondary)',
+          borderBottom: '1px solid var(--border-color)', overflowX: 'auto',
+        }}>
+          {sheets.map(s => (
+            <button key={s.name} onClick={() => loadSheet(s.name)} style={{
+              padding: '6px 14px', border: 'none', cursor: 'pointer',
+              background: 'transparent', fontSize: '0.75rem',
+              color: activeSheet === s.name ? '#2563eb' : 'var(--text-secondary)',
+              fontWeight: activeSheet === s.name ? 600 : 400,
+              borderBottom: activeSheet === s.name ? '2px solid #2563eb' : '2px solid transparent',
+              whiteSpace: 'nowrap',
+            }}>
+              {s.name}
+              {s.images_count > 0 && <span style={{ marginLeft: 4, fontSize: '0.6rem', color: 'var(--text-secondary)' }}>🖼{s.images_count}</span>}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* Markdown content */}
       <div style={{
-        padding: '20px 24px', maxHeight: 'calc(100vh - 380px)', overflowY: 'auto',
+        padding: '20px 24px', maxHeight: 'calc(100vh - 420px)', overflowY: 'auto',
         fontSize: '0.85rem', lineHeight: 1.7, color: 'var(--text-primary)',
       }}>
-        {doc.md_content ? (
+        {mdContent ? (
           <div className="markdown-body">
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               components={{
                 img: ({ src, alt, ...props }) => {
-                  // images/xxx.png → API URL로 변환
-                  const apiSrc = src?.startsWith('images/')
-                    ? `${API_BASE_URL}/admin/pipeline/documents/${doc.doc_id}/images/${src.replace('images/', '')}`
-                    : src
+                  let apiSrc = src
+                  if (src?.startsWith('images/')) {
+                    const imgFile = src.replace('images/', '')
+                    if (isExcel && sheetImgBase) {
+                      apiSrc = `${API_BASE_URL}/admin/pipeline/documents/${doc.doc_id}/images/${sheetImgBase}images/${imgFile}`
+                    } else {
+                      apiSrc = `${API_BASE_URL}/admin/pipeline/documents/${doc.doc_id}/images/${imgFile}`
+                    }
+                  }
                   return <img src={apiSrc} alt={alt || ''} {...props} style={{
                     maxWidth: '100%', borderRadius: 8, margin: '8px 0',
                     border: '1px solid var(--border-color)',
@@ -247,7 +290,7 @@ function DocumentViewer({ doc, onClose }: { doc: DocumentContent; onClose: () =>
                 }
               }}
             >
-              {doc.md_content}
+              {mdContent}
             </ReactMarkdown>
           </div>
         ) : (

@@ -1140,6 +1140,7 @@ class Worker:
 
     def run_once(self) -> bool:
         """작업 1개 처리. 처리했으면 True."""
+        self._heartbeat()
         job = _db_claim_job(self.worker_id, self.worker_types)
 
         if not job:

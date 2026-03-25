@@ -8,6 +8,7 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 
 const PipelineGraphTab = lazy(() => import('./PipelineGraphTab'))
+const GameDataTab = lazy(() => import('./GameDataTab'))
 
 const STATUS_COLORS: Record<string, string> = {
   new: '#6b7280', crawled: '#3b82f6', captured: '#8b5cf6',
@@ -23,7 +24,7 @@ const StatusBadge = ({ status }: { status: string }) => (
   }}>{status}</span>
 )
 
-type Tab = 'graph' | 'documents'
+type Tab = 'graph' | 'documents' | 'gamedata'
 
 function PipelinePage() {
   const [tab, setTab] = useState<Tab>('graph')
@@ -80,7 +81,7 @@ function PipelinePage() {
 
       {/* Tab bar */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 24, borderBottom: '1px solid var(--border-color)', paddingBottom: 4 }}>
-        {(['graph', 'documents'] as Tab[]).map(t => (
+        {(['graph', 'documents', 'gamedata'] as Tab[]).map(t => (
           <button key={t} onClick={() => { setTab(t); setSelectedDoc(null) }} style={{
             padding: '8px 16px', border: 'none', cursor: 'pointer', borderRadius: '8px 8px 0 0',
             background: 'transparent',
@@ -88,7 +89,7 @@ function PipelinePage() {
             fontWeight: tab === t ? 600 : 500, fontSize: '0.85rem',
             borderBottom: tab === t ? '2px solid #2563eb' : '2px solid transparent',
           }}>
-            {t === 'graph' ? 'Graph' : '문서'}
+            {t === 'graph' ? 'Graph' : t === 'documents' ? '문서' : 'DataSheet DB'}
           </button>
         ))}
       </div>
@@ -97,6 +98,13 @@ function PipelinePage() {
       {tab === 'graph' && (
         <Suspense fallback={<div style={{ padding: 40, color: 'var(--text-secondary)' }}>Graph 로딩 중...</div>}>
           <PipelineGraphTab />
+        </Suspense>
+      )}
+
+      {/* DataSheet DB */}
+      {tab === 'gamedata' && (
+        <Suspense fallback={<div style={{ padding: 40, color: 'var(--text-secondary)' }}>DataSheet DB 로딩 중...</div>}>
+          <GameDataTab />
         </Suspense>
       )}
 

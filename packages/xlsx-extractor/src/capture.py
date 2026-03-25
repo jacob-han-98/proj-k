@@ -265,6 +265,35 @@ def _find_vertical_split_points(img, max_tile_h, overlap_px, min_gap=5):
     return splits
 
 
+def _smart_horizontal_crop(tile_img, header_skip=80, bg_threshold=245,
+                           min_content_ratio=0.01, padding=30):
+    """타일 이미지의 우측 빈 공간을 크롭. 헤더 행은 건너뛰고 데이터 영역 기준."""
+    import numpy as np
+    W, H = tile_img.size
+    if W <= OVERVIEW_MAX_W:
+        return tile_img, W  # 이미 작으면 크롭 불필요
+
+    arr = np.array(tile_img.convert("RGB"))
+    skip = min(header_skip, H // 3)  # 이미지가 작으면 스킵 축소
+    data_region = arr[skip:, :, :]
+    if data_region.shape[0] == 0:
+        return tile_img, W
+
+    non_bg = ~np.all(data_region > bg_threshold, axis=2)
+    col_density = non_bg.sum(axis=0) / data_region.shape[0]
+    content_cols = np.where(col_density > min_content_ratio)[0]
+
+    if len(content_cols) == 0:
+        return tile_img, W
+
+    rightmost = int(content_cols[-1])
+    crop_x = min(rightmost + padding, W)
+
+    if crop_x < W * 0.90:  # 10% 이상 줄어들 때만 크롭
+        return tile_img.crop((0, 0, crop_x, H)), crop_x
+    return tile_img, W
+
+
 def _create_detail_tiles(full_img_path, output_dir):
     from PIL import Image
     Image.MAX_IMAGE_PIXELS = None
@@ -273,12 +302,16 @@ def _create_detail_tiles(full_img_path, output_dir):
     W, H = img.size
 
     if H <= DETAIL_MAX:
+        # 단일 타일 — 가로 크롭 적용
+        cropped, crop_w = _smart_horizontal_crop(img)
         tile_path = os.path.join(output_dir, "detail_r0.png")
-        img.save(tile_path, "PNG")
+        cropped.save(tile_path, "PNG")
+        if crop_w < W:
+            print(f"    [crop] detail_r0: {W}→{crop_w}px ({(1-crop_w/W)*100:.0f}% 절약)")
         return {
             "tiles": [{
                 "tile_id": "detail_r0", "row_index": 0, "total_rows": 1,
-                "pixel_region": {"x": 0, "y": 0, "w": W, "h": H},
+                "pixel_region": {"x": 0, "y": 0, "w": crop_w, "h": H},
                 "position_description": "entire sheet",
             }],
             "total_rows": 1, "split_needed": False,
@@ -288,10 +321,25 @@ def _create_detail_tiles(full_img_path, output_dir):
     splits = _find_vertical_split_points(img, DETAIL_MAX, overlap_px)
     total_rows = len(splits)
 
-    tiles = []
+    # 모든 타일의 데이터 영역 기준 최대 너비 계산 (일관된 크롭)
+    max_content_x = 0
+    tile_imgs = []
     for r, y_start in enumerate(splits):
         y_end = min(splits[r + 1] + overlap_px, H) if r < total_rows - 1 else H
         tile = img.crop((0, y_start, W, y_end))
+        _, crop_w = _smart_horizontal_crop(tile)
+        max_content_x = max(max_content_x, crop_w)
+        tile_imgs.append((tile, y_start, y_end))
+
+    # 일관된 너비로 크롭 (가장 넓은 타일 기준)
+    crop_w = min(max_content_x, W)
+    if crop_w < W * 0.90:
+        print(f"    [crop] 전체 타일: {W}→{crop_w}px ({(1-crop_w/W)*100:.0f}% 절약)")
+
+    tiles = []
+    for r, (tile, y_start, y_end) in enumerate(tile_imgs):
+        if crop_w < W * 0.90:
+            tile = tile.crop((0, 0, crop_w, tile.size[1]))
 
         tile_id = f"detail_r{r}"
         tile_path = os.path.join(output_dir, f"{tile_id}.png")
@@ -304,7 +352,7 @@ def _create_detail_tiles(full_img_path, output_dir):
 
         tiles.append({
             "tile_id": tile_id, "row_index": r, "total_rows": total_rows,
-            "pixel_region": {"x": 0, "y": int(y_start), "w": W, "h": int(y_end - y_start)},
+            "pixel_region": {"x": 0, "y": int(y_start), "w": tile.size[0], "h": int(y_end - y_start)},
             "position_description": pos_desc,
             "overlap_bottom": overlap_px if r < total_rows - 1 else 0,
         })
@@ -312,6 +360,7 @@ def _create_detail_tiles(full_img_path, output_dir):
     return {
         "tiles": tiles, "total_rows": total_rows, "split_needed": True,
         "original_size": {"width": W, "height": H},
+        "cropped_width": crop_w if crop_w < W * 0.90 else W,
     }
 
 

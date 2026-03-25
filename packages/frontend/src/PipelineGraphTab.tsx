@@ -91,8 +91,9 @@ function buildSvg(dag: PipelineDagResponse, theme: ReturnType<typeof getThemeCol
   let svg = ''
 
   const SOURCE_COLS: Record<string, { fill: string; stroke: string; text: string }> = {
-    perforce:   { fill: '#1e3a5f', stroke: '#2563eb', text: '#93c5fd' },
-    confluence: { fill: '#2d1b69', stroke: '#7c3aed', text: '#c4b5fd' },
+    perforce:       { fill: '#1e3a5f', stroke: '#2563eb', text: '#93c5fd' },
+    confluence:     { fill: '#2d1b69', stroke: '#7c3aed', text: '#c4b5fd' },
+    'data-table':   { fill: '#1a3a2a', stroke: '#059669', text: '#6ee7b7' },
   }
 
   // helper: is this node selected?
@@ -121,14 +122,16 @@ function buildSvg(dag: PipelineDagResponse, theme: ReturnType<typeof getThemeCol
       svg += bezier(fx, y, tx, y, color, false, pending)
     })
 
-    // last stage → shared index
-    const lastIdx = src.stages.findIndex(s => s.id === src.last_stage)
-    if (lastIdx >= 0) {
-      const fx = LABEL_W + GAP_X / 2 + lastIdx * (NODE_W + GAP_X) + NODE_W
-      const sharedCY = (contentH - GAP_Y) / 2 + GAP_Y / 2
-      const indexPending = (dag.shared_status['index']?.pending_count || 0) + (dag.shared_status['index']?.running_count || 0)
-      const color = indexPending > 0 ? '#22c55e' : theme.border
-      svg += bezier(fx, y, sharedX, sharedCY, color, true, indexPending)
+    // last stage → shared index (data-table 파이프라인은 SQLite로 직접 가므로 제외)
+    if (src.pipeline !== 'data-table') {
+      const lastIdx = src.stages.findIndex(s => s.id === src.last_stage)
+      if (lastIdx >= 0) {
+        const fx = LABEL_W + GAP_X / 2 + lastIdx * (NODE_W + GAP_X) + NODE_W
+        const sharedCY = (contentH - GAP_Y) / 2 + GAP_Y / 2
+        const indexPending = (dag.shared_status['index']?.pending_count || 0) + (dag.shared_status['index']?.running_count || 0)
+        const color = indexPending > 0 ? '#22c55e' : theme.border
+        svg += bezier(fx, y, sharedX, sharedCY, color, true, indexPending)
+      }
     }
   })
 
@@ -144,7 +147,7 @@ function buildSvg(dag: PipelineDagResponse, theme: ReturnType<typeof getThemeCol
   // -- Source labels --
   dag.sources.forEach((src, ri) => {
     const x = 10, y = GAP_Y + ri * rowH
-    const c = SOURCE_COLS[src.source_type] || SOURCE_COLS.perforce
+    const c = SOURCE_COLS[src.pipeline] || SOURCE_COLS[src.source_type] || SOURCE_COLS.perforce
     const sel = isSelected(src.source_id, '')
     positions.push({ x, y, id: `src-${src.source_id}`, sourceId: src.source_id, stageId: '', shared: false })
     svg += `<g class="dag-node" data-id="src-${src.source_id}" data-source="${src.source_id}" data-stage="">
@@ -202,7 +205,7 @@ function buildSvg(dag: PipelineDagResponse, theme: ReturnType<typeof getThemeCol
         <text x="${x + NODE_W / 2}" y="${y + 33}" text-anchor="middle" fill="${theme.text2}" font-size="9">${timeAgo(status.completed_at || status.created_at)}</text>
         <text x="${x + NODE_W / 2}" y="${y + 46}" text-anchor="middle" fill="${sc.text}" font-size="9" font-weight="600">${
           displayStatus === 'running' ? 'RUNNING' + (runningCount > 1 ? ` (${runningCount})` : '') :
-          displayStatus === 'queued' ? `QUEUED ${pendingCount}` :
+          displayStatus === 'queued' ? '' :
           displayStatus === 'auto' ? 'AUTO' :
           displayStatus === 'failed' ? 'FAILED' :
           displayStatus === 'pending' ? 'PENDING' :
@@ -595,39 +598,42 @@ export default function PipelineGraphTab() {
                 </td>
                 <td style={{ padding: '4px 8px', color: 'var(--text-secondary)', fontSize: '0.72rem' }}>{formatTime(j.created_at)}</td>
                 <td style={{ padding: '4px 8px', color: 'var(--text-secondary)', fontSize: '0.72rem' }}>{formatTime(j.completed_at)}</td>
-                <td style={{ padding: '4px 8px', color: '#ef4444', maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: '0.72rem' }}>
-                  {j.error_message || ''}
-                  {j.status === 'failed' && (
-                    <button
-                      onClick={async (e) => {
-                        e.stopPropagation()
-                        try {
-                          await retryJob(j.id)
-                          setToast('재시도: pending으로 이동')
-                          setTimeout(() => setToast(null), 2000)
-                          // 작업 목록 새로고침
-                          const sourceId = selected?.sourceId
-                          const jobType = selected?.stageId || undefined
-                          const r = await fetchPipelineJobs(
-                            jobStatusFilter.size > 0 ? [...jobStatusFilter] : undefined,
-                            jobType ? [jobType] : undefined, jobPageSize, jobPage * jobPageSize, sourceId || undefined
-                          )
-                          setJobs(r.jobs); setJobTotal(r.total)
-                          load()
-                        } catch (err) {
-                          setToast('재시도 실패: ' + (err instanceof Error ? err.message : String(err)))
-                          setTimeout(() => setToast(null), 3000)
-                        }
-                      }}
-                      style={{
-                        marginLeft: 6, padding: '1px 6px', fontSize: '0.65rem',
-                        border: '1px solid #f97316', borderRadius: 4,
-                        background: 'transparent', color: '#f97316',
-                        cursor: 'pointer', whiteSpace: 'nowrap',
-                      }}
-                      title="pending으로 재시도"
-                    >재시도</button>
-                  )}
+                <td style={{ padding: '4px 8px', fontSize: '0.72rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {j.status === 'failed' && (
+                      <button
+                        onClick={async (e) => {
+                          e.stopPropagation()
+                          try {
+                            await retryJob(j.id)
+                            setToast('재시도: pending으로 이동')
+                            setTimeout(() => setToast(null), 2000)
+                            const sourceId = selected?.sourceId
+                            const jobType = selected?.stageId || undefined
+                            const r = await fetchPipelineJobs(
+                              jobStatusFilter.size > 0 ? [...jobStatusFilter] : undefined,
+                              jobType ? [jobType] : undefined, jobPageSize, jobPage * jobPageSize, sourceId || undefined
+                            )
+                            setJobs(r.jobs); setJobTotal(r.total)
+                            load()
+                          } catch (err) {
+                            setToast('재시도 실패: ' + (err instanceof Error ? err.message : String(err)))
+                            setTimeout(() => setToast(null), 3000)
+                          }
+                        }}
+                        style={{
+                          padding: '2px 8px', fontSize: '0.65rem', flexShrink: 0,
+                          border: '1px solid #f97316', borderRadius: 4,
+                          background: '#f9731611', color: '#f97316',
+                          cursor: 'pointer', whiteSpace: 'nowrap', fontWeight: 600,
+                        }}
+                        title="pending으로 재시도"
+                      >재시도</button>
+                    )}
+                    <span style={{ color: '#ef4444', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {j.error_message || ''}
+                    </span>
+                  </div>
                 </td>
               </tr>
             ))}

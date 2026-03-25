@@ -465,6 +465,62 @@ export const savePipelineSettings = async (
   return res.json();
 };
 
+// ── Game Data (DataSheet DB) ─────────────────────
+
+export interface GameDataSummary {
+  ready: boolean;
+  db_size_mb?: number;
+  ingested_at?: string;
+  table_count?: number;
+  total_rows?: number;
+  enum_types?: number;
+  enum_values?: number;
+  fk_count?: number;
+  tables?: { name: string; file: string; rows: number; columns: number; cs: string }[];
+}
+
+export interface GameDataQueryResult {
+  table?: string;
+  columns: string[];
+  rows: any[][];
+  total: number;
+  sql?: string;
+  ms?: number;
+  error?: string | null;
+}
+
+export const fetchGameDataSummary = async (): Promise<GameDataSummary> => {
+  const res = await fetch(`${API_BASE_URL}/admin/game-data/summary`);
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res.json();
+};
+
+export const fetchGameDataTable = async (tableName: string, limit = 100, filter?: string): Promise<GameDataQueryResult> => {
+  const params = new URLSearchParams({ limit: String(limit) });
+  if (filter) params.set('filter', filter);
+  const res = await fetch(`${API_BASE_URL}/admin/game-data/table/${tableName}?${params}`);
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res.json();
+};
+
+export const fetchGameDataDescribe = async (tableName: string): Promise<GameDataQueryResult> => {
+  const res = await fetch(`${API_BASE_URL}/admin/game-data/describe/${tableName}`);
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res.json();
+};
+
+export const fetchGameDataEnum = async (enumType: string): Promise<GameDataQueryResult> => {
+  const res = await fetch(`${API_BASE_URL}/admin/game-data/enum/${enumType}`);
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res.json();
+};
+
+export const searchGameData = async (q: string): Promise<{ results: any[]; query: string }> => {
+  const res = await fetch(`${API_BASE_URL}/admin/game-data/search?q=${encodeURIComponent(q)}`);
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res.json();
+};
+
 /** NDJSON 스트리밍 이벤트 타입 */
 export type StreamEvent =
   | { type: 'status'; message: string }

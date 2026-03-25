@@ -1125,6 +1125,24 @@ def pipeline_trigger_job(job_type: str, source_id: int = None, document_id: int 
         return {"job_id": job_id, "job_type": job_type, "status": "pending"}
 
 
+@app.post("/admin/pipeline/jobs/reset-all")
+def pipeline_reset_jobs(job_type: str, from_status: str = None):
+    """특정 타입의 작업을 모두 pending으로 리셋."""
+    pdb = _get_pipeline_db()
+    statuses = [from_status] if from_status else ["completed", "failed", "running"]
+    total = 0
+    with pdb.get_conn() as conn:
+        for s in statuses:
+            cur = conn.execute(
+                "UPDATE jobs SET status = 'pending', worker_id = NULL, started_at = NULL, "
+                "completed_at = NULL, error_message = NULL, result = NULL "
+                "WHERE job_type = ? AND status = ?",
+                [job_type, s]
+            )
+            total += cur.rowcount
+    return {"reset": total, "job_type": job_type, "from_statuses": statuses}
+
+
 @app.get("/admin/pipeline/dag")
 def pipeline_dag():
     """통합 파이프라인 DAG — 소스별 단계 + 공유 단계(index, kg_build).
@@ -1136,8 +1154,9 @@ def pipeline_dag():
     pdb = _get_pipeline_db()
 
     # 소스 타입별 고유 단계 (index/kg_build 제외)
+    # convert_strategy로 세분화: perforce/vision-first vs perforce/table-parser
     SOURCE_STAGES = {
-        "perforce": {
+        "perforce:vision-first": {
             "pipeline": "excel-vision",
             "stages": [
                 {"id": "crawl", "label": "P4 Get Latest", "desc": "P4 서버에서 7_System 폴더를 동기화하고, SHA256 해시 비교로 변경/추가된 xlsx 파일을 감지합니다."},
@@ -1147,6 +1166,17 @@ def pipeline_dag():
             "edges": [
                 {"from": "crawl", "to": "capture"},
                 {"from": "capture", "to": "convert"},
+            ],
+            "last_stage": "convert",
+        },
+        "perforce:table-parser": {
+            "pipeline": "data-table",
+            "stages": [
+                {"id": "crawl", "label": "P4 Get Latest", "desc": "P4 서버에서 DataSheet 폴더를 동기화하고, 변경된 xlsx 파일을 감지합니다."},
+                {"id": "convert", "label": "Table Parser → SQLite", "desc": "xlsx 데이터시트(Row1 헤더, Row2 타입, Row3+ 데이터)를 파싱하여 SQLite DB로 인제스트합니다. Agent의 query_game_data 도구가 이 DB를 조회합니다."},
+            ],
+            "edges": [
+                {"from": "crawl", "to": "convert"},
             ],
             "last_stage": "convert",
         },
@@ -1176,7 +1206,9 @@ def pipeline_dag():
 
         for src in sources:
             src_type = src["source_type"]
-            src_def = SOURCE_STAGES.get(src_type)
+            convert_strategy = src.get("convert_strategy", "vision-first")
+            # convert_strategy로 세분화된 키 매칭 (예: perforce:table-parser)
+            src_def = SOURCE_STAGES.get(f"{src_type}:{convert_strategy}") or SOURCE_STAGES.get(src_type)
             if not src_def:
                 continue
 
@@ -1667,6 +1699,160 @@ def pipeline_create_crawl_log(data: dict):
 
 
 # ── Webhook 트리거 (P4/Confluence 변경 알림) ──────────────
+
+# ── 게임 데이터 (DataSheet DB) ──────────────────────────
+
+def _get_game_data_module():
+    """game_data 모듈 lazy import."""
+    import sys as _sys
+    _dp_path = str(Path(__file__).resolve().parent.parent.parent / "data-pipeline")
+    if _dp_path not in _sys.path:
+        _sys.path.insert(0, _dp_path)
+    # data-pipeline 패키지의 game_data 모듈을 직접 import
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "game_data", str(Path(_dp_path) / "src" / "game_data.py"))
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod.execute_game_query, mod.get_schema_summary, mod.is_db_ready, mod.get_db_path
+
+
+@app.get("/admin/game-data/summary")
+def game_data_summary():
+    """게임 데이터 DB 요약 — 테이블 목록, DB 크기, Enum 통계."""
+    execute_game_query, get_schema_summary, is_db_ready, get_db_path = _get_game_data_module()
+    db_path = get_db_path()
+    if not is_db_ready(db_path):
+        return {"ready": False}
+
+    import sqlite3
+    conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+    conn.row_factory = sqlite3.Row
+    try:
+        tables = conn.execute(
+            "SELECT table_name, source_file, row_count, column_count, cs, columns_json "
+            "FROM _table_catalog ORDER BY table_name"
+        ).fetchall()
+
+        meta = {r["key"]: r["value"] for r in conn.execute("SELECT key, value FROM _meta").fetchall()}
+
+        enum_stats = conn.execute(
+            "SELECT COUNT(DISTINCT enum_type) as types, COUNT(*) as total_values FROM _enums"
+        ).fetchone()
+
+        fk_count = conn.execute("SELECT COUNT(*) FROM _fk_relationships").fetchone()[0]
+
+        db_size = db_path.stat().st_size / 1024 / 1024
+
+        return {
+            "ready": True,
+            "db_path": str(db_path),
+            "db_size_mb": round(db_size, 2),
+            "ingested_at": meta.get("ingested_at", ""),
+            "table_count": len(tables),
+            "total_rows": sum(t["row_count"] for t in tables),
+            "enum_types": enum_stats["types"],
+            "enum_values": enum_stats["total_values"],
+            "fk_count": fk_count,
+            "tables": [
+                {"name": t["table_name"], "file": t["source_file"],
+                 "rows": t["row_count"], "columns": t["column_count"], "cs": t["cs"]}
+                for t in tables
+            ],
+        }
+    finally:
+        conn.close()
+
+
+@app.get("/admin/game-data/table/{table_name}")
+def game_data_table(table_name: str, limit: int = 100, offset: int = 0, filter: str = None):
+    """특정 테이블 데이터 조회. filter: 'column=value' 형식."""
+    execute_game_query, _, is_db_ready, get_db_path = _get_game_data_module()
+    db_path = get_db_path()
+    if not is_db_ready(db_path):
+        return {"error": "DB not ready"}
+
+    spec: dict = {"action": "query", "table": table_name, "limit": limit}
+    if filter:
+        filters = []
+        for f in filter.split(","):
+            for op in [">=", "<=", "!=", "=", ">", "<"]:
+                if op in f:
+                    col, val = f.split(op, 1)
+                    filters.append({"column": col.strip(), "op": op, "value": val.strip()})
+                    break
+        if filters:
+            spec["filters"] = filters
+
+    result = execute_game_query(spec, db_path)
+    return {
+        "table": table_name,
+        "columns": result.columns,
+        "rows": result.rows,
+        "total": result.total_matched,
+        "sql": result.sql,
+        "ms": round(result.execution_ms, 1),
+        "error": result.error or None,
+    }
+
+
+@app.get("/admin/game-data/describe/{table_name}")
+def game_data_describe(table_name: str):
+    """테이블 스키마 조회."""
+    execute_game_query, _, is_db_ready, get_db_path = _get_game_data_module()
+    result = execute_game_query({"action": "describe", "table": table_name}, get_db_path())
+    return {"columns": result.columns, "rows": result.rows, "error": result.error or None}
+
+
+@app.get("/admin/game-data/enum/{enum_type}")
+def game_data_enum(enum_type: str):
+    """Enum 값 조회."""
+    execute_game_query, _, is_db_ready, get_db_path = _get_game_data_module()
+    result = execute_game_query({"action": "lookup_enum", "enum_type": enum_type}, get_db_path())
+    return {"columns": result.columns, "rows": result.rows, "total": result.total_matched}
+
+
+@app.get("/admin/game-data/search")
+def game_data_search(q: str, limit: int = 50):
+    """테이블/컬럼/Enum에서 키워드 검색."""
+    _, _, is_db_ready, get_db_path = _get_game_data_module()
+    db_path = get_db_path()
+    if not is_db_ready(db_path):
+        return {"results": []}
+
+    import sqlite3, json as _json
+    conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+    conn.row_factory = sqlite3.Row
+    try:
+        results = []
+        q_lower = q.lower()
+
+        # 테이블명 검색
+        for t in conn.execute("SELECT table_name, row_count, source_file FROM _table_catalog").fetchall():
+            if q_lower in t["table_name"].lower():
+                results.append({"type": "table", "name": t["table_name"], "rows": t["row_count"], "file": t["source_file"]})
+
+        # Enum값 검색
+        for e in conn.execute("SELECT enum_type, name, value, comment FROM _enums WHERE name LIKE ? OR comment LIKE ? LIMIT ?",
+                              (f"%{q}%", f"%{q}%", limit)).fetchall():
+            results.append({"type": "enum", "enum_type": e["enum_type"], "name": e["name"], "value": e["value"], "comment": e["comment"]})
+
+        return {"results": results[:limit], "query": q}
+    finally:
+        conn.close()
+
+
+@app.post("/admin/game-data/query")
+def game_data_query_endpoint(spec: dict):
+    """자유 쿼리 — 구조화 JSON spec 전달."""
+    execute_game_query, _, is_db_ready, get_db_path = _get_game_data_module()
+    result = execute_game_query(spec, get_db_path())
+    return {
+        "columns": result.columns, "rows": result.rows,
+        "total": result.total_matched, "sql": result.sql,
+        "ms": round(result.execution_ms, 1), "error": result.error or None,
+    }
+
 
 @app.post("/webhook/perforce")
 def webhook_perforce(data: dict):

@@ -1171,8 +1171,11 @@ class Worker:
     def _heartbeat(self):
         """하트비트 전송 — 이 워커가 가동 중임을 DB에 기록."""
         try:
-            with _db.get_conn() as conn:
-                _db.worker_heartbeat(conn, self.worker_id, self.worker_types, self.worker_types)
+            if _remote_mode:
+                _db.worker_heartbeat(self.worker_id, self.worker_types, self.worker_types)
+            else:
+                with _db.get_conn() as conn:
+                    _db.worker_heartbeat(conn, self.worker_id, self.worker_types, self.worker_types)
         except Exception:
             pass  # 하트비트 실패는 무시
 

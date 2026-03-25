@@ -1441,6 +1441,17 @@ def pipeline_rollback_index(snapshot_id: int):
 
 # ── 워커용 API (개발PC → 서버 DB 접근) ──────────────────
 
+@app.post("/admin/pipeline/workers/heartbeat")
+def pipeline_worker_heartbeat(worker_id: str, worker_types: str = "any", job_types: str = "any"):
+    """원격 워커 하트비트."""
+    pdb = _get_pipeline_db()
+    with pdb.get_conn() as conn:
+        pdb.worker_heartbeat(conn, worker_id,
+                             worker_types.split(","),
+                             job_types.split(","))
+    return {"ok": True}
+
+
 @app.post("/admin/pipeline/jobs/claim")
 def pipeline_claim_job(worker_id: str, worker_types: str = "any"):
     """워커가 작업을 가져감."""

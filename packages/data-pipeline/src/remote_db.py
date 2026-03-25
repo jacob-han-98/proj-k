@@ -151,6 +151,16 @@ def get_documents_by_source(source_id: int) -> list[dict]:
     return _get(f"/sources/{source_id}/documents").get("documents", [])
 
 
+# ── worker heartbeat ──
+
+def worker_heartbeat(worker_id: str, worker_types: list[str], job_types: list[str]):
+    _post("/workers/heartbeat", params={
+        "worker_id": worker_id,
+        "worker_types": ",".join(worker_types),
+        "job_types": ",".join(job_types),
+    })
+
+
 # ── pipeline status ──
 
 def get_pipeline_stats() -> dict:

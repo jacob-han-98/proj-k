@@ -955,7 +955,8 @@ def handle_enrich(job: dict, worker_id: str) -> dict:
     cd_dir = PROJECT_ROOT / "packages" / "confluence-downloader"
     output_dir = cd_dir / "output"
     import re
-    safe_parts = _safe_dir_parts(tree_path, title)
+    doc_title = doc.get("title", "")
+    safe_parts = _safe_dir_parts(tree_path, doc_title)
     page_dir = output_dir / "/".join(safe_parts)
 
     if not (page_dir / "content.md").exists():

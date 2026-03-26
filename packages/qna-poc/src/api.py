@@ -40,6 +40,66 @@ app = FastAPI(title="Project K QnA PoC", version="0.2.0")
 _auto_threads: dict[str, threading.Thread] = {}
 _auto_stop = threading.Event()
 
+# ── 상주 워커 프로세스 매니저 ──────────────
+# key: job_type (convert, enrich), value: list of (worker_id, Popen)
+_managed_workers: dict[str, list[tuple[str, subprocess.Popen]]] = {}
+_worker_lock = threading.Lock()
+_SCALABLE_TYPES = {"convert", "enrich"}  # UI에서 스케일 가능한 타입
+
+def _worker_dir() -> str:
+    return str(Path(__file__).resolve().parent.parent.parent / "data-pipeline")
+
+def _worker_log_path() -> Path:
+    p = Path(_worker_dir()).parent.parent / "logs"
+    p.mkdir(exist_ok=True)
+    return p
+
+def _cleanup_dead_workers():
+    """종료된 프로세스를 목록에서 제거."""
+    for jt in list(_managed_workers):
+        _managed_workers[jt] = [(wid, p) for wid, p in _managed_workers[jt] if p.poll() is None]
+        if not _managed_workers[jt]:
+            del _managed_workers[jt]
+
+def _scale_workers(job_type: str, desired: int) -> dict:
+    """워커 수를 desired로 조정. 반환: {job_type, current, launched, killed}."""
+    if job_type not in _SCALABLE_TYPES:
+        raise ValueError(f"스케일 불가: {job_type}")
+    desired = max(0, min(desired, 10))  # 0~10 제한
+
+    with _worker_lock:
+        _cleanup_dead_workers()
+        current_list = _managed_workers.get(job_type, [])
+        current = len(current_list)
+
+        launched = 0
+        killed = 0
+
+        if desired > current:
+            # 추가 스폰
+            wdir = _worker_dir()
+            log_path = _worker_log_path()
+            for i in range(desired - current):
+                wid = f"scale-{job_type}-{current + i}"
+                proc = subprocess.Popen(
+                    [sys.executable, "-m", "src.worker", "--id", wid, "--types", job_type],
+                    cwd=wdir,
+                    stdout=open(log_path / f"scale-{job_type}.log", "a"),
+                    stderr=subprocess.STDOUT,
+                )
+                current_list.append((wid, proc))
+                launched += 1
+        elif desired < current:
+            # 뒤에서부터 kill
+            to_kill = current - desired
+            for _ in range(to_kill):
+                wid, proc = current_list.pop()
+                proc.terminate()
+                killed += 1
+
+        _managed_workers[job_type] = current_list
+        return {"job_type": job_type, "current": len(current_list), "launched": launched, "killed": killed}
+
 
 def _auto_scheduler():
     """자동 크롤/다운로드/enrich 스케줄러. API 시작 시 백그라운드 실행."""
@@ -1245,7 +1305,7 @@ def pipeline_dag():
                 # pending/running 카운트 추가
                 counts = conn.execute(
                     "SELECT status, COUNT(*) as c FROM jobs "
-                    "WHERE source_id = ? AND job_type = ? AND status IN ('pending','running') "
+                    "WHERE source_id = ? AND job_type = ? AND status IN ('pending','assigned','running') "
                     "GROUP BY status",
                     [src["id"], stage["id"]]
                 ).fetchall()
@@ -1312,12 +1372,28 @@ def pipeline_dag():
             for jt in job_types:
                 workers_by_type[jt] = workers_by_type.get(jt, 0) + 1
 
+        # managed 워커도 합산
+        with _worker_lock:
+            _cleanup_dead_workers()
+            for jt in _SCALABLE_TYPES:
+                managed = len(_managed_workers.get(jt, []))
+                if managed > 0:
+                    workers_by_type[jt] = workers_by_type.get(jt, 0) + managed
+
+        # managed 워커 수 (UI 스케일 조절용)
+        managed_counts = {}
+        with _worker_lock:
+            for jt in _SCALABLE_TYPES:
+                managed_counts[jt] = len(_managed_workers.get(jt, []))
+
         return {
             "sources": source_data,
             "shared_stages": SHARED_STAGES,
             "shared_edges": [{"from": "index", "to": "kg_build"}],
             "shared_status": shared_status,
             "workers": workers_by_type,
+            "managed_workers": managed_counts,
+            "scalable_types": list(_SCALABLE_TYPES),
         }
 
 
@@ -1469,6 +1545,28 @@ def pipeline_rollback_index(snapshot_id: int):
     with pdb.get_conn() as conn:
         pdb.activate_snapshot(conn, snapshot_id)
         return {"snapshot_id": snapshot_id, "status": "activated"}
+
+
+# ── 워커 스케일 API ────────────────────────────────────
+
+@app.get("/admin/pipeline/workers/scale")
+def pipeline_workers_scale_get():
+    """스케일 가능한 워커 현황 조회."""
+    with _worker_lock:
+        _cleanup_dead_workers()
+        result = {}
+        for jt in _SCALABLE_TYPES:
+            result[jt] = len(_managed_workers.get(jt, []))
+    return {"workers": result, "scalable_types": list(_SCALABLE_TYPES)}
+
+
+@app.post("/admin/pipeline/workers/scale")
+def pipeline_workers_scale_set(job_type: str, count: int):
+    """워커 수 조절 (convert, enrich만 가능)."""
+    if job_type not in _SCALABLE_TYPES:
+        raise HTTPException(400, f"스케일 불가: {job_type}. 가능: {_SCALABLE_TYPES}")
+    result = _scale_workers(job_type, count)
+    return result
 
 
 # ── 워커용 API (개발PC → 서버 DB 접근) ──────────────────

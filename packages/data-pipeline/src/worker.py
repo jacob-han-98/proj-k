@@ -1118,8 +1118,16 @@ def _convert_vision_first(doc: dict, source: dict, params: dict) -> dict:
     conv_id = _db_create_conversion(doc["id"], "synthesize", "vision-first",
                                      input_path=str(xlsx_path))
 
-    from run import process_workbook
-    result = process_workbook(str(xlsx_path), str(output_dir))
+    import subprocess
+    run_py = extractor_dir / "run.py"
+    cmd = [sys.executable, str(run_py), str(xlsx_path), "--output", str(output_dir.parent),
+           "--stage", "vis-syn"]
+    log.info(f"  실행: {' '.join(cmd)}")
+    proc = subprocess.run(cmd, capture_output=True, text=True, cwd=str(extractor_dir),
+                          timeout=600)
+    if proc.returncode != 0:
+        raise RuntimeError(f"xlsx-extractor 실패 (exit {proc.returncode}): {proc.stderr[-500:]}")
+    result = {"stdout_tail": proc.stdout[-300:] if proc.stdout else ""}
 
     _db_complete_conversion(conv_id, str(output_dir), stats=result or {})
     _db_update_document_status(doc["id"], "converted")

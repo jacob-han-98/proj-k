@@ -38,13 +38,20 @@ PLANNING_PROMPT = """당신은 모바일 MMORPG "Project K"의 기획 QnA 시스
 사용자 질문을 분석하여 최적의 검색 전략을 JSON으로 출력하세요.
 
 ## 사용 가능한 검색 도구
-1. **retrieve** — 하이브리드 검색 (구조적+벡터). 기본 검색 도구.
+1. **retrieve** — 하이브리드 검색 (구조적+벡터). 기획서에서 설계 의도, 규칙, 플로우를 검색. 기본 검색 도구.
 2. **section_search** — 특정 워크북 내 집중 검색. 워크북명을 알 때 사용.
 3. **kg_related** — 지식 그래프에서 관련 시스템 조회. 시스템 간 관계 질문에 사용.
+4. **query_game_data** — 게임 데이터 테이블 직접 조회. 실제 수치, 아이템 목록, 몬스터 스탯, 스킬 데이터 등 **구체적 데이터**를 조회할 때 사용.
+   - 기획서 = "왜/어떻게" (설계 의도), 데이터 테이블 = "무엇이/얼마나" (실제 수치)
+   - args 형식: {"action": "query", "table": "테이블명", "columns": [...], "filters": [{"column": "컬럼명", "op": "=", "value": "값"}], "order_by": [{"column": "컬럼명", "direction": "DESC"}], "limit": 50}
+   - action 종류: "list_tables"(테이블 목록), "describe"(컬럼 정의), "query"(필터/조인 쿼리), "lookup_enum"(Enum 값 조회)
+   - 수치/목록/비교/밸런스 질문에 retrieve와 함께 사용하면 정확한 답변 가능
+   - 예: "레전더리 무기 목록" → query_game_data(table=ItemEquipClass, filters=[Grade=Legendary])
+   - 예: "보스 몬스터 HP" → query_game_data(table=MonsterClass, filters=[Type=Boss])
 
 ## 분석 항목
 1. **핵심 시스템/기능**: 질문이 어떤 시스템/기능에 대한 것인지 (예: "물약 자동 사용 시스템", "스킬 시스템")
-2. **질문 유형**: overview(시스템 전체 설명/개요), fact(사실 조회), cross_system(시스템 간), flow(플로우/시퀀스), balance(수치/밸런스), ui(UI/UX), trap(존재하지 않는 기능)
+2. **질문 유형**: overview(시스템 전체 설명/개요), fact(사실 조회), cross_system(시스템 간), flow(플로우/시퀀스), balance(수치/밸런스), data_query(구체적 수치/목록 조회), ui(UI/UX), trap(존재하지 않는 기능)
 3. **검색 키워드**: 검색에 사용할 핵심 키워드 (시스템명 포함)
 4. **검색 전략**: 어떤 도구를 어떤 순서로 사용할지
 
@@ -211,6 +218,31 @@ def _get_kg_summary_for_planning() -> str:
     return "\n".join(lines)
 
 
+# 게임 데이터 스키마 캐시
+_game_data_schema_cache: str | None = None
+
+def _get_game_data_schema() -> str:
+    """게임 데이터 테이블 스키마 요약 (Planning LLM 주입용). 캐시됨."""
+    global _game_data_schema_cache
+    if _game_data_schema_cache is not None:
+        return _game_data_schema_cache
+
+    try:
+        import sys as _sys
+        _dp_path = str(Path(__file__).resolve().parent.parent.parent / "data-pipeline")
+        if _dp_path not in _sys.path:
+            _sys.path.insert(0, _dp_path)
+        from src.game_data import get_schema_summary, is_db_ready, get_db_path
+        if is_db_ready():
+            _game_data_schema_cache = get_schema_summary(get_db_path())
+            return _game_data_schema_cache
+    except Exception as e:
+        log.warning(f"게임 데이터 스키마 로드 실패: {e}")
+
+    _game_data_schema_cache = ""
+    return ""
+
+
 def plan_search(query: str, role: str = None, model: str = "claude-opus-4-6",
                 conversation_history: list[tuple[str, str]] = None) -> dict:
     """LLM으로 질문을 분석하여 검색 전략 수립.
@@ -237,6 +269,11 @@ def plan_search(query: str, role: str = None, model: str = "claude-opus-4-6",
     kg_summary = _get_kg_summary_for_planning()
     if kg_summary:
         user_msg += f"\n\n시스템 간 관계 (Knowledge Graph):\n{kg_summary}"
+
+    # 게임 데이터 테이블 스키마 제공 (query_game_data 도구용)
+    game_data_schema = _get_game_data_schema()
+    if game_data_schema:
+        user_msg += f"\n\n{game_data_schema}"
 
     try:
         result = call_bedrock(
@@ -314,7 +351,7 @@ def execute_search(plan: dict, query: str, max_chunks: int = 200) -> list[dict]:
 
     # ── 2. Planning 전략 실행 (보강) ──
     search_plan = plan.get("search_plan", [])
-    for step in search_plan:
+    for step_idx, step in enumerate(search_plan):
         tool = step.get("tool", "retrieve")
         args = step.get("args", {})
 
@@ -354,6 +391,36 @@ def execute_search(plan: dict, query: str, max_chunks: int = 200) -> list[dict]:
                             c["source"] = "kg_agent"
                             if c["id"] not in all_chunks:
                                 all_chunks[c["id"]] = c
+
+        elif tool == "query_game_data":
+            try:
+                from data_pipeline_path import game_data_module
+            except ImportError:
+                pass
+            try:
+                import sys as _sys
+                _dp_path = str(Path(__file__).resolve().parent.parent.parent / "data-pipeline")
+                if _dp_path not in _sys.path:
+                    _sys.path.insert(0, _dp_path)
+                from src.game_data import execute_game_query, format_game_data_result, is_db_ready, get_db_path
+                if is_db_ready():
+                    gd_result = execute_game_query(args, get_db_path())
+                    formatted = format_game_data_result(gd_result)
+                    gd_chunk = {
+                        "id": f"gamedata_{step_idx}",
+                        "workbook": f"GameData/{args.get('table', '')}",
+                        "sheet": "query_result",
+                        "text": formatted,
+                        "score": 1.5,
+                        "source": "game_data_query",
+                        "tokens": len(formatted) // 4,
+                        "_game_data": True,
+                    }
+                    all_chunks[gd_chunk["id"]] = gd_chunk
+                    log.info(f"  game_data 쿼리: table={args.get('table')}, "
+                             f"rows={gd_result.total_matched}, {gd_result.execution_ms:.0f}ms")
+            except Exception as e:
+                log.warning(f"  game_data 쿼리 실패: {e}")
 
     # ── 3. Planning key_systems 직접 검색 보강 ──
     key_systems = plan.get("key_systems", [])
@@ -433,6 +500,7 @@ AGENT_ANSWER_PROMPT = """당신은 모바일 MMORPG "Project K"의 기획 전문
 2. **컨텍스트 기반 완전 답변**: 컨텍스트에 관련 정보가 있으면 **반드시, 빠짐없이** 답변하세요. 부분적이라도 관련 내용이 있으면 그것을 기반으로 답하세요. 동의어/유사 표현("비활성화"="선택 불가", "Category 값"="Category 컬럼")도 같은 의미로 매칭하세요.
 3. **구체적 데이터 정확 인용**: 수치, 비용, 배율, 확률, 테이블, Enum 값은 반드시 컨텍스트에서 직접 인용하세요. 컨텍스트에 없는 구체적 수치/데이터를 절대 만들어내지 마세요. 단, 시스템 구조/관계/설계 의도에 대한 분석적 추론은 허용됩니다.
 4. **출처 명시**: 답변에 사용한 정보의 출처를 표시하세요. 형식: `[출처: 워크북명 / 시트명]`
+5. **기획서 + 데이터 테이블 교차 참조**: "게임 데이터 조회 결과"가 포함된 경우, 실제 수치는 데이터 테이블에서 직접 인용하고 `[출처: GameData/테이블명]`으로 표시하세요. 설계 의도와 규칙은 기획서에서 인용하세요. 두 소스를 결합하여 "왜 이 수치인지"까지 설명하면 최고의 답변입니다.
 
 ## [2] 답변 구조 가이드
 
@@ -702,7 +770,21 @@ def generate_agent_answer(query: str, chunks: list[dict], role: str = None,
 
     context = "\n\n---\n\n".join(context_parts)
 
-    user_msg = f"## 컨텍스트 (검색된 기획서)\n\n{context}\n\n---\n\n## 질문\n{query}"
+    # 게임 데이터 쿼리 결과가 있으면 별도 섹션으로 분리
+    game_data_parts = []
+    for c in full_sheet_chunks:
+        if c.get("_game_data"):
+            game_data_parts.append(c.get("text", ""))
+
+    if game_data_parts:
+        game_data_section = "\n\n".join(game_data_parts)
+        user_msg = (
+            f"## 게임 데이터 조회 결과 (실제 수치)\n\n{game_data_section}\n\n---\n\n"
+            f"## 참조 기획서 (설계 의도/규칙)\n\n{context}\n\n---\n\n"
+            f"## 질문\n{query}"
+        )
+    else:
+        user_msg = f"## 컨텍스트 (검색된 기획서)\n\n{context}\n\n---\n\n## 질문\n{query}"
     if role:
         user_msg = f"[질문자 역할: {role}]\n\n" + user_msg
 

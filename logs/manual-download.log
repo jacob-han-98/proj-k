@@ -10,3 +10,7 @@
 17:14:46 [worker] INFO   완료: [Beta3] 서대륙 컷신 제작 (61545자, 이미지 66개) → /home/jacob/repos/proj-k/packages/confluence-downloader/output/컷신/[Beta3] 서대륙 컷신 제작
 17:14:48 [worker] INFO   enrich 작업 체이닝 (이미지 66개)
 17:14:49 [worker] INFO 작업 완료: #2157
+22:22:55 [worker] INFO DB 모드: local (SQLite 직접 접근)
+22:22:56 [worker] INFO 작업 수령: #2603 (download)
+22:22:56 [worker] INFO 다운로드: 전문 기술 (page=4557570779, path=시스템 디자인/제작/전문 기술)
+22:22:56 [worker] ERROR 작업 실패: #2603 — 404 Client Error: Not Found for url: https://bighitcorp.atlassian.net/wiki/rest/api/content/4557570779?expand=body.storage%2Cversion

@@ -1,0 +1,25 @@
+00:31:22 [worker] INFO DB 모드: local (SQLite 직접 접근)
+00:31:22 [worker] INFO DB 모드: local (SQLite 직접 접근)
+00:31:22 [worker] INFO DB 모드: local (SQLite 직접 접근)
+00:31:22 [worker] INFO DB 모드: local (SQLite 직접 접근)
+00:31:22 [worker] INFO DB 모드: local (SQLite 직접 접근)
+00:31:22 [worker] INFO 작업 수령: #3505 (convert)
+00:31:22 [worker] INFO   변환: PK_NPC퀵이동 (전략: vision-first)
+00:31:22 [worker] INFO 작업 수령: #3506 (convert)
+00:31:22 [worker] INFO   실행: /home/jacob/repos/proj-k/.venv/bin/python /home/jacob/repos/proj-k/packages/xlsx-extractor/run.py /home/jacob/p4sync/Design/7_System/PK_NPC퀵이동.xlsx --output /home/jacob/repos/proj-k/packages/xlsx-extractor/output --stage vis-syn
+00:31:22 [worker] INFO 작업 수령: #3507 (convert)
+00:31:22 [worker] INFO   변환: PK_대미지 명중률 계산기 (전략: vision-first)
+00:31:22 [worker] INFO   실행: /home/jacob/repos/proj-k/.venv/bin/python /home/jacob/repos/proj-k/packages/xlsx-extractor/run.py /home/jacob/p4sync/Design/7_System/PK_대미지 명중률 계산기.xlsx --output /home/jacob/repos/proj-k/packages/xlsx-extractor/output --stage vis-syn
+00:31:22 [worker] INFO   변환: PK_리니지라이크 컨텐츠 분석 (전략: vision-first)
+00:31:23 [worker] INFO   실행: /home/jacob/repos/proj-k/.venv/bin/python /home/jacob/repos/proj-k/packages/xlsx-extractor/run.py /home/jacob/p4sync/Design/7_System/PK_리니지라이크 컨텐츠 분석.xlsx --output /home/jacob/repos/proj-k/packages/xlsx-extractor/output --stage vis-syn
+00:31:23 [worker] INFO 작업 수령: #3508 (convert)
+00:31:23 [worker] INFO   변환: PK_리니지라이크 Stat 구조 분석 (전략: vision-first)
+00:31:23 [worker] INFO   실행: /home/jacob/repos/proj-k/.venv/bin/python /home/jacob/repos/proj-k/packages/xlsx-extractor/run.py /home/jacob/p4sync/Design/7_System/PK_리니지라이크 Stat 구조 분석.xlsx --output /home/jacob/repos/proj-k/packages/xlsx-extractor/output --stage vis-syn
+00:31:23 [worker] INFO 작업 수령: #3509 (convert)
+00:31:23 [worker] INFO   변환: PK_마우스 이벤트 처리 (전략: vision-first)
+00:31:23 [worker] INFO   실행: /home/jacob/repos/proj-k/.venv/bin/python /home/jacob/repos/proj-k/packages/xlsx-extractor/run.py /home/jacob/p4sync/Design/7_System/PK_마우스 이벤트 처리.xlsx --output /home/jacob/repos/proj-k/packages/xlsx-extractor/output --stage vis-syn
+00:31:30 [worker] ERROR 작업 실패: #3506 — xlsx-extractor 실패 (exit 1): 
+00:31:51 [worker] INFO 작업 완료: #3509
+00:32:48 [worker] INFO 작업 완료: #3505
+00:37:46 [worker] INFO 작업 완료: #3507
+00:37:53 [worker] INFO 작업 완료: #3508

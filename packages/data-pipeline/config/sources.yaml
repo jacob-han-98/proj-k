@@ -10,7 +10,17 @@ sources:
     schedule: daily
     properties:
       local_path: "/home/jacob/p4sync/Design/7_System"
-      description: "핵심 시스템 기획서 (67개 xlsx)"
+      description: "핵심 시스템 기획서"
+      file_types: ["xlsx"]
+
+  - name: "8_Contents 컨텐츠 기획서"
+    type: perforce
+    path: "//main/ProjectK/.../8_Contents/..."
+    convert_strategy: vision-first
+    schedule: manual
+    properties:
+      local_path: "/home/jacob/p4sync/Design/8_Contents"
+      description: "컨텐츠 디자인 기획서 (xlsx)"
       file_types: ["xlsx"]
 
   - name: "DataSheet"
@@ -19,22 +29,12 @@ sources:
     convert_strategy: table-parser
     schedule: daily
     properties:
-      local_path: "/mnt/d/projectk/resource/design"
+      local_path: "/home/jacob/p4sync/Design/DataSheet"
       description: "게임 데이터시트 — 클라/서버 실제 사용 수치 데이터 (tool calling용)"
       file_types: ["xlsx"]
 
-  # - name: "9_MileStone"
-  #   type: perforce
-  #   path: "//main/ProjectK/.../9_MileStone/..."
-  #   convert_strategy: vision-first
-  #   schedule: weekly
-  #   properties:
-  #     local_path: "D:/ProjectK/Design/9_MileStone"
-  #     description: "마일스톤 기획서"
-  #     file_types: ["xlsx", "pptx"]
-
   # ── Confluence 소스 ────────────────────────────
-  - name: "게임디자인 Confluence"
+  - name: "Confluence"
     type: confluence
     path: "3666773573"                            # root_page_id (Design)
     convert_strategy: html-to-md
@@ -43,11 +43,3 @@ sources:
       description: "Project K 게임디자인 문서"
       enrich_images: true                        # 이미지 보강 활성화
 
-  # - name: "기술문서 Confluence"
-  #   type: confluence
-  #   path: "TECH_ROOT_PAGE_ID"
-  #   convert_strategy: html-to-md
-  #   schedule: weekly
-  #   properties:
-  #     description: "기술 문서 (프로그래밍/QA)"
-  #     enrich_images: false

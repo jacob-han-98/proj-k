@@ -33,8 +33,6 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
 
-import openpyxl
-
 log = logging.getLogger("game_data")
 
 # ── 상수 ──────────────────────────────────────────────────
@@ -138,6 +136,7 @@ def _meta_to_column_def(col_name: str, meta: dict) -> ColumnDef:
 
 def parse_xlsx_table(file_path: str | Path, sheet_name: str) -> Optional[TableDef]:
     """xlsx의 특정 시트를 파싱하여 TableDef 반환."""
+    import openpyxl
     wb = openpyxl.load_workbook(str(file_path), read_only=True, data_only=True)
     try:
         if sheet_name not in wb.sheetnames:
@@ -202,6 +201,7 @@ def load_table_attribute(design_dir: str | Path) -> dict[str, dict]:
         log.warning(f"TableAttribute.xlsx not found: {file_path}")
         return {}
 
+    import openpyxl
     wb = openpyxl.load_workbook(str(file_path), read_only=True, data_only=True)
     try:
         ws = wb[wb.sheetnames[0]]

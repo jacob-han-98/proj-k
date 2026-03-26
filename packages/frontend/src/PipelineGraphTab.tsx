@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { fetchPipelineDag, fetchPipelineJobs, runPipelineDag, savePipelineSettings, retryJob, type PipelineDagResponse, type PipelineJob } from './api'
+import { fetchPipelineDag, fetchPipelineJobs, runPipelineDag, savePipelineSettings, retryJob, scaleWorkers, type PipelineDagResponse, type PipelineJob } from './api'
 
 // ── Status theme (uses CSS vars at runtime) ───────
 
@@ -73,7 +73,7 @@ interface NodeSelection {
   label: string
 }
 
-function buildSvg(dag: PipelineDagResponse, theme: ReturnType<typeof getThemeColors>, selected: NodeSelection | null, workers: Record<string, number>): { svg: string; positions: NodePos[]; w: number; h: number } {
+function buildSvg(dag: PipelineDagResponse, theme: ReturnType<typeof getThemeColors>, selected: NodeSelection | null, workers: Record<string, number>, managedWorkers: Record<string, number>, scalableTypes: Set<string>): { svg: string; positions: NodePos[]; w: number; h: number } {
   const NODE_W = 160, NODE_H = 78, GAP_X = 60, GAP_Y = 24
   const LABEL_W = 180
   const positions: NodePos[] = []
@@ -163,7 +163,7 @@ function buildSvg(dag: PipelineDagResponse, theme: ReturnType<typeof getThemeCol
       const x = LABEL_W + GAP_X / 2 + ci * (NODE_W + GAP_X)
       const y = GAP_Y + ri * rowH
       const status = src.stage_status[stage.id] || { status: 'idle' }
-      const pendingCount = (status.pending_count || 0)
+      const pendingCount = (status.pending_count || 0) + (status.assigned_count || 0)
       const runningCount = (status.running_count || 0)
 
       let displayStatus = status.status
@@ -190,15 +190,28 @@ function buildSvg(dag: PipelineDagResponse, theme: ReturnType<typeof getThemeCol
       const disabledOpacity = 0.2
 
       const wCount = workers[stage.id] || 0
+      const isScalable = scalableTypes.has(stage.id)
+      const managedCount = managedWorkers[stage.id] || 0
 
       const isWindowsOnly = stage.id === 'capture'
       const winStroke = isWindowsOnly ? '#f97316' : nodeStroke  // 오렌지 테두리
       const winTooltip = isWindowsOnly ? '\n⊞ Windows 전용 — PC에서 워커 실행 필요' : ''
 
       svg += `<g class="dag-node ${isRunning ? 'running' : ''}" data-id="${src.source_id}-${stage.id}" data-source="${src.source_id}" data-stage="${stage.id}">
-        <title>${esc(stage.label)}: ${esc(stage.desc || '')}${winTooltip}${pendingCount ? `\n대기: ${pendingCount}건` : ''}${wCount ? `\n워커: ${wCount}대` : ''}</title>
+        <title>${esc(stage.label)}: ${esc(stage.desc || '')}${winTooltip}${pendingCount ? `\n대기: ${pendingCount}건` : ''}${wCount ? `\n워커: ${wCount}대` : ''}${isScalable ? '\n클릭으로 워커 수 조절' : ''}</title>
         <rect class="node-bg" x="${x}" y="${y}" width="${NODE_W}" height="${NODE_H}" rx="10" fill="${nodeFill}" stroke="${sel ? '#2563eb' : winStroke}" stroke-width="${sel ? 2.5 : isWindowsOnly ? 2 : 1.5}" ${isWindowsOnly ? 'stroke-dasharray="4 2"' : ''}/>
-        ${wCount > 0 ? `<g><circle cx="${x + NODE_W - 8}" cy="${y + 8}" r="8" fill="#052e16" stroke="#22c55e" stroke-width="1"/>
+        ${isScalable ? (() => {
+          const bx = x + NODE_W - 8, by = y + 8
+          return `<g class="node-action" data-scale-down="${stage.id}"><title>워커 -1</title>
+            <rect x="${bx - 26}" y="${by - 7}" width="14" height="14" rx="3" fill="rgba(239,68,68,0.15)" stroke="#ef4444" stroke-width="0.8" style="cursor:pointer"/>
+            <text x="${bx - 19}" y="${by + 1}" text-anchor="middle" fill="#f87171" font-size="12" font-weight="700">−</text></g>
+          <g><circle cx="${bx}" cy="${by}" r="9" fill="${managedCount > 0 ? '#052e16' : 'rgba(255,255,255,0.05)'}" stroke="${managedCount > 0 ? '#22c55e' : theme.border}" stroke-width="${managedCount > 0 ? '1.5' : '0.8'}"/>
+            <text x="${bx}" y="${by + 4}" text-anchor="middle" fill="${managedCount > 0 ? '#4ade80' : theme.text2}" font-size="9" font-weight="700">${managedCount}</text></g>
+          <g class="node-action" data-scale-up="${stage.id}"><title>워커 +1</title>
+            <rect x="${bx + 5}" y="${by - 7}" width="14" height="14" rx="3" fill="rgba(34,197,94,0.15)" stroke="#22c55e" stroke-width="0.8" style="cursor:pointer"/>
+            <text x="${bx + 12}" y="${by + 1}" text-anchor="middle" fill="#4ade80" font-size="12" font-weight="700">+</text></g>`
+        })()
+        : wCount > 0 ? `<g><circle cx="${x + NODE_W - 8}" cy="${y + 8}" r="8" fill="#052e16" stroke="#22c55e" stroke-width="1"/>
           <text x="${x + NODE_W - 8}" y="${y + 12}" text-anchor="middle" fill="#4ade80" font-size="9" font-weight="700">${wCount}</text></g>`
         : `<circle cx="${x + NODE_W - 8}" cy="${y + 8}" r="5" fill="none" stroke="${theme.border}" stroke-width="0.8" stroke-dasharray="2 2"/>`}
         <text x="${x + NODE_W / 2}" y="${y + 18}" text-anchor="middle" fill="${theme.text}" font-size="12" font-weight="600">${esc(stage.label)}</text>
@@ -368,12 +381,12 @@ export default function PipelineGraphTab() {
       const launched = r.workers_launched || 0
       const pendingTotal = r.pending ? Object.values(r.pending as Record<string, number>).reduce((a: number, b: number) => a + b, 0) : 0
       if (r.windows_only) {
-        setToast(`Windows 전용 작업 (대기 ${pendingTotal}건) — Windows PC에서 워커를 실행하세요`)
+        setToast(`⚠ Windows 전용 — 대기 ${pendingTotal}건. Windows PC에서 워커를 실행하세요`)
         setTimeout(() => setToast(null), 5000)
       } else {
         setToast(launched > 0 ? `워커 ${launched}개 실행 (대기 ${pendingTotal}건)` : '대기 작업 없음')
+        setTimeout(() => setToast(null), 3000)
       }
-      setTimeout(() => setToast(null), 3000)
       load()
     } catch (e) {
       setToast('실패: ' + (e instanceof Error ? e.message : String(e)))
@@ -382,6 +395,33 @@ export default function PipelineGraphTab() {
   }, [dag, load])
 
   const handleSvgClick = useCallback(async (e: React.MouseEvent) => {
+    // 워커 스케일 +/- 버튼
+    const scaleUp = (e.target as Element).closest('[data-scale-up]') as Element | null
+    if (scaleUp) {
+      const jt = scaleUp.getAttribute('data-scale-up') || ''
+      const current = dag?.managed_workers?.[jt] || 0
+      try {
+        const r = await scaleWorkers(jt, current + 1)
+        setToast(`${jt} 워커: ${r.current}대 (+${r.launched})`)
+        setTimeout(() => setToast(null), 3000)
+        load()
+      } catch (err) { setToast('스케일 실패: ' + (err instanceof Error ? err.message : String(err))); setTimeout(() => setToast(null), 5000) }
+      return
+    }
+    const scaleDown = (e.target as Element).closest('[data-scale-down]') as Element | null
+    if (scaleDown) {
+      const jt = scaleDown.getAttribute('data-scale-down') || ''
+      const current = dag?.managed_workers?.[jt] || 0
+      if (current <= 0) return
+      try {
+        const r = await scaleWorkers(jt, current - 1)
+        setToast(`${jt} 워커: ${r.current}대 (−${r.killed})`)
+        setTimeout(() => setToast(null), 3000)
+        load()
+      } catch (err) { setToast('스케일 실패: ' + (err instanceof Error ? err.message : String(err))); setTimeout(() => setToast(null), 5000) }
+      return
+    }
+
     // ▶▶ 여기부터 끝까지
     const dsTarget = (e.target as Element).closest('[data-run-downstream]') as Element | null
     if (dsTarget) {
@@ -467,7 +507,8 @@ export default function PipelineGraphTab() {
   if (!dag) return null
 
   const theme = getThemeColors()
-  const { svg, positions, w, h } = buildSvg(dag, theme, selected, dag.workers || {})
+  const scalableTypes = new Set(dag.scalable_types || [])
+  const { svg, positions, w, h } = buildSvg(dag, theme, selected, dag.workers || {}, dag.managed_workers || {}, scalableTypes)
   positionsRef.current = positions
 
   const fullSvg = `<svg class="dag-svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg">

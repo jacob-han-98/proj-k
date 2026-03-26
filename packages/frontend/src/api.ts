@@ -410,6 +410,7 @@ export interface DagStageStatus {
   error?: string | null;
   pending_count?: number;
   running_count?: number;
+  assigned_count?: number;
 }
 
 export interface PipelineSettings {
@@ -436,6 +437,8 @@ export interface PipelineDagResponse {
   shared_edges: DagEdge[];
   shared_status: Record<string, DagStageStatus>;
   workers?: Record<string, number>;
+  managed_workers?: Record<string, number>;
+  scalable_types?: string[];
 }
 
 export const fetchPipelineDag = async (): Promise<PipelineDagResponse> => {
@@ -461,6 +464,15 @@ export const savePipelineSettings = async (
   if (settings.auto_download !== undefined) params.set('auto_download', String(settings.auto_download));
   if (settings.auto_enrich !== undefined) params.set('auto_enrich', String(settings.auto_enrich));
   const res = await fetch(`${API_BASE_URL}/admin/pipeline/settings?${params}`, { method: 'POST' });
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res.json();
+};
+
+export const scaleWorkers = async (
+  jobType: string, count: number
+): Promise<{ job_type: string; current: number; launched: number; killed: number }> => {
+  const params = new URLSearchParams({ job_type: jobType, count: String(count) });
+  const res = await fetch(`${API_BASE_URL}/admin/pipeline/workers/scale?${params}`, { method: 'POST' });
   if (!res.ok) throw new Error(`API error: ${res.status}`);
   return res.json();
 };

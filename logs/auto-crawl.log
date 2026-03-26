@@ -1110,3 +1110,8 @@
 12:46:31 [worker] INFO 크롤링: Confluence (confluence)
 12:46:31 [worker] INFO   CQL 증분 크롤: ancestor = 3666773573 AND lastModified > "2026-03-24 03:46" ORDER BY lastModified DESC
 13:03:12 [worker] ERROR 작업 실패: #2145 — HTTPSConnectionPool(host='bighitcorp.atlassian.net', port=443): Read timed out. (read timeout=None)
+22:27:30 [worker] INFO DB 모드: local (SQLite 직접 접근)
+22:27:30 [worker] INFO 작업 수령: #3504 (crawl)
+22:27:30 [worker] INFO 크롤링: 7_System 기획서 (perforce)
+22:27:30 [worker] INFO   실행: p4 sync //main/ProjectK/.../7_System/...
+22:27:30 [worker] ERROR 작업 실패: #3504 — [Errno 2] No such file or directory: 'p4'

@@ -142,7 +142,7 @@ def phase1_capture_images(xlsx_path, output_base, sheet_indices, sheet_names, ex
                 # 우측으로 컬럼을 확장하여 오버플로우 영역까지 캡처
                 extra_cols = 50  # 고정 50컬럼 여백 (~3200px) — 오버플로우 텍스트 확보
                 last_row = ur.Row + row_count - 1
-                last_col = ur.Column + col_count - 1 + extra_cols
+                last_col = min(ur.Column + col_count - 1 + extra_cols, 16384)  # Excel 최대 컬럼 초과 방지
                 capture_range = ws.Range(
                     ws.Cells(ur.Row, ur.Column),
                     ws.Cells(last_row, last_col)
@@ -150,8 +150,19 @@ def phase1_capture_images(xlsx_path, output_base, sheet_indices, sheet_names, ex
 
                 # CopyPicture: xlScreen=1, xlBitmap=2
                 capture_range.CopyPicture(Appearance=1, Format=2)
+                # 클립보드 안정화 — 대형 이미지는 전송에 시간이 걸림
+                pixel_est = row_count * col_count * 64
+                wait = 0.3 if pixel_est > 500000 else 0.05
+                time.sleep(wait)
                 img = ImageGrab.grabclipboard()
 
+                if img is None:
+                    # 재시도: 대형 이미지에서 클립보드 전송이 늦을 수 있음
+                    for retry in range(3):
+                        time.sleep(0.5)
+                        img = ImageGrab.grabclipboard()
+                        if img is not None:
+                            break
                 if img is None:
                     raise RuntimeError("CopyPicture failed: no image in clipboard")
 

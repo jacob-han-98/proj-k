@@ -999,22 +999,24 @@ def handle_capture(job: dict, worker_id: str) -> dict:
 
     doc = _db_get_document(document_id)
     source = _db_get_source(doc["source_id"])
-    props = json.loads(source.get("properties", "{}"))
-    local_path = props.get("local_path", "")
 
-    # Windows에서 실행 시 환경변수 P4_LOCAL_PATH를 우선 사용
-    # (DB의 local_path는 서버(WSL2) 경로일 수 있음)
-    if platform.system() == "Windows":
-        win_path = os.getenv("P4_LOCAL_PATH", "")
-        if win_path:
-            local_path = win_path
-
-    if not local_path:
-        raise ValueError("local_path 없음 — P4_LOCAL_PATH 환경변수 또는 소스 properties 확인")
-
-    xlsx_path = Path(local_path) / doc["file_path"]
-    if not xlsx_path.exists():
-        raise FileNotFoundError(f"파일 없음: {xlsx_path}")
+    # ── 파일 확보: remote 모드 → HTTP 다운로드, local 모드 → 로컬 경로 ──
+    _temp_xlsx = None  # cleanup용
+    if _remote_mode:
+        import tempfile
+        tmp_dir = Path(tempfile.gettempdir()) / "pipeline-capture"
+        tmp_dir.mkdir(parents=True, exist_ok=True)
+        xlsx_path = tmp_dir / Path(doc["file_path"]).name
+        _db.download_document_file(document_id, str(xlsx_path))
+        _temp_xlsx = xlsx_path
+    else:
+        props = json.loads(source.get("properties", "{}"))
+        local_path = props.get("local_path", "")
+        if not local_path:
+            raise ValueError("local_path 없음 — 소스 properties 확인")
+        xlsx_path = Path(local_path) / doc["file_path"]
+        if not xlsx_path.exists():
+            raise FileNotFoundError(f"파일 없음: {xlsx_path}")
 
     # xlsx-extractor capture.py를 subprocess로 실행
     # (importlib 로드 시 ProcessPoolExecutor pickle 충돌 회피)
@@ -1022,8 +1024,9 @@ def handle_capture(job: dict, worker_id: str) -> dict:
     extractor_dir = PROJECT_ROOT / "packages" / "xlsx-extractor"
     capture_script = extractor_dir / "src" / "capture.py"
 
-    # output 경로 결정: repo의 output이 심볼릭 링크(WSL2→E:)이므로
-    # Windows에서는 실제 타겟 경로를 직접 사용
+    # output 경로 결정 — 소스별 서브폴더 분리
+    props = json.loads(source.get("properties", "{}"))
+    output_subdir = props.get("output_dir", "")
     output_base = extractor_dir / "output"
     if not output_base.is_dir():
         try:
@@ -1034,8 +1037,8 @@ def handle_capture(job: dict, worker_id: str) -> dict:
                 log.info(f"  심볼릭 링크 → Windows 경로: {output_base}")
         except Exception:
             pass
-    # capture_all 내부에서 output_dir/excel_name/ 하위 폴더를 자동 생성하므로
-    # 여기서는 output_base를 직접 전달 (중복 nesting 방지)
+    if output_subdir:
+        output_base = output_base / output_subdir
     output_base.mkdir(parents=True, exist_ok=True)
 
     import subprocess
@@ -1071,6 +1074,35 @@ def handle_capture(job: dict, worker_id: str) -> dict:
     if stats["failed"] > 0:
         raise RuntimeError(f"캡처 실패: {stats['failed']}/{stats['sheet_count']}개 시트 실패")
 
+    # ── remote 모드: 캡처 결과를 zip으로 묶어 서버에 업로드 ──
+    if _remote_mode:
+        import tempfile
+        import zipfile
+        zip_path = Path(tempfile.gettempdir()) / f"capture_{document_id}.zip"
+        t_zip = time.time()
+        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+            for f in output_dir.rglob("*"):
+                if f.is_file():
+                    arcname = f"{safe_name}/{f.relative_to(output_dir)}"
+                    zf.write(f, arcname)
+            # _capture_manifest.json도 포함
+            if manifest_path.exists():
+                zf.write(manifest_path, f"{safe_name}/_capture_manifest.json")
+        zip_mb = zip_path.stat().st_size / (1024 * 1024)
+        log.info(f"  zip 생성: {zip_mb:.1f}MB ({time.time() - t_zip:.1f}s)")
+
+        t_upload = time.time()
+        _db.upload_capture_result(document_id, str(zip_path))
+        log.info(f"  업로드 완료 ({time.time() - t_upload:.1f}s)")
+
+        # 업로드 후 로컬 임시파일 정리
+        try:
+            zip_path.unlink()
+            import shutil
+            shutil.rmtree(output_dir, ignore_errors=True)
+        except Exception:
+            pass
+
     try:
         conv_id = _db_create_conversion(document_id, "capture", "excel-com",
                                          input_path=str(xlsx_path))
@@ -1078,6 +1110,14 @@ def handle_capture(job: dict, worker_id: str) -> dict:
     except Exception as e:
         log.warning(f"  변환 이력 기록 실패 (무시): {e}")
     _db_update_document_status(document_id, "captured")
+
+    # remote 모드에서 다운로드한 임시 xlsx 정리
+    if _temp_xlsx and _temp_xlsx.exists():
+        try:
+            _temp_xlsx.unlink()
+            log.info(f"  임시 파일 삭제: {_temp_xlsx}")
+        except Exception:
+            pass
 
     log.info(f"  캡처 완료: {xlsx_path.name} ({ok}/{stats['sheet_count']} sheets OK)")
     return {"capture_dir": str(output_dir), **stats}
@@ -1113,7 +1153,12 @@ def _convert_vision_first(doc: dict, source: dict, params: dict) -> dict:
     props = json.loads(source.get("properties", "{}"))
     local_path = props.get("local_path", os.getenv("P4_LOCAL_PATH", ""))
     xlsx_path = Path(local_path) / doc["file_path"]
-    output_dir = extractor_dir / "output" / xlsx_path.stem
+    # 소스별 서브폴더 분리 (예: output/7_System/PK_xxx, output/8_Contents/PK_xxx)
+    output_subdir = props.get("output_dir", "")
+    output_parent = extractor_dir / "output"
+    if output_subdir:
+        output_parent = output_parent / output_subdir
+    output_dir = output_parent / xlsx_path.stem
 
     conv_id = _db_create_conversion(doc["id"], "synthesize", "vision-first",
                                      input_path=str(xlsx_path))

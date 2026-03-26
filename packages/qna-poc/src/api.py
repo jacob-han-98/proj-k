@@ -24,7 +24,7 @@ from pathlib import Path
 
 import requests as http_requests
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
@@ -1131,6 +1131,65 @@ def pipeline_document_download(doc_id: int):
                             media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")
 
 
+@app.post("/admin/pipeline/documents/{doc_id}/capture-upload")
+async def pipeline_capture_upload(doc_id: int, file: UploadFile = File(...)):
+    """캡처 결과 zip 업로드 → xlsx-extractor/output/{workbook}/ 에 압축 해제.
+
+    Windows 캡처 워커가 캡처 완료 후 결과를 서버로 전송할 때 사용.
+    zip 구조: {workbook_name}/{sheet_name}/_vision_input/*.png + manifest
+              {workbook_name}/_capture_manifest.json
+    """
+    import shutil
+    import tempfile
+    import zipfile
+
+    pdb = _get_pipeline_db()
+    with pdb.get_conn() as conn:
+        doc = pdb.get_document(conn, doc_id)
+        if not doc:
+            raise HTTPException(status_code=404, detail="Document not found")
+        source = conn.execute("SELECT * FROM crawl_sources WHERE id=?", [doc["source_id"]]).fetchone()
+        source_props = json.loads(dict(source).get("properties", "{}")) if source else {}
+
+    # zip을 임시 파일로 저장
+    with tempfile.NamedTemporaryFile(suffix=".zip", delete=False) as tmp:
+        tmp_path = tmp.name
+        content = await file.read()
+        tmp.write(content)
+
+    try:
+        # output 경로 결정 — 소스별 서브폴더 분리
+        extractor_dir = Path(__file__).resolve().parent.parent.parent / "xlsx-extractor"
+        output_base = extractor_dir / "output"
+        # 심볼릭 링크 해석 (WSL2 환경)
+        if output_base.is_symlink():
+            output_base = output_base.resolve()
+        # 소스별 서브폴더 (예: output/7_System/, output/8_Contents/)
+        output_subdir = source_props.get("output_dir", "")
+        if output_subdir:
+            output_base = output_base / output_subdir
+        output_base.mkdir(parents=True, exist_ok=True)
+
+        with zipfile.ZipFile(tmp_path, "r") as zf:
+            # 보안: 경로 탈출 방지
+            for name in zf.namelist():
+                if name.startswith("/") or ".." in name:
+                    raise HTTPException(status_code=400, detail=f"잘못된 경로: {name}")
+            zf.extractall(str(output_base))
+            extracted = zf.namelist()
+
+        size_mb = len(content) / (1024 * 1024)
+        return {
+            "status": "ok",
+            "document_id": doc_id,
+            "extracted_files": len(extracted),
+            "size_mb": round(size_mb, 1),
+            "output_base": str(output_base),
+        }
+    finally:
+        os.unlink(tmp_path)
+
+
 @app.get("/admin/pipeline/jobs")
 def pipeline_jobs(status: str = None, job_type: str = None, limit: int = 50, offset: int = 0, source_id: int = None):
     """작업 내역 목록 (페이징 지원)."""
@@ -1281,11 +1340,21 @@ def pipeline_dag():
                     [src["id"], stage["id"]]
                 ).fetchone()
                 if row:
+                    # 활성 작업(pending/assigned/running)이 있으면 그 상태를 우선 표시
+                    active_row = conn.execute(
+                        "SELECT status, created_at, error_message "
+                        "FROM jobs WHERE source_id = ? AND job_type = ? "
+                        "AND status IN ('pending','assigned','running') "
+                        "ORDER BY CASE status WHEN 'running' THEN 1 WHEN 'assigned' THEN 2 ELSE 3 END "
+                        "LIMIT 1",
+                        [src["id"], stage["id"]]
+                    ).fetchone()
+                    display = active_row or row
                     stage_status[stage["id"]] = {
-                        "status": row["status"],
+                        "status": display["status"],
                         "completed_at": row["completed_at"],
-                        "created_at": row["created_at"],
-                        "error": row["error_message"],
+                        "created_at": display["created_at"],
+                        "error": row["error_message"] if not active_row else None,
                     }
                 elif stage["id"] == "crawl":
                     # jobs에 없으면 crawl_logs에서 가져오기

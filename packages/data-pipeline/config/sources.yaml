@@ -10,6 +10,7 @@ sources:
     schedule: daily
     properties:
       local_path: "/home/jacob/p4sync/Design/7_System"
+      output_dir: "7_System"                        # xlsx-extractor/output/{output_dir}/
       description: "핵심 시스템 기획서"
       file_types: ["xlsx"]
 
@@ -20,6 +21,7 @@ sources:
     schedule: manual
     properties:
       local_path: "/home/jacob/p4sync/Design/8_Contents"
+      output_dir: "8_Contents"                      # xlsx-extractor/output/{output_dir}/
       description: "컨텐츠 디자인 기획서 (xlsx)"
       file_types: ["xlsx"]
 

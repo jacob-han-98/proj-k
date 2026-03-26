@@ -170,3 +170,51 @@ def get_pipeline_stats() -> dict:
 def get_job_stats() -> dict:
     data = _get("/jobs")
     return data.get("stats", {})
+
+
+# ── file download ──
+
+def download_document_file(doc_id: int, dest_path: str) -> str:
+    """서버에서 원본 파일을 HTTP로 다운로드.
+
+    Returns: 저장된 파일 경로 (dest_path)
+    """
+    import shutil
+    from pathlib import Path
+
+    url = _url(f"/documents/{doc_id}/download")
+    log.info(f"파일 다운로드: {url} → {dest_path}")
+
+    r = requests.get(url, stream=True, timeout=120)
+    r.raise_for_status()
+
+    dest = Path(dest_path)
+    dest.parent.mkdir(parents=True, exist_ok=True)
+
+    with open(dest, "wb") as f:
+        shutil.copyfileobj(r.raw, f)
+
+    size_mb = dest.stat().st_size / (1024 * 1024)
+    log.info(f"다운로드 완료: {dest.name} ({size_mb:.1f}MB)")
+    return str(dest)
+
+
+def upload_capture_result(doc_id: int, zip_path: str) -> dict:
+    """캡처 결과 zip을 서버에 업로드.
+
+    Returns: {"status": "ok", "extracted_files": N, ...}
+    """
+    from pathlib import Path
+
+    url = _url(f"/documents/{doc_id}/capture-upload")
+    zip_file = Path(zip_path)
+    size_mb = zip_file.stat().st_size / (1024 * 1024)
+    log.info(f"캡처 결과 업로드: {zip_file.name} ({size_mb:.1f}MB) → {url}")
+
+    with open(zip_file, "rb") as f:
+        r = requests.post(url, files={"file": (zip_file.name, f, "application/zip")}, timeout=300)
+    r.raise_for_status()
+
+    result = r.json()
+    log.info(f"업로드 완료: {result.get('extracted_files', 0)}개 파일")
+    return result

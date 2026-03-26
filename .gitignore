@@ -48,6 +48,7 @@ packages/qna-poc/eval/results/
 
 # 시스템 로그
 packages/qna-poc/logs/
+packages/data-pipeline/logs/
 
 # 테스트/임시 파일
 _test_log.txt

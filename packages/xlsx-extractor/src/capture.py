@@ -95,6 +95,11 @@ def phase1_capture_images(xlsx_path, output_base, sheet_indices, sheet_names, ex
         excel.DisplayAlerts = False
         excel.Interactive = False
         excel.AskToUpdateLinks = False
+        # 창이 화면에 올라오지 않도록 추가 억제
+        try:
+            excel.WindowState = -4140  # xlMinimized
+        except Exception:
+            pass
     else:
         excel = excel_app
     # NOTE: ScreenUpdating는 반드시 True여야 CopyPicture(xlScreen)이 작동함

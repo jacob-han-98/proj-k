@@ -990,36 +990,97 @@ def handle_capture(job: dict, worker_id: str) -> dict:
     if platform.system() != "Windows":
         raise RuntimeError("capture 작업은 Windows에서만 실행 가능")
 
+    # P4 환경변수 로드
+    from dotenv import load_dotenv
+    load_dotenv(PROJECT_ROOT / "scripts" / ".env")
+
     params = json.loads(job.get("params", "{}"))
     document_id = job.get("document_id")
 
     doc = _db_get_document(document_id)
     source = _db_get_source(doc["source_id"])
     props = json.loads(source.get("properties", "{}"))
-    local_path = props.get("local_path", os.getenv("P4_LOCAL_PATH", ""))
+    local_path = props.get("local_path", "")
+
+    # Windows에서 실행 시 환경변수 P4_LOCAL_PATH를 우선 사용
+    # (DB의 local_path는 서버(WSL2) 경로일 수 있음)
+    if platform.system() == "Windows":
+        win_path = os.getenv("P4_LOCAL_PATH", "")
+        if win_path:
+            local_path = win_path
+
+    if not local_path:
+        raise ValueError("local_path 없음 — P4_LOCAL_PATH 환경변수 또는 소스 properties 확인")
 
     xlsx_path = Path(local_path) / doc["file_path"]
     if not xlsx_path.exists():
         raise FileNotFoundError(f"파일 없음: {xlsx_path}")
 
-    # xlsx-extractor capture 모듈 활용
+    # xlsx-extractor capture.py를 subprocess로 실행
+    # (importlib 로드 시 ProcessPoolExecutor pickle 충돌 회피)
+    import subprocess
     extractor_dir = PROJECT_ROOT / "packages" / "xlsx-extractor"
-    sys.path.insert(0, str(extractor_dir))
+    capture_script = extractor_dir / "src" / "capture.py"
 
-    from src.capture import capture_workbook
-    output_dir = extractor_dir / "output" / xlsx_path.stem
-    output_dir.mkdir(parents=True, exist_ok=True)
+    # output 경로 결정: repo의 output이 심볼릭 링크(WSL2→E:)이므로
+    # Windows에서는 실제 타겟 경로를 직접 사용
+    output_base = extractor_dir / "output"
+    if not output_base.is_dir():
+        try:
+            link_target = output_base.read_text(encoding="utf-8").strip()
+            if link_target.startswith("/mnt/"):
+                drive = link_target[5]  # /mnt/e → 'e'
+                output_base = Path(f"{drive.upper()}:/{link_target[7:]}")
+                log.info(f"  심볼릭 링크 → Windows 경로: {output_base}")
+        except Exception:
+            pass
+    # capture_all 내부에서 output_dir/excel_name/ 하위 폴더를 자동 생성하므로
+    # 여기서는 output_base를 직접 전달 (중복 nesting 방지)
+    output_base.mkdir(parents=True, exist_ok=True)
 
-    log.info(f"  캡처: {xlsx_path.name}")
-    result = capture_workbook(str(xlsx_path), str(output_dir))
+    import subprocess
 
-    conv_id = _db_create_conversion(document_id, "capture", "excel-com",
-                                     input_path=str(xlsx_path))
-    _db_complete_conversion(conv_id, str(output_dir), stats=result)
+    log.info(f"  캡처: {xlsx_path.name} → {output_base}")
+    proc = subprocess.run(
+        [sys.executable, str(capture_script), str(xlsx_path), str(output_base)],
+        capture_output=True, text=True, timeout=600,
+        cwd=str(extractor_dir),
+    )
+
+    # 결과는 _capture_manifest.json에서 읽기
+    safe_name = xlsx_path.stem
+    for ch in '/\\:*?"<>|':
+        safe_name = safe_name.replace(ch, "_")
+    output_dir = output_base / safe_name
+    manifest_path = output_dir / "_capture_manifest.json"
+
+    if manifest_path.exists():
+        with open(manifest_path, "r", encoding="utf-8") as f:
+            manifest = json.load(f)
+        sheets = manifest.get("sheets", [])
+        ok = sum(1 for s in sheets if s.get("split_success"))
+        total = len(sheets)
+        stats = {"sheet_count": total, "ok": ok,
+                 "failed": total - ok - sum(1 for s in sheets if s.get("blank"))}
+    else:
+        # 매니페스트조차 없으면 완전 실패
+        raise RuntimeError(f"capture.py 실패 (매니페스트 없음): "
+                           f"{proc.stderr[-300:] if proc.stderr else proc.stdout[-300:]}")
+
+    # 모든 시트가 성공해야 완료 (일부 실패도 실패 처리 → retry)
+    if stats["failed"] > 0:
+        raise RuntimeError(f"캡처 실패: {stats['failed']}/{stats['sheet_count']}개 시트 실패")
+
+    try:
+        conv_id = _db_create_conversion(document_id, "capture", "excel-com",
+                                         input_path=str(xlsx_path))
+        _db_complete_conversion(conv_id, str(output_dir), stats=stats)
+    except Exception as e:
+        log.warning(f"  변환 이력 기록 실패 (무시): {e}")
     _db_update_document_status(document_id, "captured")
 
-    # 체이닝은 서버 API의 complete_job에서 처리 (capture→convert, download→enrich)
-    return {"capture_dir": str(output_dir), "sheets": result.get("sheet_count", 0)}
+    log.info(f"  캡처 완료: {xlsx_path.name} ({ok}/{stats['sheet_count']} sheets OK)")
+    return {"capture_dir": str(output_dir), **stats}
 
 
 @register_handler("convert")
@@ -1203,6 +1264,40 @@ class Worker:
         except Exception:
             pass  # 하트비트 실패는 무시
 
+    def _cleanup_stale_jobs(self):
+        """고아 running 작업 정리 — 워커 kill로 보고 못 한 작업을 pending으로 되돌림."""
+        try:
+            if _remote_mode:
+                import requests
+                r = requests.post(
+                    f"{_db._api_url}/admin/pipeline/jobs/reset-all",
+                    params={"job_type": "capture", "from_status": "running"},
+                    timeout=10)
+                if r.ok:
+                    data = r.json()
+                    if data.get("reset", 0) > 0:
+                        log.info(f"고아 running 작업 {data['reset']}개 → pending 복원")
+                # assigned 상태도 정리
+                r2 = requests.post(
+                    f"{_db._api_url}/admin/pipeline/jobs/reset-all",
+                    params={"job_type": "capture", "from_status": "assigned"},
+                    timeout=10)
+                if r2.ok:
+                    data2 = r2.json()
+                    if data2.get("reset", 0) > 0:
+                        log.info(f"고아 assigned 작업 {data2['reset']}개 → pending 복원")
+            else:
+                with _db.get_conn() as conn:
+                    for status in ("running", "assigned"):
+                        cur = conn.execute(
+                            "UPDATE jobs SET status = 'pending', worker_id = NULL "
+                            "WHERE job_type IN (?) AND status = ?",
+                            [",".join(self.worker_types), status])
+                        if cur.rowcount > 0:
+                            log.info(f"고아 {status} 작업 {cur.rowcount}개 → pending 복원")
+        except Exception as e:
+            log.warning(f"고아 작업 정리 실패: {e}")
+
     def run(self):
         """작업 루프 (Ctrl+C로 중지)."""
         signal.signal(signal.SIGINT, self.stop)
@@ -1210,6 +1305,16 @@ class Worker:
 
         log.info(f"워커 시작: {self.worker_id} (타입: {self.worker_types})")
         log.info(f"폴링 간격: {self.poll_interval}s")
+
+        self._cleanup_stale_jobs()
+
+        # 워커 시작 시 좀비 Excel 정리 (이전 실패로 남은 인스턴스)
+        if "capture" in self.worker_types and platform.system() == "Windows":
+            import subprocess as _sp
+            _sp.run(["taskkill", "/IM", "EXCEL.EXE", "/F"],
+                    capture_output=True, timeout=10)
+            time.sleep(2)
+            log.info("좀비 Excel 정리 완료")
 
         self._heartbeat()
 

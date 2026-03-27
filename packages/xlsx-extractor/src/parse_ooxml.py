@@ -71,40 +71,102 @@ def get_sheet_drawing_map(xlsx_path):
     return mapping
 
 
+def _parse_single_shape(sp, xdr_ns, a_ns):
+    """단일 도형(sp) 요소에서 ID, 텍스트, 도형 타입을 추출한다."""
+    cNvPr = sp.find(f'.//{{{xdr_ns}}}nvSpPr/{{{xdr_ns}}}cNvPr')
+    if cNvPr is None:
+        return None
+    sid = cNvPr.get('id')
+    # 텍스트 추출
+    texts = []
+    for t in sp.iter(f'{{{a_ns}}}t'):
+        if t.text:
+            texts.append(t.text)
+    text = ''.join(texts).strip()
+    text = re.sub(r'\s+', ' ', text)
+    # 도형 타입
+    geom = sp.find(f'.//{{{a_ns}}}prstGeom')
+    geom_type = geom.get('prst', '?') if geom is not None else '?'
+    return {
+        'id': sid,
+        'text': text,
+        'geom': geom_type,
+    }
+
+
 def extract_shapes_and_connectors(xlsx_path, drawing_path):
-    """drawing XML에서 도형과 커넥터를 추출한다."""
+    """drawing XML에서 도형과 커넥터를 추출한다.
+
+    그룹 도형(grpSp) 처리:
+    Excel에서 마름모+TextBox 등을 그룹으로 묶는 경우가 많다.
+    커넥터는 그룹 내 도형 도형(예: 마름모 id=325)에 연결되지만,
+    텍스트는 같은 그룹의 TextBox(id=326)에 있다.
+    → 그룹 내 텍스트 없는 도형에 같은 그룹의 텍스트를 병합한다.
+    """
     with zipfile.ZipFile(xlsx_path, 'r') as z:
         tree = ET.fromstring(z.read(drawing_path))
 
     xdr_ns = NS['xdr']
     a_ns = NS['a']
 
-    # 도형(sp) 수집
     shapes = {}
-    for sp in tree.iter(f'{{{xdr_ns}}}sp'):
-        cNvPr = sp.find(f'.//{{{xdr_ns}}}nvSpPr/{{{xdr_ns}}}cNvPr')
-        if cNvPr is None:
+    group_id_map = {}  # grpSp ID → 병합 텍스트 (커넥터가 그룹 ID를 참조할 때 대비)
+
+    # 1. 그룹 도형(grpSp) 처리 — 그룹 내부 도형들을 수집하고 텍스트 병합
+    for grp in tree.iter(f'{{{xdr_ns}}}grpSp'):
+        grp_nvPr = grp.find(f'{{{xdr_ns}}}nvGrpSpPr/{{{xdr_ns}}}cNvPr')
+        grp_id = grp_nvPr.get('id') if grp_nvPr is not None else None
+
+        inner_shapes = []
+        for sp in grp.findall(f'{{{xdr_ns}}}sp'):
+            parsed = _parse_single_shape(sp, xdr_ns, a_ns)
+            if parsed:
+                inner_shapes.append(parsed)
+
+        if not inner_shapes:
             continue
-        sid = cNvPr.get('id')
-        # 텍스트 추출
-        texts = []
-        for t in sp.iter(f'{{{a_ns}}}t'):
-            if t.text:
-                texts.append(t.text)
-        text = ''.join(texts).strip()
-        # 줄바꿈 정규화
-        text = re.sub(r'\s+', ' ', text)
-        # 도형 타입
-        geom = sp.find(f'.//{{{a_ns}}}prstGeom')
-        geom_type = geom.get('prst', '?') if geom is not None else '?'
 
-        shapes[sid] = {
-            'id': sid,
-            'text': text,
-            'geom': geom_type,
-        }
+        # 그룹 내 텍스트 병합: 도형+TextBox 쌍(2~3개)만 처리
+        # 큰 그룹(플로우차트 전체)의 텍스트를 합치면 안 됨
+        group_texts = [s['text'] for s in inner_shapes if s['text']]
+        merged_text = ' '.join(group_texts) if group_texts else ''
 
-    # 커넥터(cxnSp) 수집
+        if len(inner_shapes) <= 3 and merged_text:
+            # 소규모 그룹: 도형+TextBox 쌍 → 텍스트 없는 도형에 병합
+            for s in inner_shapes:
+                if not s['text']:
+                    s['text'] = merged_text
+                    s['text_from_group'] = True
+                shapes[s['id']] = s
+
+            # 그룹 ID도 shapes에 등록
+            if grp_id and grp_id not in shapes:
+                main_geom = '?'
+                for s in inner_shapes:
+                    if s.get('geom') not in ('rect', '?'):
+                        main_geom = s['geom']
+                        break
+                shapes[grp_id] = {
+                    'id': grp_id,
+                    'text': merged_text,
+                    'geom': main_geom,
+                    'is_group': True,
+                    'text_from_group': True,
+                }
+                group_id_map[grp_id] = merged_text
+        else:
+            # 대규모 그룹: 텍스트 병합 없이 개별 도형만 등록
+            for s in inner_shapes:
+                shapes[s['id']] = s
+
+    # 2. 비그룹 도형(sp) 수집 — 이미 그룹에서 추출된 것은 건너뜀
+    for anchor in tree:
+        for sp in anchor.findall(f'{{{xdr_ns}}}sp'):
+            parsed = _parse_single_shape(sp, xdr_ns, a_ns)
+            if parsed and parsed['id'] not in shapes:
+                shapes[parsed['id']] = parsed
+
+    # 3. 커넥터(cxnSp) 수집
     connectors = []
     for cxn in tree.iter(f'{{{xdr_ns}}}cxnSp'):
         cNvPr = cxn.find(f'.//{{{xdr_ns}}}nvCxnSpPr/{{{xdr_ns}}}cNvPr')
@@ -123,6 +185,97 @@ def extract_shapes_and_connectors(xlsx_path, drawing_path):
                 'start_text': shapes.get(st_id, {}).get('text', ''),
                 'end_text': shapes.get(end_id, {}).get('text', ''),
             })
+
+    # 4. 깨진 참조 복구 — 커넥터가 참조하지만 shapes에 없는 ID
+    #    Excel에서 도형 수정 시 orphan reference가 발생할 수 있음.
+    #    전략: 같은 플로우차트 그룹 내에서, orphan과 이웃이 완전히 겹치지 않고
+    #    병합 시 in+out 모두 2개 이상이 되는 노드를 찾아 매핑.
+    orphan_ids = set()
+    for c in connectors:
+        if c['start_id'] not in shapes:
+            orphan_ids.add(c['start_id'])
+        if c['end_id'] not in shapes:
+            orphan_ids.add(c['end_id'])
+
+    if orphan_ids:
+        # orphan을 임시로 shapes에 등록 (그룹핑에 참여하도록)
+        for oid in orphan_ids:
+            shapes[oid] = {'id': oid, 'text': '', 'geom': '?', 'unresolved': True}
+
+        # in/out 엣지 맵 구축
+        in_edges = {}
+        out_edges = {}
+        for c in connectors:
+            out_edges.setdefault(c['start_id'], set()).add(c['end_id'])
+            in_edges.setdefault(c['end_id'], set()).add(c['start_id'])
+
+        for oid in orphan_ids:
+            o_in = in_edges.get(oid, set())
+            o_out = out_edges.get(oid, set())
+            o_neighbors = o_in | o_out
+
+            best = None
+            best_score = -1
+            for sid, s in shapes.items():
+                if sid == oid or s.get('unresolved') or not s.get('text'):
+                    continue
+                s_in = in_edges.get(sid, set())
+                s_out = out_edges.get(sid, set())
+                s_neighbors = s_in | s_out
+
+                # 이웃이 완전히 겹치지 않아야 함 (보완적 관계)
+                if o_neighbors & s_neighbors:
+                    continue
+
+                # 병합 시 in, out 모두 2개 이상이어야 함 (플로우차트 분기점)
+                merged_in = len(o_in | s_in)
+                merged_out = len(o_out | s_out)
+                if merged_in >= 2 and merged_out >= 2:
+                    score = merged_in + merged_out
+                    if score > best_score:
+                        best_score = score
+                        best = sid
+
+            if best:
+                src = shapes[best]
+                resolved_text = src['text']
+
+                # 같은 텍스트를 가진 다른 노드가 커넥터에 이미 존재하면
+                # orphan을 그 노드로 리다이렉트 (중복 노드 제거)
+                redirect_to = None
+                for sid, s in shapes.items():
+                    if sid != oid and sid != best and not s.get('unresolved') \
+                       and s.get('text') == resolved_text \
+                       and sid in (in_edges.keys() | out_edges.keys()):
+                        redirect_to = sid
+                        break
+
+                if redirect_to:
+                    # orphan의 커넥터를 기존 노드로 리다이렉트
+                    redirect_shape = shapes[redirect_to]
+                    for c in connectors:
+                        if c['start_id'] == oid:
+                            c['start_id'] = redirect_to
+                            c['start_text'] = redirect_shape['text']
+                        if c['end_id'] == oid:
+                            c['end_id'] = redirect_to
+                            c['end_text'] = redirect_shape['text']
+                    # orphan은 shapes에서 제거
+                    del shapes[oid]
+                else:
+                    # 리다이렉트 대상 없으면 텍스트만 복사
+                    shapes[oid] = {
+                        'id': oid,
+                        'text': resolved_text,
+                        'geom': src.get('geom', '?'),
+                        'resolved_from': best,
+                        'text_from_group': True,
+                    }
+                    for c in connectors:
+                        if c['start_id'] == oid:
+                            c['start_text'] = resolved_text
+                        if c['end_id'] == oid:
+                            c['end_text'] = resolved_text
 
     return shapes, connectors
 
@@ -612,6 +765,16 @@ def process_sheet(xlsx_path, sheet_dir, sheet_name):
         connectors_count = len(connectors)
         print(f"  [parse_ooxml] {sheet_name}: {shapes_count} shapes, {connectors_count} connectors from {drawing_path}")
 
+        # 4.5. 도형/커넥터 raw 데이터 저장
+        if shapes:
+            shapes_path = os.path.join(parse_output_dir, 'shapes.json')
+            with open(shapes_path, 'w', encoding='utf-8') as f:
+                json.dump(shapes, f, ensure_ascii=False, indent=2)
+        if connectors:
+            connectors_path = os.path.join(parse_output_dir, 'connectors.json')
+            with open(connectors_path, 'w', encoding='utf-8') as f:
+                json.dump(connectors, f, ensure_ascii=False, indent=2)
+
         if connectors:
             # 5. 플로우차트 그룹핑
             groups = group_flowcharts(shapes, connectors)
@@ -673,7 +836,18 @@ def process_sheet(xlsx_path, sheet_dir, sheet_name):
         print(f"  [parse_ooxml] {sheet_name}: {len(text_corpus)} text fragments extracted")
 
     t_corpus_done = _time.time()
-    t_elapsed = t_corpus_done - t_total
+
+    # 11. 셀 데이터 그리드 추출 (기조 데이터 테이블 합성용)
+    t_grid = _time.time()
+    cell_data_grid = extract_cell_data_grid(xlsx_path, sheet_name)
+    if cell_data_grid and cell_data_grid.get('cells'):
+        grid_path = os.path.join(parse_output_dir, 'cell_data_grid.json')
+        with open(grid_path, 'w', encoding='utf-8') as f:
+            json.dump(cell_data_grid, f, ensure_ascii=False, indent=2, default=str)
+        print(f"  [parse_ooxml] {sheet_name}: {len(cell_data_grid['cells'])} cells extracted to cell_data_grid.json")
+    t_grid_done = _time.time()
+
+    t_elapsed = t_grid_done - t_total
 
     # 타이밍 로그
     timing = {
@@ -681,11 +855,13 @@ def process_sheet(xlsx_path, sheet_dir, sheet_name):
         'ooxml_mermaid_s': round(t_ooxml_done - t_ooxml, 2),
         'grade_colors_s': round(t_colors_done - t_colors, 2),
         'text_corpus_s': round(t_corpus_done - t_corpus, 2),
+        'cell_data_grid_s': round(t_grid_done - t_grid, 2),
     }
     print(f"  [parse_ooxml] {sheet_name}: {t_elapsed:.1f}s total "
-          f"(ooxml={timing['ooxml_mermaid_s']:.1f}s, colors={timing['grade_colors_s']:.1f}s, corpus={timing['text_corpus_s']:.1f}s)")
+          f"(ooxml={timing['ooxml_mermaid_s']:.1f}s, colors={timing['grade_colors_s']:.1f}s, "
+          f"corpus={timing['text_corpus_s']:.1f}s, grid={timing['cell_data_grid_s']:.1f}s)")
 
-    # 11. 메타데이터 저장 (항상)
+    # 12. 메타데이터 저장 (항상)
     meta = {
         'sheet_name': sheet_name,
         'drawing_path': drawing_path,
@@ -695,6 +871,7 @@ def process_sheet(xlsx_path, sheet_dir, sheet_name):
         'has_mermaid_corrections': has_mermaid_corrections,
         'has_grade_colors': bool(grade_colors),
         'has_text_corpus': bool(text_corpus),
+        'has_cell_data_grid': bool(cell_data_grid and cell_data_grid.get('cells')),
         'corrections': mermaid_result.get('corrections', []) if mermaid_result else [],
         'timing': timing,
     }
@@ -706,6 +883,7 @@ def process_sheet(xlsx_path, sheet_dir, sheet_name):
         'has_mermaid_corrections': has_mermaid_corrections,
         'has_grade_colors': bool(grade_colors),
         'has_text_corpus': bool(text_corpus),
+        'has_cell_data_grid': bool(cell_data_grid and cell_data_grid.get('cells')),
         'corrections': mermaid_result.get('corrections', []) if mermaid_result else [],
     }
 
@@ -840,6 +1018,137 @@ def extract_ooxml_text_corpus(xlsx_path, sheet_name):
         pass
 
     return list(fragments)
+
+
+def extract_cell_data_grid(xlsx_path, sheet_name):
+    """시트의 모든 셀 값을 위치+타입 정보와 함께 추출한다.
+
+    기조 데이터 테이블 합성 시 openpyxl의 정확한 값을 Vision 구조 힌트와
+    결합하기 위해 사용. Vision OCR은 숫자 인식 오류가 있으므로 이 데이터가
+    ground truth 역할을 한다.
+
+    Returns:
+        dict: {
+            "cells": [{"row": 5, "col": 3, "value": 27000, "display": "27,000",
+                        "type": "number", "format": "#,##0"}, ...],
+            "dimensions": {"min_row": 1, "max_row": 40, "min_col": 1, "max_col": 18},
+            "merged_cells": [{"min_row": 1, "min_col": 1, "max_row": 1, "max_col": 3}, ...]
+        }
+    """
+    try:
+        import openpyxl
+    except ImportError:
+        return None
+
+    try:
+        wb = openpyxl.load_workbook(xlsx_path, data_only=True)
+        if sheet_name not in wb.sheetnames:
+            wb.close()
+            return None
+        ws = wb[sheet_name]
+
+        cells = []
+        min_row = min_col = float('inf')
+        max_row = max_col = 0
+
+        for row in ws.iter_rows():
+            for cell in row:
+                if cell.value is None:
+                    continue
+
+                r, c = cell.row, cell.column
+                min_row = min(min_row, r)
+                max_row = max(max_row, r)
+                min_col = min(min_col, c)
+                max_col = max(max_col, c)
+
+                raw_value = cell.value
+                number_format = cell.number_format or 'General'
+
+                # 타입 판별
+                if isinstance(raw_value, bool):
+                    cell_type = 'boolean'
+                    display = str(raw_value)
+                elif isinstance(raw_value, (int, float)):
+                    cell_type = 'number'
+                    # 퍼센트 서식 감지
+                    if '%' in number_format or '0.0%' in number_format:
+                        cell_type = 'percent'
+                        display = f"{raw_value * 100:.1f}%" if isinstance(raw_value, float) and raw_value < 1 else str(raw_value)
+                    else:
+                        # 정수면 정수로 표시
+                        if isinstance(raw_value, float) and raw_value == int(raw_value):
+                            display = f"{int(raw_value):,}"
+                            raw_value = int(raw_value)
+                        elif isinstance(raw_value, int):
+                            display = f"{raw_value:,}"
+                        else:
+                            display = str(raw_value)
+                elif isinstance(raw_value, str):
+                    cell_type = 'string'
+                    display = raw_value.strip()
+                    if not display:
+                        continue
+                else:
+                    # datetime 등 기타 타입
+                    cell_type = 'string'
+                    display = str(raw_value)
+
+                cells.append({
+                    'row': r,
+                    'col': c,
+                    'value': raw_value,
+                    'display': display,
+                    'type': cell_type,
+                    'format': number_format,
+                })
+
+        # 병합 셀 정보 수집 + 값 복제
+        merged = []
+        cell_map = {(c['row'], c['col']): c for c in cells}  # (row, col) → cell
+
+        for mc in ws.merged_cells.ranges:
+            merged.append({
+                'min_row': mc.min_row, 'min_col': mc.min_col,
+                'max_row': mc.max_row, 'max_col': mc.max_col,
+            })
+
+            # 좌상단 셀의 값을 병합 범위 내 빈 셀에 복제
+            src = cell_map.get((mc.min_row, mc.min_col))
+            if src and src['display']:
+                for r in range(mc.min_row, mc.max_row + 1):
+                    for c in range(mc.min_col, mc.max_col + 1):
+                        if (r, c) != (mc.min_row, mc.min_col) and (r, c) not in cell_map:
+                            new_cell = {
+                                'row': r,
+                                'col': c,
+                                'value': src['value'],
+                                'display': src['display'],
+                                'type': src['type'],
+                                'format': src['format'],
+                            }
+                            cells.append(new_cell)
+                            cell_map[(r, c)] = new_cell
+
+        wb.close()
+
+        if not cells:
+            return None
+
+        return {
+            'cells': cells,
+            'dimensions': {
+                'min_row': min_row if min_row != float('inf') else 1,
+                'max_row': max_row,
+                'min_col': min_col if min_col != float('inf') else 1,
+                'max_col': max_col,
+            },
+            'merged_cells': merged,
+        }
+
+    except Exception as e:
+        print(f"  [parse_ooxml] extract_cell_data_grid error: {e}")
+        return None
 
 
 def extract_grade_colors(xlsx_path, sheet_name):

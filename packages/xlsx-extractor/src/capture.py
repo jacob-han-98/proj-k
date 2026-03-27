@@ -61,10 +61,14 @@ def _trim_right_whitespace(img, bg_threshold=240, padding=20):
     return img
 
 def get_sheet_names(xlsx_path):
+    """시트 이름 목록 반환. 숨김 시트(hidden, veryHidden)는 제외."""
     import openpyxl
     wb = openpyxl.load_workbook(xlsx_path, read_only=True, data_only=True)
-    names = wb.sheetnames
+    names = [ws.title for ws in wb.worksheets if ws.sheet_state == 'visible']
+    hidden = [ws.title for ws in wb.worksheets if ws.sheet_state != 'visible']
     wb.close()
+    if hidden:
+        print(f"  [capture] 숨김 시트 {len(hidden)}개 제외: {hidden[:5]}{'...' if len(hidden) > 5 else ''}")
     return names
 
 
@@ -300,7 +304,7 @@ def _smart_horizontal_crop(tile_img, header_skip=80, bg_threshold=245,
     content_cols = np.where(col_density > min_content_ratio)[0]
 
     if len(content_cols) == 0:
-        return tile_img, W
+        return tile_img, 0  # 빈 타일: crop_w=0으로 반환하여 max 계산에 영향 안 줌
 
     rightmost = int(content_cols[-1])
     crop_x = min(rightmost + padding, W)
@@ -344,16 +348,26 @@ def _create_detail_tiles(full_img_path, output_dir):
         y_end = min(splits[r + 1] + overlap_px, H) if r < total_rows - 1 else H
         tile = img.crop((0, y_start, W, y_end))
         _, crop_w = _smart_horizontal_crop(tile)
+        is_blank = (crop_w == 0)
         max_content_x = max(max_content_x, crop_w)
-        tile_imgs.append((tile, y_start, y_end))
+        tile_imgs.append((tile, y_start, y_end, is_blank))
 
-    # 일관된 너비로 크롭 (가장 넓은 타일 기준)
-    crop_w = min(max_content_x, W)
+    # 일관된 너비로 크롭 (가장 넓은 타일 기준, 빈 타일은 0이므로 무시됨)
+    crop_w = min(max_content_x, W) if max_content_x > 0 else W
     if crop_w < W * 0.90:
         print(f"    [crop] 전체 타일: {W}→{crop_w}px ({(1-crop_w/W)*100:.0f}% 절약)")
 
     tiles = []
-    for r, (tile, y_start, y_end) in enumerate(tile_imgs):
+    skipped_blank = 0
+    for r, (tile, y_start, y_end, is_blank) in enumerate(tile_imgs):
+        # 빈 타일은 파일 생성하지 않음 (Vision API 절약)
+        if is_blank:
+            skipped_blank += 1
+            tile_path = os.path.join(output_dir, f"detail_r{r}.png")
+            if os.path.exists(tile_path):
+                os.remove(tile_path)  # 기존 파일이 있으면 삭제
+            continue
+
         if crop_w < W * 0.90:
             tile = tile.crop((0, 0, crop_w, tile.size[1]))
 
@@ -372,6 +386,9 @@ def _create_detail_tiles(full_img_path, output_dir):
             "position_description": pos_desc,
             "overlap_bottom": overlap_px if r < total_rows - 1 else 0,
         })
+
+    if skipped_blank:
+        print(f"    [blank] {skipped_blank} blank tile(s) removed")
 
     return {
         "tiles": tiles, "total_rows": total_rows, "split_needed": True,

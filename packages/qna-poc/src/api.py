@@ -1694,7 +1694,15 @@ def pipeline_complete_job(job_id: int, result: dict = None):
                 "download": "enrich",
             }
             next_type = CHAIN_MAP.get(job_type)
+            # 체이닝 전 문서 상태 검증 (capture→convert는 captured 상태여야 함)
+            REQUIRED_DOC_STATUS = {"capture": "captured", "download": "downloaded"}
             if next_type and doc_id:
+                required = REQUIRED_DOC_STATUS.get(job_type)
+                if required:
+                    doc_status = conn.execute("SELECT status FROM documents WHERE id=?", [doc_id]).fetchone()
+                    if not doc_status or doc_status["status"] != required:
+                        return {"job_id": job_id, "status": "completed", "chained": None,
+                                "chain_skipped": f"문서 상태가 {required}가 아님"}
                 # 중복 방지
                 existing = conn.execute(
                     "SELECT id FROM jobs WHERE job_type=? AND document_id=? AND status IN ('pending','running','assigned')",

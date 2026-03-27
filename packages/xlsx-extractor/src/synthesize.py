@@ -37,7 +37,7 @@ from dotenv import load_dotenv
 load_dotenv(Path(__file__).parent.parent / ".env")
 
 # ── 설정 ──
-OCR_MODEL = os.environ.get("OCR_MODEL", "claude-sonnet-4-5")
+OCR_MODEL = os.environ.get("OCR_MODEL", "claude-opus-4-6")
 
 # parse_ooxml.py에서 유틸리티 import
 from parse_ooxml import rgb_to_color_name
@@ -1257,20 +1257,29 @@ def _remove_incomplete_boundary_sections(text):
 
 # ── Parse 보정 ──
 
-def call_text_api(prompt, max_tokens=4096):
-    """Bedrock Claude API 텍스트 전용 호출 (OCR 교정용)."""
+def call_text_api(prompt, max_tokens=4096, model=None):
+    """Bedrock Claude API 텍스트 전용 호출.
+
+    Args:
+        prompt: 프롬프트 텍스트
+        max_tokens: 최대 출력 토큰
+        model: 사용할 모델 (None이면 OCR_MODEL 환경변수 사용)
+    """
     token = os.environ.get("AWS_BEARER_TOKEN_BEDROCK")
     if not token:
         raise RuntimeError("AWS_BEARER_TOKEN_BEDROCK 환경변수 미설정")
     region = os.environ.get("AWS_REGION", "us-east-1")
 
+    use_model = model or OCR_MODEL
     model_mapping = {
         "claude-opus": "global.anthropic.claude-opus-4-5-20251101-v1:0",
         "claude-opus-4-5": "global.anthropic.claude-opus-4-5-20251101-v1:0",
+        "claude-opus-4-6": "global.anthropic.claude-opus-4-6-v1",
         "claude-sonnet-4-5": "global.anthropic.claude-sonnet-4-5-20250929-v1:0",
+        "claude-sonnet-4-6": "global.anthropic.claude-sonnet-4-6-v1",
         "claude-haiku-4-5": "global.anthropic.claude-haiku-4-5-20251001-v1:0",
     }
-    model_id = model_mapping.get(OCR_MODEL, f"global.anthropic.{OCR_MODEL}-v1:0")
+    model_id = model_mapping.get(use_model, f"global.anthropic.{use_model}-v1:0")
 
     url = f"https://bedrock-runtime.{region}.amazonaws.com/model/{model_id}/invoke"
 
@@ -1302,6 +1311,267 @@ def call_text_api(prompt, max_tokens=4096):
         "output_tokens": usage.get("output_tokens", 0),
         "api_s": round(t_api, 1),
     }
+
+
+# ── 기조 데이터 테이블 추출/합성 ──
+
+FOUNDATION_TABLE_MODEL = os.environ.get("FOUNDATION_TABLE_MODEL", "claude-opus-4-6")
+
+
+def extract_table_structure_blocks(md_text):
+    """Vision 출력에서 ```table-structure 블록을 파싱하여 추출한다.
+
+    Returns:
+        list[dict]: 테이블 구조 정보 리스트. 빈 리스트면 테이블 없음.
+    """
+    tables = []
+    pattern = re.compile(r'```table-structure\s*\n(.*?)\n\s*```', re.DOTALL)
+    for m in pattern.finditer(md_text):
+        try:
+            data = json.loads(m.group(1))
+            if isinstance(data, dict) and "tables" in data:
+                tables.extend(data["tables"])
+            elif isinstance(data, list):
+                tables.extend(data)
+        except json.JSONDecodeError:
+            print(f"    [warn] table-structure JSON parse failed")
+    return tables
+
+
+def extract_survey_block(md_text):
+    """Vision 출력에서 ```survey 블록을 파싱하여 추출한다.
+
+    마지막 타일 출력이 잘려서 닫는 ```이 없는 경우에도 처리한다.
+
+    Returns:
+        dict or None: 설문 응답 JSON.
+    """
+    # 정상 케이스: 닫는 ``` 있음
+    pattern = re.compile(r'```survey\s*\n(.*?)\n\s*```', re.DOTALL)
+    m = pattern.search(md_text)
+    if not m:
+        # 닫는 ```이 없는 경우: ```survey 이후 파일 끝까지
+        pattern2 = re.compile(r'```survey\s*\n(.*)', re.DOTALL)
+        m = pattern2.search(md_text)
+    if not m:
+        return None
+    try:
+        raw = m.group(1).strip()
+        # 혹시 불완전한 JSON이면 닫는 괄호 보정 시도
+        if raw and not raw.endswith('}'):
+            # 열린 중괄호 수 세기
+            opens = raw.count('{') - raw.count('}')
+            raw += '}' * opens
+        return json.loads(raw)
+    except json.JSONDecodeError:
+        print(f"    [warn] survey JSON parse failed")
+        return None
+
+
+def remove_special_blocks(md_text):
+    """table-structure, survey 블록을 content.md에서 제거한다.
+    닫는 ```이 없는 경우(Vision 출력 잘림)에도 안전하게 처리한다.
+
+    전략: 라인 단위로 스캔하여 블록 경계를 정확히 파악.
+    - 특수 블록 시작 (```table-structure, ```survey) 감지
+    - 단독 ``` 로 블록 종료
+    - 닫는 ```이 없으면 마크다운 헤딩(#)이 나타나면 블록 종료 (다음 타일 콘텐츠 보존)
+    """
+    lines = md_text.split('\n')
+    result = []
+    skip = False
+
+    for line in lines:
+        stripped = line.strip()
+
+        if not skip:
+            if stripped.startswith('```table-structure') or stripped.startswith('```survey'):
+                skip = True
+                continue
+            result.append(line)
+        else:
+            # 블록 종료 조건 1: 단독 ```
+            if stripped == '```':
+                skip = False
+                continue
+            # 블록 종료 조건 2: 마크다운 헤딩 (다음 타일의 콘텐츠 시작)
+            # → 닫는 ```이 없는 블록이 다음 타일 콘텐츠를 삼키는 것을 방지
+            if stripped.startswith('#') and not stripped.startswith('##{'):
+                skip = False
+                result.append(line)
+                continue
+            # 블록 종료 조건 3: 다른 특수 블록 시작
+            if stripped.startswith('```table-structure') or stripped.startswith('```survey'):
+                continue  # 새 블록도 skip
+            # 그 외: 블록 내부이므로 skip
+
+    return '\n'.join(result)
+
+
+def _format_cell_grid_all(cell_data_grid):
+    """cell_data_grid 전체를 LLM에 전달할 텍스트로 포맷한다.
+
+    반환 형식 예시:
+    R9: C5:숙련도 등급 | C6:변경 비용 | C7:비고
+    R10: C5:견습 | C6:500 | C7:계정당 최초 1회 무료
+    """
+    if not cell_data_grid or not cell_data_grid.get('cells'):
+        return ""
+
+    from collections import defaultdict
+    rows = defaultdict(list)
+    for cell in cell_data_grid['cells']:
+        rows[cell['row']].append((cell['col'], cell['display']))
+
+    lines = []
+    for row_num in sorted(rows):
+        cells = sorted(rows[row_num], key=lambda x: x[0])
+        cell_texts = [f"C{col}:{text}" for col, text in cells]
+        lines.append(f"R{row_num}: " + " | ".join(cell_texts))
+
+    return "\n".join(lines)
+
+
+def _extract_md_tables(md_text):
+    """마크다운 텍스트에서 테이블 블록을 추출한다.
+
+    Returns:
+        list[dict]: [{"context": "## 제목\\n설명", "table": "| ... |\\n|...|"}, ...]
+    """
+    tables = []
+    lines = md_text.split('\n')
+    i = 0
+    while i < len(lines):
+        line = lines[i].strip()
+        # 테이블 헤더 행 감지: | text | text | ... |
+        if line.startswith('|') and line.endswith('|') and line.count('|') >= 3:
+            # 이전 몇 줄을 context로 수집 (헤딩, 설명)
+            ctx_start = max(0, i - 5)
+            context_lines = []
+            for j in range(ctx_start, i):
+                l = lines[j].strip()
+                if l and not l.startswith('|'):
+                    context_lines.append(l)
+
+            # 테이블 행 수집
+            table_lines = []
+            while i < len(lines) and lines[i].strip().startswith('|'):
+                table_lines.append(lines[i].strip())
+                i += 1
+
+            # 구분자 행(|---|---|)만 있는 건 제외
+            data_rows = [l for l in table_lines if not re.match(r'^\|[\s\-:]+\|$', l)]
+            if len(data_rows) >= 2:  # 헤더 + 최소 1개 데이터 행
+                tables.append({
+                    "context": '\n'.join(context_lines[-3:]),  # 마지막 3줄
+                    "table": '\n'.join(table_lines),
+                })
+            continue
+        i += 1
+    return tables
+
+
+def synthesize_foundation_tables(md_text, cell_data_grid, sheet_name):
+    """Vision의 Markdown 테이블 + openpyxl 셀 데이터 → 검증된 구조화 JSON 테이블.
+
+    correct_ocr_typos()와 동일한 패턴:
+    - Vision = Markdown 테이블 (구조 + OCR 읽은 값)
+    - openpyxl = 셀 데이터 그리드 (ground truth)
+    - LLM = Vision 테이블의 오타를 openpyxl 값으로 교정 → 구조화 JSON 출력
+
+    Args:
+        md_text: Vision 출력 마크다운 (merged.md)
+        cell_data_grid: openpyxl에서 추출한 셀 데이터 그리드 (dict)
+        sheet_name: 시트 이름 (로그용)
+
+    Returns:
+        list[dict]: 검증된 테이블 JSON 리스트.
+    """
+    md_tables = _extract_md_tables(md_text)
+    if not md_tables:
+        return []
+
+    grid_text = _format_cell_grid_all(cell_data_grid)
+    if not grid_text:
+        return []
+
+    results = []
+
+    for ti, mt in enumerate(md_tables):
+        table_id = f"t{ti + 1}"
+        context = mt['context']
+        table_md = mt['table']
+
+        # 테이블 이름 추정 (context의 마지막 헤딩 또는 첫 줄)
+        table_name = context.split('\n')[-1] if context else f"table_{ti+1}"
+        table_name = re.sub(r'^#+\s*', '', table_name).strip()
+        if not table_name:
+            table_name = f"table_{ti+1}"
+
+        prompt = f"""아래에 두 가지 데이터 소스가 있습니다.
+
+[소스 A] Vision AI가 Excel 시트 스크린샷에서 OCR로 읽은 Markdown 테이블:
+
+{context}
+{table_md}
+
+[소스 B] 같은 Excel 파일의 openpyxl에서 추출한 정확한 셀 값 (ground truth):
+{grid_text}
+
+## 임무
+
+소스 A의 Markdown 테이블을 구조화된 JSON으로 변환하세요.
+소스 B를 참고하여, 소스 A에 OCR 오류(숫자 오인식, 한글 오타 등)가 있다면 소스 B의 정확한 값으로 교정하세요.
+
+## 규칙
+
+1. **테이블 구조는 소스 A를 따름** — 헤더, 컬럼 수, 행 수는 소스 A 기준
+2. **값은 소스 B로 검증** — 소스 A와 B의 값이 다르면, 소스 B(openpyxl)를 신뢰
+3. **타입 추론**: 숫자면 int/float, 텍스트면 string, 퍼센트면 percent
+4. **병합 셀 채우기 (중요)**: Excel에서 셀이 병합되어 여러 행에 걸쳐 하나의 값이 표시되는 경우, 해당 값을 모든 행에 반복 기입하세요. null로 두지 마세요.
+   예: "구분" 열에 "1차 스탯"이 10행에 걸쳐 병합 → 10행 모두 "1차 스탯"으로 채움
+5. **데이터가 없는 빈 셀**: null로 표기 (병합이 아니라 진짜 비어있는 셀만)
+6. **table_name**: 테이블의 맥락에 맞는 이름 (한글)
+
+## 출력 형식
+
+순수 JSON만 출력하세요. 다른 설명이나 텍스트는 일절 포함하지 마세요.
+
+```json
+{{
+  "table_id": "{table_id}",
+  "table_name": "테이블 이름",
+  "description": "이 테이블이 어떤 정보를 담고 있는지 1~2문장으로 설명. 기획자가 검색할 때 이 설명으로 테이블을 찾을 수 있도록 구체적으로",
+  "sample_queries": ["이 테이블로 답할 수 있는 자연어 질문 3~5개"],
+  "headers": [{{"name": "컬럼명", "type": "int|float|string|percent"}}],
+  "rows": [[값1, 값2, ...], ...],
+  "notes": "교정 사항이 있으면 여기에 기록"
+}}
+```"""
+
+        try:
+            print(f"    [foundation] {table_name[:30]}: verifying with {FOUNDATION_TABLE_MODEL}...")
+            response = call_text_api(prompt, max_tokens=8192, model=FOUNDATION_TABLE_MODEL)
+
+            resp_text = response["text"]
+            json_match = re.search(r'\{.*\}', resp_text, re.DOTALL)
+            if not json_match:
+                print(f"    [foundation] {table_name[:30]}: no JSON in response "
+                      f"({response['input_tokens']} in, {response['output_tokens']} out, {response['api_s']}s)")
+                continue
+
+            table_json = json.loads(json_match.group())
+            results.append(table_json)
+            print(f"    [foundation] {table_name[:30]}: {len(table_json.get('rows', []))} rows, "
+                  f"{len(table_json.get('headers', []))} cols "
+                  f"({response['input_tokens']} in, {response['output_tokens']} out, {response['api_s']}s)")
+
+        except json.JSONDecodeError:
+            print(f"    [foundation] {table_name[:30]}: JSON parse error")
+        except Exception as e:
+            print(f"    [foundation] {table_name[:30]}: error: {e}")
+
+    return results
 
 
 def correct_ocr_typos(md_text, text_corpus, sheet_name):
@@ -1647,6 +1917,22 @@ def synthesize_sheet(sheet_dir, sheet_name, xlsx_path=None, source_name=""):
         md_text, ocr_corrections = correct_ocr_typos(md_text, text_corpus, sheet_name)
     t_ocr_done = time.time()
 
+    # 3.7. 기조 데이터 테이블 합성 (Vision MD 테이블 + openpyxl 검증 → JSON)
+    t_fdn = time.time()
+    foundation_tables = []
+    cell_grid_path = os.path.join(parse_ooxml_dir, "cell_data_grid.json")
+    if os.path.exists(cell_grid_path):
+        with open(cell_grid_path, "r", encoding="utf-8") as f:
+            cell_data_grid = json.load(f)
+        foundation_tables = synthesize_foundation_tables(md_text, cell_data_grid, sheet_name)
+    t_fdn_done = time.time()
+
+    # 3.8. Vision 설문 추출
+    survey = extract_survey_block(md_text)
+
+    # 3.9. table-structure, survey 블록을 content.md에서 제거
+    md_text = remove_special_blocks(md_text)
+
     # 4. 메타데이터 헤더 추가
     md_text = add_metadata_header(md_text, sheet_name, source_name)
 
@@ -1673,6 +1959,30 @@ def synthesize_sheet(sheet_dir, sheet_name, xlsx_path=None, source_name=""):
     with open(content_path, "w", encoding="utf-8") as f:
         f.write(md_text)
 
+    # 9. 기조 데이터 테이블 JSON 출력
+    if foundation_tables:
+        fdn_path = os.path.join(final_dir, "foundation_tables.json")
+        with open(fdn_path, "w", encoding="utf-8") as f:
+            json.dump({
+                "source_file": source_name,
+                "sheet_name": sheet_name,
+                "tables": foundation_tables,
+                "extracted_at": datetime.now().isoformat(),
+            }, f, ensure_ascii=False, indent=2)
+        print(f"    [foundation] saved {len(foundation_tables)} table(s) → _final/foundation_tables.json")
+
+    # 10. Vision 설문 JSON 출력
+    if survey:
+        survey_path = os.path.join(final_dir, "survey.json")
+        with open(survey_path, "w", encoding="utf-8") as f:
+            json.dump({
+                "source_file": source_name,
+                "sheet_name": sheet_name,
+                "survey": survey,
+                "extracted_at": datetime.now().isoformat(),
+            }, f, ensure_ascii=False, indent=2)
+        print(f"    [survey] saved → _final/survey.json")
+
     elapsed = time.time() - t_start
 
     # 타이밍 로그
@@ -1681,13 +1991,15 @@ def synthesize_sheet(sheet_dir, sheet_name, xlsx_path=None, source_name=""):
         'dedup_s': round(t_dedup_done - t_dedup, 2),
         'color_correction_s': round(t_colors_done - t_colors, 2),
         'ocr_correction_s': round(t_ocr_done - t_ocr, 2),
+        'foundation_s': round(t_fdn_done - t_fdn, 2),
         'images_s': round(t_images_done - t_images, 2),
     }
     print(f"    => {len(md_text.split(chr(10)))} lines, {len(md_text.encode('utf-8')):,} bytes, "
           f"dedup=-{lines_removed} lines, {img_copied} images ({img_skipped} skipped)  "
+          f"foundation={len(foundation_tables)} tables, survey={'yes' if survey else 'no'}  "
           f"parse={'corrected' if input_source.startswith('parse') else 'n/a'}  "
           f"({elapsed:.2f}s: dedup={timing['dedup_s']}s colors={timing['color_correction_s']}s "
-          f"ocr={timing['ocr_correction_s']}s images={timing['images_s']}s)")
+          f"ocr={timing['ocr_correction_s']}s fdn={timing['foundation_s']}s images={timing['images_s']}s)")
 
     return {
         "success": True,
@@ -1699,6 +2011,8 @@ def synthesize_sheet(sheet_dir, sheet_name, xlsx_path=None, source_name=""):
         "images_copied": img_copied,
         "images_skipped": img_skipped,
         "parse_corrections": parse_result,
+        "foundation_tables_count": len(foundation_tables),
+        "has_survey": bool(survey),
         "elapsed_s": round(elapsed, 2),
         "timing": timing,
     }

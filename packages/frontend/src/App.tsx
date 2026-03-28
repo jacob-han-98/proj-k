@@ -308,14 +308,17 @@ function App() {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       font-size: 14px; line-height: 1.6;
     `
+    // Remove glass class entirely (backdrop-filter blur causes hazy PDF)
+    clone.querySelectorAll('.glass').forEach(el => {
+      el.classList.remove('glass')
+    })
     // Fix inner elements for light theme
     clone.querySelectorAll<HTMLElement>('*').forEach(el => {
-      // SVG 내부 요소는 색상 변경 제외 (Mermaid 다이어그램 선명도 보존)
       if (el.closest('svg')) return
       const cs = window.getComputedStyle(el)
       if (cs.color) el.style.color = '#1a1a1a'
       if (cs.borderColor && cs.borderColor !== 'rgba(0, 0, 0, 0)') {
-        el.style.borderColor = '#ddd'
+        el.style.borderColor = '#e2e8f0'
       }
     })
     // Style user messages

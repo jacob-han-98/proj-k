@@ -302,38 +302,36 @@ function App() {
 
   const exportToPdf = useCallback(async (element: HTMLElement, filename: string) => {
     const clone = element.cloneNode(true) as HTMLElement
-    // Force light theme colors for PDF readability
+    // Plain document style — white background, black text
     clone.style.cssText = `
       color: #1a1a1a; background: #fff; padding: 24px;
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       font-size: 14px; line-height: 1.6;
     `
-    // Remove glass class entirely (backdrop-filter blur causes hazy PDF)
-    clone.querySelectorAll('.glass').forEach(el => {
-      el.classList.remove('glass')
-    })
-    // Fix inner elements for light theme
+    // Reset all inner elements: no glass, no shadows, plain colors
     clone.querySelectorAll<HTMLElement>('*').forEach(el => {
       if (el.closest('svg')) return
-      const cs = window.getComputedStyle(el)
-      if (cs.color) el.style.color = '#1a1a1a'
-      if (cs.borderColor && cs.borderColor !== 'rgba(0, 0, 0, 0)') {
-        el.style.borderColor = '#e2e8f0'
-      }
+      el.style.background = 'transparent'
+      el.style.backdropFilter = 'none'
+      el.style.color = '#1a1a1a'
+      el.style.borderColor = '#e2e8f0'
+      el.style.boxShadow = 'none'
     })
-    // Style user messages
+    // Style user messages — light blue bubble
     clone.querySelectorAll<HTMLElement>('.message.user').forEach(el => {
       el.style.background = '#e8f0fe'
       el.style.borderRadius = '12px'
       el.style.padding = '12px 16px'
+      el.style.border = 'none'
     })
-    // Style assistant messages
+    // Style assistant messages — light gray bubble
     clone.querySelectorAll<HTMLElement>('.message.assistant').forEach(el => {
       el.style.background = '#f8f9fa'
       el.style.borderRadius = '12px'
       el.style.padding = '12px 16px'
+      el.style.border = 'none'
     })
-    // Remove action buttons from PDF
+    // Remove UI-only elements from PDF
     clone.querySelectorAll('.copy-msg-btn, .pdf-msg-btn, .proposal-cta, .pdf-export-bar').forEach(el => el.remove())
 
     const opt = {

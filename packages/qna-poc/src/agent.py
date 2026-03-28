@@ -220,6 +220,28 @@ def _get_kg_summary_for_planning() -> str:
 
 # 게임 데이터 스키마 캐시
 _game_data_schema_cache: str | None = None
+_game_data_module = None  # data-pipeline의 game_data 모듈 (importlib 로드)
+
+
+def _load_game_data_module():
+    """data-pipeline/src/game_data.py를 importlib로 로드.
+
+    qna-poc의 src 패키지와 네임스페이스 충돌 방지.
+    """
+    global _game_data_module
+    if _game_data_module is not None:
+        return _game_data_module
+
+    import importlib.util
+    gd_path = Path(__file__).resolve().parent.parent.parent / "data-pipeline" / "src" / "game_data.py"
+    if not gd_path.exists():
+        return None
+    spec = importlib.util.spec_from_file_location("game_data_dp", str(gd_path))
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    _game_data_module = mod
+    return mod
+
 
 def _get_game_data_schema() -> str:
     """게임 데이터 테이블 스키마 요약 (Planning LLM 주입용). 캐시됨."""
@@ -228,13 +250,9 @@ def _get_game_data_schema() -> str:
         return _game_data_schema_cache
 
     try:
-        import sys as _sys
-        _dp_path = str(Path(__file__).resolve().parent.parent.parent / "data-pipeline")
-        if _dp_path not in _sys.path:
-            _sys.path.insert(0, _dp_path)
-        from src.game_data import get_schema_summary, is_db_ready, get_db_path
-        if is_db_ready():
-            _game_data_schema_cache = get_schema_summary(get_db_path())
+        mod = _load_game_data_module()
+        if mod and mod.is_db_ready():
+            _game_data_schema_cache = mod.get_schema_summary(mod.get_db_path())
             return _game_data_schema_cache
     except Exception as e:
         log.warning(f"게임 데이터 스키마 로드 실패: {e}")
@@ -394,18 +412,10 @@ def execute_search(plan: dict, query: str, max_chunks: int = 200) -> list[dict]:
 
         elif tool == "query_game_data":
             try:
-                from data_pipeline_path import game_data_module
-            except ImportError:
-                pass
-            try:
-                import sys as _sys
-                _dp_path = str(Path(__file__).resolve().parent.parent.parent / "data-pipeline")
-                if _dp_path not in _sys.path:
-                    _sys.path.insert(0, _dp_path)
-                from src.game_data import execute_game_query, format_game_data_result, is_db_ready, get_db_path
-                if is_db_ready():
-                    gd_result = execute_game_query(args, get_db_path())
-                    formatted = format_game_data_result(gd_result)
+                mod = _load_game_data_module()
+                if mod and mod.is_db_ready():
+                    gd_result = mod.execute_game_query(args, mod.get_db_path())
+                    formatted = mod.format_game_data_result(gd_result)
                     gd_chunk = {
                         "id": f"gamedata_{step_idx}",
                         "workbook": f"GameData/{args.get('table', '')}",
@@ -500,7 +510,12 @@ AGENT_ANSWER_PROMPT = """당신은 모바일 MMORPG "Project K"의 기획 전문
 2. **컨텍스트 기반 완전 답변**: 컨텍스트에 관련 정보가 있으면 **반드시, 빠짐없이** 답변하세요. 부분적이라도 관련 내용이 있으면 그것을 기반으로 답하세요. 동의어/유사 표현("비활성화"="선택 불가", "Category 값"="Category 컬럼")도 같은 의미로 매칭하세요.
 3. **구체적 데이터 정확 인용**: 수치, 비용, 배율, 확률, 테이블, Enum 값은 반드시 컨텍스트에서 직접 인용하세요. 컨텍스트에 없는 구체적 수치/데이터를 절대 만들어내지 마세요. 단, 시스템 구조/관계/설계 의도에 대한 분석적 추론은 허용됩니다.
 4. **출처 명시**: 답변에 사용한 정보의 출처를 표시하세요. 형식: `[출처: 워크북명 / 시트명]`
-5. **기획서 + 데이터 테이블 교차 참조**: "게임 데이터 조회 결과"가 포함된 경우, 실제 수치는 데이터 테이블에서 직접 인용하고 `[출처: GameData/테이블명]`으로 표시하세요. 설계 의도와 규칙은 기획서에서 인용하세요. 두 소스를 결합하여 "왜 이 수치인지"까지 설명하면 최고의 답변입니다.
+5. **기획서 + 데이터 테이블 교차 참조 (최우선 필수)**: "게임 데이터 조회 결과"가 포함된 경우:
+   - **게임 데이터 조회 결과는 클라이언트/서버에서 실제로 사용되는 확정 데이터**입니다. 기획서보다 우선합니다.
+   - 게임 데이터의 핵심 행/컬럼을 **반드시 본문에 Markdown 테이블로 포함**하고, 해당 테이블 바로 아래에 `[출처: GameData/테이블명]`을 표기하세요.
+   - 50행 이상이면 대표적인 10~20행을 선별하여 표시하고 "외 N건" 표기.
+   - 기획서에서는 설계 의도/규칙을 인용하고, 데이터시트에서는 실제 구현 수치를 인용하여 **두 소스를 결합**하세요.
+   - **게임 데이터가 제공되었는데 본문에서 전혀 언급하지 않는 것은 금지**입니다.
 
 ## [2] 답변 구조 가이드
 
@@ -746,7 +761,12 @@ def generate_agent_answer(query: str, chunks: list[dict], role: str = None,
                 c["score"] = max(c.get("score", 0), 1.5)  # key_systems 보너스
 
     # 시트 전체 로드 (청크 조각 → 완전한 시트 컨텍스트)
-    full_sheet_chunks = _load_full_sheets(chunks)
+    # game_data 청크는 ChromaDB가 아닌 실시간 쿼리 결과이므로 별도 보존
+    game_data_chunks = [c for c in chunks if c.get("_game_data")]
+    non_game_chunks = [c for c in chunks if not c.get("_game_data")]
+    full_sheet_chunks = _load_full_sheets(non_game_chunks)
+    # game_data 청크를 다시 합류
+    full_sheet_chunks.extend(game_data_chunks)
 
     # 시트별로 그룹화하여 컨텍스트 구성
     sheet_groups = {}  # (wb, sheet) → [chunks]
@@ -774,14 +794,21 @@ def generate_agent_answer(query: str, chunks: list[dict], role: str = None,
     game_data_parts = []
     for c in full_sheet_chunks:
         if c.get("_game_data"):
-            game_data_parts.append(c.get("text", ""))
+            table_name = c.get("workbook", "GameData").replace("GameData/", "")
+            game_data_parts.append(
+                f"### [출처: GameData/{table_name}]\n\n{c.get('text', '')}"
+            )
 
     if game_data_parts:
         game_data_section = "\n\n".join(game_data_parts)
         user_msg = (
-            f"## 게임 데이터 조회 결과 (실제 수치)\n\n{game_data_section}\n\n---\n\n"
+            f"## 질문\n{query}\n\n---\n\n"
             f"## 참조 기획서 (설계 의도/규칙)\n\n{context}\n\n---\n\n"
-            f"## 질문\n{query}"
+            f"## 게임 데이터시트 조회 결과\n\n"
+            f"아래는 게임 클라이언트/서버에서 실제 사용되는 데이터시트 조회 결과입니다.\n"
+            f"이 데이터를 답변의 **별도 섹션**(예: '## 데이터시트 조회 결과')에 포함하고 "
+            f"`[출처: GameData/테이블명]`을 표기하세요.\n\n"
+            f"{game_data_section}"
         )
     else:
         user_msg = f"## 컨텍스트 (검색된 기획서)\n\n{context}\n\n---\n\n## 질문\n{query}"

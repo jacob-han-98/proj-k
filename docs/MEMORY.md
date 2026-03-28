@@ -3,13 +3,67 @@
 > 세션 간 항상성을 유지하기 위한 작업 상태 기록.
 > 세션 시작 시 반드시 이 파일을 먼저 읽는다.
 
-## 최종 업데이트: 2026-03-27
+## 최종 업데이트: 2026-03-28
 
-## 현재 단계: Vision Convert 파이프라인 고도화 + 기조 데이터 구조화
+## 현재 단계: Phase 1 PoC 완료 + 파일럿 테스트 진행 중
 
 ---
 
-### [최근 작업 내역] 2026-03-27: Vision Convert + 기조 데이터 구조화 PoC
+### [최근 작업 내역] 2026-03-28: 인덱싱 고도화 + game_data 연동 + Phase 1 PoC + 서버 배포
+
+**목표:** Vision Convert 후속 처리(인덱싱/KG 재구축) + 데이터시트 SQLite 연동 수정 + Phase 1 PoC 검증 + 파일럿 테스터용 서버 배포
+
+**완료 항목:**
+
+1. **indexer.py — foundation_tables.json 인덱싱 추가**
+   - `_build_foundation_table_chunks()` 함수 추가
+   - 테이블별 독립 청크 생성 (sample_queries 포함 → 검색 매칭률 향상)
+   - `chunk_type` 메타데이터 추가 (`content` / `foundation_table`)
+   - 결과: 기존 4,133 → **7,798 청크** (+89%), foundation_table 3,486개
+
+2. **build_kg.py — survey.json cross_references 통합**
+   - `scan_content_files()`에서 survey.json의 cross_references 자동 추출
+   - `extract_system_info()`에서 survey 기반 관계 매칭 추가
+   - rglob 방식으로 변경 (7_System/8_Contents 하위 폴더 탐색 버그 수정)
+   - 결과: 기존 476 → **934 관계** (+96%), 181/222 시스템 연결
+
+3. **전체 리셋 재인덱싱 + KG 재빌드**
+   - ChromaDB 전체 리셋 후 7,798 청크 인덱싱 (298초, $0.13)
+   - KG 재빌드: 222 시스템, 934 관계 (62초)
+   - 8_Contents 검증: 75 워크북, 524 시트, 3,835 청크 정상
+
+4. **Phase 1 PoC — 10/10 high confidence**
+   - 1-1 데이터시트 PoC (5개): 수치 질문 모두 정확 답변 (변신 등급, 골드 밸런스, 대미지 계산기 등)
+   - 1-2 레벨 기획서 QnA (5개): 8_Contents 데이터 완벽 활용 (인트로 던전, 오스트하펜 NPC, 정령의 탑 등)
+   - 결과: `eval/phase1_poc_results.json`
+
+5. **agent.py — game_data SQLite 연동 버그 수정**
+   - 네임스페이스 충돌 수정: `from src.game_data import ...` → `importlib.util` 방식
+   - `_load_game_data_module()` 함수 추가 (data-pipeline/src/game_data.py 직접 로드)
+   - `_load_full_sheets()` 통과 시 game_data 청크 누락 버그 수정 (ChromaDB 로드 전 분리 → 이후 합류)
+   - game_data 컨텍스트에 출처 라벨 명시 + 프롬프트 규칙 강화
+   - 결과: BuffClass 27건, ItemEquipClass 50건 등 SQLite 쿼리 → 본문 인용 + `[출처: GameData/테이블명]` 표기 정상
+
+6. **프론트엔드 프리셋 질문 추가**
+   - 기존 7개 → 13개 (데이터시트 2, 레벨 기획서 2, 기존 시스템 4 추가)
+   - 데이터시트: "레전더리 장비 ID/파츠 조회", "스킬별 기절 버프 지속시간 비교"
+   - 레벨: "인트로 던전 플레이 시나리오", "칼날바람절벽 몬스터 배치와 특징"
+
+7. **서버 배포 (cp.tech2.hybe.im)**
+   - SSH config 설정 (jacob.pem 발견)
+   - rsync로 백엔드/프론트/ChromaDB(480MB)/KG/game_data.db(5.7MB) 전송
+   - Opus 4.6 모델 매핑 서버 .env에 추가
+   - game_data.py + game_data.db 서버 배포 (누락되어 있었음)
+
+8. **기존 69개 평가셋 폐기 결정**
+   - 지엽적 정답에 포커스 → 기획자의 폭넓은 답변 니즈와 불일치
+   - 기록으로만 남기고 더 이상 관리하지 않음
+
+**현재 상태:** 파일럿 테스터가 서버에서 실사용 테스트 진행 중
+
+---
+
+### [이전 작업 내역] 2026-03-27: Vision Convert + 기조 데이터 구조화 PoC
 
 **목표:** Vision 변환 시 Markdown + 구조화 테이블 JSON + Vision 설문을 동시에 추출. iterative 방법론 정제 후 100% 적용.
 
@@ -287,9 +341,9 @@
 
 | # | 항목 | 설명 | 상태 |
 |---|------|------|------|
-| 1-1 | **데이터시트 추가 임팩트 PoC** | 데이터시트(수치 테이블)가 QnA·기획서 작성에 얼마나 차이를 만드는지 직접 검증 | 미착수 |
-| 1-2 | **8_Contents 레벨 기획서 QnA 품질 검증** | 새로 추가된 레벨 기획서 대상 기본 질문 답변 퀄리티 확인 + 레벨 기획서 작성 PoC | 미착수 |
-| 1-3 | **QnA/기획서 작성 품질 Standard 수립** | 파일럿 테스터 피드백 기반으로 "좋은 답변/좋은 기획서"의 기준을 찾아가는 과정 | 미착수 |
+| 1-1 | **데이터시트 추가 임팩트 PoC** | 데이터시트(수치 테이블)가 QnA·기획서 작성에 얼마나 차이를 만드는지 직접 검증 | ✅ 완료 (2026-03-28) |
+| 1-2 | **8_Contents 레벨 기획서 QnA 품질 검증** | 새로 추가된 레벨 기획서 대상 기본 질문 답변 퀄리티 확인 + 레벨 기획서 작성 PoC | ✅ 완료 (2026-03-28) |
+| 1-3 | **QnA/기획서 작성 품질 Standard 수립** | 파일럿 테스터 피드백 기반으로 "좋은 답변/좋은 기획서"의 기준을 찾아가는 과정 | 파일럿 테스트 진행 중 |
 
 ### Phase 2: UX 확장
 

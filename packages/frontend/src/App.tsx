@@ -392,6 +392,8 @@ function App() {
                 <button className="prompt-card glass" onClick={() => { setInput('대미지 계산기에서 Normal 근접 공방 스탯 기준값은 얼마인가요?'); inputRef.current?.focus() }}>대미지 계산기 근접 공방 스탯 기준값</button>
                 <button className="prompt-card glass" onClick={() => { setInput('인트로 던전의 전체적인 플레이 시나리오는 어떻게 되나요?'); inputRef.current?.focus() }}>인트로 던전 플레이 시나리오</button>
                 <button className="prompt-card glass" onClick={() => { setInput('칼날바람절벽 필드의 몬스터 배치와 특징은 무엇인가요?'); inputRef.current?.focus() }}>칼날바람절벽 몬스터 배치와 특징</button>
+                <button className="prompt-card glass" onClick={() => { setInput('레전더리 등급 장비의 파츠별 아이템 ID와 종류를 데이터시트에서 조회해줘'); inputRef.current?.focus() }}>레전더리 장비 ID/파츠 조회</button>
+                <button className="prompt-card glass" onClick={() => { setInput('스킬별 기절(Stun) 버프의 지속시간을 데이터시트에서 뽑아서 비교해줘'); inputRef.current?.focus() }}>스킬별 기절 버프 지속시간 비교</button>
                 <button className="prompt-card glass" onClick={() => { setInput('텔레포트 시도 시 "거리가 짧아 텔레포트를 이용하지 않았습니다"라는 메시지가 나오는 조건은?'); inputRef.current?.focus() }}>텔레포트 "거리가 짧아" 메시지 조건은?</button>
                 <button className="prompt-card glass" onClick={() => { setInput('도깨비 등급을 올리고 싶은데요 (컷신 테스트에 필요) 치트가 있을까요?'); inputRef.current?.focus() }}>도깨비 등급 올리는 치트?</button>
                 <button className="prompt-card glass" onClick={() => { setInput('로컬 서버의 시간 기준이? 또는 로컬 서버의 시간을 보는 방법?'); inputRef.current?.focus() }}>로컬 서버 시간 기준/확인 방법?</button>

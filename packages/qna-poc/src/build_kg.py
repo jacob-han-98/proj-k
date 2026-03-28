@@ -67,39 +67,61 @@ SYSTEM_KEYWORDS = {
 
 
 def scan_content_files() -> list[dict]:
-    """output/ 디렉토리에서 모든 content.md를 스캔하여 메타데이터 추출."""
+    """output/ 디렉토리에서 모든 content.md를 스캔하여 메타데이터 추출.
+
+    디렉토리 구조:
+    - output/{workbook}/{sheet}/_final/content.md  (직접 하위)
+    - output/{category}/{workbook}/{sheet}/_final/content.md  (7_System, 8_Contents 등)
+    rglob으로 모든 깊이를 탐색한다.
+    """
     entries = []
 
     if not EXTRACTOR_OUTPUT.exists():
         print(f"[ERROR] output dir not found: {EXTRACTOR_OUTPUT}")
         return entries
 
-    for wb_dir in sorted(EXTRACTOR_OUTPUT.iterdir()):
-        if not wb_dir.is_dir():
-            continue
+    for content_path in sorted(EXTRACTOR_OUTPUT.rglob("_final/content.md")):
+        # _final의 부모 = sheet_dir, 그 부모 = workbook_dir
+        final_dir = content_path.parent  # _final
+        sheet_dir = final_dir.parent     # sheet
+        wb_dir = sheet_dir.parent        # workbook (또는 category)
+
+        sheet = sheet_dir.name
         workbook = wb_dir.name
 
-        for sheet_dir in sorted(wb_dir.iterdir()):
-            if not sheet_dir.is_dir():
-                continue
-            sheet = sheet_dir.name
+        # category 디렉토리인 경우 (7_System, 8_Contents 등)
+        # workbook은 보통 "PK_" 접두사가 있음
+        # category 디렉토리(숫자_이름)면 workbook을 한 단계 올려 봄
+        if not workbook.startswith("PK_") and not workbook.startswith("Confluence"):
+            # 시트 폴더 내부에 _final이 있는지로 판단 — 실제 workbook은 sheet_dir
+            # 구조: output/7_System/PK_xxx/시트/_final/content.md
+            # 이 경우 wb_dir = PK_xxx, sheet_dir 위가 category
+            pass  # workbook = wb_dir.name 이 이미 PK_xxx
 
-            content_path = sheet_dir / "_final" / "content.md"
-            if not content_path.exists():
-                continue
+        try:
+            text = content_path.read_text(encoding="utf-8")
+        except Exception:
+            continue
 
+        # survey.json에서 cross_references 추출
+        survey_refs = []
+        survey_path = final_dir / "survey.json"
+        if survey_path.exists():
             try:
-                text = content_path.read_text(encoding="utf-8")
+                survey = json.loads(survey_path.read_text(encoding="utf-8"))
+                sv = survey.get("survey", {}).get("service_value", {})
+                survey_refs = sv.get("cross_references", [])
             except Exception:
-                continue
+                pass
 
-            entries.append({
-                "workbook": workbook,
-                "sheet": sheet,
-                "path": str(content_path),
-                "text": text,
-                "size": len(text),
-            })
+        entries.append({
+            "workbook": workbook,
+            "sheet": sheet,
+            "path": str(content_path),
+            "text": text,
+            "size": len(text),
+            "survey_cross_references": survey_refs,
+        })
 
     return entries
 
@@ -221,6 +243,25 @@ def extract_system_info(entries: list[dict]) -> dict:
                     if other_short in section or other_wb in section:
                         referenced_systems.add(other_wb)
 
+        # 4. survey.json cross_references (Vision AI가 의미적으로 파악한 관계)
+        for s in sheets:
+            for ref in s.get("survey_cross_references", []):
+                ref_clean = ref.strip()
+                if not ref_clean or len(ref_clean) < 2:
+                    continue
+                # 직접 매칭 시도
+                for candidate_wb in wb_entries:
+                    if candidate_wb == system_name:
+                        continue
+                    candidate_short = candidate_wb.replace("PK_", "").strip()
+                    # "소환 시스템" → "PK_소환 시스템" 등
+                    ref_normalized = ref_clean.replace(" 시스템", "").replace("시스템", "").strip()
+                    if (ref_clean in candidate_short or candidate_short in ref_clean
+                            or ref_normalized in candidate_short
+                            or candidate_short in ref_normalized):
+                        referenced_systems.add(candidate_wb)
+                        break
+
         # 소스 유형 결정
         file_types = list(set(s.get("source_type", "excel") for s in sheets))
 
@@ -323,7 +364,8 @@ def build_knowledge_graph(dry_run: bool = False):
     # 1. 스캔
     print(f"\n  [1/4] content.md 스캔 중...")
     entries = scan_content_files()
-    print(f"    Excel: {len(entries)}개 content.md")
+    survey_ref_count = sum(len(e.get("survey_cross_references", [])) for e in entries)
+    print(f"    Excel: {len(entries)}개 content.md (survey cross_refs: {survey_ref_count}개)")
     conf_entries = scan_confluence_files()
     print(f"    Confluence: {len(conf_entries)}개 content.md")
     entries.extend(conf_entries)

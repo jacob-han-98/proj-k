@@ -426,6 +426,85 @@ def chunk_section(section: dict, parent_context: str, max_tokens: int = MAX_CHUN
     return chunks if chunks else [{"heading": heading, "text": prefix + text, "tokens": tokens}]
 
 
+def _build_foundation_table_chunks(foundation_path: Path, workbook: str, sheet: str,
+                                     source_url: str) -> list[dict]:
+    """foundation_tables.json에서 테이블별 전용 청크 생성.
+
+    각 테이블을 독립 청크로 만들고, sample_queries를 텍스트에 포함하여
+    자연어 검색 시 매칭률을 높인다. 수치 데이터는 openpyxl 검증 거쳤으므로
+    Vision OCR보다 정확하다.
+    """
+    try:
+        data = json.loads(foundation_path.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+
+    tables = data.get("tables", [])
+    if not tables:
+        return []
+
+    chunks = []
+    for table in tables:
+        table_name = table.get("table_name", "")
+        description = table.get("description", "")
+        sample_queries = table.get("sample_queries", [])
+        headers = table.get("headers", [])
+        rows = table.get("rows", [])
+        notes = table.get("notes", "")
+
+        if not headers or not rows:
+            continue
+
+        # 청크 텍스트 구성
+        lines = [
+            f"[{workbook} / {sheet}]",
+            f"## 데이터 테이블: {table_name}",
+            "",
+            description,
+            "",
+        ]
+
+        # 마크다운 테이블 생성
+        header_names = [h["name"] for h in headers]
+        lines.append("| " + " | ".join(header_names) + " |")
+        lines.append("| " + " | ".join(["---"] * len(header_names)) + " |")
+        for row in rows:
+            cells = [str(v) if v is not None else "" for v in row]
+            # 컬럼 수 맞추기
+            while len(cells) < len(header_names):
+                cells.append("")
+            lines.append("| " + " | ".join(cells[:len(header_names)]) + " |")
+
+        # notes 추가
+        if notes:
+            lines.extend(["", f"참고: {notes}"])
+
+        # sample_queries를 검색 힌트로 포함
+        if sample_queries:
+            lines.extend(["", "이 테이블로 답할 수 있는 질문:"])
+            for q in sample_queries:
+                lines.append(f"- {q}")
+
+        chunk_text = "\n".join(lines)
+
+        chunks.append({
+            "heading": f"데이터 테이블: {table_name}",
+            "text": chunk_text,
+            "tokens": estimate_tokens(chunk_text),
+            "workbook": workbook,
+            "sheet": sheet,
+            "section_path": f"foundation_table/{table.get('table_id', '')}",
+            "has_mermaid": False,
+            "has_table": True,
+            "has_images": False,
+            "source_path": str(foundation_path),
+            "source_url": source_url,
+            "chunk_type": "foundation_table",
+        })
+
+    return chunks
+
+
 def chunk_file(filepath: Path, source_type: str = "excel") -> list[dict]:
     """content.md 파일 하나를 청크 리스트로 변환."""
     parsed = parse_content_md(filepath, source_type=source_type)
@@ -448,6 +527,7 @@ def chunk_file(filepath: Path, source_type: str = "excel") -> list[dict]:
             chunk["has_images"] = "![" in chunk["text"]
             chunk["source_path"] = str(filepath)
             chunk["source_url"] = source_url
+            chunk["chunk_type"] = "content"
 
             # 최소 토큰 필터
             if chunk["tokens"] >= MIN_CHUNK_TOKENS:
@@ -471,8 +551,18 @@ def chunk_file(filepath: Path, source_type: str = "excel") -> list[dict]:
             "has_images": "![" in merged_text,
             "source_path": str(filepath),
             "source_url": source_url,
+            "chunk_type": "content",
         }
         all_chunks.append(merged)
+
+    # Foundation tables 청크 추가 (Excel만 — openpyxl 검증 데이터)
+    if source_type == "excel":
+        foundation_path = filepath.parent / "foundation_tables.json"
+        if foundation_path.exists():
+            ft_chunks = _build_foundation_table_chunks(
+                foundation_path, workbook, sheet, source_url
+            )
+            all_chunks.extend(ft_chunks)
 
     return all_chunks
 
@@ -649,6 +739,7 @@ def index_chunks(chunks: list[dict], reset: bool = False):
             "tokens": chunk["tokens"],
             "source_path": chunk["source_path"],
             "source_url": chunk.get("source_url", ""),
+            "chunk_type": chunk.get("chunk_type", "content"),
         })
 
     # 4. 배치 추가 (ChromaDB 제한: 5461개씩)
@@ -680,6 +771,7 @@ def print_stats(chunks: list[dict]):
     mermaid_count = sum(1 for c in chunks if c.get("has_mermaid"))
     table_count = sum(1 for c in chunks if c.get("has_table"))
     image_count = sum(1 for c in chunks if c.get("has_images"))
+    foundation_count = sum(1 for c in chunks if c.get("chunk_type") == "foundation_table")
 
     # 소스별 통계
     excel_chunks = [c for c in chunks if not c["workbook"].startswith("Confluence")]
@@ -701,6 +793,7 @@ def print_stats(chunks: list[dict]):
     print(f"  With Mermaid:    {mermaid_count}")
     print(f"  With Tables:     {table_count}")
     print(f"  With Images:     {image_count}")
+    print(f"  Foundation TBL:  {foundation_count}")
     print(f"{'='*60}")
 
     # 토큰 분포

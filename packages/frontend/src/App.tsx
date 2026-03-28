@@ -5,7 +5,10 @@ import type { AskResponse, StreamEvent, Proposal } from './api'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import mermaid from 'mermaid'
+import html2pdf from 'html2pdf.js'
 import ProposalView from './ProposalView'
+import PromptSettings from './PromptSettings'
+import { getPromptOverrides, hasAnyOverrides } from './promptStorage'
 
 // ── Theme ──
 type ThemeMode = 'system' | 'light' | 'dark';
@@ -75,6 +78,7 @@ function App() {
     (localStorage.getItem('qna-theme') as ThemeMode) || 'system'
   ))
 
+  const [showPromptSettings, setShowPromptSettings] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
@@ -195,6 +199,7 @@ function App() {
     setLoadingThreads(prev => new Set(prev).add(threadId));
 
     try {
+      const overrides = getPromptOverrides();
       await askQuestionStream(
         userMsg,
         (event: StreamEvent) => {
@@ -232,6 +237,7 @@ function App() {
         '검증세트 최적화',
         threadId,
         ac.signal,
+        Object.keys(overrides).length > 0 ? overrides : undefined,
       );
     } catch (error: unknown) {
       if (error instanceof DOMException && error.name === 'AbortError') {
@@ -290,6 +296,81 @@ function App() {
       <path d="M14.5 5.5C14.5 5.5 14 6.5 13 6.5C11.5 6.5 11 5 9 5C7 5 6 7 4.5 7C3.5 7 3.5 6 3.5 6L3.5 4.5C3.5 4.5 4 3.5 5 3.5C6.5 3.5 7 5 9 5C11 5 12 3 13.5 3C14.5 3 14.5 4 14.5 4V5.5Z" fill="white"/>
     </svg>
   )
+
+  // ── PDF Export ──
+  const [pdfExporting, setPdfExporting] = useState<string | null>(null) // 'all' | message index | null
+
+  const exportToPdf = useCallback(async (element: HTMLElement, filename: string) => {
+    const clone = element.cloneNode(true) as HTMLElement
+    // Force light theme colors for PDF readability
+    clone.style.cssText = `
+      color: #1a1a1a; background: #fff; padding: 24px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 14px; line-height: 1.6;
+    `
+    // Fix inner elements for light theme
+    clone.querySelectorAll<HTMLElement>('*').forEach(el => {
+      // SVG 내부 요소는 색상 변경 제외 (Mermaid 다이어그램 선명도 보존)
+      if (el.closest('svg')) return
+      const cs = window.getComputedStyle(el)
+      if (cs.color) el.style.color = '#1a1a1a'
+      if (cs.borderColor && cs.borderColor !== 'rgba(0, 0, 0, 0)') {
+        el.style.borderColor = '#ddd'
+      }
+    })
+    // Style user messages
+    clone.querySelectorAll<HTMLElement>('.message.user').forEach(el => {
+      el.style.background = '#e8f0fe'
+      el.style.borderRadius = '12px'
+      el.style.padding = '12px 16px'
+    })
+    // Style assistant messages
+    clone.querySelectorAll<HTMLElement>('.message.assistant').forEach(el => {
+      el.style.background = '#f8f9fa'
+      el.style.borderRadius = '12px'
+      el.style.padding = '12px 16px'
+    })
+    // Remove action buttons from PDF
+    clone.querySelectorAll('.copy-msg-btn, .pdf-msg-btn, .proposal-cta, .pdf-export-bar').forEach(el => el.remove())
+
+    const opt = {
+      margin: [10, 10, 10, 10] as [number, number, number, number],
+      filename,
+      image: { type: 'png' as const },
+      html2canvas: { scale: 3, useCORS: true, scrollY: 0 },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const },
+    }
+
+    await html2pdf().set(opt).from(clone).save()
+  }, [])
+
+  const handleExportConversation = useCallback(async () => {
+    const chatContainer = document.querySelector('.chat-container') as HTMLElement
+    if (!chatContainer) return
+    setPdfExporting('all')
+    try {
+      const title = activeThread?.title || 'conversation'
+      const safeTitle = title.replace(/[^a-zA-Z0-9가-힣_-]/g, '_').slice(0, 30)
+      await exportToPdf(chatContainer, `${safeTitle}.pdf`)
+    } finally {
+      setPdfExporting(null)
+    }
+  }, [activeThread, exportToPdf])
+
+  const handleExportMessage = useCallback(async (idx: number) => {
+    const msgEls = document.querySelectorAll('.message-wrapper')
+    const el = msgEls[idx] as HTMLElement
+    if (!el) return
+    setPdfExporting(String(idx))
+    try {
+      const role = messages[idx]?.role || 'message'
+      const threadTitle = activeThread?.title || 'msg'
+      const safeTitle = threadTitle.replace(/[^a-zA-Z0-9가-힣_-]/g, '_').slice(0, 20)
+      await exportToPdf(el, `${safeTitle}_${role}_${idx + 1}.pdf`)
+    } finally {
+      setPdfExporting(null)
+    }
+  }, [messages, activeThread, exportToPdf])
 
   const renderSources = (sources: AskResponse['sources']) => {
     if (!sources || sources.length === 0) return null;
@@ -366,6 +447,9 @@ function App() {
               Admin
             </a>
           </div>
+          <button className="kb-btn" style={{ width: '100%', textAlign: 'center', position: 'relative' }} onClick={() => setShowPromptSettings(true)}>
+            ⚙ 프롬프트 설정{hasAnyOverrides() ? <span style={{ color: '#f5a623', marginLeft: 4 }}>●</span> : null}
+          </button>
           <div className="theme-selector">
             <button className={`theme-btn ${themeMode === 'system' ? 'active' : ''}`} onClick={() => handleThemeChange('system')}>System</button>
             <button className={`theme-btn ${themeMode === 'light' ? 'active' : ''}`} onClick={() => handleThemeChange('light')}>Light</button>
@@ -401,6 +485,20 @@ function App() {
             </div>
           ) : (
             <div className="chat-container">
+              <div className="pdf-export-bar">
+                <button
+                  className="pdf-export-all-btn glass"
+                  onClick={handleExportConversation}
+                  disabled={pdfExporting !== null}
+                  title="전체 대화를 PDF로 내보내기"
+                >
+                  {pdfExporting === 'all' ? (
+                    <><span className="loading-spinner" style={{width: 14, height: 14}} /> PDF 생성 중...</>
+                  ) : (
+                    <><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><polyline points="9 15 12 18 15 15"/></svg> 전체 대화 PDF</>
+                  )}
+                </button>
+              </div>
               {messages.map((msg, idx) => (
                 <div key={idx} className={`message-wrapper ${msg.role}`}>
                   <div className={`message glass ${msg.role}`}>
@@ -410,6 +508,9 @@ function App() {
                           <span>{msg.content}</span>
                           <button className="copy-msg-btn" title="복사" onClick={() => navigator.clipboard.writeText(msg.content)}>
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                          </button>
+                          <button className="pdf-msg-btn" title="이 메시지 PDF" onClick={() => handleExportMessage(idx)} disabled={pdfExporting !== null}>
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
                           </button>
                         </div>
                       ) : (
@@ -429,6 +530,17 @@ function App() {
                         </ReactMarkdown>
                       )}
                     </div>
+                    {msg.role === 'assistant' && (
+                      <div className="assistant-actions">
+                        <button className="pdf-msg-btn" title="이 메시지 PDF" onClick={() => handleExportMessage(idx)} disabled={pdfExporting !== null}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                          <span>PDF</span>
+                        </button>
+                        <button className="copy-msg-btn" title="복사" onClick={() => navigator.clipboard.writeText(msg.content)} style={{opacity: undefined}}>
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                        </button>
+                      </div>
+                    )}
                     {msg.proposals && msg.proposals.length > 0 && (
                       <ProposalView proposals={msg.proposals} conversationId={activeThreadId} />
                     )}
@@ -491,6 +603,9 @@ function App() {
           )}
         </div>
       </main>
+      {showPromptSettings && (
+        <PromptSettings onClose={() => setShowPromptSettings(false)} />
+      )}
     </div>
   )
 }

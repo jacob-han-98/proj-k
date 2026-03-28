@@ -2,7 +2,7 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import './App.css'
 import { fetchConversations, fetchConversationDetail, forkConversation } from './api'
-import type { ConversationSummary, ConversationDetail, Source, Proposal } from './api'
+import type { ConversationSummary, ConversationDetail, ConversationTurn, Source, Proposal } from './api'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import mermaid from 'mermaid'
@@ -176,9 +176,10 @@ function AdminPage() {
   }
 
   // 턴 → 메시지 변환
+  const [overrideModalData, setOverrideModalData] = useState<Record<string, string> | null>(null)
   const messages = detail?.turns.flatMap(turn => [
-    { role: 'user' as const, content: turn.question, sources: undefined as Source[] | undefined, proposals: undefined as Proposal[] | undefined },
-    { role: 'assistant' as const, content: turn.answer, sources: turn.sources, proposals: (turn as any).proposals as Proposal[] | undefined },
+    { role: 'user' as const, content: turn.question, sources: undefined as Source[] | undefined, proposals: undefined as Proposal[] | undefined, prompt_overrides: undefined as Record<string, string> | undefined },
+    { role: 'assistant' as const, content: turn.answer, sources: turn.sources, proposals: (turn as any).proposals as Proposal[] | undefined, prompt_overrides: turn.prompt_overrides },
   ]) ?? []
 
   return (
@@ -317,6 +318,11 @@ function AdminPage() {
                       <ProposalView proposals={msg.proposals} conversationId={selectedId || undefined} />
                     )}
                     {msg.sources && renderSources(msg.sources)}
+                    {msg.prompt_overrides && Object.keys(msg.prompt_overrides).length > 0 && (
+                      <button className="prompt-override-icon" title="커스텀 프롬프트 사용됨" onClick={() => setOverrideModalData(msg.prompt_overrides!)}>
+                        🔧
+                      </button>
+                    )}
                   </div>
                 </div>
               ))}
@@ -324,6 +330,22 @@ function AdminPage() {
           )}
         </div>
       </main>
+      {overrideModalData && (
+        <div className="prompt-override-modal-overlay" onClick={() => setOverrideModalData(null)}>
+          <div className="prompt-override-modal" onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <h3 style={{ margin: 0 }}>커스텀 프롬프트 (이 턴에서 사용됨)</h3>
+              <button className="prompt-close-btn" onClick={() => setOverrideModalData(null)}>✕</button>
+            </div>
+            {Object.entries(overrideModalData).map(([key, value]) => (
+              <div key={key} className="prompt-override-section">
+                <div className="prompt-override-section-label">{key}</div>
+                <textarea readOnly value={value} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }

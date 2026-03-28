@@ -262,7 +262,8 @@ def _get_game_data_schema() -> str:
 
 
 def plan_search(query: str, role: str = None, model: str = "claude-opus-4-6",
-                conversation_history: list[tuple[str, str]] = None) -> dict:
+                conversation_history: list[tuple[str, str]] = None,
+                prompt_overrides: dict[str, str] | None = None) -> dict:
     """LLM으로 질문을 분석하여 검색 전략 수립.
 
     KG 관계 정보를 함께 제공하여 시스템 간 관계를 파악할 수 있게 함.
@@ -296,16 +297,17 @@ def plan_search(query: str, role: str = None, model: str = "claude-opus-4-6",
     try:
         result = call_bedrock(
             messages=[{"role": "user", "content": user_msg}],
-            system=PLANNING_PROMPT,
+            system=_resolve_prompt("planning", prompt_overrides),
             model=model,
             max_tokens=1024,
             temperature=0,
         )
+        planning_prompt_used = _resolve_prompt("planning", prompt_overrides)
         plan = _parse_plan_json(result["text"])
         plan["_tokens"] = result.get("input_tokens", 0) + result.get("output_tokens", 0)
         plan["_api_seconds"] = result.get("api_seconds", 0)
         plan["_raw_response"] = result["text"]  # Planning LLM의 원본 응답 보존
-        plan["_system_prompt"] = PLANNING_PROMPT
+        plan["_system_prompt"] = planning_prompt_used
         plan["_user_prompt"] = user_msg
         return plan
     except Exception as e:
@@ -593,6 +595,42 @@ _PROMPT_STYLE_CONFIG = {
     "기본": BASIC_ANSWER_PROMPT,
 }
 
+# ── 프롬프트 레지스트리 (커스텀 프롬프트 기능용) ──
+# 각 단계별 기본 프롬프트를 key로 관리. 프론트엔드에서 override 가능.
+# NOTE: _SYNTHESIS_PROMPT, _BASIC_SYNTHESIS_PROMPT는 아래(deep_research 부근)에서 정의되므로
+#       모듈 로드 후 _init_default_prompts()로 등록한다.
+DEFAULT_PROMPTS: dict[str, str] = {}
+
+PROMPT_LABELS = {
+    "planning": "계획 (Planning)",
+    "answer": "답변 (Answer)",
+    "answer_basic": "답변 - 기본",
+    "reflection": "검증 (Reflection)",
+    "proposal": "기획서 (Proposal)",
+    "synthesis": "종합 (Deep Research)",
+    "synthesis_basic": "종합 - 기본",
+}
+
+
+def _init_default_prompts():
+    """모듈 내 모든 프롬프트 상수가 정의된 후 호출. DEFAULT_PROMPTS를 채운다."""
+    DEFAULT_PROMPTS.update({
+        "planning": PLANNING_PROMPT,
+        "answer": AGENT_ANSWER_PROMPT,
+        "answer_basic": BASIC_ANSWER_PROMPT,
+        "reflection": REFLECTION_PROMPT,
+        "proposal": PROPOSAL_PROMPT,
+        "synthesis": _SYNTHESIS_PROMPT,
+        "synthesis_basic": _BASIC_SYNTHESIS_PROMPT,
+    })
+
+
+def _resolve_prompt(key: str, overrides: dict[str, str] | None = None) -> str:
+    """override가 있으면 사용, 없으면 기본 프롬프트 반환."""
+    if overrides and key in overrides:
+        return overrides[key]
+    return DEFAULT_PROMPTS[key]
+
 
 # 모델별 최대 출력 토큰
 _MODEL_MAX_OUTPUT = {
@@ -741,7 +779,8 @@ def generate_agent_answer(query: str, chunks: list[dict], role: str = None,
                           key_systems: list[str] = None, model: str = "claude-opus-4-6",
                           conversation_history: list[tuple[str, str]] = None,
                           detail_level: str = "상세",
-                          prompt_style: str = "검증세트 최적화") -> dict:
+                          prompt_style: str = "검증세트 최적화",
+                          prompt_overrides: dict[str, str] | None = None) -> dict:
     """수집된 증거로 답변 생성.
 
     검색된 청크에서 시트를 식별 → 해당 시트 전체를 로드하여 완전한 컨텍스트 제공.
@@ -824,7 +863,12 @@ def generate_agent_answer(query: str, chunks: list[dict], role: str = None,
     messages.append({"role": "user", "content": user_msg})
 
     detail_cfg = _DETAIL_LEVEL_CONFIG.get(detail_level, _DETAIL_LEVEL_CONFIG["보통"])
-    base_prompt = _PROMPT_STYLE_CONFIG.get(prompt_style, AGENT_ANSWER_PROMPT)
+    # prompt_overrides > prompt_style 우선순위
+    answer_key = "answer_basic" if prompt_style == "기본" else "answer"
+    if prompt_overrides and answer_key in prompt_overrides:
+        base_prompt = prompt_overrides[answer_key]
+    else:
+        base_prompt = _PROMPT_STYLE_CONFIG.get(prompt_style, AGENT_ANSWER_PROMPT)
     system_prompt = base_prompt + detail_cfg["prompt_suffix"]
     max_tokens = _get_max_tokens(model, detail_level)
 
@@ -885,7 +929,8 @@ REFLECTION_PROMPT = """당신은 QnA 시스템의 품질 검증관입니다.
 ```"""
 
 
-def reflect_on_answer(query: str, answer: str, chunks: list[dict], plan: dict, model: str = "claude-opus-4-6") -> dict:
+def reflect_on_answer(query: str, answer: str, chunks: list[dict], plan: dict, model: str = "claude-opus-4-6",
+                      prompt_overrides: dict[str, str] | None = None) -> dict:
     """생성된 답변의 품질을 자체 검증.
 
     검색 실패 시 검색 컨텍스트(어떤 문서를 찾았는지, 어떤 키워드를 사용했는지)를
@@ -961,16 +1006,17 @@ def reflect_on_answer(query: str, answer: str, chunks: list[dict], plan: dict, m
     try:
         result = call_bedrock(
             messages=[{"role": "user", "content": user_msg}],
-            system=REFLECTION_PROMPT,
+            system=_resolve_prompt("reflection", prompt_overrides),
             model=model,
             max_tokens=256,
             temperature=0,
         )
+        reflection_prompt_used = _resolve_prompt("reflection", prompt_overrides)
         reflection = _parse_plan_json(result["text"])  # 같은 파서 재사용
         reflection["_tokens"] = result.get("input_tokens", 0) + result.get("output_tokens", 0)
         reflection["_api_seconds"] = result.get("api_seconds", 0)
         reflection["_raw_response"] = result["text"]
-        reflection["_system_prompt"] = REFLECTION_PROMPT
+        reflection["_system_prompt"] = reflection_prompt_used
         reflection["_user_prompt"] = user_msg
         return reflection
     except Exception as e:
@@ -1087,6 +1133,7 @@ def generate_document_proposal(
     plan: dict,
     model: str = "claude-opus-4-6",
     status_callback=None,
+    prompt_overrides: dict[str, str] | None = None,
 ) -> dict:
     """대화 맥락 기반 기획서 수정/생성 제안 생성.
 
@@ -1165,7 +1212,8 @@ def generate_document_proposal(
         except Exception as e:
             log.warning(f"품질 기준 로드 실패: {e}")
 
-    system_prompt = PROPOSAL_PROMPT.replace("{quality_criteria_section}", criteria_section)
+    proposal_base = _resolve_prompt("proposal", prompt_overrides)
+    system_prompt = proposal_base.replace("{quality_criteria_section}", criteria_section)
 
     # 5. LLM 호출 (큰 max_tokens — 제안은 길 수 있음)
     result = call_bedrock(
@@ -1256,7 +1304,8 @@ def agent_answer(query: str, role: str = None,
                  conversation_history: list[tuple[str, str]] = None,
                  model: str = "claude-opus-4-6",
                  prompt_style: str = "검증세트 최적화",
-                 status_callback=None) -> dict:
+                 status_callback=None,
+                 prompt_overrides: dict[str, str] | None = None) -> dict:
     """Agent QnA 파이프라인.
 
     Args:
@@ -1285,7 +1334,8 @@ def agent_answer(query: str, role: str = None,
     # ── Step 1: Planning ──
     if status_callback: status_callback("🧠 질문을 분석하고 있습니다...")
     t_plan = time.time()
-    plan = plan_search(query, role, conversation_history=conversation_history)
+    plan = plan_search(query, role, conversation_history=conversation_history,
+                       prompt_overrides=prompt_overrides)
     plan_time = time.time() - t_plan
     total_tokens += plan.get("_tokens", 0)
     log.debug(f"  PLANNING: key_systems={plan.get('key_systems',[])} "
@@ -1373,6 +1423,7 @@ def agent_answer(query: str, role: str = None,
         prop_result = generate_document_proposal(
             query, chunks, conversation_history or [],
             plan, model=model, status_callback=status_callback,
+            prompt_overrides=prompt_overrides,
         )
         prop_time = time.time() - t_prop
         total_tokens += prop_result.get("tokens", 0)
@@ -1387,7 +1438,7 @@ def agent_answer(query: str, role: str = None,
         })
 
         total_time = time.time() - t0
-        return {
+        result = {
             "answer": prop_result["answer"],
             "mode": "proposal",
             "proposals": prop_result.get("proposals", []),
@@ -1397,6 +1448,9 @@ def agent_answer(query: str, role: str = None,
             "total_tokens": total_tokens,
             "total_api_seconds": round(total_time, 1),
         }
+        if prompt_overrides:
+            result["prompt_overrides_used"] = {k: v for k, v in prompt_overrides.items() if k in DEFAULT_PROMPTS}
+        return result
 
     # ── Step 3: Answer Generation ──
     if status_callback: status_callback("✍️ 답변을 생성하고 있습니다...")
@@ -1404,7 +1458,8 @@ def agent_answer(query: str, role: str = None,
     key_systems = plan.get("key_systems", [])
     gen_result = generate_agent_answer(query, chunks, role, key_systems=key_systems,
                                        model=model, conversation_history=conversation_history,
-                                       prompt_style=prompt_style)
+                                       prompt_style=prompt_style,
+                                       prompt_overrides=prompt_overrides)
     gen_time = time.time() - t_gen
     total_tokens += gen_result.get("tokens", 0)
 
@@ -1435,7 +1490,8 @@ def agent_answer(query: str, role: str = None,
     # ── Step 4: Reflection ──
     if status_callback: status_callback("🔍 답변 품질을 검증하고 있습니다...")
     t_ref = time.time()
-    reflection = reflect_on_answer(query, answer, chunks, plan)
+    reflection = reflect_on_answer(query, answer, chunks, plan,
+                                   prompt_overrides=prompt_overrides)
     ref_time = time.time() - t_ref
     total_tokens += reflection.get("_tokens", 0)
 
@@ -1478,7 +1534,8 @@ def agent_answer(query: str, role: str = None,
         # 재답변 (더 적극적으로)
         gen_result2 = generate_agent_answer(query, chunks, role, key_systems=key_systems,
                                             model=model, conversation_history=conversation_history,
-                                            prompt_style=prompt_style)
+                                            prompt_style=prompt_style,
+                                            prompt_overrides=prompt_overrides)
         retry_time = time.time() - t_retry
         total_tokens += gen_result2.get("tokens", 0)
 
@@ -1501,7 +1558,7 @@ def agent_answer(query: str, role: str = None,
 
     total_time = time.time() - t0
 
-    return {
+    result = {
         "answer": answer,
         "chunks": chunks,
         "trace": trace,
@@ -1509,6 +1566,9 @@ def agent_answer(query: str, role: str = None,
         "total_tokens": total_tokens,
         "total_api_seconds": round(total_time, 1),
     }
+    if prompt_overrides:
+        result["prompt_overrides_used"] = {k: v for k, v in prompt_overrides.items() if k in DEFAULT_PROMPTS}
+    return result
 
 
 # ══════════════════════════════════════════════════════════
@@ -1739,6 +1799,9 @@ _BASIC_SYNTHESIS_PROMPT = """당신은 모바일 MMORPG "Project K"의 기획 �
 - 수치, 조건, 규칙 등 구체적 데이터는 반드시 포함
 - 기획서에 없는 내용은 만들어내지 마세요"""
 
+# ── 모듈 내 모든 프롬프트 상수 정의 완료 → 레지스트리 초기화 ──
+_init_default_prompts()
+
 
 def _estimate_scan_tokens(scan_result: dict) -> int:
     """scan 결과의 전체 토큰 수 추정."""
@@ -1762,7 +1825,8 @@ _DIRECT_CONTEXT_LIMIT = 160000
 def deep_research(query: str, plan: dict, scan_result: dict,
                   progress_callback=None,
                   model: str = "claude-opus-4-6",
-                  prompt_style: str = "검증세트 최적화") -> dict:
+                  prompt_style: str = "검증세트 최적화",
+                  prompt_overrides: dict[str, str] | None = None) -> dict:
     """딥 리서치 파이프라인.
 
     전략 자동 선택:
@@ -1837,7 +1901,8 @@ def deep_research(query: str, plan: dict, scan_result: dict,
             progress_callback("synthesis", f"{model}이 {len(sorted_wbs)}개 문서 원본을 직접 분석 중...")
 
         t_synth = time.time()
-        synth_base = _BASIC_SYNTHESIS_PROMPT if prompt_style == "기본" else _SYNTHESIS_PROMPT
+        synth_key = "synthesis_basic" if prompt_style == "기본" else "synthesis"
+        synth_base = _resolve_prompt(synth_key, prompt_overrides)
         system_prompt = synth_base.format(query=query)
         user_msg = f"## 질문\n{query}\n\n## 관련 문서 원본 ({len(sorted_wbs)}개 문서, {scan_result['total_chunks']}개 청크)\n\n{synthesis_context}"
 
@@ -1933,7 +1998,8 @@ def deep_research(query: str, plan: dict, scan_result: dict,
 
         t_synth = time.time()
 
-        synth_base = _BASIC_SYNTHESIS_PROMPT if prompt_style == "기본" else _SYNTHESIS_PROMPT
+        synth_key = "synthesis_basic" if prompt_style == "기본" else "synthesis"
+        synth_base = _resolve_prompt(synth_key, prompt_overrides)
         system_prompt = synth_base.format(query=query)
         user_msg = (
             f"## 질문\n{query}\n\n"

@@ -223,7 +223,8 @@ def _flush_conversations():
 
 
 def _save_turn(conv_id: str, question: str, result: dict, sources: list[dict], model: str,
-               proposals: list[dict] | None = None):
+               proposals: list[dict] | None = None,
+               prompt_overrides: dict[str, str] | None = None):
     """대화 턴을 저장하고 디스크에 기록."""
     now = datetime.datetime.utcnow().isoformat() + "Z"
     turn = {
@@ -238,6 +239,10 @@ def _save_turn(conv_id: str, question: str, result: dict, sources: list[dict], m
     }
     if proposals:
         turn["proposals"] = proposals
+    # 사용자가 override한 프롬프트가 있으면 기록 (Admin 디버그 조회용)
+    overrides_used = result.get("prompt_overrides_used") or prompt_overrides
+    if overrides_used:
+        turn["prompt_overrides"] = overrides_used
     with _conv_lock:
         if conv_id not in conversations:
             conversations[conv_id] = {
@@ -271,6 +276,7 @@ class AskRequest(BaseModel):
     role: str | None = None
     model: str = "claude-opus-4-6"
     prompt_style: str = "검증세트 최적화"  # "검증세트 최적화" | "기본"
+    prompt_overrides: dict[str, str] | None = None  # 단계별 프롬프트 override (key: planning/answer/...)
 
 
 class AskResponse(BaseModel):
@@ -301,6 +307,16 @@ def health():
     return {"status": "ok", "version": "0.2.0"}
 
 
+@app.get("/prompts/defaults")
+def get_default_prompts():
+    """각 단계별 기본 시스템 프롬프트 조회. 프론트엔드 커스텀 프롬프트 편집용."""
+    from src.agent import DEFAULT_PROMPTS, PROMPT_LABELS
+    return {
+        key: {"key": key, "label": PROMPT_LABELS.get(key, key), "content": val}
+        for key, val in DEFAULT_PROMPTS.items()
+    }
+
+
 @app.post("/ask", response_model=AskResponse)
 def ask(req: AskRequest):
     """기획 QnA 질문 — Agent 파이프라인 (Planning→Search→Answer→Reflection).
@@ -312,7 +328,8 @@ def ask(req: AskRequest):
 
     result = agent_answer(req.question, role=req.role,
                           model=req.model, prompt_style=req.prompt_style,
-                          conversation_history=conv_history or None)
+                          conversation_history=conv_history or None,
+                          prompt_overrides=req.prompt_overrides)
 
     # 소스 정보 추출
     sources = []
@@ -330,7 +347,8 @@ def ask(req: AskRequest):
             })
 
     proposals = result.get("proposals") if result.get("mode") == "proposal" else None
-    _save_turn(conv_id, req.question, result, sources[:10], req.model, proposals=proposals)
+    _save_turn(conv_id, req.question, result, sources[:10], req.model, proposals=proposals,
+               prompt_overrides=req.prompt_overrides)
 
     return AskResponse(
         answer=result["answer"],
@@ -373,6 +391,7 @@ def ask_stream(req: AskRequest):
                 model=req.model, prompt_style=req.prompt_style,
                 conversation_history=conv_history or None,
                 status_callback=on_status,
+                prompt_overrides=req.prompt_overrides,
             )
             result_holder.append(res)
         except Exception as e:
@@ -413,7 +432,8 @@ def ask_stream(req: AskRequest):
                 })
 
         proposals = result.get("proposals") if result.get("mode") == "proposal" else None
-        _save_turn(conv_id, req.question, result, sources[:10], req.model, proposals=proposals)
+        _save_turn(conv_id, req.question, result, sources[:10], req.model, proposals=proposals,
+                   prompt_overrides=req.prompt_overrides)
 
         payload = {
             "answer": result["answer"],

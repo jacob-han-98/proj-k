@@ -38,19 +38,19 @@ export const askQuestion = async (
   question: string,
   model: string = 'claude-opus-4-5',
   prompt_style: string = '검증세트 최적화',
-  conversation_id?: string
+  conversation_id?: string,
+  prompt_overrides?: Record<string, string>,
 ): Promise<AskResponse> => {
+  const body: Record<string, unknown> = { question, conversation_id, model, prompt_style };
+  if (prompt_overrides && Object.keys(prompt_overrides).length > 0) {
+    body.prompt_overrides = prompt_overrides;
+  }
   const response = await fetch(`${API_BASE_URL}/ask`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
-    body: JSON.stringify({
-      question,
-      conversation_id,
-      model,
-      prompt_style,
-    }),
+    body: JSON.stringify(body),
   });
 
   if (!response.ok) {
@@ -80,6 +80,7 @@ export interface ConversationTurn {
   total_tokens: number;
   api_seconds: number;
   timestamp: string;
+  prompt_overrides?: Record<string, string>;
 }
 
 export interface ConversationDetail {
@@ -89,6 +90,20 @@ export interface ConversationDetail {
   updated_at: string;
   turns: ConversationTurn[];
 }
+
+// ── 프롬프트 커스텀 ──
+
+export interface PromptDefault {
+  key: string;
+  label: string;
+  content: string;
+}
+
+export const fetchDefaultPrompts = async (): Promise<Record<string, PromptDefault>> => {
+  const res = await fetch(`${API_BASE_URL}/prompts/defaults`);
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res.json();
+};
 
 export const fetchConversations = async (): Promise<{ conversations: ConversationSummary[]; total: number }> => {
   const res = await fetch(`${API_BASE_URL}/admin/conversations`);
@@ -549,11 +564,16 @@ export const askQuestionStream = async (
   prompt_style: string = '검증세트 최적화',
   conversation_id?: string,
   signal?: AbortSignal,
+  prompt_overrides?: Record<string, string>,
 ): Promise<void> => {
+  const body: Record<string, unknown> = { question, conversation_id, model, prompt_style };
+  if (prompt_overrides && Object.keys(prompt_overrides).length > 0) {
+    body.prompt_overrides = prompt_overrides;
+  }
   const response = await fetch(`${API_BASE_URL}/ask_stream`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ question, conversation_id, model, prompt_style }),
+    body: JSON.stringify(body),
     signal,
   });
 

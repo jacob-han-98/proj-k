@@ -337,8 +337,8 @@ function App() {
     const opt = {
       margin: [10, 10, 10, 10] as [number, number, number, number],
       filename,
-      image: { type: 'png' as const },
-      html2canvas: { scale: 3, useCORS: true, scrollY: 0 },
+      image: { type: 'jpeg' as const, quality: 0.85 },
+      html2canvas: { scale: 2, useCORS: true, scrollY: 0 },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' as const },
     }
 

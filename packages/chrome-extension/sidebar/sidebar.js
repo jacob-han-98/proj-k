@@ -1,5 +1,5 @@
-// sidebar.js - Main sidebar UI logic
-// Runs inside the sidebar iframe, communicates with content script via postMessage
+// sidebar.js - Conversational UI for Project K Chrome Extension
+// Replaces the old tab-based UI with a chat interface
 
 (function () {
   'use strict';
@@ -7,11 +7,11 @@
   // --- State ---
   let pageMeta = null;
   let pageContent = null;
-  let editSession = {
-    changes: [],
-    decisions: {},  // { 'change-1': 'accepted' | 'rejected' }
-    autoApply: false,
-  };
+  let messages = [];        // { role: 'user'|'assistant'|'system', content, type?, changes?, reviewData? }
+  let chatState = 'IDLE';   // IDLE | PROCESSING | CHANGES_PENDING | APPLYING
+  let pendingChanges = [];  // changes[] waiting for user approval
+  let editSession = { changes: [], decisions: {}, autoApply: false };
+  let editEnabled = false;
   let pendingRequests = {};
   let requestCounter = 0;
 
@@ -21,11 +21,35 @@
 
   // --- Init ---
   function init() {
-    setupTabs();
-    setupSummaryTab();
-    setupEditTab();
-    setupStatusBar();
+    setupInput();
+    setupPresets();
+    setupClose();
+    setupDelegation();
     requestPageContent();
+    setupStatusBar();
+  }
+
+  // --- Event Delegation (MV3 CSP blocks inline onclick) ---
+  function setupDelegation() {
+    $('#chat-messages').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-action]');
+      if (!btn) return;
+      const action = btn.dataset.action;
+      const id = btn.dataset.id;
+
+      switch (action) {
+        case 'fix-from-review': window._fixFromReview(); break;
+        case 'copy-review': window._copyReview(); break;
+        case 'comment-review': window._commentReview(); break;
+        case 'ri-feedback': window._riFeedback(id, btn.dataset.status); break;
+        case 'focus-change': sendToContent('FOCUS_CHANGE', { changeId: id }); break;
+        case 'accept-change': window._acceptChange(id); break;
+        case 'reject-change': window._rejectChange(id); break;
+        case 'undo-change': window._undoChange(id); break;
+        case 'accept-all': window._acceptAll(); break;
+        case 'reject-all': window._rejectAll(); break;
+      }
+    });
   }
 
   // --- Communication with content script ---
@@ -38,16 +62,11 @@
     return new Promise((resolve, reject) => {
       const requestId = `req-${++requestCounter}`;
       pendingRequests[requestId] = { resolve, reject };
-
-      sendToContent('CALL_BACKGROUND', null);
-      // We need to pass the requestId along with the background message
       window.parent.postMessage({
         type: 'CALL_BACKGROUND',
-        requestId: requestId,
+        requestId,
         payload: { action, payload },
       }, '*');
-
-      // Timeout after 180 seconds (Opus 4.6 + long pages can take a while)
       setTimeout(() => {
         if (pendingRequests[requestId]) {
           delete pendingRequests[requestId];
@@ -62,52 +81,66 @@
     if (!msg || !msg.type) return;
 
     switch (msg.type) {
-      case 'PAGE_CONTENT':
+      case 'PAGE_CONTENT': {
         const isNewPage = pageMeta && msg.payload.meta && pageMeta.pageId !== msg.payload.meta.pageId;
         pageMeta = msg.payload.meta;
         pageContent = msg.payload.content;
-        updatePageInfo();
-        if (isNewPage) resetEditSession();
+        updatePageContext();
+        if (isNewPage) resetChat();
         break;
-
-      case 'PREVIEW_RESULT':
-        const previewEl = $('#preview-result');
-        if (msg.payload.applied < msg.payload.total) {
-          previewEl.innerHTML = `${msg.payload.applied}/${msg.payload.total} changes found on page. ` +
-            `<em style="color:#f59e0b">${msg.payload.total - msg.payload.applied} not found (page may have changed)</em>`;
+      }
+      case 'PREVIEW_RESULT': {
+        const matched = new Set(msg.payload.orderedIds || []);
+        // Track which changes matched on the page
+        editSession.unmatchedIds = new Set();
+        editSession.changes.forEach(c => {
+          if (!matched.has(c.id)) editSession.unmatchedIds.add(c.id);
+        });
+        // Reorder changes to match page DOM order
+        if (msg.payload.orderedIds && editSession.changes.length > 0) {
+          const orderMap = {};
+          msg.payload.orderedIds.forEach((id, i) => { orderMap[id] = i; });
+          editSession.changes.sort((a, b) => {
+            const oa = orderMap[a.id] != null ? orderMap[a.id] : 9999;
+            const ob = orderMap[b.id] != null ? orderMap[b.id] : 9999;
+            return oa - ob;
+          });
+          const changesMsg = messages.find(m => m.type === 'changes');
+          if (changesMsg) {
+            changesMsg.changes = editSession.changes;
+            updateChangesCard();
+          }
+        }
+        // Show match stats
+        if (editSession.unmatchedIds.size > 0) {
+          addMessage({ role: 'system', content: `⚠️ ${msg.payload.applied}/${msg.payload.total}건만 페이지에서 매칭됨. ${editSession.unmatchedIds.size}건은 원문 불일치로 프리뷰 불가.` });
         }
         break;
-
+      }
       case 'INLINE_DECISION':
-        // Decision made on the page → sync to sidebar
         if (msg.payload.decision === 'pending') {
           delete editSession.decisions[msg.payload.changeId];
         } else {
           editSession.decisions[msg.payload.changeId] = msg.payload.decision;
         }
-        renderDiffs();
+        updateChangesCard();
         break;
-
       case 'FLOATING_CONFIRM':
-        handleSaveToConfluence();
+        handleApplyAccepted();
         break;
-
       case 'FLOATING_CANCEL':
         handleCancelEdits();
         break;
-
-      case 'BACKGROUND_RESPONSE':
+      case 'BACKGROUND_RESPONSE': {
         const req = pendingRequests[msg.payload.requestId];
         if (req) {
           delete pendingRequests[msg.payload.requestId];
           const resp = msg.payload.response;
-          if (resp && resp.error) {
-            req.reject(new Error(resp.error));
-          } else {
-            req.resolve(resp);
-          }
+          if (resp && resp.error) req.reject(new Error(resp.error));
+          else req.resolve(resp);
         }
         break;
+      }
     }
   });
 
@@ -115,7 +148,6 @@
     sendToContent('REQUEST_PAGE_CONTENT');
   }
 
-  // Fetch fresh content from DOM right now (returns a promise)
   function refreshPageContent() {
     return new Promise((resolve) => {
       const handler = (event) => {
@@ -124,52 +156,29 @@
           window.removeEventListener('message', handler);
           pageMeta = msg.payload.meta;
           pageContent = msg.payload.content;
-          updatePageInfo();
+          updatePageContext();
           resolve(pageContent);
         }
       };
       window.addEventListener('message', handler);
       sendToContent('REQUEST_PAGE_CONTENT');
-      // Timeout fallback
-      setTimeout(() => {
-        window.removeEventListener('message', handler);
-        resolve(pageContent);
-      }, 3000);
+      setTimeout(() => { window.removeEventListener('message', handler); resolve(pageContent); }, 3000);
     });
   }
 
-  // --- Tabs ---
+  // --- Page Context ---
 
-  function setupTabs() {
-    $$('.tab').forEach((tab) => {
-      tab.addEventListener('click', () => {
-        if (tab.classList.contains('disabled')) return;
-        $$('.tab').forEach((t) => t.classList.remove('active'));
-        $$('.tab-content').forEach((c) => c.classList.remove('active'));
-        tab.classList.add('active');
-        $(`#tab-${tab.dataset.tab}`).classList.add('active');
-      });
-    });
-
-    $('#btn-close').addEventListener('click', () => {
-      sendToContent('CLOSE_SIDEBAR');
-    });
-  }
-
-  // --- Page Info ---
-
-  let editEnabled = false;
-
-  function updatePageInfo() {
+  function updatePageContext() {
     if (!pageMeta) return;
+    const ctx = $('#page-context');
+    ctx.textContent = pageMeta.title || '';
+    ctx.title = pageMeta.title || '';
 
-    const spaceTag = pageMeta.spaceKey ? ` <span class="space-tag">${escapeHtml(pageMeta.spaceKey)}</span>` : '';
-    const infoHtml = `<span class="page-title">${escapeHtml(pageMeta.title || 'Unknown')}</span>${spaceTag}`;
-    $('#page-info').innerHTML = infoHtml;
-    $('#edit-page-info').innerHTML = infoHtml;
-
-    if (!pageContent) {
-      $('#page-info').innerHTML += '<br><em style="color:#ef4444">Could not extract page content</em>';
+    const desc = $('#welcome-desc');
+    if (desc) {
+      desc.textContent = pageContent
+        ? `"${pageMeta.title}" 페이지에 대해 질문하거나 리뷰를 요청하세요.`
+        : '페이지 내용을 추출할 수 없습니다.';
     }
 
     checkEditPermission();
@@ -185,392 +194,798 @@
     } catch {
       editEnabled = false;
     }
-
-    const editTab = $('[data-tab="edit"]');
-    const editControls = $('#tab-edit .input-group');
-    if (editEnabled) {
-      editTab.classList.remove('disabled');
-      editTab.title = '';
-      if (editControls) editControls.style.display = '';
-      $('#edit-page-info').innerHTML = $('#page-info').innerHTML;
-    } else {
-      editTab.classList.add('disabled');
-      editTab.title = `Edit disabled — space "${pageMeta.spaceKey}" not in whitelist`;
-      if (editControls) editControls.style.display = 'none';
-      $('#edit-page-info').innerHTML = `<span class="edit-blocked">Edit disabled for space "${escapeHtml(pageMeta.spaceKey || '?')}"</span><br><em style="color:#888">Allowed spaces can be configured in extension settings</em>`;
-    }
   }
 
-  // --- Summary Tab ---
+  // --- Input ---
 
-  function setupSummaryTab() {
-    $('#btn-summarize').addEventListener('click', handleSummarize);
+  function setupInput() {
+    const input = $('#chat-input');
+    const sendBtn = $('#btn-send');
+
+    input.addEventListener('input', () => {
+      sendBtn.disabled = !input.value.trim() || chatState === 'PROCESSING';
+      autoResize(input);
+    });
+
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        if (input.value.trim() && chatState !== 'PROCESSING') handleSend();
+      }
+    });
+
+    sendBtn.addEventListener('click', () => {
+      if (input.value.trim() && chatState !== 'PROCESSING') handleSend();
+    });
   }
 
-  async function handleSummarize() {
-    const btn = $('#btn-summarize');
-    const resultEl = $('#summary-result');
+  function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 120) + 'px';
+  }
 
-    btn.disabled = true;
-    resultEl.className = 'result-area loading';
-    resultEl.innerHTML = '<span class="spinner"></span> Fetching page content...';
+  // --- Presets ---
 
-    // Always fetch fresh content from DOM
-    await refreshPageContent();
+  function setupPresets() {
+    $$('.preset-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const text = btn.dataset.preset;
+        $('#chat-input').value = text;
+        handleSend();
+      });
+    });
+  }
 
-    if (!pageContent) {
-      showError('summary-result', 'Could not extract page content');
-      btn.disabled = false;
-      return;
+  function setupClose() {
+    $('#btn-close').addEventListener('click', () => sendToContent('CLOSE_SIDEBAR'));
+  }
+
+  // --- Send Message ---
+
+  async function handleSend() {
+    const input = $('#chat-input');
+    const text = input.value.trim();
+    if (!text) return;
+
+    input.value = '';
+    input.style.height = 'auto';
+    $('#btn-send').disabled = true;
+
+    // Hide welcome
+    const welcome = $('#welcome');
+    if (welcome) welcome.style.display = 'none';
+
+    // Add user message
+    addMessage({ role: 'user', content: text });
+
+    // Determine intent
+    const intent = classifyIntent(text);
+    await handleIntent(intent, text);
+  }
+
+  // --- Intent Classification ---
+
+  function classifyIntent(text) {
+    const lower = text.toLowerCase().trim();
+
+    // State-based: if we have pending changes and user responds
+    if (chatState === 'CHANGES_PENDING') {
+      if (/^(응|네|예|적용|ㅇㅇ|yes|ok|확인|반영|저장)/.test(lower)) return 'CONFIRM_CHANGES';
+      if (/^(아니|no|취소|안|다시|수정|말고)/.test(lower)) return 'REJECT_CHANGES';
     }
-    resultEl.className = 'result-area loading';
-    resultEl.innerHTML = '<span class="spinner"></span> Analyzing page...';
-    setStatus('Summarizing...');
+
+    // Keyword matching
+    if (/요약|summarize|summary|정리해/.test(lower)) return 'SUMMARIZE';
+    if (/리뷰|검토|review|점검|진단/.test(lower)) return 'REVIEW';
+    if (/초안|완성|보강|draft|같이.*작성|작성.*같이/.test(lower)) return 'DRAFT_ASSIST';
+    if (/수정|고쳐|edit|바꿔|변경|추가해|삭제해|제거해/.test(lower)) return 'SUGGEST_EDITS';
+
+    return 'CHAT';
+  }
+
+  // --- Intent Handlers ---
+
+  async function handleIntent(intent, text) {
+    chatState = 'PROCESSING';
+    setStatus('분석 중...');
+
+    // Show loading
+    const loadingId = addMessage({ role: 'assistant', content: '', type: 'loading' });
 
     try {
-      const response = await callBackground('SUMMARIZE', {
-        title: pageMeta.title,
-        text: pageContent.text,
-      });
-
-      resultEl.className = 'result-area';
-      resultEl.innerHTML = formatMarkdown(response.summary);
-      setStatus('Summary complete');
-    } catch (err) {
-      showError('summary-result', err.message);
-      setStatus('Error');
-    } finally {
-      btn.disabled = false;
-    }
-  }
-
-  // --- Edit Tab ---
-
-  function setupEditTab() {
-    $('#btn-suggest-edits').addEventListener('click', handleSuggestEdits);
-    $('#btn-yes-all').addEventListener('click', () => bulkAction('accepted'));
-    $('#btn-reject-all').addEventListener('click', () => bulkAction('rejected'));
-    $('#btn-always').addEventListener('click', handleAlways);
-    $('#btn-confirm').addEventListener('click', handleSaveToConfluence);
-    $('#btn-cancel-edits').addEventListener('click', handleCancelEdits);
-
-    // Ctrl+Enter to submit
-    $('#edit-instruction').addEventListener('keydown', (e) => {
-      if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
-        handleSuggestEdits();
+      await refreshPageContent();
+      if (!pageContent) {
+        removeMessage(loadingId);
+        addMessage({ role: 'system', content: '페이지 내용을 추출할 수 없습니다.' });
+        chatState = 'IDLE';
+        setStatus('Ready');
+        return;
       }
-    });
+
+      switch (intent) {
+        case 'SUMMARIZE':
+          await handleSummarize(loadingId);
+          break;
+        case 'REVIEW':
+          await handleReview(loadingId);
+          break;
+        case 'DRAFT_ASSIST':
+          await handleDraftAssist(loadingId, text);
+          break;
+        case 'SUGGEST_EDITS':
+          await handleSuggestEdits(loadingId, text);
+          break;
+        case 'CONFIRM_CHANGES':
+          removeMessage(loadingId);
+          await handleApplyAccepted();
+          break;
+        case 'REJECT_CHANGES':
+          removeMessage(loadingId);
+          handleCancelEdits();
+          addMessage({ role: 'assistant', content: '수정을 취소했습니다. 다른 방향으로 수정할까요?' });
+          break;
+        case 'CHAT':
+          await handleChat(loadingId, text);
+          break;
+      }
+    } catch (err) {
+      removeMessage(loadingId);
+      addMessage({ role: 'system', content: `오류: ${err.message}` });
+      setStatus('Error');
+    }
+
+    if (chatState === 'PROCESSING') chatState = 'IDLE';
+    if (chatState === 'IDLE') setStatus('Ready');
   }
 
-  async function handleSuggestEdits() {
-    const instruction = $('#edit-instruction').value.trim();
-    if (!instruction) {
-      alert('Please enter edit instructions.');
+  async function handleSummarize(loadingId) {
+    const response = await callBackground('SUMMARIZE', {
+      title: pageMeta.title,
+      text: pageContent.text,
+    });
+    removeMessage(loadingId);
+    addMessage({ role: 'assistant', content: response.summary });
+    setStatus('요약 완료');
+  }
+
+  async function handleReview(loadingId) {
+    const response = await callBackground('REVIEW', {
+      title: pageMeta.title,
+      text: pageContent.text,
+    });
+    removeMessage(loadingId);
+
+    // Try to parse structured review
+    let reviewData;
+    try {
+      const cleaned = response.review.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+      if (jsonMatch) reviewData = JSON.parse(jsonMatch[0]);
+    } catch { /* fall through to text display */ }
+
+    if (reviewData) {
+      latestReviewData = reviewData;
+      reviewFeedback = {}; // reset feedback for new review
+      addMessage({ role: 'assistant', content: '', type: 'review', reviewData });
+    } else {
+      addMessage({ role: 'assistant', content: response.review });
+    }
+    setStatus('리뷰 완료');
+  }
+
+  async function handleDraftAssist(loadingId, text) {
+    const response = await callBackground('DRAFT_ASSIST', {
+      title: pageMeta.title,
+      text: pageContent.text,
+      instruction: text,
+      history: getRecentHistory(),
+    });
+    removeMessage(loadingId);
+    addMessage({ role: 'assistant', content: response.answer });
+    setStatus('분석 완료');
+  }
+
+  async function handleSuggestEdits(loadingId, text) {
+    if (!editEnabled) {
+      removeMessage(loadingId);
+      addMessage({ role: 'system', content: `이 스페이스(${pageMeta.spaceKey})에서는 수정이 비활성화되어 있습니다. 설정에서 허용된 스페이스를 확인하세요.` });
       return;
     }
 
-    const btn = $('#btn-suggest-edits');
-    const diffArea = $('#diff-area');
+    // Enrich instruction with review context if available
+    let instruction = text;
+    if (latestReviewData && /수정|고쳐|fix|edit|리뷰.*바탕|리뷰.*수정/.test(text.toLowerCase())) {
+      const reviewItems = [];
+      if (latestReviewData.issues) latestReviewData.issues.forEach(i => reviewItems.push(`[보강 필요] ${i}`));
+      if (latestReviewData.verifications) latestReviewData.verifications.forEach(i => reviewItems.push(`[검증 필요] ${i}`));
+      if (latestReviewData.suggestions) latestReviewData.suggestions.forEach(i => reviewItems.push(`[제안] ${i}`));
+      if (reviewItems.length > 0) {
+        instruction = `${text}\n\n이전 AI 리뷰에서 발견한 항목들 (이 항목들을 모두 반영하여 수정해주세요):\n${reviewItems.join('\n')}`;
+      }
+    }
 
-    btn.disabled = true;
-    $('#edit-instruction').disabled = true;
-    diffArea.innerHTML = '<div class="result-area loading"><span class="spinner"></span> Fetching latest page content...</div>';
-    $('#bulk-actions').classList.add('hidden');
-    $('#apply-area').classList.add('hidden');
-    setStatus('Fetching page content...');
+    // Count expected changes from instruction to pass as hint
+    const lineCount = (instruction.match(/^\d+\./gm) || []).length;
+    const maxChanges = lineCount > 0 ? Math.min(lineCount, 25) : 10;
 
-    // Always fetch fresh content from DOM
-    await refreshPageContent();
+    const response = await callBackground('SUGGEST_EDITS', {
+      title: pageMeta.title,
+      text: pageContent.text,
+      html: pageContent.html,
+      instruction,
+      maxChanges,
+    });
 
-    if (!pageContent) {
-      showError('diff-area', 'Could not extract page content');
-      btn.disabled = false;
+    removeMessage(loadingId);
+
+    if (!response.changes || response.changes.length === 0) {
+      addMessage({ role: 'assistant', content: '수정할 부분을 찾지 못했습니다.' });
       return;
     }
 
-    diffArea.innerHTML = '<div class="result-area loading"><span class="spinner"></span> Analyzing page and generating suggestions...</div>';
-    setStatus('Generating edit suggestions...');
+    // Store changes
+    editSession.changes = response.changes;
+    editSession.decisions = {};
+    pendingChanges = response.changes;
+    chatState = 'CHANGES_PENDING';
+
+    addMessage({
+      role: 'assistant',
+      content: `${response.changes.length}건의 수정을 제안합니다.`,
+      type: 'changes',
+      changes: response.changes,
+    });
+
+    // Show inline preview on page
+    sendToContent('PREVIEW_CHANGES', {
+      changes: response.changes.map(c => ({ id: c.id, before: c.before, after: c.after })),
+    });
+
+    setStatus(`${response.changes.length}건 수정 제안`);
+  }
+
+  async function handleChat(loadingId, text) {
+    // Use QnA backend for free-form questions
+    try {
+      const response = await callBackground('CHAT', {
+        title: pageMeta.title,
+        text: pageContent.text.slice(0, 30000),
+        question: text,
+        history: getRecentHistory(),
+      });
+      removeMessage(loadingId);
+      addMessage({ role: 'assistant', content: response.answer });
+    } catch (err) {
+      // Fallback: direct LLM call with page context
+      try {
+        const response = await callBackground('CHAT_DIRECT', {
+          title: pageMeta.title,
+          text: pageContent.text,
+          question: text,
+          history: getRecentHistory(),
+        });
+        removeMessage(loadingId);
+        addMessage({ role: 'assistant', content: response.answer });
+      } catch (err2) {
+        removeMessage(loadingId);
+        throw err2;
+      }
+    }
+    setStatus('Ready');
+  }
+
+  // --- Apply Changes ---
+
+  async function handleApplyAccepted() {
+    const accepted = editSession.changes.filter(c =>
+      editSession.decisions[c.id] === 'accepted' || !editSession.decisions[c.id]
+    );
+    if (accepted.length === 0) {
+      addMessage({ role: 'system', content: '적용할 변경사항이 없습니다.' });
+      chatState = 'IDLE';
+      return;
+    }
+
+    chatState = 'APPLYING';
+    setStatus('Confluence에 저장 중...');
+    addMessage({ role: 'system', content: '⏳ Confluence에 저장 중...' });
 
     try {
-      const response = await callBackground('SUGGEST_EDITS', {
-        title: pageMeta.title,
-        text: pageContent.text,
-        html: pageContent.html,
-        instruction: instruction,
+      const response = await callBackground('APPLY_EDITS', {
+        pageId: pageMeta.pageId,
+        confluenceUrl: pageMeta.confluenceBaseUrl,
+        changes: accepted.map(c => ({ before: c.before, after: c.after, description: c.description })),
       });
 
-      editSession.changes = response.changes;
-      editSession.decisions = {};
-      editSession.autoApply = false;
+      sendToContent('CLEAR_PREVIEW');
+      sendToContent('HIDE_FLOATING_BAR');
 
-      renderDiffs();
-      setStatus(`${response.changes.length} change(s) suggested`);
-
-      // Auto-show inline diff on page
-      sendToContent('PREVIEW_CHANGES', {
-        changes: response.changes.map((c) => ({ id: c.id, before: c.before, after: c.after })),
-      });
-
-      // Scroll to first card
-      setTimeout(() => {
-        const first = diffArea.querySelector('.diff-card');
-        if (first) first.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }, 100);
+      let msg = `✅ ${response.applied}건 저장 완료! (v${response.oldVersion} → v${response.newVersion})`;
+      if (response.failed > 0) {
+        msg += `\n⚠️ ${response.failed}건은 매칭 실패`;
+      }
+      addMessage({ role: 'system', content: msg });
+      setStatus(`저장 완료 (v${response.newVersion})`);
     } catch (err) {
-      diffArea.innerHTML = '';
-      showError('diff-area', err.message);
-      setStatus('Error');
-    } finally {
-      btn.disabled = false;
-      $('#edit-instruction').disabled = false;
-    }
-  }
-
-  // --- Diff Rendering ---
-
-  // Track which card is currently expanded
-  let focusedChangeId = null;
-
-  function renderDiffs() {
-    const diffArea = $('#diff-area');
-    diffArea.innerHTML = '';
-
-    if (editSession.changes.length === 0) {
-      diffArea.innerHTML = '<div class="result-area">No changes suggested.</div>';
-      return;
+      addMessage({ role: 'system', content: `❌ 저장 실패: ${err.message}` });
+      setStatus('저장 실패');
     }
 
-    // Auto-focus first pending card
-    if (!focusedChangeId || editSession.decisions[focusedChangeId]) {
-      const firstPending = editSession.changes.find(c => !editSession.decisions[c.id]);
-      focusedChangeId = firstPending ? firstPending.id : null;
-    }
-
-    editSession.changes.forEach((change, index) => {
-      const decision = editSession.decisions[change.id] || 'pending';
-      const isExpanded = change.id === focusedChangeId;
-      const card = createDiffCard(change, index, decision, isExpanded);
-      diffArea.appendChild(card);
-    });
-
-    updateBulkActions();
-
-    // Scroll focused card into view
-    if (focusedChangeId) {
-      const focusedCard = diffArea.querySelector(`[data-change-id="${focusedChangeId}"]`);
-      if (focusedCard) {
-        setTimeout(() => focusedCard.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50);
-      }
-    }
-  }
-
-  function createDiffCard(change, index, decision, isExpanded) {
-    const card = document.createElement('div');
-    card.className = `diff-card ${decision} ${isExpanded ? 'expanded' : 'collapsed'}`;
-    card.dataset.changeId = change.id;
-
-    // Header (always visible, clickable to toggle)
-    const header = document.createElement('div');
-    header.className = 'diff-card-header';
-    header.innerHTML = `
-      <span class="diff-card-title">${index + 1}/${editSession.changes.length}: ${escapeHtml(change.section || 'Change')}</span>
-      <span class="diff-card-badge ${decision}">${decision}</span>
-    `;
-
-    // Click header to expand/collapse
-    header.addEventListener('click', () => {
-      focusedChangeId = (focusedChangeId === change.id) ? null : change.id;
-      renderDiffs();
-    });
-
-    // Description (always visible)
-    const desc = document.createElement('div');
-    desc.className = 'diff-card-desc';
-    desc.textContent = change.description || '';
-
-    card.appendChild(header);
-    card.appendChild(desc);
-
-    // Body + Actions only when expanded
-    if (isExpanded) {
-      const body = document.createElement('div');
-      body.className = 'diff-card-body';
-
-      const sideBySide = DiffEngine.renderSideBySide(change.before, change.after);
-      body.innerHTML = sideBySide.beforeHtml + sideBySide.afterHtml;
-
-      const inlineDiff = document.createElement('div');
-      inlineDiff.className = 'diff-inline';
-      inlineDiff.innerHTML = DiffEngine.renderDiff(change.before, change.after);
-      body.appendChild(inlineDiff);
-
-      const actions = document.createElement('div');
-      actions.className = 'diff-card-actions';
-      if (decision === 'pending') {
-        actions.innerHTML = `
-          <button class="btn-approve" data-action="accept" data-id="${change.id}">Accept</button>
-          <button class="btn-reject" data-action="reject" data-id="${change.id}">Reject</button>
-        `;
-      } else {
-        actions.innerHTML = `
-          <button class="btn-skip" data-action="undo" data-id="${change.id}">Undo</button>
-        `;
-      }
-
-      actions.addEventListener('click', (e) => {
-        const action = e.target.dataset.action;
-        const id = e.target.dataset.id;
-        if (!action || !id) return;
-
-        let decision;
-        if (action === 'accept') {
-          editSession.decisions[id] = 'accepted';
-          decision = 'accepted';
-        } else if (action === 'reject') {
-          editSession.decisions[id] = 'rejected';
-          decision = 'rejected';
-        } else if (action === 'undo') {
-          delete editSession.decisions[id];
-          decision = 'pending';
-        }
-
-        // Sync to inline diff on page
-        sendToContent('SYNC_DECISION', { changeId: id, decision });
-
-        // Auto-advance to next pending
-        const currentIdx = editSession.changes.findIndex(c => c.id === id);
-        const nextPending = editSession.changes.find((c, i) => i > currentIdx && !editSession.decisions[c.id]);
-        focusedChangeId = nextPending ? nextPending.id : null;
-
-        renderDiffs();
-      });
-
-      card.appendChild(body);
-      card.appendChild(actions);
-    }
-
-    return card;
-  }
-
-  function updateBulkActions() {
-    const pending = editSession.changes.filter((c) => !editSession.decisions[c.id]);
-    const accepted = editSession.changes.filter((c) => editSession.decisions[c.id] === 'accepted');
-    const rejected = editSession.changes.filter((c) => editSession.decisions[c.id] === 'rejected');
-
-    const bulkEl = $('#bulk-actions');
-    const applyEl = $('#apply-area');
-
-    if (editSession.changes.length > 0) {
-      bulkEl.classList.remove('hidden');
-      $('#diff-stats').textContent = `${accepted.length} accepted / ${rejected.length} rejected / ${pending.length} pending`;
-    }
-
-    // Show confirm/cancel when at least one accepted
-    if (accepted.length > 0) {
-      applyEl.classList.remove('hidden');
-      $('#btn-confirm').textContent = `Save ${accepted.length} Change(s) to Confluence`;
-      $('#apply-result').innerHTML = '';
-    } else {
-      applyEl.classList.add('hidden');
-    }
-
-    // Sync counts to page floating bar
-    sendToContent('UPDATE_COUNTS', {
-      total: editSession.changes.length,
-      accepted: accepted.length,
-      rejected: rejected.length,
-      pending: pending.length,
-    });
-  }
-
-  function bulkAction(decision) {
-    editSession.changes.forEach((change) => {
-      if (!editSession.decisions[change.id]) {
-        editSession.decisions[change.id] = decision;
-        sendToContent('SYNC_DECISION', { changeId: change.id, decision });
-      }
-    });
-    focusedChangeId = null;
-    renderDiffs();
-  }
-
-  function handleAlways() {
-    editSession.autoApply = true;
-    bulkAction('accepted');
+    editSession = { changes: [], decisions: {}, autoApply: false };
+    pendingChanges = [];
+    chatState = 'IDLE';
   }
 
   function handleCancelEdits() {
     sendToContent('CLEAR_PREVIEW');
     sendToContent('HIDE_FLOATING_BAR');
     editSession = { changes: [], decisions: {}, autoApply: false };
-    focusedChangeId = null;
-    $('#diff-area').innerHTML = '';
-    $('#bulk-actions').classList.add('hidden');
-    $('#apply-area').classList.add('hidden');
-    $('#apply-result').innerHTML = '';
-    setStatus('Edits cancelled');
+    pendingChanges = [];
+    chatState = 'IDLE';
+    setStatus('Ready');
   }
 
-  // --- Save to Confluence ---
+  // --- Message Rendering ---
 
-  async function handleSaveToConfluence() {
-    const accepted = editSession.changes.filter((c) => editSession.decisions[c.id] === 'accepted');
-    if (accepted.length === 0) return;
+  let messageCounter = 0;
 
-    const btn = $('#btn-confirm');
-    const resultEl = $('#apply-result');
-    btn.disabled = true;
-    resultEl.className = 'result-area loading';
-    resultEl.innerHTML = '<span class="spinner"></span> Saving to Confluence...';
-    setStatus('Saving to Confluence...');
+  function addMessage(msg) {
+    const id = `msg-${++messageCounter}`;
+    msg.id = id;
+    messages.push(msg);
+    renderMessage(msg);
+    // Large responses (review, changes): scroll to start of the message
+    // Small responses: scroll to bottom
+    if (msg.type === 'review' || msg.type === 'changes') {
+      scrollToMessage(id);
+    } else {
+      scrollToBottom();
+    }
+    return id;
+  }
+
+  function removeMessage(id) {
+    messages = messages.filter(m => m.id !== id);
+    const el = document.getElementById(id);
+    if (el) el.remove();
+  }
+
+  function renderMessage(msg) {
+    const container = $('#chat-messages');
+    const el = document.createElement('div');
+    el.id = msg.id;
+    el.className = `chat-msg ${msg.role}`;
+
+    if (msg.type === 'loading') {
+      el.innerHTML = '<div class="loading-dots"><span></span><span></span><span></span></div>';
+    } else if (msg.type === 'review' && msg.reviewData) {
+      el.innerHTML = renderReviewCard(msg.reviewData);
+    } else if (msg.type === 'changes' && msg.changes) {
+      el.innerHTML = renderChangesCard(msg.changes);
+    } else if (msg.role === 'system') {
+      el.innerHTML = `<div class="system-msg">${escapeHtml(msg.content)}</div>`;
+    } else if (msg.role === 'user') {
+      el.innerHTML = `<div class="user-bubble">${escapeHtml(msg.content)}</div>`;
+    } else {
+      el.innerHTML = `<div class="assistant-bubble">${formatMarkdown(msg.content)}</div>`;
+    }
+
+    container.appendChild(el);
+  }
+
+  let reviewItemCounter = 0;
+
+  function renderReviewCard(data) {
+    reviewItemCounter = 0;
+    let html = '<div class="review-card" id="review-card">';
+
+    // Score
+    if (data.score != null) {
+      const pct = Math.max(0, Math.min(100, data.score));
+      html += `<div class="review-score">
+        <span class="review-score-label">전체 평가</span>
+        <div class="review-score-bar"><div class="review-score-fill" style="width:${pct}%"></div></div>
+        <span class="review-score-num">${data.score}/100</span>
+      </div>`;
+    }
+
+    // Actionable sections (issues, verifications, suggestions) — with feedback buttons
+    if (data.issues && data.issues.length > 0) {
+      html += '<div class="review-section warning">';
+      html += `<div class="review-section-title">⚠️ 보강 필요 (${data.issues.length}건)</div>`;
+      data.issues.forEach(item => { html += renderReviewItem(item, 'issue'); });
+      html += '</div>';
+    }
+
+    if (data.verifications && data.verifications.length > 0) {
+      html += '<div class="review-section info">';
+      html += `<div class="review-section-title">🔍 검증 필요 (${data.verifications.length}건)</div>`;
+      data.verifications.forEach(item => { html += renderReviewItem(item, 'verification'); });
+      html += '</div>';
+    }
+
+    // Strengths — no feedback buttons (read-only)
+    if (data.strengths && data.strengths.length > 0) {
+      html += '<div class="review-section success">';
+      html += `<div class="review-section-title">✅ 잘 된 부분 (${data.strengths.length}건)</div>`;
+      data.strengths.forEach(item => {
+        html += `<div class="review-item">${escapeHtml(item)}</div>`;
+      });
+      html += '</div>';
+    }
+
+    if (data.suggestions && data.suggestions.length > 0) {
+      html += '<div class="review-section suggestion">';
+      html += `<div class="review-section-title">💡 제안 (${data.suggestions.length}건)</div>`;
+      data.suggestions.forEach(item => { html += renderReviewItem(item, 'suggestion'); });
+      html += '</div>';
+    }
+
+    // Primary action: fix now
+    html += `<div class="review-cta">`;
+    html += `<button class="btn-fix-now" data-action="fix-from-review">✏️ 원본 Confluence 문서 수정안 정리</button>`;
+    html += `<div class="review-cta-hint">각 항목의 👍👎 로 반영 여부를 조정할 수 있어요</div>`;
+    html += `</div>`;
+
+    // Secondary actions
+    html += `<div class="review-actions">`;
+    html += `<button class="btn-sm btn-copy-review" data-action="copy-review">📋 복사</button>`;
+    html += `<button class="btn-sm btn-comment-review" data-action="comment-review">💬 Confluence 댓글</button>`;
+    html += `</div>`;
+
+    html += '</div>';
+    return html;
+  }
+
+  function renderReviewItem(text, category) {
+    const id = `ri-${reviewItemCounter++}`;
+    const fb = reviewFeedback[id] || { status: 'liked', editText: '' };
+    // Initialize default as liked
+    if (!reviewFeedback[id]) reviewFeedback[id] = { status: 'liked', editText: '', text, category };
+
+    const isLiked = fb.status === 'liked';
+    const isDisliked = fb.status === 'disliked';
+    const isEdited = fb.status === 'edited';
+
+    let html = `<div class="review-item-outer" id="${id}">`;
+    html += `<div class="review-item-wrap ${isDisliked ? 'disliked' : ''}">`;
+    html += `<div class="review-item-content">${escapeHtml(text)}</div>`;
+    html += `<div class="review-item-feedback">`;
+    html += `<button class="ri-btn ${isLiked ? 'active' : ''}" data-action="ri-feedback" data-id="${id}" data-status="liked" title="좋아요">👍</button>`;
+    html += `<button class="ri-btn ${isDisliked ? 'active' : ''}" data-action="ri-feedback" data-id="${id}" data-status="disliked" title="싫어요">👎</button>`;
+    html += `<button class="ri-btn ${isEdited ? 'active' : ''}" data-action="ri-feedback" data-id="${id}" data-status="edited" title="수정">✏️</button>`;
+    html += `</div>`;
+    html += `</div>`;
+
+    // Edit textarea (shown when status is 'edited') — full width below
+    if (isEdited) {
+      html += `<div class="ri-edit-area">`;
+      html += `<textarea class="ri-edit-input" id="edit-${id}" placeholder="수정 방향을 입력하세요..." rows="2">${escapeHtml(fb.editText)}</textarea>`;
+      html += `</div>`;
+    }
+
+    html += `</div>`;
+    return html;
+  }
+
+  // Store latest review data for copy/comment
+  let latestReviewData = null;
+  // Per-item feedback: { 'ri-0': { status: 'liked'|'disliked'|'edited', editText: '' } }
+  let reviewFeedback = {};
+
+  function reviewDataToMarkdown(data) {
+    let lines = [];
+    lines.push(`## 📋 AI 리뷰 — ${pageMeta?.title || 'Untitled'}`);
+    if (data.score != null) lines.push(`\n**전체 평가: ${data.score}/100**`);
+
+    if (data.issues?.length) {
+      lines.push(`\n### ⚠️ 보강 필요 (${data.issues.length}건)`);
+      data.issues.forEach(item => lines.push(`- ${item}`));
+    }
+    if (data.verifications?.length) {
+      lines.push(`\n### 🔍 검증 필요 (${data.verifications.length}건)`);
+      data.verifications.forEach(item => lines.push(`- ${item}`));
+    }
+    if (data.strengths?.length) {
+      lines.push(`\n### ✅ 잘 된 부분 (${data.strengths.length}건)`);
+      data.strengths.forEach(item => lines.push(`- ${item}`));
+    }
+    if (data.suggestions?.length) {
+      lines.push(`\n### 💡 제안 (${data.suggestions.length}건)`);
+      data.suggestions.forEach(item => lines.push(`- ${item}`));
+    }
+
+    lines.push(`\n---\n_Project K AI Assistant로 생성됨_`);
+    return lines.join('\n');
+  }
+
+  function reviewDataToConfluenceHtml(data) {
+    let html = `<h3>📋 AI 리뷰 — ${escapeHtml(pageMeta?.title || '')}</h3>`;
+    if (data.score != null) html += `<p><strong>전체 평가: ${data.score}/100</strong></p>`;
+
+    if (data.issues?.length) {
+      html += `<h4>⚠️ 보강 필요 (${data.issues.length}건)</h4><ul>`;
+      data.issues.forEach(item => { html += `<li>${escapeHtml(item)}</li>`; });
+      html += '</ul>';
+    }
+    if (data.verifications?.length) {
+      html += `<h4>🔍 검증 필요 (${data.verifications.length}건)</h4><ul>`;
+      data.verifications.forEach(item => { html += `<li>${escapeHtml(item)}</li>`; });
+      html += '</ul>';
+    }
+    if (data.strengths?.length) {
+      html += `<h4>✅ 잘 된 부분 (${data.strengths.length}건)</h4><ul>`;
+      data.strengths.forEach(item => { html += `<li>${escapeHtml(item)}</li>`; });
+      html += '</ul>';
+    }
+    if (data.suggestions?.length) {
+      html += `<h4>💡 제안 (${data.suggestions.length}건)</h4><ul>`;
+      data.suggestions.forEach(item => { html += `<li>${escapeHtml(item)}</li>`; });
+      html += '</ul>';
+    }
+
+    html += `<hr/><p><em>Project K AI Assistant로 생성됨</em></p>`;
+    return html;
+  }
+
+  window._riFeedback = (id, status) => {
+    // Save edit text before switching state
+    const fb = reviewFeedback[id];
+    if (!fb) return;
+    const editInput = document.getElementById(`edit-${id}`);
+    if (editInput) fb.editText = editInput.value;
+
+    // Toggle: clicking same status resets to 'liked'
+    fb.status = (fb.status === status && status !== 'liked') ? 'liked' : status;
+
+    // Re-render the review card
+    reRenderReviewCard();
+  };
+
+  function reRenderReviewCard() {
+    if (!latestReviewData) return;
+    const reviewMsg = messages.find(m => m.type === 'review');
+    if (!reviewMsg) return;
+    const el = document.getElementById(reviewMsg.id);
+    if (!el) return;
+
+    // Save all edit texts before re-render
+    Object.keys(reviewFeedback).forEach(id => {
+      const input = document.getElementById(`edit-${id}`);
+      if (input) reviewFeedback[id].editText = input.value;
+    });
+
+    el.innerHTML = renderReviewCard(latestReviewData);
+
+    // Restore edit texts and focus
+    Object.keys(reviewFeedback).forEach(id => {
+      if (reviewFeedback[id].status === 'edited') {
+        const input = document.getElementById(`edit-${id}`);
+        if (input) {
+          input.value = reviewFeedback[id].editText;
+          // Auto-focus the newly opened edit box
+          if (!reviewFeedback[id].editText) input.focus();
+        }
+      }
+    });
+  }
+
+  window._fixFromReview = () => {
+    if (!latestReviewData) return;
+
+    // Save any open edit texts
+    Object.keys(reviewFeedback).forEach(id => {
+      const input = document.getElementById(`edit-${id}`);
+      if (input) reviewFeedback[id].editText = input.value;
+    });
+
+    // Build instruction only from liked + edited items (skip disliked)
+    const items = [];
+    Object.keys(reviewFeedback).forEach(id => {
+      const fb = reviewFeedback[id];
+      if (fb.status === 'disliked') return; // skip
+      if (fb.status === 'edited' && fb.editText.trim()) {
+        items.push(`${fb.text} → 사용자 수정 방향: ${fb.editText.trim()}`);
+      } else if (fb.status === 'liked') {
+        items.push(fb.text);
+      }
+    });
+
+    if (items.length === 0) {
+      addMessage({ role: 'system', content: '반영할 항목이 없습니다. 좋아요(👍) 항목을 확인해주세요.' });
+      return;
+    }
+
+    const instruction = `다음 리뷰 결과를 바탕으로 문서를 수정해주세요:\n${items.map((it, i) => `${i+1}. ${it}`).join('\n')}`;
+    $('#chat-input').value = '';
+    const total = Object.keys(reviewFeedback).length;
+    const disliked = Object.values(reviewFeedback).filter(f => f.status === 'disliked').length;
+    const strengths = latestReviewData?.strengths?.length || 0;
+    addMessage({ role: 'user', content: `리뷰 반영 수정 요청 (전체 ${total}건 중 잘된부분 ${strengths}건·제외 ${disliked}건 = 반영 대상 ${items.length}건)` });
+    const welcome = $('#welcome');
+    if (welcome) welcome.style.display = 'none';
+    handleIntent('SUGGEST_EDITS', instruction);
+  };
+
+  window._copyReview = async () => {
+    if (!latestReviewData) return;
+    const text = reviewDataToMarkdown(latestReviewData);
+    try {
+      await navigator.clipboard.writeText(text);
+      // Show feedback
+      const btn = document.querySelector('.btn-copy-review');
+      if (btn) {
+        const orig = btn.textContent;
+        btn.textContent = '✅ 복사됨!';
+        setTimeout(() => { btn.textContent = orig; }, 2000);
+      }
+    } catch {
+      // Fallback
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+  };
+
+  window._commentReview = async () => {
+    if (!latestReviewData || !pageMeta?.pageId) {
+      addMessage({ role: 'system', content: '리뷰 데이터 또는 페이지 정보가 없습니다.' });
+      return;
+    }
+
+    const btn = document.querySelector('.btn-comment-review');
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = '⏳ 등록 중...';
+    }
 
     try {
-      const response = await callBackground('APPLY_EDITS', {
+      const commentHtml = reviewDataToConfluenceHtml(latestReviewData);
+      await callBackground('ADD_CONFLUENCE_COMMENT', {
         pageId: pageMeta.pageId,
         confluenceUrl: pageMeta.confluenceBaseUrl,
-        changes: accepted.map((c) => ({ before: c.before, after: c.after, description: c.description })),
+        body: commentHtml,
       });
-
-      // Clear preview after successful save
-      sendToContent('CLEAR_PREVIEW');
-
-      resultEl.className = 'result-area';
-      let msg = `${response.applied} change(s) saved! (v${response.oldVersion} → v${response.newVersion})`;
-      if (response.failed > 0) {
-        msg += `<br><em style="color:#f59e0b">${response.failed} change(s) could not be matched in HTML</em>`;
-      }
-      msg += `<br><br><a href="#" onclick="location.reload(); return false;">Reload page</a> to see changes.`;
-      msg += `<br><em style="color:#888">Rollback: Confluence page history → restore v${response.oldVersion}</em>`;
-      resultEl.innerHTML = msg;
-      setStatus(`Saved (v${response.oldVersion} → v${response.newVersion})`);
-
-      // Hide buttons after save, clear inline preview
-      sendToContent('HIDE_FLOATING_BAR');
-      $('#btn-confirm').classList.add('hidden');
-      $('#btn-cancel-edits').classList.add('hidden');
-
-      setTimeout(() => resultEl.scrollIntoView({ behavior: 'smooth', block: 'end' }), 100);
-
+      addMessage({ role: 'system', content: '✅ Confluence 댓글로 등록했습니다.' });
+      if (btn) btn.textContent = '✅ 등록됨!';
     } catch (err) {
-      resultEl.className = 'result-area error';
-      resultEl.textContent = `Error: ${err.message}`;
-      setStatus('Save failed');
-      setTimeout(() => resultEl.scrollIntoView({ behavior: 'smooth', block: 'end' }), 100);
-    } finally {
-      btn.disabled = false;
+      addMessage({ role: 'system', content: `❌ 댓글 등록 실패: ${err.message}` });
+      if (btn) { btn.textContent = '💬 Confluence 댓글'; btn.disabled = false; }
     }
+  };
+
+  function renderChangesCard(changes) {
+    let html = '<div class="changes-card">';
+
+    changes.forEach((change, i) => {
+      const decision = editSession.decisions[change.id] || 'pending';
+      html += `<div class="change-item ${decision}" data-change-id="${change.id}" data-action="focus-change" data-id="${change.id}">`;
+      html += `<div class="change-header">`;
+      html += `<span class="change-num">${i + 1}.</span>`;
+      html += `<span class="change-desc">${escapeHtml(change.description || change.section || '')}</span>`;
+      const unmatched = editSession.unmatchedIds && editSession.unmatchedIds.has(change.id);
+      html += `<span class="change-badge ${decision}">${decision}</span>`;
+      if (unmatched) html += `<span class="change-badge unmatched">미매칭</span>`;
+      html += `</div>`;
+
+      // Inline diff
+      html += `<div class="change-diff">${DiffEngine.renderDiff(change.before, change.after)}</div>`;
+
+      // Action buttons
+      if (decision === 'pending') {
+        html += `<div class="change-actions">`;
+        html += `<button class="btn-sm btn-approve-sm" data-action="accept-change" data-id="${change.id}">✓ 적용</button>`;
+        html += `<button class="btn-sm btn-reject-sm" data-action="reject-change" data-id="${change.id}">✕ 미적용</button>`;
+        html += `</div>`;
+      } else {
+        html += `<div class="change-actions">`;
+        html += `<button class="btn-sm btn-undo-sm" data-action="undo-change" data-id="${change.id}">↩ 되돌리기</button>`;
+        html += `</div>`;
+      }
+
+      html += `</div>`;
+    });
+
+    // Bottom actions
+    html += `<div class="changes-bottom">`;
+    html += `<div class="changes-summary" id="changes-summary">${getChangesSummary()}</div>`;
+    html += `<div class="changes-actions">`;
+    html += `<button class="btn-sm btn-approve-sm" data-action="accept-all">전체 적용</button>`;
+    html += `<button class="btn-sm btn-reject-sm" data-action="reject-all">전체 거부</button>`;
+    html += `</div>`;
+    html += `<div class="changes-confirm">Confluence에 반영할까요? "응" 또는 "아니"로 답해주세요.</div>`;
+    html += `</div>`;
+
+    html += '</div>';
+    return html;
   }
+
+  function getChangesSummary() {
+    const accepted = editSession.changes.filter(c => editSession.decisions[c.id] === 'accepted').length;
+    const rejected = editSession.changes.filter(c => editSession.decisions[c.id] === 'rejected').length;
+    const pending = editSession.changes.length - accepted - rejected;
+    return `${accepted}건 적용 / ${rejected}건 거부 / ${pending}건 대기`;
+  }
+
+  function updateChangesCard() {
+    // Re-render the changes card in place
+    const changesMsg = messages.find(m => m.type === 'changes');
+    if (!changesMsg) return;
+    const el = document.getElementById(changesMsg.id);
+    if (!el) return;
+    el.innerHTML = renderChangesCard(changesMsg.changes);
+
+    // Update floating bar counts
+    const accepted = editSession.changes.filter(c => editSession.decisions[c.id] === 'accepted').length;
+    const rejected = editSession.changes.filter(c => editSession.decisions[c.id] === 'rejected').length;
+    const pending = editSession.changes.length - accepted - rejected;
+    sendToContent('UPDATE_COUNTS', {
+      total: editSession.changes.length,
+      accepted, rejected, pending,
+    });
+  }
+
+  // Global handlers for inline onclick
+  window._acceptChange = (id) => {
+    editSession.decisions[id] = 'accepted';
+    sendToContent('SYNC_DECISION', { changeId: id, decision: 'accepted' });
+    updateChangesCard();
+  };
+  window._rejectChange = (id) => {
+    editSession.decisions[id] = 'rejected';
+    sendToContent('SYNC_DECISION', { changeId: id, decision: 'rejected' });
+    updateChangesCard();
+  };
+  window._undoChange = (id) => {
+    delete editSession.decisions[id];
+    sendToContent('SYNC_DECISION', { changeId: id, decision: 'pending' });
+    updateChangesCard();
+  };
+  window._acceptAll = () => {
+    editSession.changes.forEach(c => {
+      if (!editSession.decisions[c.id]) {
+        editSession.decisions[c.id] = 'accepted';
+        sendToContent('SYNC_DECISION', { changeId: c.id, decision: 'accepted' });
+      }
+    });
+    updateChangesCard();
+  };
+  window._rejectAll = () => {
+    editSession.changes.forEach(c => {
+      if (!editSession.decisions[c.id]) {
+        editSession.decisions[c.id] = 'rejected';
+        sendToContent('SYNC_DECISION', { changeId: c.id, decision: 'rejected' });
+      }
+    });
+    updateChangesCard();
+  };
 
   // --- Utilities ---
 
-  function setStatus(text) {
-    $('#status-text').textContent = text;
+  function getRecentHistory() {
+    return messages
+      .filter(m => m.role === 'user' || (m.role === 'assistant' && !m.type))
+      .slice(-10)
+      .map(m => ({ role: m.role, content: m.content }));
   }
 
-  function showError(containerId, message) {
-    const el = $(`#${containerId}`);
-    el.className = 'result-area error';
-    el.textContent = `Error: ${message}`;
+  function scrollToBottom() {
+    const container = $('#chat-messages');
+    setTimeout(() => container.scrollTop = container.scrollHeight, 50);
+  }
+
+  function scrollToMessage(id) {
+    setTimeout(() => {
+      const el = document.getElementById(id);
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 50);
+  }
+
+  function setStatus(text) {
+    $('#status-text').textContent = text;
   }
 
   function escapeHtml(text) {
@@ -580,7 +995,7 @@
   }
 
   function formatMarkdown(text) {
-    // Simple markdown formatting for display
+    if (!text) return '';
     return text
       .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
       .replace(/\*(.+?)\*/g, '<em>$1</em>')
@@ -593,33 +1008,37 @@
       .replace(/\n/g, '<br>');
   }
 
-  function resetEditSession() {
+  function resetChat() {
+    messages = [];
     editSession = { changes: [], decisions: {}, autoApply: false };
-    $('#diff-area').innerHTML = '';
-    $('#bulk-actions').classList.add('hidden');
-    $('#apply-area').classList.add('hidden');
-    $('#edit-instruction').value = '';
-    $('#summary-result').innerHTML = '';
-    $('#summary-result').className = 'result-area';
-    setStatus('Page changed — ready');
+    pendingChanges = [];
+    chatState = 'IDLE';
+
+    const container = $('#chat-messages');
+    container.innerHTML = '';
+
+    // Re-add welcome
+    const welcome = document.createElement('div');
+    welcome.id = 'welcome';
+    welcome.className = 'welcome';
+    welcome.innerHTML = `
+      <div class="welcome-title">무엇을 도와드릴까요?</div>
+      <div class="welcome-desc" id="welcome-desc">${pageMeta ? `"${escapeHtml(pageMeta.title)}" 페이지에 대해 질문하거나 리뷰를 요청하세요.` : '페이지를 분석하고 있습니다...'}</div>
+      <div class="presets" id="presets">
+        <button class="preset-btn" data-preset="이 문서를 요약해줘">요약해줘</button>
+        <button class="preset-btn" data-preset="이 문서를 리뷰해줘">리뷰해줘</button>
+        <button class="preset-btn" data-preset="초안을 같이 완성해줘">초안을 같이 완성해줘</button>
+      </div>
+    `;
+    container.appendChild(welcome);
+    setupPresets();
+    setStatus('페이지 변경 — Ready');
   }
 
   function setupStatusBar() {
     $('#status-mode').textContent = 'Loading...';
     callBackground('PING', {}).then(() => {
       $('#status-mode').textContent = 'Connected';
-      // Re-sync floating bar if we have an active edit session
-      if (editSession.changes.length > 0) {
-        const pending = editSession.changes.filter((c) => !editSession.decisions[c.id]);
-        const accepted = editSession.changes.filter((c) => editSession.decisions[c.id] === 'accepted');
-        const rejected = editSession.changes.filter((c) => editSession.decisions[c.id] === 'rejected');
-        sendToContent('UPDATE_COUNTS', {
-          total: editSession.changes.length,
-          accepted: accepted.length,
-          rejected: rejected.length,
-          pending: pending.length,
-        });
-      }
     }).catch(() => {
       $('#status-mode').textContent = 'Disconnected';
     });

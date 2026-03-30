@@ -28,20 +28,87 @@ Provide:
     system: `You are an editor for Confluence wiki pages. Propose text changes as a JSON array.
 
 CRITICAL RULES:
-- "before": a SHORT, UNIQUE substring from the page (1 sentence max, no newlines, no tabs)
-- "after": the replacement text (no newlines, no tabs — use spaces instead)
-- Keep each change small and focused. Split large edits into multiple changes.
+- "before": COPY-PASTE an exact substring from the page text. It MUST appear verbatim. Keep it short (1 sentence max, no newlines, no tabs).
+- "after": the REPLACEMENT text that will REPLACE "before". It must contain the full corrected version of "before", NOT just the addition.
+  - WRONG: before="HP 물약" after="HP 물약 (자동 사용 포함)" ← this ADDS text instead of replacing
+  - RIGHT: before="HP 물약을 사용한다" after="HP 물약을 자동으로 사용한다" ← this REPLACES the sentence
+- If you need to ADD new content, use "before" as the sentence AFTER which the content should appear, and "after" as that sentence + the new content.
+- Each change must be SMALL: 1-2 sentences only.
 - Return ONLY a raw JSON array. No markdown fences. No explanation.
-- Ensure valid JSON: escape quotes with \\", no literal newlines in strings.`,
-    user: (title, text, instruction) => `Page Title: ${title}
+- Ensure valid JSON: escape quotes with \\", no literal newlines in strings.
+- Generate one change per instruction item. Do NOT skip items.
+- When referencing other documents: you do NOT know which documents actually exist. Never invent document names or links. Instead, write "[TODO: 관련 문서 링크 추가 필요]" so the author can fill in real links later.
+- For features planned but not yet designed, mark as "[TODO]" with a brief note.`,
+    user: (title, text, instruction, maxChanges) => `Page Title: ${title}
 
 Page Text:
 ${text.slice(0, 60000)}
 
 Edit Instruction: ${instruction}
 
-Return JSON array. Each "before" must be a short exact match (1 sentence, no newlines):
-[{"id":"change-1","section":"섹션명","description":"설명","before":"short exact text","after":"replacement"}]`,
+Return JSON array (generate up to ${maxChanges || 10} changes — one per instruction item). Each "before" must be a short EXACT substring from the page text above (1 sentence, no newlines):
+[{"id":"change-1","section":"섹션명","description":"간단한 설명","before":"페이지에서 복사한 정확한 짧은 텍스트","after":"대체 텍스트"}]`,
+  },
+
+  review: {
+    system: `You are a senior game designer reviewing Confluence wiki pages for Project K, a mobile MMORPG.
+Analyze the document quality from a game design perspective. Respond in Korean.
+
+Return a JSON object with this exact structure:
+{
+  "score": 0-100,
+  "issues": ["..."],
+  "verifications": ["..."],
+  "strengths": ["..."],
+  "suggestions": ["..."]
+}
+
+STRICT CATEGORY RULES — each item must belong to EXACTLY ONE category. No duplicates across categories:
+- "issues": 문서에 반드시 있어야 하는데 빠진 것. 구현자가 이 문서만 보고 작업할 수 없는 수준의 누락. (예: 수치 없음, 예외 케이스 미기술, 필수 정의 누락)
+- "verifications": 적혀 있지만 맞는지 확인이 필요한 것. 다른 문서와 불일치 가능성, 오타/오류 의심, 모호한 표현. (예: 수치가 다른 문서와 다름, 용어 불일치)
+- "strengths": 잘 작성된 부분. 간결하게.
+- "suggestions": issues/verifications에 해당하지 않지만, 추가하면 문서 품질이 올라가는 것. (예: 다이어그램 추가, 관련 문서 링크, 구조 개선)
+
+IMPORTANT: suggestions는 issues와 겹치면 안 됨. "없어서 문제"이면 issues, "있어도 되고 없어도 되지만 있으면 좋은 것"이면 suggestions.
+
+Return ONLY the raw JSON object. No markdown fences.`,
+    user: (title, text) => `Page Title: ${title}
+
+Page Content:
+${text.slice(0, 100000)}
+
+Review this document and return the JSON result:`,
+  },
+
+  draftAssist: {
+    system: `You are a game design expert helping complete draft Confluence pages for Project K, a mobile MMORPG.
+Analyze the document and identify sections that are incomplete, placeholder-like ("추후 결정", "TBD", empty sections), or need more detail.
+Respond in Korean. Be specific and actionable.
+
+If the user asks about a specific section, focus on that section.
+If the user asks generally, list all incomplete/draft sections and ask which to work on first.`,
+    user: (title, text, instruction, history) => {
+      let prompt = `Page Title: ${title}\n\nPage Content:\n${text.slice(0, 80000)}\n\n`;
+      if (history && history.length > 0) {
+        prompt += `Previous conversation:\n${history.map(h => `${h.role}: ${h.content}`).join('\n')}\n\n`;
+      }
+      prompt += `User request: ${instruction}`;
+      return prompt;
+    },
+  },
+
+  chat: {
+    system: `You are a knowledgeable assistant for Project K, a mobile MMORPG. You have access to the current Confluence page content.
+Answer questions about the page content in Korean. Be concise and specific.
+If the user asks about content not in the current page, say so and suggest they use the QnA web app for cross-document search.`,
+    user: (title, text, question, history) => {
+      let prompt = `Current Page: ${title}\n\nPage Content:\n${text.slice(0, 60000)}\n\n`;
+      if (history && history.length > 0) {
+        prompt += `Previous conversation:\n${history.map(h => `${h.role}: ${h.content}`).join('\n')}\n\n`;
+      }
+      prompt += `Question: ${question}`;
+      return prompt;
+    },
   },
 
   applyEdits: {
@@ -93,8 +160,23 @@ async function handleMessage(message) {
     case 'SUGGEST_EDITS':
       return handleSuggestEdits(message.payload, settings);
 
+    case 'REVIEW':
+      return handleReview(message.payload, settings);
+
+    case 'DRAFT_ASSIST':
+      return handleDraftAssist(message.payload, settings);
+
+    case 'CHAT':
+      return handleChat(message.payload, settings);
+
+    case 'CHAT_DIRECT':
+      return handleChatDirect(message.payload, settings);
+
     case 'APPLY_EDITS':
       return handleApplyEdits(message.payload, settings);
+
+    case 'ADD_CONFLUENCE_COMMENT':
+      return handleAddConfluenceComment(message.payload, settings);
 
     case 'GET_CONFLUENCE_PAGE':
       return handleGetConfluencePage(message.payload, settings);
@@ -133,9 +215,9 @@ async function handleSummarize({ title, text }, settings) {
   return { summary: result };
 }
 
-async function handleSuggestEdits({ title, text, html, instruction }, settings) {
+async function handleSuggestEdits({ title, text, html, instruction, maxChanges }, settings) {
   const content = text || html;
-  Logger.info('bg', 'SuggestEdits start', { title, textLen: text?.length, htmlLen: html?.length, instruction });
+  Logger.info('bg', 'SuggestEdits start', { title, textLen: text?.length, htmlLen: html?.length, instruction, maxChanges });
 
   if (!content) {
     throw new Error('No page content available. Page content could not be extracted.');
@@ -143,7 +225,7 @@ async function handleSuggestEdits({ title, text, html, instruction }, settings) 
 
   const result = await ApiClient.call(
     PROMPTS.editSuggestion.system,
-    PROMPTS.editSuggestion.user(title, content, instruction),
+    PROMPTS.editSuggestion.user(title, content, instruction, maxChanges),
     settings
   );
   Logger.info('bg', 'SuggestEdits API response', { resultLen: result?.length, preview: result?.slice(0, 300) });
@@ -174,6 +256,58 @@ async function handleSuggestEdits({ title, text, html, instruction }, settings) 
 
   Logger.info('bg', 'SuggestEdits done', { changeCount: changes.length });
   return { changes };
+}
+
+async function handleReview({ title, text }, settings) {
+  Logger.info('bg', 'Review start', { title, textLen: text?.length });
+  const result = await ApiClient.call(
+    PROMPTS.review.system,
+    PROMPTS.review.user(title, text),
+    settings
+  );
+  Logger.info('bg', 'Review done', { resultLen: result?.length });
+  return { review: result };
+}
+
+async function handleDraftAssist({ title, text, instruction, history }, settings) {
+  Logger.info('bg', 'DraftAssist start', { title, instruction });
+  const result = await ApiClient.call(
+    PROMPTS.draftAssist.system,
+    PROMPTS.draftAssist.user(title, text, instruction, history),
+    settings
+  );
+  Logger.info('bg', 'DraftAssist done', { resultLen: result?.length });
+  return { answer: result };
+}
+
+async function handleChat({ title, text, question, history }, settings) {
+  Logger.info('bg', 'Chat (QnA server) start', { question });
+  // Try QnA backend first
+  const backendUrl = settings.backendUrl || 'https://cp.tech2.hybe.im/proj-k/api';
+  const contextNote = title ? `\n\n[현재 보고 있는 Confluence 페이지: "${title}"]` : '';
+  const fullQuestion = question + contextNote;
+
+  const resp = await fetch(`${backendUrl}/ask`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ question: fullQuestion }),
+  });
+
+  if (!resp.ok) throw new Error(`QnA server error: ${resp.status}`);
+  const data = await resp.json();
+  Logger.info('bg', 'Chat done (QnA server)', { answerLen: data.answer?.length });
+  return { answer: data.answer || data.response || 'No response' };
+}
+
+async function handleChatDirect({ title, text, question, history }, settings) {
+  Logger.info('bg', 'Chat (direct LLM) start', { question });
+  const result = await ApiClient.call(
+    PROMPTS.chat.system,
+    PROMPTS.chat.user(title, text, question, history),
+    settings
+  );
+  Logger.info('bg', 'Chat done (direct)', { resultLen: result?.length });
+  return { answer: result };
 }
 
 async function handleApplyEdits({ pageId, confluenceUrl, changes }, settings) {
@@ -253,6 +387,43 @@ async function handleUpdateConfluencePage({ pageId, title, body, currentVersion,
   }
   const url = confluenceUrl || `https://${extractDomain(settings)}/wiki`;
   return ConfluenceApi.updatePage(pageId, title, body, currentVersion, url, settings.confluenceEmail, settings.confluenceApiToken);
+}
+
+async function handleAddConfluenceComment({ pageId, confluenceUrl, body }, settings) {
+  Logger.info('bg', 'AddConfluenceComment', { pageId });
+  if (!settings.confluenceEmail || !settings.confluenceApiToken) {
+    throw new Error('Confluence credentials not configured. Open extension settings.');
+  }
+  const baseUrl = confluenceUrl || `https://${extractDomain(settings)}/wiki`;
+  const auth = btoa(`${settings.confluenceEmail}:${settings.confluenceApiToken}`);
+
+  const resp = await fetch(`${baseUrl}/rest/api/content/${pageId}/child/comment`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Basic ${auth}`,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+    },
+    body: JSON.stringify({
+      type: 'comment',
+      body: {
+        storage: {
+          value: body,
+          representation: 'storage',
+        },
+      },
+    }),
+  });
+
+  if (!resp.ok) {
+    const text = await resp.text();
+    Logger.error('bg', 'AddConfluenceComment failed', { status: resp.status, body: text });
+    throw new Error(`Confluence comment failed: ${resp.status}`);
+  }
+
+  const result = await resp.json();
+  Logger.info('bg', 'AddConfluenceComment done', { commentId: result.id });
+  return { status: 'ok', commentId: result.id };
 }
 
 function extractDomain(settings) {

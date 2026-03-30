@@ -91,8 +91,10 @@ body.pk-sidebar-open #content {
 }
 
 .pk-inline-diff.pending {
-  background: rgba(37, 99, 235, 0.06);
+  background: transparent;
   outline: 1px solid rgba(37, 99, 235, 0.3);
+  border-radius: 4px;
+  padding: 2px 4px;
 }
 
 /* Focused widget - current keyboard target */
@@ -115,7 +117,7 @@ body.pk-sidebar-open #content {
 .pk-diff-removed {
   text-decoration: line-through;
   color: #dc2626;
-  background: rgba(239, 68, 68, 0.12);
+  background: rgba(239, 68, 68, 0.1);
   padding: 1px 3px;
   border-radius: 2px;
 }
@@ -123,7 +125,7 @@ body.pk-sidebar-open #content {
 /* Added text (green) */
 .pk-diff-added {
   color: #16a34a;
-  background: rgba(34, 197, 94, 0.12);
+  background: rgba(34, 197, 94, 0.1);
   padding: 1px 3px;
   border-radius: 2px;
   font-weight: 600;
@@ -142,21 +144,18 @@ body.pk-sidebar-open #content {
   background: none;
 }
 
-/* Floating toolbar above the diff */
+/* Floating toolbar at end of diff */
 .pk-diff-toolbar {
   display: none;
-  position: absolute;
-  top: -28px;
-  left: 0;
-  background: #1e293b;
+  position: relative;
+  background: transparent;
   border-radius: 14px;
-  padding: 2px 3px;
-  padding-bottom: 8px; /* extend hit area down to bridge gap */
-  margin-bottom: -6px;
+  padding: 0 2px;
   gap: 2px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
   z-index: 10000;
   white-space: nowrap;
+  vertical-align: middle;
+  margin-left: 4px;
 }
 
 .pk-inline-diff:hover > .pk-diff-toolbar,

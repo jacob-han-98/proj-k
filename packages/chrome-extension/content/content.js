@@ -87,9 +87,9 @@
   let sidebarWrapper = null;
   let toggleBtn = null;
   let isOpen = false;
-  let sidebarWidth = 420;
+  let sidebarWidth = 630;
   const SIDEBAR_MIN_WIDTH = 300;
-  const SIDEBAR_MAX_WIDTH = 800;
+  const SIDEBAR_MAX_WIDTH = 1000;
 
   function createToggleButton() {
     toggleBtn = document.createElement('button');
@@ -220,6 +220,10 @@
         syncInlineDecision(msg.payload.changeId, msg.payload.decision);
         break;
 
+      case 'FOCUS_CHANGE':
+        focusChangeOnPage(msg.payload.changeId);
+        break;
+
       case 'UPDATE_COUNTS':
         updateFloatingBar(msg.payload);
         break;
@@ -244,31 +248,136 @@
   let previewMarkers = [];
   let focusedWidgetId = null;
 
+  function normalizeWS(str) {
+    return str.replace(/\s+/g, ' ').trim();
+  }
+
   function previewChangesOnPage(changes) {
     clearPreview();
 
     const contentEl = getPageContentElement();
     if (!contentEl) return;
 
-    let applied = 0;
+    // Collect all text nodes once
+    const textNodes = collectTextNodes(contentEl);
+
+    // Build charMap: for each char in normalized text, track source {node, offset}
+    // KEY FIX: insert a space between text nodes that are in different parent elements
+    // This matches innerText behavior (which adds \n/space at block boundaries)
+    const charMap = [];
+    let normalizedParts = [];
+    let prevParent = null;
+
+    for (const node of textNodes) {
+      const parent = node.parentElement;
+
+      // Insert space between nodes from different parents (simulates innerText block breaks)
+      if (prevParent && parent !== prevParent && normalizedParts.length > 0 && normalizedParts[normalizedParts.length - 1] !== ' ') {
+        normalizedParts.push(' ');
+        charMap.push({ node, offset: 0 }); // space maps to start of new node
+      }
+      prevParent = parent;
+
+      const raw = node.textContent;
+      for (let i = 0; i < raw.length; i++) {
+        const ch = raw[i];
+        if (/\s/.test(ch)) {
+          if (normalizedParts.length > 0 && normalizedParts[normalizedParts.length - 1] !== ' ') {
+            normalizedParts.push(' ');
+            charMap.push({ node, offset: i });
+          }
+        } else {
+          normalizedParts.push(ch);
+          charMap.push({ node, offset: i });
+        }
+      }
+    }
+    const normalizedText = normalizedParts.join('');
+
+    // First pass: find all ranges WITHOUT modifying DOM
+    const rangeData = [];
     for (const change of changes) {
-      const found = findAndHighlightText(contentEl, change.before, change.after, change.id);
-      if (found) applied++;
+      const needle = normalizeWS(change.before);
+      const idx = normalizedText.indexOf(needle);
+      if (idx === -1 || needle.length === 0) {
+        rangeData.push({ change, position: -1, range: null });
+        continue;
+      }
+
+      // Map normalized positions back to DOM nodes
+      const startMap = charMap[idx];
+      const endMap = charMap[idx + needle.length - 1];
+      if (startMap && endMap) {
+        try {
+          const range = document.createRange();
+          range.setStart(startMap.node, startMap.offset);
+          range.setEnd(endMap.node, endMap.offset + 1);
+          rangeData.push({ change, position: idx, range });
+        } catch (e) {
+          rangeData.push({ change, position: -1, range: null });
+        }
+      } else {
+        rangeData.push({ change, position: -1, range: null });
+      }
     }
 
-    sendToSidebar('PREVIEW_RESULT', { applied, total: changes.length });
+    // Sort by position (top to bottom)
+    rangeData.sort((a, b) => {
+      if (a.position === -1 && b.position === -1) return 0;
+      if (a.position === -1) return 1;
+      if (b.position === -1) return -1;
+      return a.position - b.position;
+    });
 
-    // Focus first pending widget
+    // Second pass: apply highlights in REVERSE order (bottom first) to preserve earlier ranges
+    let applied = 0;
+    for (let i = rangeData.length - 1; i >= 0; i--) {
+      const { change, range } = rangeData[i];
+      if (!range) continue;
+      const widget = createDiffWidget(change.before, change.after, change.id);
+      range.deleteContents();
+      range.insertNode(widget);
+      previewMarkers.push(widget);
+      applied++;
+    }
+
+    // Send ordered IDs to sidebar
+    const orderedIds = rangeData.filter(r => r.range).map(r => r.change.id);
+    sendToSidebar('PREVIEW_RESULT', { applied, total: changes.length, orderedIds });
+
+    // Focus first widget
     if (previewMarkers.length > 0) {
+      previewMarkers.sort((a, b) => {
+        const pos = a.compareDocumentPosition(b);
+        return pos & Node.DOCUMENT_POSITION_FOLLOWING ? -1 : 1;
+      });
       setFocusedWidget(previewMarkers[0].dataset.changeId);
       startKeyboardNavigation();
     }
   }
 
+  function collectTextNodes(root) {
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+      acceptNode(node) {
+        if (node.parentElement && node.parentElement.closest('.pk-inline-diff')) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    }, false);
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    return nodes;
+  }
+
   function getPageContentElement() {
     const selectors = [
+      // View mode
       '[data-testid="renderer-page"]',
       '.ak-renderer-document',
+      // Edit mode (ProseMirror editor)
+      '.ProseMirror',
+      '.ak-editor-content-area [contenteditable="true"]',
+      '[data-testid="editor-page"] .ProseMirror',
+      // Legacy Confluence
       '#content-body .wiki-content',
       '#content .wiki-content',
       '#main-content',
@@ -281,73 +390,38 @@
     return null;
   }
 
-  function findAndHighlightText(root, beforeText, afterText, changeId) {
-    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null, false);
-    const textNodes = [];
-    while (walker.nextNode()) textNodes.push(walker.currentNode);
-
-    const fullText = textNodes.map(n => n.textContent).join('');
-    const idx = fullText.indexOf(beforeText);
-    if (idx === -1) return false;
-
-    let charPos = 0;
-    let startNode = null, startOffset = 0, endNode = null, endOffset = 0;
-
-    for (const node of textNodes) {
-      const nodeEnd = charPos + node.textContent.length;
-      if (!startNode && idx < nodeEnd) {
-        startNode = node;
-        startOffset = idx - charPos;
-      }
-      if (startNode && idx + beforeText.length <= nodeEnd) {
-        endNode = node;
-        endOffset = idx + beforeText.length - charPos;
-        break;
-      }
-      charPos = nodeEnd;
-    }
-
-    if (!startNode || !endNode) return false;
-
-    const range = document.createRange();
-    range.setStart(startNode, startOffset);
-    range.setEnd(endNode, endOffset);
-
-    // Create inline diff widget
+  function createDiffWidget(beforeText, afterText, changeId) {
     const widget = document.createElement('span');
     widget.className = 'pk-inline-diff pending';
     widget.dataset.changeId = changeId;
     widget.dataset.originalText = beforeText;
     widget.dataset.afterText = afterText;
 
-    // Before text (strikethrough)
     const beforeEl = document.createElement('span');
     beforeEl.className = 'pk-diff-removed';
     beforeEl.textContent = beforeText;
 
-    // After text (green)
     const afterEl = document.createElement('span');
     afterEl.className = 'pk-diff-added';
     afterEl.textContent = afterText;
 
-    // Action buttons toolbar
     const toolbar = document.createElement('span');
     toolbar.className = 'pk-diff-toolbar';
 
     const btnAccept = document.createElement('button');
     btnAccept.className = 'pk-diff-icon pk-icon-accept';
-    btnAccept.innerHTML = '&#x2713;'; // ✓
-    btnAccept.title = 'Accept this change';
+    btnAccept.innerHTML = '&#x2713;';
+    btnAccept.title = 'Accept';
 
     const btnReject = document.createElement('button');
     btnReject.className = 'pk-diff-icon pk-icon-reject';
-    btnReject.innerHTML = '&#x2715;'; // ✕
-    btnReject.title = 'Reject this change';
+    btnReject.innerHTML = '&#x2715;';
+    btnReject.title = 'Reject';
 
     const btnSkip = document.createElement('button');
     btnSkip.className = 'pk-diff-icon pk-icon-skip';
-    btnSkip.innerHTML = '&#x279C;'; // ➜
-    btnSkip.title = 'Skip — decide later';
+    btnSkip.innerHTML = '&#x279C;';
+    btnSkip.title = 'Skip';
 
     toolbar.appendChild(btnAccept);
     toolbar.appendChild(btnReject);
@@ -357,18 +431,17 @@
     btnReject.addEventListener('click', (e) => { e.stopPropagation(); applyInlineDecision(changeId, 'rejected'); });
     btnSkip.addEventListener('click', (e) => { e.stopPropagation(); scrollToNextPending(changeId); });
 
-    // Assemble widget
-    range.deleteContents();
-    widget.appendChild(toolbar);
     widget.appendChild(beforeEl);
     widget.appendChild(afterEl);
-    range.insertNode(widget);
-
-    previewMarkers.push(widget);
-    return true;
+    widget.appendChild(toolbar);
+    return widget;
   }
 
   // --- Focus & Keyboard Navigation ---
+
+  function focusChangeOnPage(changeId) {
+    setFocusedWidget(changeId);
+  }
 
   function setFocusedWidget(changeId) {
     // Remove old focus

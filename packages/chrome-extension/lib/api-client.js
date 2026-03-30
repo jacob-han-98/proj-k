@@ -12,7 +12,7 @@ const ApiClient = {
   // AWS Bedrock Claude API call (same pattern as qna-poc/generator.py)
   async callBedrock(systemPrompt, userMessage, bearerToken, model, region) {
     region = region || 'us-east-1';
-    model = model || 'claude-sonnet-4-5';
+    model = model || 'claude-opus-4-6';
     const modelId = BEDROCK_MODEL_MAP[model] || `global.anthropic.${model}-v1:0`;
     const url = `https://bedrock-runtime.${region}.amazonaws.com/model/${modelId}/invoke`;
 
@@ -24,7 +24,7 @@ const ApiClient = {
       },
       body: JSON.stringify({
         anthropic_version: 'bedrock-2023-05-31',
-        max_tokens: 16384,
+        max_tokens: 32768,
         temperature: 0,
         system: systemPrompt,
         messages: [{ role: 'user', content: userMessage }],
@@ -51,8 +51,8 @@ const ApiClient = {
         'anthropic-dangerous-direct-browser-access': 'true',
       },
       body: JSON.stringify({
-        model: model || 'claude-sonnet-4-5-20250514',
-        max_tokens: 16384,
+        model: model || 'claude-opus-4-6-20250925',
+        max_tokens: 32768,
         system: systemPrompt,
         messages: [{ role: 'user', content: userMessage }],
       }),

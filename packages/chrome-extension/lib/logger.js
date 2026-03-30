@@ -10,7 +10,7 @@ const Logger = {
 
   log(level, source, message, data) {
     const entry = {
-      ts: new Date().toISOString(),
+      ts: new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul', hour12: false }) + ' KST',
       level,
       source,
       message,

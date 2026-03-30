@@ -3,6 +3,10 @@
 ConvertProgram/.env
 packages/*/.env
 
+# Chrome Extension config (API keys) and logs
+packages/chrome-extension/lib/config.js
+packages/chrome-extension/logs/
+
 # Python
 __pycache__/
 *.pyc

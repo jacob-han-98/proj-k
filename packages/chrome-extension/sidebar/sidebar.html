@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Project K Assistant</title>
+  <link rel="stylesheet" href="sidebar.css">
+</head>
+<body>
+  <div class="sidebar-container">
+    <!-- Header -->
+    <header class="sidebar-header">
+      <div class="header-left">
+        <h1>Project K</h1>
+        <span id="page-context" class="page-context"></span>
+      </div>
+      <button id="btn-close" class="btn-icon" title="Close">✕</button>
+    </header>
+
+    <!-- Chat Messages -->
+    <div id="chat-messages" class="chat-messages">
+      <!-- Welcome + Presets (shown when empty) -->
+      <div id="welcome" class="welcome">
+        <div class="welcome-title">무엇을 도와드릴까요?</div>
+        <div class="welcome-desc" id="welcome-desc">페이지를 분석하고 있습니다...</div>
+        <div class="presets" id="presets">
+          <button class="preset-btn" data-preset="이 문서를 요약해줘">요약해줘</button>
+          <button class="preset-btn" data-preset="이 문서를 리뷰해줘">리뷰해줘</button>
+          <button class="preset-btn" data-preset="초안을 같이 완성해줘">초안을 같이 완성해줘</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Input Area (always fixed at bottom) -->
+    <div class="chat-input-area">
+      <div class="input-row">
+        <textarea id="chat-input" placeholder="메시지를 입력하세요..." rows="1"></textarea>
+        <button id="btn-send" class="btn-send" disabled>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+            <path d="M22 2L11 13M22 2L15 22L11 13M22 2L2 9L11 13"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Status Bar -->
+    <footer class="status-bar">
+      <span id="status-text">Ready</span>
+      <span id="status-mode" class="status-mode"></span>
+    </footer>
+  </div>
+
+  <script src="../lib/diff-engine.js"></script>
+  <script src="sidebar.js"></script>
+</body>
+</html>

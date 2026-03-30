@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html><head><title>PK Debug Logs</title>
+<style>
+  body { font-family: monospace; background: #1e1e1e; color: #d4d4d4; padding: 16px; }
+  h1 { color: #569cd6; font-size: 18px; }
+  .log { padding: 4px 8px; border-bottom: 1px solid #333; font-size: 13px; }
+  .log.error { color: #f44747; }
+  .log.warn { color: #cca700; }
+  .log .ts { color: #808080; }
+  .log .src { color: #4ec9b0; }
+  .log .data { color: #9cdcfe; font-size: 12px; }
+  button { background: #0e639c; color: white; border: none; padding: 8px 16px; cursor: pointer; margin: 4px; }
+  button:hover { background: #1177bb; }
+  #logs { margin-top: 12px; }
+</style></head>
+<body>
+  <h1>Project K Extension - Debug Logs</h1>
+  <button id="refresh">Refresh</button>
+  <button id="clear">Clear Logs</button>
+  <button id="export">Export to clipboard</button>
+  <div id="logs"></div>
+  <script>
+    function send(action) {
+      return new Promise(r => chrome.runtime.sendMessage({ action, payload: {} }, r));
+    }
+    async function refresh() {
+      const resp = await send('GET_LOGS');
+      const el = document.getElementById('logs');
+      if (!resp || !resp.logs) { el.innerHTML = '<div class="log">No logs available</div>'; return; }
+      el.innerHTML = resp.logs.map(l =>
+        `<div class="log ${l.level}"><span class="ts">${l.ts}</span> <span class="src">[${l.source}]</span> ${l.message}${l.data ? `<div class="data">${l.data}</div>` : ''}</div>`
+      ).join('');
+      el.scrollTop = el.scrollHeight;
+    }
+    document.getElementById('refresh').onclick = refresh;
+    document.getElementById('clear').onclick = async () => { await send('CLEAR_LOGS'); refresh(); };
+    document.getElementById('export').onclick = async () => {
+      const resp = await send('GET_LOGS');
+      if (resp?.logs) {
+        const text = resp.logs.map(l => `${l.ts} [${l.level}] [${l.source}] ${l.message} ${l.data || ''}`).join('\n');
+        navigator.clipboard.writeText(text);
+        alert('Copied to clipboard!');
+      }
+    };
+    refresh();
+  </script>
+</body></html>

@@ -187,7 +187,33 @@
     }
 
     checkEditPermission();
+    updateApiIndicator();
     setStatus('Ready');
+  }
+
+  async function updateApiIndicator() {
+    try {
+      const settings = await callBackground('GET_SETTINGS', {});
+      const modeEl = $('#status-mode');
+      if (!modeEl) return;
+      const backendUrl = settings.backendUrl || '';
+      if (backendUrl) {
+        // Show short host
+        try {
+          const url = new URL(backendUrl);
+          modeEl.textContent = url.host;
+          modeEl.title = backendUrl;
+          modeEl.style.color = '';
+        } catch {
+          modeEl.textContent = backendUrl.slice(0, 30);
+          modeEl.title = backendUrl;
+        }
+      } else {
+        modeEl.textContent = 'Direct (no backend)';
+        modeEl.title = '백엔드 미설정 — 리뷰 시 Claude 직접 호출';
+        modeEl.style.color = 'var(--warning-text, #f59e0b)';
+      }
+    } catch { /* ignore */ }
   }
 
   async function checkEditPermission() {

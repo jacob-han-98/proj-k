@@ -307,7 +307,7 @@
 
     // Keyword matching
     if (/요약|summarize|summary|정리해/.test(lower)) return 'SUMMARIZE';
-    if (/이미지\s*포함.*리뷰|리뷰.*이미지\s*포함|vision.*review|review.*vision/.test(lower)) return 'REVIEW_VISION';
+    if (/이미지\s*리뷰|이미지\s*포함.*리뷰|리뷰.*이미지|vision.*review|review.*vision/.test(lower)) return 'REVIEW_VISION';
     if (/리뷰|검토|review|점검|진단/.test(lower)) return 'REVIEW';
     if (/초안|완성|보강|draft|같이.*작성|작성.*같이/.test(lower)) return 'DRAFT_ASSIST';
     if (/수정|고쳐|edit|바꿔|변경|추가해|삭제해|제거해/.test(lower)) return 'SUGGEST_EDITS';

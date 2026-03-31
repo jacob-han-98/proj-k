@@ -396,9 +396,9 @@
     let instruction = text;
     if (latestReviewData && /수정|고쳐|fix|edit|리뷰.*바탕|리뷰.*수정/.test(text.toLowerCase())) {
       const reviewItems = [];
-      if (latestReviewData.issues) latestReviewData.issues.forEach(i => reviewItems.push(`[보강 필요] ${i}`));
-      if (latestReviewData.verifications) latestReviewData.verifications.forEach(i => reviewItems.push(`[검증 필요] ${i}`));
-      if (latestReviewData.suggestions) latestReviewData.suggestions.forEach(i => reviewItems.push(`[제안] ${i}`));
+      if (latestReviewData.issues) latestReviewData.issues.forEach(i => reviewItems.push(`[보강 필요] ${_itemText(i)}`));
+      if (latestReviewData.verifications) latestReviewData.verifications.forEach(i => reviewItems.push(`[검증 필요] ${_itemText(i)}`));
+      if (latestReviewData.suggestions) latestReviewData.suggestions.forEach(i => reviewItems.push(`[제안] ${_itemText(i)}`));
       if (reviewItems.length > 0) {
         instruction = `${text}\n\n이전 AI 리뷰에서 발견한 항목들 (이 항목들을 모두 반영하여 수정해주세요):\n${reviewItems.join('\n')}`;
       }
@@ -593,23 +593,21 @@
     if (data.issues && data.issues.length > 0) {
       html += '<div class="review-section warning">';
       html += `<div class="review-section-title">⚠️ 보강 필요 (${data.issues.length}건)</div>`;
-      data.issues.forEach(item => { html += renderReviewItem(item, 'issue'); });
+      data.issues.forEach(item => {
+        const text = typeof item === 'object' ? item.text : item;
+        const perspective = typeof item === 'object' ? item.perspective : null;
+        html += renderReviewItem(text, 'issue', perspective);
+      });
       html += '</div>';
     }
 
     if (data.verifications && data.verifications.length > 0) {
       html += '<div class="review-section info">';
       html += `<div class="review-section-title">🔍 검증 필요 (${data.verifications.length}건)</div>`;
-      data.verifications.forEach(item => { html += renderReviewItem(item, 'verification'); });
-      html += '</div>';
-    }
-
-    // Strengths — no feedback buttons (read-only)
-    if (data.strengths && data.strengths.length > 0) {
-      html += '<div class="review-section success">';
-      html += `<div class="review-section-title">✅ 잘 된 부분 (${data.strengths.length}건)</div>`;
-      data.strengths.forEach(item => {
-        html += `<div class="review-item">${escapeHtml(item)}</div>`;
+      data.verifications.forEach(item => {
+        const text = typeof item === 'object' ? item.text : item;
+        const perspective = typeof item === 'object' ? item.perspective : null;
+        html += renderReviewItem(text, 'verification', perspective);
       });
       html += '</div>';
     }
@@ -617,7 +615,49 @@
     if (data.suggestions && data.suggestions.length > 0) {
       html += '<div class="review-section suggestion">';
       html += `<div class="review-section-title">💡 제안 (${data.suggestions.length}건)</div>`;
-      data.suggestions.forEach(item => { html += renderReviewItem(item, 'suggestion'); });
+      data.suggestions.forEach(item => {
+        const text = typeof item === 'object' ? item.text : item;
+        html += renderReviewItem(text, 'suggestion');
+      });
+      html += '</div>';
+    }
+
+    // Flow — text-based sequence diagram
+    if (data.flow) {
+      html += '<div class="review-section flow">';
+      html += `<div class="review-section-title">🔀 로직 플로우</div>`;
+      html += `<div class="review-flow-content">${escapeHtml(data.flow).replace(/\n/g, '<br>')}</div>`;
+      html += '</div>';
+    }
+
+    // QA Checklist
+    if (data.qa_checklist && data.qa_checklist.length > 0) {
+      html += '<div class="review-section checklist">';
+      html += `<div class="review-section-title">✅ QA 체크리스트 (${data.qa_checklist.length}건)</div>`;
+      html += '<div class="review-checklist-items">';
+      data.qa_checklist.forEach((item, i) => {
+        html += `<label class="review-checklist-item"><input type="checkbox" /><span>${escapeHtml(item)}</span></label>`;
+      });
+      html += '</div></div>';
+    }
+
+    // Readability
+    if (data.readability) {
+      const rScore = data.readability.score != null ? data.readability.score : null;
+      html += '<div class="review-section readability">';
+      html += `<div class="review-section-title">📖 문서 가독성${rScore != null ? ` (${rScore}/100)` : ''}</div>`;
+      if (rScore != null) {
+        const rPct = Math.max(0, Math.min(100, rScore));
+        html += `<div class="review-score" style="margin-bottom:8px">
+          <div class="review-score-bar"><div class="review-score-fill" style="width:${rPct}%"></div></div>
+          <span class="review-score-num">${rScore}/100</span>
+        </div>`;
+      }
+      if (data.readability.issues && data.readability.issues.length > 0) {
+        data.readability.issues.forEach(item => {
+          html += `<div class="review-item">${escapeHtml(item)}</div>`;
+        });
+      }
       html += '</div>';
     }
 
@@ -637,7 +677,7 @@
     return html;
   }
 
-  function renderReviewItem(text, category) {
+  function renderReviewItem(text, category, perspective) {
     const id = `ri-${reviewItemCounter++}`;
     const fb = reviewFeedback[id] || { status: 'liked', editText: '' };
     // Initialize default as liked
@@ -647,9 +687,13 @@
     const isDisliked = fb.status === 'disliked';
     const isEdited = fb.status === 'edited';
 
+    const perspectiveBadge = perspective
+      ? `<span class="ri-perspective ${perspective === '프로그래머' ? 'dev' : 'lead'}">${perspective}</span>`
+      : '';
+
     let html = `<div class="review-item-outer" id="${id}">`;
     html += `<div class="review-item-wrap ${isDisliked ? 'disliked' : ''}">`;
-    html += `<div class="review-item-content">${escapeHtml(text)}</div>`;
+    html += `<div class="review-item-content">${perspectiveBadge}${escapeHtml(text)}</div>`;
     html += `<div class="review-item-feedback">`;
     html += `<button class="ri-btn ${isLiked ? 'active' : ''}" data-action="ri-feedback" data-id="${id}" data-status="liked" title="좋아요">👍</button>`;
     html += `<button class="ri-btn ${isDisliked ? 'active' : ''}" data-action="ri-feedback" data-id="${id}" data-status="disliked" title="싫어요">👎</button>`;
@@ -673,6 +717,14 @@
   // Per-item feedback: { 'ri-0': { status: 'liked'|'disliked'|'edited', editText: '' } }
   let reviewFeedback = {};
 
+  function _itemText(item) {
+    return typeof item === 'object' ? item.text : item;
+  }
+  function _itemPerspective(item) {
+    const p = typeof item === 'object' ? item.perspective : null;
+    return p ? `[${p}] ` : '';
+  }
+
   function reviewDataToMarkdown(data) {
     let lines = [];
     lines.push(`## 📋 AI 리뷰 — ${pageMeta?.title || 'Untitled'}`);
@@ -680,19 +732,29 @@
 
     if (data.issues?.length) {
       lines.push(`\n### ⚠️ 보강 필요 (${data.issues.length}건)`);
-      data.issues.forEach(item => lines.push(`- ${item}`));
+      data.issues.forEach(item => lines.push(`- ${_itemPerspective(item)}${_itemText(item)}`));
     }
     if (data.verifications?.length) {
       lines.push(`\n### 🔍 검증 필요 (${data.verifications.length}건)`);
-      data.verifications.forEach(item => lines.push(`- ${item}`));
-    }
-    if (data.strengths?.length) {
-      lines.push(`\n### ✅ 잘 된 부분 (${data.strengths.length}건)`);
-      data.strengths.forEach(item => lines.push(`- ${item}`));
+      data.verifications.forEach(item => lines.push(`- ${_itemPerspective(item)}${_itemText(item)}`));
     }
     if (data.suggestions?.length) {
       lines.push(`\n### 💡 제안 (${data.suggestions.length}건)`);
-      data.suggestions.forEach(item => lines.push(`- ${item}`));
+      data.suggestions.forEach(item => lines.push(`- ${_itemText(item)}`));
+    }
+    if (data.flow) {
+      lines.push(`\n### 🔀 로직 플로우`);
+      lines.push(data.flow);
+    }
+    if (data.qa_checklist?.length) {
+      lines.push(`\n### ✅ QA 체크리스트 (${data.qa_checklist.length}건)`);
+      data.qa_checklist.forEach(item => lines.push(`- [ ] ${item}`));
+    }
+    if (data.readability) {
+      lines.push(`\n### 📖 문서 가독성${data.readability.score != null ? ` (${data.readability.score}/100)` : ''}`);
+      if (data.readability.issues?.length) {
+        data.readability.issues.forEach(item => lines.push(`- ${item}`));
+      }
     }
 
     lines.push(`\n---\n_Project K AI Assistant로 생성됨_`);
@@ -705,23 +767,37 @@
 
     if (data.issues?.length) {
       html += `<h4>⚠️ 보강 필요 (${data.issues.length}건)</h4><ul>`;
-      data.issues.forEach(item => { html += `<li>${escapeHtml(item)}</li>`; });
+      data.issues.forEach(item => { html += `<li><strong>${escapeHtml(_itemPerspective(item))}</strong>${escapeHtml(_itemText(item))}</li>`; });
       html += '</ul>';
     }
     if (data.verifications?.length) {
       html += `<h4>🔍 검증 필요 (${data.verifications.length}건)</h4><ul>`;
-      data.verifications.forEach(item => { html += `<li>${escapeHtml(item)}</li>`; });
-      html += '</ul>';
-    }
-    if (data.strengths?.length) {
-      html += `<h4>✅ 잘 된 부분 (${data.strengths.length}건)</h4><ul>`;
-      data.strengths.forEach(item => { html += `<li>${escapeHtml(item)}</li>`; });
+      data.verifications.forEach(item => { html += `<li><strong>${escapeHtml(_itemPerspective(item))}</strong>${escapeHtml(_itemText(item))}</li>`; });
       html += '</ul>';
     }
     if (data.suggestions?.length) {
       html += `<h4>💡 제안 (${data.suggestions.length}건)</h4><ul>`;
-      data.suggestions.forEach(item => { html += `<li>${escapeHtml(item)}</li>`; });
+      data.suggestions.forEach(item => { html += `<li>${escapeHtml(_itemText(item))}</li>`; });
       html += '</ul>';
+    }
+    if (data.flow) {
+      html += `<h4>🔀 로직 플로우</h4><pre>${escapeHtml(data.flow)}</pre>`;
+    }
+    if (data.qa_checklist?.length) {
+      html += `<h4>✅ QA 체크리스트 (${data.qa_checklist.length}건)</h4>`;
+      html += `<ac:task-list>`;
+      data.qa_checklist.forEach(item => {
+        html += `<ac:task><ac:task-status>incomplete</ac:task-status><ac:task-body>${escapeHtml(item)}</ac:task-body></ac:task>`;
+      });
+      html += `</ac:task-list>`;
+    }
+    if (data.readability) {
+      html += `<h4>📖 문서 가독성${data.readability.score != null ? ` (${data.readability.score}/100)` : ''}</h4>`;
+      if (data.readability.issues?.length) {
+        html += '<ul>';
+        data.readability.issues.forEach(item => { html += `<li>${escapeHtml(item)}</li>`; });
+        html += '</ul>';
+      }
     }
 
     html += `<hr/><p><em>Project K AI Assistant로 생성됨</em></p>`;
@@ -800,8 +876,7 @@
     $('#chat-input').value = '';
     const total = Object.keys(reviewFeedback).length;
     const disliked = Object.values(reviewFeedback).filter(f => f.status === 'disliked').length;
-    const strengths = latestReviewData?.strengths?.length || 0;
-    addMessage({ role: 'user', content: `리뷰 반영 수정 요청 (전체 ${total}건 중 잘된부분 ${strengths}건·제외 ${disliked}건 = 반영 대상 ${items.length}건)` });
+    addMessage({ role: 'user', content: `리뷰 반영 수정 요청 (전체 ${total}건 중 제외 ${disliked}건 = 반영 대상 ${items.length}건)` });
     const welcome = $('#welcome');
     if (welcome) welcome.style.display = 'none';
     handleIntent('SUGGEST_EDITS', instruction);

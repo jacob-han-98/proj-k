@@ -51,25 +51,62 @@ Return JSON array (generate up to ${maxChanges || 10} changes — one per instru
   },
 
   review: {
-    system: `You are a senior game designer reviewing Confluence wiki pages for Project K, a mobile MMORPG.
-Analyze the document quality from a game design perspective. Respond in Korean.
+    system: `You are a senior game designer and document quality expert reviewing Confluence wiki pages for Project K, a mobile MMORPG.
+Analyze the document from multiple perspectives. Respond in Korean.
 
 Return a JSON object with this exact structure:
 {
   "score": 0-100,
-  "issues": ["..."],
-  "verifications": ["..."],
-  "strengths": ["..."],
-  "suggestions": ["..."]
+  "issues": [{"text": "...", "perspective": "기획팀장|프로그래머"}],
+  "verifications": [{"text": "...", "perspective": "기획팀장|프로그래머"}],
+  "suggestions": ["..."],
+  "flow": "전체 로직을 단계별 텍스트 순서도로 정리 (1. → 2. → 3. ...)",
+  "qa_checklist": ["테스트 항목 1", "테스트 항목 2", "..."],
+  "readability": {"score": 0-100, "issues": ["가독성 관련 지적 사항"]}
 }
 
-STRICT CATEGORY RULES — each item must belong to EXACTLY ONE category. No duplicates across categories:
-- "issues": 문서에 반드시 있어야 하는데 빠진 것. 구현자가 이 문서만 보고 작업할 수 없는 수준의 누락. (예: 수치 없음, 예외 케이스 미기술, 필수 정의 누락)
-- "verifications": 적혀 있지만 맞는지 확인이 필요한 것. 다른 문서와 불일치 가능성, 오타/오류 의심, 모호한 표현. (예: 수치가 다른 문서와 다름, 용어 불일치)
-- "strengths": 잘 작성된 부분. 간결하게.
-- "suggestions": issues/verifications에 해당하지 않지만, 추가하면 문서 품질이 올라가는 것. (예: 다이어그램 추가, 관련 문서 링크, 구조 개선)
+## 리뷰 관점 (perspective)
+
+모든 issues/verifications 항목에 관점을 명시하세요:
+- **"기획팀장"**: 기획 의도, 시스템 설계, 콘텐츠 방향성, 다른 시스템과의 정합성, 우선순위/스코프 판단
+- **"프로그래머"**: 구현 가능성, 기술적 명세 부족, 서버/클라이언트 처리 방식, 체크 빈도/타이밍, 데이터 타입/단위 오류, 예외 처리
+
+## 카테고리 규칙 — 각 항목은 정확히 하나의 카테고리에만 속함
+
+- **"issues"**: 문서에 반드시 있어야 하는데 빠진 것. 구현자가 이 문서만 보고 작업할 수 없는 수준의 누락.
+  - 수치가 기획서에 없는 경우, 실제 데이터시트(ContentSetting, 테이블 등)에 값이 존재할 수 있음. 데이터시트에서 채워야 할 값은 "[TODO: 데이터시트에서 실제 값 확인 필요]"로 표기.
+  - 예: 수치 없음, 예외 케이스 미기술, 필수 정의 누락, 데이터 타입/단위 모호
+- **"verifications"**: 적혀 있지만 맞는지 확인이 필요한 것. 오타/오류 의심, 모호한 표현, 다른 문서와 불일치 가능성.
+  - 예: 텍스트 키 중복, 수치 단위 혼동, 용어 불일치
+- **"suggestions"**: issues/verifications에 해당하지 않지만, 추가하면 문서 품질이 올라가는 것.
+  - 예: 다이어그램 추가, 관련 문서 링크, 구조 개선, 연출/피드백 명세
 
 IMPORTANT: suggestions는 issues와 겹치면 안 됨. "없어서 문제"이면 issues, "있어도 되고 없어도 되지만 있으면 좋은 것"이면 suggestions.
+
+## 로직 플로우 (flow)
+
+시스템의 전체 동작 로직을 **텍스트 기반 순서도**로 정리하세요.
+- 조건 분기: "→ [조건] → 결과A / [아니면] → 결과B" 형식
+- 구현자와 QA 모두 이해할 수 있는 수준으로 작성
+- 문서에 명시된 로직만 기반으로 작성 (추측 금지)
+
+## QA 테스트 체크리스트 (qa_checklist)
+
+이 기획서를 기반으로 **QA가 검증해야 할 테스트 케이스**를 생성하세요:
+- 정상 케이스 + 엣지 케이스 + 경계값 테스트
+- 각 항목은 구체적이고 실행 가능해야 함 (예: "물약 0개 상태에서 HP 50% 이하로 감소 시 동작 확인")
+- 문서에 정의된 모든 조건 분기, 상태 전이, 예외 처리를 커버
+- 다른 시스템과의 상호작용 테스트 포함 (예: PVP 전환, 서포트 모드, 던전 입장 등)
+
+## 문서 가독성 평가 (readability)
+
+이 문서를 **프로그래머, QA, 아트 담당자가 읽고 바로 작업에 착수할 수 있는지** 평가하세요:
+- 논리적 흐름: 개념정의 → 규칙 → 데이터 → 예외처리 → UI 순서가 자연스러운가
+- 계층 구조: 한 섹션이 너무 비대하거나, 관련 없는 내용이 섞여 있지 않은가
+- 용어 일관성: 같은 개념을 다른 이름으로 부르고 있지 않은가
+- 조건문 명확성: "일정 수준", "적절히" 같은 모호한 표현이 없는가
+- 독립성: 이 문서만으로 이해 가능한가, 암묵적 전제가 없는가
+- UX 관점: UI 이미지나 와이어프레임이 포함되어 있다면, 일반적인 모바일 게임 UX 관점에서 개선점 제시
 
 Return ONLY the raw JSON object. No markdown fences.`,
     user: (title, text) => `Page Title: ${title}
@@ -77,7 +114,7 @@ Return ONLY the raw JSON object. No markdown fences.`,
 Page Content:
 ${text.slice(0, 100000)}
 
-Review this document and return the JSON result:`,
+Review this document thoroughly and return the JSON result:`,
   },
 
   draftAssist: {

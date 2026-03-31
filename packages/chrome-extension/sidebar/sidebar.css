@@ -357,6 +357,9 @@ body {
 .review-section.info { background: var(--info-bg); border: 1px solid var(--info-border); }
 .review-section.success { background: var(--success-bg); border: 1px solid var(--success-border); }
 .review-section.suggestion { background: var(--suggestion-bg); border: 1px solid var(--suggestion-border); }
+.review-section.flow { background: var(--bg-tertiary); border: 1px solid var(--border); }
+.review-section.checklist { background: var(--success-bg); border: 1px solid var(--success-border); }
+.review-section.readability { background: var(--info-bg); border: 1px solid var(--info-border); }
 
 .review-section-title {
   font-size: 12px;
@@ -368,6 +371,9 @@ body {
 .review-section.info .review-section-title { color: var(--info-text); }
 .review-section.success .review-section-title { color: var(--success-text); }
 .review-section.suggestion .review-section-title { color: var(--suggestion-text); }
+.review-section.flow .review-section-title { color: var(--text-primary); }
+.review-section.checklist .review-section-title { color: var(--success-text); }
+.review-section.readability .review-section-title { color: var(--info-text); }
 
 .review-item {
   font-size: 12px;
@@ -466,6 +472,75 @@ body {
 
 .ri-edit-input::placeholder {
   color: var(--text-muted);
+}
+
+/* ── Review Flow ── */
+.review-flow-content {
+  font-size: 12px;
+  line-height: 1.7;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  padding: 4px 0;
+}
+
+/* ── Review Checklist ── */
+.review-checklist-items {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.review-checklist-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.review-checklist-item input[type="checkbox"] {
+  margin-top: 3px;
+  flex-shrink: 0;
+  accent-color: var(--success);
+}
+
+.review-checklist-item span {
+  flex: 1;
+}
+
+/* ── Review Perspective Badge ── */
+.ri-perspective {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+.ri-perspective.lead {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.ri-perspective.dev {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+@media (prefers-color-scheme: dark) {
+  .ri-perspective.lead {
+    background: #78350f;
+    color: #fde68a;
+  }
+  .ri-perspective.dev {
+    background: #1e3a5f;
+    color: #93c5fd;
+  }
 }
 
 /* ── Review CTA ── */

@@ -307,6 +307,26 @@ def health():
     return {"status": "ok", "version": "0.2.0"}
 
 
+class ReviewRequest(BaseModel):
+    title: str
+    text: str
+    model: str = "claude-opus-4-6"
+    prompt_overrides: dict[str, str] | None = None
+
+
+@app.post("/review")
+def review_document_api(req: ReviewRequest):
+    """기획서 리뷰 — RAG + game_data + KG 기반 교차 검증 리뷰."""
+    from src.agent import review_document
+    result = review_document(
+        title=req.title,
+        text=req.text,
+        model=req.model,
+        prompt_overrides=req.prompt_overrides,
+    )
+    return result
+
+
 @app.get("/prompts/defaults")
 def get_default_prompts():
     """각 단계별 기본 시스템 프롬프트 조회. 프론트엔드 커스텀 프롬프트 편집용."""

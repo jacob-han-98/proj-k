@@ -609,6 +609,7 @@ PROMPT_LABELS = {
     "proposal": "기획서 (Proposal)",
     "synthesis": "종합 (Deep Research)",
     "synthesis_basic": "종합 - 기본",
+    "review": "리뷰 (Review)",
 }
 
 
@@ -2061,4 +2062,269 @@ def deep_research(query: str, plan: dict, scan_result: dict,
         "workbooks_analyzed": len(sorted_wbs),
         "strategy": "direct" if use_direct else "scratchpad",
         "estimated_context_tokens": estimated_tokens,
+    }
+
+
+# ══════════════════════════════════════════════════════════
+#  기획서 리뷰 파이프라인
+# ══════════════════════════════════════════════════════════
+
+REVIEW_PROMPT = """당신은 모바일 MMORPG "Project K"의 수석 기획 리뷰어입니다.
+아래에 **리뷰 대상 문서**와 **관련 기획서/데이터시트 참조 자료**가 제공됩니다.
+
+## 리뷰 규칙
+
+1. **관련 기획서 교차 검증**: 참조 자료에 있는 다른 기획서와 리뷰 대상 문서의 규칙/수치/용어가 일치하는지 확인. 불일치가 있으면 구체적으로 지적.
+2. **데이터시트 교차 검증**: 참조 자료에 GameData 조회 결과가 있으면, 리뷰 대상 문서의 수치/설정값과 실제 데이터를 비교. 불일치 시 "기획서에는 X로 적혀있지만 ContentSetting 실제 값은 Y" 형식으로 지적. 기획서에 값이 없는데 데이터시트에 있으면 실제 값을 인용.
+3. **관련 시스템 누락 감지**: 참조 자료에서 이 시스템과 연결된 다른 시스템이 보이면, 리뷰 대상 문서에서 해당 상호작용이 기술되어 있는지 확인.
+4. **기획서에 값이 없고 데이터시트에도 없으면**: "[TODO: 값 정의 필요]"로 표기.
+
+## 리뷰 관점 (perspective)
+
+모든 issues/verifications 항목에 관점을 명시:
+- **"기획팀장"**: 기획 의도, 시스템 설계, 콘텐츠 방향성, 다른 시스템과의 정합성
+- **"프로그래머"**: 구현 가능성, 기술적 명세 부족, 서버/클라 처리, 데이터 타입/단위, 예외 처리
+
+## 카테고리 규칙
+
+- **"issues"**: 반드시 있어야 하는데 빠진 것. 구현자가 작업할 수 없는 수준의 누락. 다른 기획서와의 불일치도 포함.
+- **"verifications"**: 적혀 있지만 확인 필요. 오타/오류 의심, 모호한 표현, 데이터시트와 수치 불일치 가능성.
+- **"suggestions"**: 추가하면 문서 품질이 올라가는 것. 다른 기획서의 좋은 패턴 참조 제안 포함.
+
+## 추가 섹션
+
+- **"flow"**: 시스템의 전체 동작 로직을 텍스트 순서도로 정리. 조건 분기: "→ [조건] → 결과A / [아니면] → 결과B"
+- **"qa_checklist"**: QA 테스트 케이스. 기본 흐름(Happy Path) 최우선, 이후 엣지/경계값.
+- **"readability"**: 문서 가독성 평가. 논리 흐름, 계층 구조, 용어 일관성, 조건문 명확성, 독립성 평가.
+- **"cross_refs"**: 이 문서와 관련된 다른 기획서/데이터시트 목록 (참조 자료에서 발견된 것).
+
+## 출력 형식 (JSON만 출력)
+```json
+{
+  "score": 0-100,
+  "issues": [{"text": "...", "perspective": "기획팀장|프로그래머"}],
+  "verifications": [{"text": "...", "perspective": "기획팀장|프로그래머"}],
+  "suggestions": ["..."],
+  "flow": "1. 사용자가 ... → 2. 시스템이 ... → ...",
+  "qa_checklist": ["테스트 항목 1", "..."],
+  "readability": {"score": 0-100, "issues": ["..."]},
+  "cross_refs": [{"document": "문서명", "relevance": "관련성 설명"}]
+}
+```"""
+
+# REVIEW_PROMPT는 _init_default_prompts() 이후에 정의되므로 여기서 등록
+DEFAULT_PROMPTS["review"] = REVIEW_PROMPT
+
+
+def review_document(title: str, text: str,
+                    model: str = "claude-opus-4-6",
+                    status_callback=None,
+                    prompt_overrides: dict[str, str] | None = None) -> dict:
+    """기획서 리뷰 파이프라인 — RAG + game_data + KG 기반 교차 검증 리뷰.
+
+    Args:
+        title: Confluence 페이지 제목
+        text: 페이지 본문 텍스트
+        model: LLM 모델
+        status_callback: 진행 상황 콜백
+        prompt_overrides: 커스텀 프롬프트 (키 "review" 사용)
+
+    Returns:
+        {
+            "review": str (JSON),
+            "chunks": list[dict],
+            "trace": list[dict],
+            "total_tokens": int,
+            "total_api_seconds": float,
+        }
+    """
+    trace = []
+    total_tokens = 0
+    t0 = time.time()
+
+    log.info(f"REVIEW_START title='{title[:60]}' text_len={len(text)}")
+
+    # ── Step 1: 문서에서 핵심 키워드/시스템 추출 (Planning 활용) ──
+    if status_callback:
+        status_callback("🧠 리뷰 대상 문서를 분석하고 있습니다... (Step 1/3: 분석)")
+
+    t_plan = time.time()
+    review_query = f"'{title}' 기획서를 리뷰하려고 합니다. 관련 시스템과 데이터시트를 검색해주세요. 문서 내용: {text[:3000]}"
+    plan = plan_search(review_query, role="기획팀장", prompt_overrides=prompt_overrides)
+    plan_time = time.time() - t_plan
+    total_tokens += plan.get("_tokens", 0)
+
+    # ContentSetting 키 추출 — 문서에서 직접 파싱
+    import re
+    cs_keys = list(set(re.findall(r'[A-Z][a-zA-Z0-9_]{4,}(?:Setting|Condition|CoolTime|Default|Enable|Disable|Count|Rate|Ratio|Level|Max|Min|Prob|Time|Limit)', text)))
+    # 테이블명 추출
+    table_refs = list(set(re.findall(r'[A-Z][a-zA-Z]{2,}Class(?:Info)?|ContentSetting|[A-Z][a-zA-Z]+Enum', text)))
+
+    trace.append({
+        "step": "analysis",
+        "description": f"문서 분석 — key_systems={plan.get('key_systems', [])}, ContentSetting keys={cs_keys[:10]}, table_refs={table_refs[:5]}",
+        "key_systems": plan.get("key_systems", []),
+        "cs_keys": cs_keys[:20],
+        "table_refs": table_refs[:10],
+        "seconds": round(plan_time, 1),
+    })
+
+    # ── Step 2: 관련 기획서 + 데이터시트 검색 ──
+    if status_callback:
+        status_callback(f"🔎 관련 기획서/데이터시트를 검색 중... (Step 2/3: 검색)")
+
+    t_search = time.time()
+    chunks = execute_search(plan, review_query, max_chunks=50)
+
+    # ContentSetting 키가 있으면 game_data 쿼리 추가
+    gd_chunks = []
+    if cs_keys:
+        try:
+            mod = _load_game_data_module()
+            if mod and mod.is_db_ready():
+                db_path = mod.get_db_path()
+                # ContentSetting에서 관련 키 일괄 조회
+                for key in cs_keys[:15]:
+                    try:
+                        result = mod.execute_game_query({
+                            "action": "query",
+                            "table": "ContentSetting",
+                            "filters": [{"column": "ContentSettingEnum", "op": "LIKE", "value": f"%{key}%"}],
+                            "limit": 10,
+                        }, db_path)
+                        if getattr(result, "rows", None):
+                            formatted = mod.format_game_data_result(result)
+                            gd_chunks.append({
+                                "id": f"gamedata_cs_{key}",
+                                "workbook": "GameData/ContentSetting",
+                                "sheet": key,
+                                "text": formatted,
+                                "score": 1.5,
+                                "source": "game_data_review",
+                                "_game_data": True,
+                            })
+                    except Exception as e:
+                        log.warning(f"game_data query failed for {key}: {e}")
+
+                # 문서에서 참조하는 테이블 조회
+                for tbl in table_refs[:5]:
+                    if tbl == "ContentSetting":
+                        continue
+                    try:
+                        result = mod.execute_game_query({
+                            "action": "describe",
+                            "table": tbl,
+                        }, db_path)
+                        if getattr(result, "columns", None):
+                            formatted = mod.format_game_data_result(result)
+                            # 샘플 데이터도 가져오기
+                            sample = mod.execute_game_query({
+                                "action": "query",
+                                "table": tbl,
+                                "limit": 5,
+                            }, db_path)
+                            if getattr(sample, "rows", None):
+                                formatted += "\n\n샘플 데이터:\n" + mod.format_game_data_result(sample)
+                            gd_chunks.append({
+                                "id": f"gamedata_tbl_{tbl}",
+                                "workbook": f"GameData/{tbl}",
+                                "sheet": "schema+sample",
+                                "text": formatted,
+                                "score": 1.3,
+                                "source": "game_data_review",
+                                "_game_data": True,
+                            })
+                    except Exception as e:
+                        log.warning(f"game_data describe failed for {tbl}: {e}")
+        except Exception as e:
+            log.warning(f"game_data module load failed: {e}")
+
+    all_chunks = chunks + gd_chunks
+    search_time = time.time() - t_search
+
+    workbooks_found = sorted(set(c.get("workbook", "?") for c in all_chunks))
+    trace.append({
+        "step": "search",
+        "description": f"관련 문서 {len(chunks)}개 + 데이터시트 {len(gd_chunks)}개 검색 완료",
+        "chunks_count": len(chunks),
+        "game_data_chunks": len(gd_chunks),
+        "workbooks_found": workbooks_found,
+        "cs_keys_found": [c["sheet"] for c in gd_chunks if "cs_" in c["id"]],
+        "seconds": round(search_time, 1),
+    })
+
+    # ── Step 3: 리뷰 생성 ──
+    if status_callback:
+        status_callback(f"📝 리뷰를 작성하고 있습니다... (Step 3/3: 리뷰 — {len(all_chunks)}개 참조)")
+
+    t_review = time.time()
+
+    # 컨텍스트 구성
+    context_parts = []
+    for c in all_chunks[:40]:  # 최대 40개 참조
+        wb = c.get("workbook", "?")
+        sh = c.get("sheet", "")
+        source = c.get("source", "")
+        label = f"[GameData] {wb}" if c.get("_game_data") else f"[기획서] {wb}/{sh}"
+        context_parts.append(f"--- {label} ---\n{c['text'][:3000]}")
+
+    context_text = "\n\n".join(context_parts)
+
+    # 리뷰 프롬프트
+    review_prompt = REVIEW_PROMPT
+    if prompt_overrides and "review" in prompt_overrides:
+        review_prompt = prompt_overrides["review"]
+
+    user_msg = f"""## 리뷰 대상 문서: {title}
+
+{text[:80000]}
+
+════════════════════════════════════
+
+## 참조 자료 (관련 기획서 + 데이터시트)
+
+{context_text[:60000]}
+
+════════════════════════════════════
+
+위 리뷰 대상 문서를 참조 자료와 교차 검증하여 리뷰해주세요. JSON만 출력:"""
+
+    from src.generator import call_bedrock
+    result = call_bedrock(
+        messages=[{"role": "user", "content": user_msg}],
+        system=review_prompt,
+        model=model,
+        max_tokens=8192,
+        temperature=0,
+    )
+
+    review_text = result.get("text", "")
+    review_tokens = result.get("input_tokens", 0) + result.get("output_tokens", 0)
+    total_tokens += review_tokens
+    review_time = time.time() - t_review
+
+    trace.append({
+        "step": "review_generation",
+        "description": f"리뷰 생성 완료 — {review_tokens:,} 토큰",
+        "model": model,
+        "tokens": review_tokens,
+        "context_chunks": len(all_chunks),
+        "seconds": round(review_time, 1),
+    })
+
+    total_time = time.time() - t0
+    log.info(f"REVIEW_DONE title='{title[:40]}' tokens={total_tokens} time={total_time:.1f}s")
+
+    return {
+        "review": review_text,
+        "chunks": [{
+            "workbook": c.get("workbook", "?"),
+            "sheet": c.get("sheet", ""),
+            "score": round(c.get("score", 0), 3),
+            "source": c.get("source", ""),
+            "text_preview": c.get("text", "")[:200],
+        } for c in all_chunks[:20]],
+        "trace": trace,
+        "total_tokens": total_tokens,
+        "total_api_seconds": round(total_time, 1),
     }

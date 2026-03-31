@@ -301,12 +301,35 @@ async function handleSuggestEdits({ title, text, html, instruction, maxChanges }
 
 async function handleReview({ title, text }, settings) {
   Logger.info('bg', 'Review start', { title, textLen: text?.length });
+
+  // 백엔드 API 호출 시도 (RAG + game_data + KG 기반)
+  const backendUrl = settings.backendUrl || '';
+  if (backendUrl) {
+    try {
+      Logger.info('bg', 'Review via backend', { backendUrl });
+      const response = await fetch(`${backendUrl}/review`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, text, model: settings.bedrockModel || 'claude-opus-4-6' }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        Logger.info('bg', 'Review backend done', { reviewLen: data.review?.length, chunks: data.chunks?.length });
+        return { review: data.review, trace: data.trace, chunks: data.chunks };
+      }
+      Logger.warn('bg', 'Review backend failed, falling back to direct', { status: response.status });
+    } catch (e) {
+      Logger.warn('bg', 'Review backend error, falling back to direct', { error: e.message });
+    }
+  }
+
+  // 폴백: Claude API 직접 호출 (백엔드 미설정 또는 실패 시)
   const result = await ApiClient.call(
     PROMPTS.review.system,
     PROMPTS.review.user(title, text),
     settings
   );
-  Logger.info('bg', 'Review done', { resultLen: result?.length });
+  Logger.info('bg', 'Review direct done', { resultLen: result?.length });
   return { review: result };
 }
 

@@ -335,7 +335,7 @@ async function handleReview({ title, text, _senderId }, settings) {
               if (event.type === 'status') {
                 // 중간 상태를 탭에 브로드캐스트
                 Logger.info('bg', 'Review status', { message: event.message });
-                chrome.tabs.query({ active: true }, (tabs) => {
+                chrome.tabs.query({ url: '*://*.atlassian.net/*' }, (tabs) => {
                   for (const tab of tabs) {
                     chrome.tabs.sendMessage(tab.id, {
                       type: 'REVIEW_STATUS',

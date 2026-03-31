@@ -122,7 +122,7 @@ def call_bedrock(
     t_start = time.time()
     for attempt in range(_MAX_RETRIES + 1):
         try:
-            resp = requests.post(url, json=body, headers=headers, timeout=180)
+            resp = requests.post(url, json=body, headers=headers, timeout=300)
         except requests.exceptions.Timeout as e:
             last_error = e
             if attempt < _MAX_RETRIES:

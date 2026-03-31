@@ -70,7 +70,7 @@ function App() {
   const [loadingThreads, setLoadingThreads] = useState<Set<string>>(new Set())
   const [threadStatuses, setThreadStatuses] = useState<Record<string, string>>({})
   const abortControllers = useRef<Record<string, AbortController>>({})
-  const [model, setModel] = useState('claude-opus-4-5')
+  const [model, setModel] = useState('claude-opus-4-6')
   const [themeMode, setThemeMode] = useState<ThemeMode>(() => {
     return (localStorage.getItem('qna-theme') as ThemeMode) || 'system'
   })

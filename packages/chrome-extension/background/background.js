@@ -397,7 +397,7 @@ async function handleAddConfluenceComment({ pageId, confluenceUrl, body }, setti
   const baseUrl = confluenceUrl || `https://${extractDomain(settings)}/wiki`;
   const auth = btoa(`${settings.confluenceEmail}:${settings.confluenceApiToken}`);
 
-  const resp = await fetch(`${baseUrl}/rest/api/content/${pageId}/child/comment`, {
+  const resp = await fetch(`${baseUrl}/rest/api/content`, {
     method: 'POST',
     headers: {
       'Authorization': `Basic ${auth}`,
@@ -406,6 +406,10 @@ async function handleAddConfluenceComment({ pageId, confluenceUrl, body }, setti
     },
     body: JSON.stringify({
       type: 'comment',
+      container: {
+        id: pageId,
+        type: 'page',
+      },
       body: {
         storage: {
           value: body,

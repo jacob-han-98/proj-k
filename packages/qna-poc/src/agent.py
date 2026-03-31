@@ -1332,7 +1332,7 @@ def agent_answer(query: str, role: str = None,
     log.debug(f"AGENT_START query='{query[:60]}' role={role}")
 
     # ── Step 1: Planning ──
-    if status_callback: status_callback("🧠 질문을 분석하고 있습니다...")
+    if status_callback: status_callback("🧠 질문을 분석하고 있습니다... (Step 1/4: Planning)")
     t_plan = time.time()
     plan = plan_search(query, role, conversation_history=conversation_history,
                        prompt_overrides=prompt_overrides)
@@ -1361,7 +1361,8 @@ def agent_answer(query: str, role: str = None,
     })
 
     # ── Step 2: Tool Use (Search) ──
-    if status_callback: status_callback("🔎 기획서에서 관련 내용을 검색하고 있습니다...")
+    key_sys_str = ', '.join(plan.get('key_systems', [])[:3]) or '전체'
+    if status_callback: status_callback(f"🔎 기획서에서 검색 중... (Step 2/4: Search — {key_sys_str})")
     t_search = time.time()
     chunks = execute_search(plan, query)
     search_time = time.time() - t_search
@@ -1453,7 +1454,9 @@ def agent_answer(query: str, role: str = None,
         return result
 
     # ── Step 3: Answer Generation ──
-    if status_callback: status_callback("✍️ 답변을 생성하고 있습니다...")
+    elapsed = int(time.time() - t0)
+    wb_list = ', '.join(workbooks_found[:3])
+    if status_callback: status_callback(f"✍️ 답변 생성 중... (Step 3/4: {len(chunks)}개 청크, {wb_list} — {elapsed}초 경과)")
     t_gen = time.time()
     key_systems = plan.get("key_systems", [])
     gen_result = generate_agent_answer(query, chunks, role, key_systems=key_systems,
@@ -1488,7 +1491,8 @@ def agent_answer(query: str, role: str = None,
     })
 
     # ── Step 4: Reflection ──
-    if status_callback: status_callback("🔍 답변 품질을 검증하고 있습니다...")
+    elapsed = int(time.time() - t0)
+    if status_callback: status_callback(f"🔍 답변 품질 검증 중... (Step 4/4: Reflection — {elapsed}초 경과)")
     t_ref = time.time()
     reflection = reflect_on_answer(query, answer, chunks, plan,
                                    prompt_overrides=prompt_overrides)
@@ -1518,7 +1522,9 @@ def agent_answer(query: str, role: str = None,
 
     # ── Step 4b: Retry if needed ──
     if not reflection.get("is_sufficient", True):
-        if status_callback: status_callback("🔄 보충 검색 후 답변을 개선하고 있습니다...")
+        elapsed = int(time.time() - t0)
+        missing = reflection.get("missing_info", "")[:50]
+        if status_callback: status_callback(f"🔄 보충 검색 + 재답변 중... (Retry: {missing} — {elapsed}초 경과)")
         t_retry = time.time()
 
         # 재검색

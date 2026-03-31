@@ -365,7 +365,14 @@ async function handleReviewVision({ title, text, images }, settings) {
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const blob = await response.blob();
       const buffer = await blob.arrayBuffer();
-      const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+      // 큰 바이너리를 chunk 방식으로 base64 변환 (스택 오버플로우 방지)
+      const bytes = new Uint8Array(buffer);
+      let binary = '';
+      const CHUNK = 8192;
+      for (let j = 0; j < bytes.length; j += CHUNK) {
+        binary += String.fromCharCode.apply(null, bytes.subarray(j, j + CHUNK));
+      }
+      const base64 = btoa(binary);
       const mediaType = blob.type || 'image/png';
 
       const docContext = text.slice(0, 15000);
@@ -373,7 +380,9 @@ async function handleReviewVision({ title, text, images }, settings) {
         { type: 'text', text: `## 기획 문서: ${title}\n\n${docContext}\n\n---\n\n## 이미지 위치 맥락\n이미지 주변 텍스트: ${img.context || '없음'}\nalt: ${img.alt || '없음'}\n\n아래 이미지를 위 기획 문서의 맥락에서 분석해주세요:` },
         { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
       ];
-      const analysis = await ApiClient.callVision(VISION_ANALYZE_PROMPT, userContent, settings);
+      // Vision은 항상 Bedrock으로 호출 (proxy 모드여도)
+      const visionSettings = { ...settings, apiMode: settings.bedrockToken ? 'bedrock' : settings.claudeApiKey ? 'direct' : settings.apiMode };
+      const analysis = await ApiClient.callVision(VISION_ANALYZE_PROMPT, userContent, visionSettings);
       const elapsed = Date.now() - start;
       Logger.info('bg', `Vision image ${idx} done`, { elapsed });
       return { idx, src: img.src, alt: img.alt, width: img.width, height: img.height, context: img.context, analysis, elapsed, error: null };

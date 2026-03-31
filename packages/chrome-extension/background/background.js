@@ -233,7 +233,7 @@ async function handleMessage(message) {
       return { status: 'cleared' };
 
     case 'GET_SETTINGS':
-      return { editableSpaces: settings.editableSpaces || '' };
+      return { editableSpaces: settings.editableSpaces || '', backendUrl: settings.backendUrl || '', apiMode: settings.apiMode || '' };
 
     case 'PING':
       return { status: 'ok' };

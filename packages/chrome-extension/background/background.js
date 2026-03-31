@@ -299,31 +299,84 @@ async function handleSuggestEdits({ title, text, html, instruction, maxChanges }
   return { changes };
 }
 
-async function handleReview({ title, text }, settings) {
+async function handleReview({ title, text, _senderId }, settings) {
   Logger.info('bg', 'Review start', { title, textLen: text?.length });
 
-  // 백엔드 API 호출 시도 (RAG + game_data + KG 기반)
   const backendUrl = settings.backendUrl || '';
   if (backendUrl) {
     try {
-      Logger.info('bg', 'Review via backend', { backendUrl });
-      const response = await fetch(`${backendUrl}/review`, {
+      Logger.info('bg', 'Review via backend SSE', { backendUrl });
+
+      // SSE 스트리밍으로 중간 상태 전달
+      const response = await fetch(`${backendUrl}/review_stream`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title, text, model: settings.bedrockModel || 'claude-opus-4-6' }),
       });
-      if (response.ok) {
-        const data = await response.json();
-        Logger.info('bg', 'Review backend done', { reviewLen: data.review?.length, chunks: data.chunks?.length });
+
+      if (response.ok && response.body) {
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        let finalResult = null;
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+
+          // NDJSON 파싱 — 줄 단위
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+          for (const line of lines) {
+            if (!line.trim()) continue;
+            try {
+              const event = JSON.parse(line);
+              if (event.type === 'status') {
+                // 중간 상태를 탭에 브로드캐스트
+                Logger.info('bg', 'Review status', { message: event.message });
+                chrome.tabs.query({ active: true }, (tabs) => {
+                  for (const tab of tabs) {
+                    chrome.tabs.sendMessage(tab.id, {
+                      type: 'REVIEW_STATUS',
+                      message: event.message,
+                    }).catch(() => {});
+                  }
+                });
+              } else if (event.type === 'result') {
+                finalResult = event.data;
+              } else if (event.type === 'error') {
+                throw new Error(event.message);
+              }
+            } catch (e) {
+              if (e.message && !e.message.includes('Unexpected')) throw e;
+            }
+          }
+        }
+
+        if (finalResult) {
+          Logger.info('bg', 'Review SSE done', { reviewLen: finalResult.review?.length });
+          return { review: finalResult.review, trace: finalResult.trace, chunks: finalResult.chunks };
+        }
+      }
+
+      // SSE 실패 시 일반 호출로 폴백
+      Logger.warn('bg', 'Review SSE failed, trying regular endpoint');
+      const fallbackResp = await fetch(`${backendUrl}/review`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, text, model: settings.bedrockModel || 'claude-opus-4-6' }),
+      });
+      if (fallbackResp.ok) {
+        const data = await fallbackResp.json();
         return { review: data.review, trace: data.trace, chunks: data.chunks };
       }
-      Logger.warn('bg', 'Review backend failed, falling back to direct', { status: response.status });
     } catch (e) {
       Logger.warn('bg', 'Review backend error, falling back to direct', { error: e.message });
     }
   }
 
-  // 폴백: Claude API 직접 호출 (백엔드 미설정 또는 실패 시)
+  // 폴백: Claude API 직접 호출
   const result = await ApiClient.call(
     PROMPTS.review.system,
     PROMPTS.review.user(title, text),

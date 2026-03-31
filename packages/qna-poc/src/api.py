@@ -327,6 +327,60 @@ def review_document_api(req: ReviewRequest):
     return result
 
 
+@app.post("/review_stream")
+def review_stream_api(req: ReviewRequest):
+    """기획서 리뷰 + SSE 스트리밍 (실시간 진행 상태).
+
+    NDJSON:
+      {"type": "status", "message": "🧠 기획 문서를 분석하고 있습니다..."}
+      {"type": "result", "data": { review, chunks, trace, ... }}
+    """
+    from src.agent import review_document
+
+    status_q: queue.Queue[str | None] = queue.Queue()
+    result_holder: list[dict] = []
+    error_holder: list[Exception] = []
+
+    def on_status(msg: str):
+        status_q.put(msg)
+
+    def run_review():
+        try:
+            res = review_document(
+                title=req.title,
+                text=req.text,
+                model=req.model,
+                status_callback=on_status,
+                prompt_overrides=req.prompt_overrides,
+            )
+            result_holder.append(res)
+        except Exception as e:
+            error_holder.append(e)
+        finally:
+            status_q.put(None)
+
+    t = threading.Thread(target=run_review, daemon=True)
+    t.start()
+
+    def event_generator():
+        while True:
+            msg = status_q.get()
+            if msg is None:
+                break
+            yield json.dumps({"type": "status", "message": msg}, ensure_ascii=False) + "\n"
+
+        t.join()
+
+        if error_holder:
+            yield json.dumps({"type": "error", "message": str(error_holder[0])}, ensure_ascii=False) + "\n"
+            return
+
+        result = result_holder[0]
+        yield json.dumps({"type": "result", "data": result}, ensure_ascii=False) + "\n"
+
+    return StreamingResponse(event_generator(), media_type="application/x-ndjson")
+
+
 @app.get("/prompts/defaults")
 def get_default_prompts():
     """각 단계별 기본 시스템 프롬프트 조회. 프론트엔드 커스텀 프롬프트 편집용."""

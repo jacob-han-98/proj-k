@@ -75,9 +75,9 @@
       setTimeout(() => {
         if (pendingRequests[requestId]) {
           delete pendingRequests[requestId];
-          reject(new Error('Request timed out (180s)'));
+          reject(new Error('Request timed out (300s)'));
         }
-      }, 180000);
+      }, 300000);
     });
   }
 
@@ -143,6 +143,19 @@
           const resp = msg.payload.response;
           if (resp && resp.error) req.reject(new Error(resp.error));
           else req.resolve(resp);
+        }
+        break;
+      }
+      case 'REVIEW_STATUS': {
+        // 백엔드 SSE에서 전달된 리뷰 진행 상태
+        const statusMsg = msg.payload?.message || '';
+        if (statusMsg) {
+          setStatus(statusMsg);
+          // 로딩 메시지도 업데이트
+          const loadingEl = document.querySelector('.loading-dots');
+          if (loadingEl) {
+            loadingEl.parentElement.innerHTML = `<div class="review-progress">${escapeHtml(statusMsg)}</div>`;
+          }
         }
         break;
       }

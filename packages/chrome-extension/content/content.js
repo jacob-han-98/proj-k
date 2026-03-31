@@ -706,6 +706,13 @@
     }
   }
 
+  // --- Background → Sidebar message relay ---
+  chrome.runtime.onMessage.addListener((msg) => {
+    if (msg && msg.type === 'REVIEW_STATUS') {
+      sendToSidebar('REVIEW_STATUS', { message: msg.message });
+    }
+  });
+
   // --- SPA Navigation Tracking ---
 
   let currentUrl = window.location.href;

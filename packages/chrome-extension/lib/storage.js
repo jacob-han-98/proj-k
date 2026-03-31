@@ -53,9 +53,16 @@ const Storage = {
     return this.get(Object.keys(StorageDefaults));
   },
 
-  // Sync config.js values into chrome.storage (overwrites cached values)
+  // Sync config.js defaults into chrome.storage (only fills missing keys, never overwrites user settings)
   async syncFromConfig() {
     if (typeof CONFIG === 'undefined' || !CONFIG.bedrockToken) return;
-    await this.set(StorageDefaults);
+    const current = await new Promise(resolve => {
+      chrome.storage.local.get(null, resolve);
+    });
+    const toSet = {};
+    for (const [key, val] of Object.entries(StorageDefaults)) {
+      if (current[key] === undefined) toSet[key] = val;
+    }
+    if (Object.keys(toSet).length > 0) await this.set(toSet);
   },
 };

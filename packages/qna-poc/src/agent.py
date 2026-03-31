@@ -2069,6 +2069,27 @@ def deep_research(query: str, plan: dict, scan_result: dict,
 #  기획서 리뷰 파이프라인
 # ══════════════════════════════════════════════════════════
 
+REVIEW_PLANNING_PROMPT = """당신은 모바일 MMORPG "Project K"의 기획서 리뷰를 준비하는 분석가입니다.
+아래에 리뷰 대상 기획 문서 전문이 제공됩니다. 이 문서를 리뷰하기 위해 **어떤 관련 기획서와 데이터시트를 참조해야 하는지** 분석하세요.
+
+## 분석 항목
+
+1. **이 문서가 다루는 핵심 시스템**: 문서의 주제가 되는 시스템명 (워크북 목록에서 매칭)
+2. **교차 검증이 필요한 관련 시스템**: 이 문서에서 언급하거나 상호작용하는 다른 시스템 (예: 물약 → HUD, 인벤토리, PVP, 버프 등)
+3. **ContentSetting/데이터 키**: 문서에서 참조하는 ContentSetting Enum, 테이블명, 데이터 키
+4. **검색 키워드**: 관련 기획서를 찾기 위한 핵심 키워드
+
+## 출력 형식 (JSON만 출력)
+```json
+{
+  "primary_systems": ["이 문서의 핵심 시스템 워크북명"],
+  "related_systems": ["교차 검증 대상 워크북명 (최대 8개)"],
+  "data_keys": ["ContentSetting Enum 키", "테이블명"],
+  "search_keywords": ["검색 키워드"],
+  "reasoning": "1줄 판단 근거"
+}
+```"""
+
 REVIEW_PROMPT = """당신은 모바일 MMORPG "Project K"의 수석 기획 리뷰어입니다.
 아래에 **리뷰 대상 문서**와 **관련 기획서/데이터시트 참조 자료**가 제공됩니다.
 
@@ -2144,112 +2165,213 @@ def review_document(title: str, text: str,
 
     log.info(f"REVIEW_START title='{title[:60]}' text_len={len(text)}")
 
-    # ── Step 1: 문서에서 핵심 키워드/시스템 추출 (Planning 활용) ──
+    # ── Step 1: 리뷰 전용 Planning (문서 전문을 LLM에 전달) ──
     if status_callback:
-        status_callback("🧠 리뷰 대상 문서를 분석하고 있습니다... (Step 1/3: 분석)")
+        status_callback("🧠 기획 문서를 분석하고 있습니다... (Step 1/3: 문서 분석)")
 
     t_plan = time.time()
-    review_query = f"'{title}' 기획서를 리뷰하려고 합니다. 관련 시스템과 데이터시트를 검색해주세요. 문서 내용: {text[:3000]}"
-    plan = plan_search(review_query, role="기획팀장", prompt_overrides=prompt_overrides)
-    plan_time = time.time() - t_plan
-    total_tokens += plan.get("_tokens", 0)
 
-    # ContentSetting 키 추출 — 문서에서 직접 파싱
-    import re
-    cs_keys = list(set(re.findall(r'[A-Z][a-zA-Z0-9_]{4,}(?:Setting|Condition|CoolTime|Default|Enable|Disable|Count|Rate|Ratio|Level|Max|Min|Prob|Time|Limit)', text)))
-    # 테이블명 추출
-    table_refs = list(set(re.findall(r'[A-Z][a-zA-Z]{2,}Class(?:Info)?|ContentSetting|[A-Z][a-zA-Z]+Enum', text)))
+    # 워크북 목록 + KG 관계 요약 제공 (QnA Planning과 동일)
+    wb_list = _build_workbook_sheet_listing()
+    kg_summary = _get_kg_summary_for_planning()
+
+    # 리뷰 전용 Planning — 문서 전문(최대 50K자)을 전달
+    review_plan_user = f"""## 리뷰 대상 기획 문서
+
+제목: {title}
+
+{text[:50000]}
+
+════════════════════════════════════
+
+## 사용 가능한 워크북 목록
+{wb_list[:8000]}
+
+## 시스템 간 관계 (Knowledge Graph)
+{kg_summary[:3000]}
+
+위 기획 문서를 리뷰하기 위해 참조해야 할 관련 시스템과 데이터를 분석해주세요. JSON만 출력:"""
+
+    from src.generator import call_bedrock
+    plan_result = call_bedrock(
+        messages=[{"role": "user", "content": review_plan_user}],
+        system=REVIEW_PLANNING_PROMPT,
+        model="claude-sonnet-4-6",  # Planning은 Sonnet으로 빠르게
+        max_tokens=1024,
+        temperature=0,
+    )
+
+    # Planning 결과 파싱
+    import re, json as _json
+    plan_text = plan_result.get("text", "")
+    plan_tokens = plan_result.get("input_tokens", 0) + plan_result.get("output_tokens", 0)
+    total_tokens += plan_tokens
+
+    review_plan = {}
+    try:
+        cleaned = re.sub(r'```json\s*', '', plan_text)
+        cleaned = re.sub(r'```\s*', '', cleaned).strip()
+        match = re.search(r'\{[\s\S]*\}', cleaned)
+        if match:
+            review_plan = _json.loads(match.group(0))
+    except Exception as e:
+        log.warning(f"Review planning parse failed: {e}")
+
+    primary_systems = review_plan.get("primary_systems", [])
+    related_systems = review_plan.get("related_systems", [])
+    data_keys = review_plan.get("data_keys", [])
+    search_keywords = review_plan.get("search_keywords", [])
+    all_systems = primary_systems + related_systems
+
+    plan_time = time.time() - t_plan
+    log.info(f"  REVIEW_PLANNING: primary={primary_systems}, related={related_systems[:5]}, "
+             f"data_keys={data_keys[:5]}, time={plan_time:.1f}s")
 
     trace.append({
-        "step": "analysis",
-        "description": f"문서 분석 — key_systems={plan.get('key_systems', [])}, ContentSetting keys={cs_keys[:10]}, table_refs={table_refs[:5]}",
-        "key_systems": plan.get("key_systems", []),
-        "cs_keys": cs_keys[:20],
-        "table_refs": table_refs[:10],
+        "step": "review_planning",
+        "description": f"리뷰 전용 분석 — primary={primary_systems}, related={related_systems}, data_keys={data_keys}",
+        "primary_systems": primary_systems,
+        "related_systems": related_systems,
+        "data_keys": data_keys,
+        "search_keywords": search_keywords,
+        "reasoning": review_plan.get("reasoning", ""),
+        "tokens": plan_tokens,
         "seconds": round(plan_time, 1),
     })
 
     # ── Step 2: 관련 기획서 + 데이터시트 검색 ──
     if status_callback:
-        status_callback(f"🔎 관련 기획서/데이터시트를 검색 중... (Step 2/3: 검색)")
+        sys_str = ', '.join(all_systems[:3]) or '전체'
+        status_callback(f"🔎 관련 기획서/데이터시트 검색 중... (Step 2/3: {sys_str})")
 
     t_search = time.time()
-    chunks = execute_search(plan, review_query, max_chunks=50)
 
-    # ContentSetting 키가 있으면 game_data 쿼리 추가
-    gd_chunks = []
-    if cs_keys:
+    # 2-1) primary/related 시스템 워크북에서 집중 검색
+    from src.retriever import retrieve, get_related_systems
+    chunks = []
+    aliases = _build_system_aliases()
+
+    for sys_name in all_systems[:12]:
+        wb_list_for_sys = aliases.get(sys_name.lower(), [])
+        if not wb_list_for_sys:
+            # 부분 매칭 시도
+            for alias_key, alias_wbs in aliases.items():
+                if sys_name.lower() in alias_key or alias_key in sys_name.lower():
+                    wb_list_for_sys = alias_wbs
+                    break
+
+        for wb in wb_list_for_sys[:2]:
+            try:
+                wb_chunks = _structural_search(wb, title)
+                for c in wb_chunks[:5]:
+                    c["source"] = "review_system_search"
+                    if sys_name in primary_systems:
+                        c["score"] *= 1.2
+                chunks.extend(wb_chunks[:5])
+            except Exception as e:
+                log.warning(f"system search failed for {wb}: {e}")
+
+    # 2-2) 키워드 기반 벡터 검색 (보충)
+    if search_keywords:
+        kw_query = ' '.join(search_keywords[:5])
         try:
-            mod = _load_game_data_module()
-            if mod and mod.is_db_ready():
-                db_path = mod.get_db_path()
-                # ContentSetting에서 관련 키 일괄 조회
-                for key in cs_keys[:15]:
-                    try:
-                        result = mod.execute_game_query({
-                            "action": "query",
-                            "table": "ContentSetting",
-                            "filters": [{"column": "ContentSettingEnum", "op": "LIKE", "value": f"%{key}%"}],
-                            "limit": 10,
-                        }, db_path)
-                        if getattr(result, "rows", None):
-                            formatted = mod.format_game_data_result(result)
-                            gd_chunks.append({
-                                "id": f"gamedata_cs_{key}",
-                                "workbook": "GameData/ContentSetting",
-                                "sheet": key,
-                                "text": formatted,
-                                "score": 1.5,
-                                "source": "game_data_review",
-                                "_game_data": True,
-                            })
-                    except Exception as e:
-                        log.warning(f"game_data query failed for {key}: {e}")
-
-                # 문서에서 참조하는 테이블 조회
-                for tbl in table_refs[:5]:
-                    if tbl == "ContentSetting":
-                        continue
-                    try:
-                        result = mod.execute_game_query({
-                            "action": "describe",
-                            "table": tbl,
-                        }, db_path)
-                        if getattr(result, "columns", None):
-                            formatted = mod.format_game_data_result(result)
-                            # 샘플 데이터도 가져오기
-                            sample = mod.execute_game_query({
-                                "action": "query",
-                                "table": tbl,
-                                "limit": 5,
-                            }, db_path)
-                            if getattr(sample, "rows", None):
-                                formatted += "\n\n샘플 데이터:\n" + mod.format_game_data_result(sample)
-                            gd_chunks.append({
-                                "id": f"gamedata_tbl_{tbl}",
-                                "workbook": f"GameData/{tbl}",
-                                "sheet": "schema+sample",
-                                "text": formatted,
-                                "score": 1.3,
-                                "source": "game_data_review",
-                                "_game_data": True,
-                            })
-                    except Exception as e:
-                        log.warning(f"game_data describe failed for {tbl}: {e}")
+            kw_chunks, _ = retrieve(kw_query, top_k=10)
+            for c in kw_chunks:
+                c["source"] = "review_keyword_search"
+            chunks.extend(kw_chunks)
         except Exception as e:
-            log.warning(f"game_data module load failed: {e}")
+            log.warning(f"keyword search failed: {e}")
+
+    # 중복 제거
+    seen_ids = set()
+    unique_chunks = []
+    for c in chunks:
+        cid = c.get("id", id(c))
+        if cid not in seen_ids:
+            seen_ids.add(cid)
+            unique_chunks.append(c)
+    chunks = sorted(unique_chunks, key=lambda c: c.get("score", 0), reverse=True)[:40]
+
+    # 2-3) 데이터시트 조회 (data_keys + 문서 내 파싱된 키)
+    import re as _re
+    # 문서에서 추가 키 파싱 (Planning이 놓칠 수 있으므로)
+    regex_keys = list(set(_re.findall(
+        r'[A-Z][a-zA-Z0-9_]{4,}(?:Setting|Condition|CoolTime|Default|Enable|Disable|Count|Rate|Ratio|Level|Max|Min|Prob|Time|Limit)',
+        text
+    )))
+    regex_tables = list(set(_re.findall(r'[A-Z][a-zA-Z]{2,}Class(?:Info)?|ContentSetting|[A-Z][a-zA-Z]+Enum', text)))
+    all_data_keys = list(set(data_keys + regex_keys))
+    all_table_refs = list(set(regex_tables))
+
+    gd_chunks = []
+    try:
+        mod = _load_game_data_module()
+        if mod and mod.is_db_ready():
+            db_path = mod.get_db_path()
+
+            # ContentSetting 일괄 조회 (LIKE 대신 OR로 한번에)
+            for key in all_data_keys[:20]:
+                try:
+                    result = mod.execute_game_query({
+                        "action": "query",
+                        "table": "ContentSetting",
+                        "filters": [{"column": "ContentSettingEnum", "op": "LIKE", "value": f"%{key}%"}],
+                        "limit": 10,
+                    }, db_path)
+                    if getattr(result, "rows", None):
+                        formatted = mod.format_game_data_result(result)
+                        gd_chunks.append({
+                            "id": f"gamedata_cs_{key}",
+                            "workbook": "GameData/ContentSetting",
+                            "sheet": key,
+                            "text": formatted,
+                            "score": 1.5,
+                            "source": "game_data_review",
+                            "_game_data": True,
+                        })
+                except Exception as e:
+                    log.debug(f"game_data query for {key}: {e}")
+
+            # 참조 테이블 조회 (스키마 + 샘플)
+            for tbl in all_table_refs[:8]:
+                if tbl == "ContentSetting":
+                    continue
+                try:
+                    result = mod.execute_game_query({"action": "describe", "table": tbl}, db_path)
+                    if getattr(result, "columns", None):
+                        formatted = mod.format_game_data_result(result)
+                        sample = mod.execute_game_query({"action": "query", "table": tbl, "limit": 5}, db_path)
+                        if getattr(sample, "rows", None):
+                            formatted += "\n\n샘플 데이터:\n" + mod.format_game_data_result(sample)
+                        gd_chunks.append({
+                            "id": f"gamedata_tbl_{tbl}",
+                            "workbook": f"GameData/{tbl}",
+                            "sheet": "schema+sample",
+                            "text": formatted,
+                            "score": 1.3,
+                            "source": "game_data_review",
+                            "_game_data": True,
+                        })
+                except Exception as e:
+                    log.debug(f"game_data describe for {tbl}: {e}")
+    except Exception as e:
+        log.warning(f"game_data module load failed: {e}")
 
     all_chunks = chunks + gd_chunks
     search_time = time.time() - t_search
 
     workbooks_found = sorted(set(c.get("workbook", "?") for c in all_chunks))
+    log.info(f"  REVIEW_SEARCH: {len(chunks)} docs + {len(gd_chunks)} gamedata = {len(all_chunks)} total "
+             f"({len(workbooks_found)} workbooks) time={search_time:.1f}s")
+
     trace.append({
-        "step": "search",
+        "step": "review_search",
         "description": f"관련 문서 {len(chunks)}개 + 데이터시트 {len(gd_chunks)}개 검색 완료",
         "chunks_count": len(chunks),
         "game_data_chunks": len(gd_chunks),
         "workbooks_found": workbooks_found,
-        "cs_keys_found": [c["sheet"] for c in gd_chunks if "cs_" in c["id"]],
+        "data_keys_queried": all_data_keys[:15],
+        "tables_queried": all_table_refs[:8],
         "seconds": round(search_time, 1),
     })
 
@@ -2294,7 +2416,7 @@ def review_document(title: str, text: str,
         messages=[{"role": "user", "content": user_msg}],
         system=review_prompt,
         model=model,
-        max_tokens=8192,
+        max_tokens=16384,
         temperature=0,
     )
 

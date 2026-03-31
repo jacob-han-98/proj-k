@@ -405,15 +405,40 @@ async function handleReviewVision({ title, text, images }, settings) {
     });
   }
 
-  // Phase 3: 기존 리뷰 실행 (enriched text로)
-  const result = await ApiClient.call(
-    PROMPTS.review.system,
-    PROMPTS.review.user(title, enrichedText),
-    settings
-  );
-  Logger.info('bg', 'ReviewVision review done', { resultLen: result?.length, visionCount: successResults.length });
+  // Phase 3: 백엔드 리뷰 (RAG + game_data + Vision enriched text)
+  const backendUrl = settings.backendUrl || '';
+  let reviewResult;
+  if (backendUrl) {
+    try {
+      Logger.info('bg', 'ReviewVision via backend', { backendUrl });
+      const response = await fetch(`${backendUrl}/review`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title, text: enrichedText, model: settings.bedrockModel || 'claude-opus-4-6' }),
+      });
+      if (response.ok) {
+        const data = await response.json();
+        Logger.info('bg', 'ReviewVision backend done', { reviewLen: data.review?.length });
+        reviewResult = data.review;
+      } else {
+        Logger.warn('bg', 'ReviewVision backend failed, falling back', { status: response.status });
+      }
+    } catch (e) {
+      Logger.warn('bg', 'ReviewVision backend error, falling back', { error: e.message });
+    }
+  }
 
-  return { review: result, visionDebug: visionResults };
+  // 폴백: Claude 직접 호출
+  if (!reviewResult) {
+    reviewResult = await ApiClient.call(
+      PROMPTS.review.system,
+      PROMPTS.review.user(title, enrichedText),
+      settings
+    );
+  }
+  Logger.info('bg', 'ReviewVision done', { resultLen: reviewResult?.length, visionCount: successResults.length });
+
+  return { review: reviewResult, visionDebug: visionResults };
 }
 
 async function handleDraftAssist({ title, text, instruction, history }, settings) {

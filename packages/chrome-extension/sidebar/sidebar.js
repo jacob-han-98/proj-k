@@ -955,7 +955,7 @@
     });
   }
 
-  window._fixFromReview = () => {
+  window._fixFromReview = async () => {
     if (!latestReviewData) return;
 
     // Save any open edit texts
@@ -964,31 +964,143 @@
       if (input) reviewFeedback[id].editText = input.value;
     });
 
-    // Build instruction only from liked + edited items (skip disliked)
-    const items = [];
+    // 카테고리별로 항목 분류
+    const sections = { issues: [], verifications: [], suggestions: [] };
     Object.keys(reviewFeedback).forEach(id => {
       const fb = reviewFeedback[id];
-      if (fb.status === 'disliked') return; // skip
-      if (fb.status === 'edited' && fb.editText.trim()) {
-        items.push(`${fb.text} → 사용자 수정 방향: ${fb.editText.trim()}`);
-      } else if (fb.status === 'liked') {
-        items.push(fb.text);
-      }
+      if (fb.status === 'disliked') return;
+      const text = fb.status === 'edited' && fb.editText.trim()
+        ? `${fb.text} → 사용자 수정 방향: ${fb.editText.trim()}`
+        : fb.text;
+      if (!text) return;
+      const cat = fb.category || 'suggestions';
+      if (sections[cat]) sections[cat].push(text);
+      else sections.suggestions.push(text);
     });
 
-    if (items.length === 0) {
+    const totalItems = Object.values(sections).reduce((s, arr) => s + arr.length, 0);
+    if (totalItems === 0) {
       addMessage({ role: 'system', content: '반영할 항목이 없습니다. 좋아요(👍) 항목을 확인해주세요.' });
       return;
     }
 
-    const instruction = `다음 리뷰 결과를 바탕으로 문서를 수정해주세요:\n${items.map((it, i) => `${i+1}. ${it}`).join('\n')}`;
-    $('#chat-input').value = '';
     const total = Object.keys(reviewFeedback).length;
     const disliked = Object.values(reviewFeedback).filter(f => f.status === 'disliked').length;
-    addMessage({ role: 'user', content: `리뷰 반영 수정 요청 (전체 ${total}건 중 제외 ${disliked}건 = 반영 대상 ${items.length}건)` });
+    addMessage({ role: 'user', content: `리뷰 반영 수정 요청 (전체 ${total}건 중 제외 ${disliked}건 = 반영 대상 ${totalItems}건)` });
     const welcome = $('#welcome');
     if (welcome) welcome.style.display = 'none';
-    handleIntent('SUGGEST_EDITS', instruction);
+
+    chatState = 'PROCESSING';
+    const loadingId = addMessage({ role: 'assistant', content: '', type: 'loading' });
+
+    try {
+      await refreshPageContent();
+      if (!pageContent) {
+        removeMessage(loadingId);
+        addMessage({ role: 'system', content: '페이지 내용을 추출할 수 없습니다.' });
+        chatState = 'IDLE';
+        return;
+      }
+
+      // 섹션별 병렬 호출
+      const sectionLabels = { issues: '⚠️ 보강 필요', verifications: '🔍 검증 필요', suggestions: '💡 제안' };
+      const activeSections = Object.entries(sections).filter(([, items]) => items.length > 0);
+
+      setStatus(`수정안 생성 중... (${activeSections.length}개 섹션 병렬 처리)`);
+
+      const sectionPromises = activeSections.map(async ([cat, items]) => {
+        const label = sectionLabels[cat] || cat;
+        setStatus(`${label} ${items.length}건 수정안 생성 중...`);
+        try {
+          const instruction = `[${label}] 다음 항목을 반영하여 문서를 수정해주세요:\n${items.map((it, i) => `${i+1}. ${it}`).join('\n')}`;
+          const response = await callBackground('SUGGEST_EDITS', {
+            title: pageMeta.title,
+            text: pageContent.text,
+            html: pageContent.html,
+            instruction,
+            maxChanges: items.length,
+          });
+          return { cat, label, changes: response.changes || [], error: null };
+        } catch (e) {
+          return { cat, label, changes: [], error: e.message };
+        }
+      });
+
+      const sectionResults = await Promise.all(sectionPromises);
+
+      // 결과 취합
+      let allChanges = [];
+      const resultSummary = [];
+      sectionResults.forEach(r => {
+        if (r.error) {
+          resultSummary.push(`${r.label}: ❌ 실패 (${r.error.slice(0, 50)})`);
+        } else {
+          resultSummary.push(`${r.label}: ✅ ${r.changes.length}건`);
+          allChanges = allChanges.concat(r.changes);
+        }
+      });
+
+      // 충돌 검사 — 같은 before 텍스트를 다른 섹션에서 수정하는 경우
+      const beforeMap = {};
+      const conflicts = [];
+      allChanges.forEach((ch, idx) => {
+        const key = ch.before?.trim();
+        if (!key) return;
+        if (beforeMap[key] !== undefined) {
+          conflicts.push({ idx1: beforeMap[key], idx2: idx, before: key });
+        } else {
+          beforeMap[key] = idx;
+        }
+      });
+
+      removeMessage(loadingId);
+
+      if (conflicts.length > 0) {
+        // 충돌 있으면 정리 요청
+        setStatus(`충돌 ${conflicts.length}건 감지 — 정리 중...`);
+        const conflictDesc = conflicts.map(c =>
+          `변경 #${c.idx1+1} vs #${c.idx2+1}: 같은 텍스트 "${c.before.slice(0, 40)}..." 를 다르게 수정`
+        ).join('\n');
+
+        const mergeLoadingId = addMessage({ role: 'assistant', content: '', type: 'loading' });
+        try {
+          const mergeInstruction = `다음 수정안 목록에서 충돌(같은 텍스트를 다르게 수정)이 있습니다. 충돌을 해결하여 최종 수정안을 정리해주세요:\n\n현재 수정안:\n${JSON.stringify(allChanges, null, 2)}\n\n충돌:\n${conflictDesc}\n\n충돌을 해결하고, 중복을 제거한 최종 수정안만 JSON 배열로 반환하세요.`;
+          const mergeResponse = await callBackground('SUGGEST_EDITS', {
+            title: pageMeta.title,
+            text: pageContent.text,
+            html: pageContent.html,
+            instruction: mergeInstruction,
+            maxChanges: allChanges.length,
+          });
+          removeMessage(mergeLoadingId);
+          allChanges = mergeResponse.changes || allChanges;
+          resultSummary.push(`🔄 충돌 ${conflicts.length}건 정리 완료`);
+        } catch (e) {
+          removeMessage(mergeLoadingId);
+          resultSummary.push(`🔄 충돌 정리 실패 — 원본 수정안 사용`);
+        }
+      }
+
+      // 결과 표시
+      addMessage({ role: 'system', content: resultSummary.join('\n') });
+
+      if (allChanges.length > 0) {
+        // 기존 changes 표시 로직 재활용
+        editSession = { changes: allChanges, acceptedIds: new Set(), rejectedIds: new Set(), unmatchedIds: new Set() };
+        addMessage({ role: 'assistant', content: '', type: 'changes', changes: allChanges });
+        setStatus(`${allChanges.length}건 수정 제안`);
+        chatState = 'CHANGES_PENDING';
+      } else {
+        addMessage({ role: 'system', content: '수정안을 생성하지 못했습니다.' });
+        setStatus('Ready');
+        chatState = 'IDLE';
+      }
+    } catch (e) {
+      removeMessage(loadingId);
+      addMessage({ role: 'system', content: `오류: ${e.message}` });
+      chatState = 'IDLE';
+      setStatus('Error');
+    }
   };
 
   window._copyReview = async () => {

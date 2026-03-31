@@ -420,18 +420,18 @@
         }
       };
       window.addEventListener('message', handler);
-      // 타임아웃 5초
       setTimeout(() => { window.removeEventListener('message', handler); resolve([]); }, 5000);
       window.parent.postMessage({ type: 'REQUEST_PAGE_IMAGES' }, '*');
     });
 
     if (images.length === 0) {
-      // 이미지 없으면 일반 리뷰로 폴백
-      setStatus('이미지 없음 — 텍스트 리뷰로 전환');
-      return handleReview(loadingId);
+      removeMessage(loadingId);
+      addMessage({ role: 'system', content: '이 페이지에 분석할 이미지가 없습니다. (아이콘/이모지 제외)' });
+      setStatus('Ready');
+      return;
     }
 
-    setStatus(`이미지 ${images.length}개 분석 중... (Vision API)`);
+    setStatus(`이미지 ${images.length}개 분석 중... (Vision API, 최대 10개)`);
     const response = await callBackground('REVIEW_VISION', {
       title: pageMeta.title,
       text: pageContent.text,
@@ -439,23 +439,12 @@
     });
     removeMessage(loadingId);
 
-    // Parse review JSON
-    let reviewData;
-    try {
-      const cleaned = response.review.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
-      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
-      if (jsonMatch) reviewData = JSON.parse(jsonMatch[0]);
-    } catch { /* fall through to text display */ }
+    const results = response.images || [];
+    const success = results.filter(r => r.analysis);
+    const failed = results.filter(r => r.error);
 
-    if (reviewData) {
-      latestReviewData = reviewData;
-      latestVisionDebug = response.visionDebug || [];
-      reviewFeedback = {};
-      addMessage({ role: 'assistant', content: '', type: 'review', reviewData, visionDebug: latestVisionDebug });
-    } else {
-      addMessage({ role: 'assistant', content: response.review });
-    }
-    setStatus(`리뷰 완료 (이미지 ${images.length}개 분석)`);
+    addMessage({ role: 'assistant', content: '', type: 'vision_review', visionResults: results });
+    setStatus(`이미지 분석 완료 (${success.length}/${results.length}개 성공)`);
   }
 
   async function handleDraftAssist(loadingId, text) {
@@ -621,7 +610,7 @@
     renderMessage(msg);
     // Large responses (review, changes): scroll to start of the message
     // Small responses: scroll to bottom
-    if (msg.type === 'review' || msg.type === 'changes') {
+    if (msg.type === 'review' || msg.type === 'changes' || msg.type === 'vision_review') {
       scrollToMessage(id);
     } else {
       scrollToBottom();
@@ -645,6 +634,8 @@
       el.innerHTML = '<div class="loading-dots"><span></span><span></span><span></span></div>';
     } else if (msg.type === 'review' && msg.reviewData) {
       el.innerHTML = renderReviewCard(msg.reviewData);
+    } else if (msg.type === 'vision_review' && msg.visionResults) {
+      el.innerHTML = renderVisionReviewCard(msg.visionResults);
     } else if (msg.type === 'changes' && msg.changes) {
       el.innerHTML = renderChangesCard(msg.changes);
     } else if (msg.role === 'system') {
@@ -780,6 +771,41 @@
       });
       html += `</div>`;
     }
+
+    html += '</div>';
+    return html;
+  }
+
+  function renderVisionReviewCard(results) {
+    const success = results.filter(r => r.analysis);
+    const failed = results.filter(r => r.error);
+    let html = '<div class="review-card" id="vision-review-card">';
+
+    // 요약
+    html += `<div class="review-score">
+      <span class="review-score-label">이미지 분석</span>
+      <span class="review-score-num">${success.length}/${results.length}개 완료</span>
+    </div>`;
+
+    // 각 이미지별 카드
+    results.forEach((r, i) => {
+      const status = r.error ? 'error' : 'success';
+      const sizeInfo = r.width && r.height ? `${r.width}×${r.height}` : '';
+      html += `<div class="vision-image-card ${status}">`;
+      html += `<div class="vision-image-header">`;
+      html += `<span class="vision-image-num">${r.error ? '❌' : '🖼️'} 이미지 ${i + 1}</span>`;
+      if (sizeInfo) html += `<span class="vision-image-size">${sizeInfo}</span>`;
+      html += `<span class="vision-image-time">${(r.elapsed / 1000).toFixed(1)}s</span>`;
+      html += `</div>`;
+      if (r.alt) html += `<div class="vision-image-alt">${escapeHtml(r.alt)}</div>`;
+      if (r.context) html += `<div class="vision-image-context">📍 ${escapeHtml(r.context.slice(0, 80))}${r.context.length > 80 ? '...' : ''}</div>`;
+      if (r.analysis) {
+        html += `<div class="vision-image-analysis">${escapeHtml(r.analysis).replace(/\n/g, '<br>')}</div>`;
+      } else if (r.error) {
+        html += `<div class="vision-image-error">${escapeHtml(r.error)}</div>`;
+      }
+      html += `</div>`;
+    });
 
     html += '</div>';
     return html;

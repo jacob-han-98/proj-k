@@ -84,6 +84,39 @@ const ApiClient = {
     return data.answer || data.response || JSON.stringify(data);
   },
 
+  // Vision call — userContent is array of {type:'text'|'image', ...} blocks
+  async callVision(systemPrompt, userContent, settings) {
+    // userContent: [{type:'text', text:'...'}, {type:'image', source:{type:'base64', media_type:'image/png', data:'...'}}]
+    const messages = [{ role: 'user', content: userContent }];
+    const model = settings.bedrockModel || 'claude-sonnet-4-6';
+    const modelId = BEDROCK_MODEL_MAP[model] || `global.anthropic.${model}-v1:0`;
+
+    if (settings.apiMode === 'bedrock') {
+      if (!settings.bedrockToken) throw new Error('Bedrock Bearer Token not configured');
+      const region = settings.bedrockRegion || 'us-east-1';
+      const url = `https://bedrock-runtime.${region}.amazonaws.com/model/${modelId}/invoke`;
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${settings.bedrockToken}` },
+        body: JSON.stringify({ anthropic_version: 'bedrock-2023-05-31', max_tokens: 1024, temperature: 0, system: systemPrompt, messages }),
+      });
+      if (!response.ok) { const err = await response.text(); throw new Error(`Bedrock Vision error (${response.status}): ${err}`); }
+      const data = await response.json();
+      return data.content[0].text;
+    } else if (settings.apiMode === 'direct') {
+      if (!settings.claudeApiKey) throw new Error('Claude API key not configured');
+      const response = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-api-key': settings.claudeApiKey, 'anthropic-version': '2023-06-01', 'anthropic-dangerous-direct-browser-access': 'true' },
+        body: JSON.stringify({ model: model || 'claude-sonnet-4-6-20250929', max_tokens: 1024, system: systemPrompt, messages }),
+      });
+      if (!response.ok) { const err = await response.text(); throw new Error(`Claude Vision error (${response.status}): ${err}`); }
+      const data = await response.json();
+      return data.content[0].text;
+    }
+    throw new Error('Vision requires bedrock or direct API mode');
+  },
+
   // Unified call - picks mode from settings
   async call(systemPrompt, userMessage, settings) {
     switch (settings.apiMode) {

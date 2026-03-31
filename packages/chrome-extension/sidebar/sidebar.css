@@ -543,6 +543,54 @@ body {
   }
 }
 
+/* ── Vision Debug Panel ── */
+.vision-debug-panel {
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+  margin-top: 8px;
+}
+
+.vision-debug-item {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px;
+  margin-bottom: 6px;
+  font-size: 11px;
+}
+
+.vision-debug-header {
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 3px;
+}
+
+.vision-debug-src {
+  color: var(--text-muted);
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 10px;
+  margin-bottom: 4px;
+  word-break: break-all;
+}
+
+.vision-debug-analysis {
+  color: var(--text-primary);
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+.vision-debug-error {
+  color: var(--error-text);
+  font-style: italic;
+}
+
+.btn-vision-debug {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+  border-color: var(--border);
+}
+.btn-vision-debug:hover { background: var(--bg-hover); color: var(--text-primary); }
+
 /* ── Review CTA ── */
 .review-cta {
   display: flex;

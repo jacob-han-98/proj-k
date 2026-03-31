@@ -41,6 +41,11 @@
         case 'fix-from-review': window._fixFromReview(); break;
         case 'copy-review': window._copyReview(); break;
         case 'comment-review': window._commentReview(); break;
+        case 'vision-debug': {
+          const panel = document.getElementById('vision-debug-panel');
+          if (panel) panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+          break;
+        }
         case 'ri-feedback': window._riFeedback(id, btn.dataset.status); break;
         case 'focus-change': sendToContent('FOCUS_CHANGE', { changeId: id }); break;
         case 'accept-change': window._acceptChange(id); break;
@@ -276,6 +281,7 @@
 
     // Keyword matching
     if (/요약|summarize|summary|정리해/.test(lower)) return 'SUMMARIZE';
+    if (/이미지\s*포함.*리뷰|리뷰.*이미지\s*포함|vision.*review|review.*vision/.test(lower)) return 'REVIEW_VISION';
     if (/리뷰|검토|review|점검|진단/.test(lower)) return 'REVIEW';
     if (/초안|완성|보강|draft|같이.*작성|작성.*같이/.test(lower)) return 'DRAFT_ASSIST';
     if (/수정|고쳐|edit|바꿔|변경|추가해|삭제해|제거해/.test(lower)) return 'SUGGEST_EDITS';
@@ -308,6 +314,9 @@
           break;
         case 'REVIEW':
           await handleReview(loadingId);
+          break;
+        case 'REVIEW_VISION':
+          await handleReviewVision(loadingId);
           break;
         case 'DRAFT_ASSIST':
           await handleDraftAssist(loadingId, text);
@@ -371,6 +380,56 @@
       addMessage({ role: 'assistant', content: response.review });
     }
     setStatus('리뷰 완료');
+  }
+
+  async function handleReviewVision(loadingId) {
+    setStatus('이미지 수집 중...');
+
+    // content.js에서 이미지 목록 요청
+    const images = await new Promise((resolve) => {
+      const handler = (event) => {
+        if (event.data?.type === 'PAGE_IMAGES') {
+          window.removeEventListener('message', handler);
+          resolve(event.data.payload?.images || []);
+        }
+      };
+      window.addEventListener('message', handler);
+      // 타임아웃 5초
+      setTimeout(() => { window.removeEventListener('message', handler); resolve([]); }, 5000);
+      window.parent.postMessage({ type: 'REQUEST_PAGE_IMAGES' }, '*');
+    });
+
+    if (images.length === 0) {
+      // 이미지 없으면 일반 리뷰로 폴백
+      setStatus('이미지 없음 — 텍스트 리뷰로 전환');
+      return handleReview(loadingId);
+    }
+
+    setStatus(`이미지 ${images.length}개 분석 중... (Vision API)`);
+    const response = await callBackground('REVIEW_VISION', {
+      title: pageMeta.title,
+      text: pageContent.text,
+      images: images,
+    });
+    removeMessage(loadingId);
+
+    // Parse review JSON
+    let reviewData;
+    try {
+      const cleaned = response.review.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+      const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+      if (jsonMatch) reviewData = JSON.parse(jsonMatch[0]);
+    } catch { /* fall through to text display */ }
+
+    if (reviewData) {
+      latestReviewData = reviewData;
+      latestVisionDebug = response.visionDebug || [];
+      reviewFeedback = {};
+      addMessage({ role: 'assistant', content: '', type: 'review', reviewData, visionDebug: latestVisionDebug });
+    } else {
+      addMessage({ role: 'assistant', content: response.review });
+    }
+    setStatus(`리뷰 완료 (이미지 ${images.length}개 분석)`);
   }
 
   async function handleDraftAssist(loadingId, text) {
@@ -671,7 +730,30 @@
     html += `<div class="review-actions">`;
     html += `<button class="btn-sm btn-copy-review" data-action="copy-review">📋 복사</button>`;
     html += `<button class="btn-sm btn-comment-review" data-action="comment-review">💬 Confluence 댓글</button>`;
+    if (latestVisionDebug && latestVisionDebug.length > 0) {
+      html += `<button class="btn-sm btn-vision-debug" data-action="vision-debug">🔍 Vision 디버그</button>`;
+    }
     html += `</div>`;
+
+    // Vision debug panel (hidden by default)
+    if (latestVisionDebug && latestVisionDebug.length > 0) {
+      html += `<div class="vision-debug-panel" id="vision-debug-panel" style="display:none">`;
+      html += `<div class="review-section-title">🔍 Vision 분석 상세 (${latestVisionDebug.length}개 이미지)</div>`;
+      latestVisionDebug.forEach((v, i) => {
+        const status = v.error ? '❌' : '✅';
+        const sizeInfo = v.width && v.height ? `${v.width}×${v.height}` : '?';
+        html += `<div class="vision-debug-item">`;
+        html += `<div class="vision-debug-header">${status} 이미지 ${i + 1} — ${sizeInfo} — ${v.elapsed}ms</div>`;
+        html += `<div class="vision-debug-src">${escapeHtml((v.src || '').slice(0, 80))}${(v.src || '').length > 80 ? '...' : ''}</div>`;
+        if (v.analysis) {
+          html += `<div class="vision-debug-analysis">${escapeHtml(v.analysis)}</div>`;
+        } else if (v.error) {
+          html += `<div class="vision-debug-error">${escapeHtml(v.error)}</div>`;
+        }
+        html += `</div>`;
+      });
+      html += `</div>`;
+    }
 
     html += '</div>';
     return html;
@@ -714,6 +796,7 @@
 
   // Store latest review data for copy/comment
   let latestReviewData = null;
+  let latestVisionDebug = [];
   // Per-item feedback: { 'ri-0': { status: 'liked'|'disliked'|'edited', editText: '' } }
   let reviewFeedback = {};
 

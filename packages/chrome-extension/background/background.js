@@ -201,6 +201,9 @@ async function handleMessage(message) {
     case 'REVIEW':
       return handleReview(message.payload, settings);
 
+    case 'REVIEW_VISION':
+      return handleReviewVision(message.payload, settings);
+
     case 'DRAFT_ASSIST':
       return handleDraftAssist(message.payload, settings);
 
@@ -305,6 +308,89 @@ async function handleReview({ title, text }, settings) {
   );
   Logger.info('bg', 'Review done', { resultLen: result?.length });
   return { review: result };
+}
+
+const VISION_ANALYZE_PROMPT = `당신은 모바일 MMORPG "Project K"의 UI/UX 및 기획 전문가입니다.
+아래에 기획 문서 전문과 그 안에 포함된 이미지가 제공됩니다.
+이미지가 기획 문서의 어떤 맥락에 위치하는지 파악하고 분석하세요.
+
+다음을 분석해주세요 (한국어):
+1. **이미지 종류**: UI 와이어프레임 / 플로우차트 / 데이터 테이블 / 스크린샷 / 기타
+2. **핵심 내용**: 이미지가 보여주는 핵심 정보 (2-3문장)
+3. **UX 평가** (UI 관련 이미지인 경우만):
+   - 모바일 게임 UX 일반 원칙 관점에서 개선점 (터치 타겟, 정보 밀도, 원핸드 조작, 시인성 등)
+   - 해당 기능의 기획 의도와 UI가 부합하는지
+4. **기획서와의 정합성**: 이미지 내용이 기획 문서 텍스트와 일치하는지, 불일치하거나 누락된 부분은 없는지
+
+간결하게 답변하세요 (300자 이내).`;
+
+async function handleReviewVision({ title, text, images }, settings) {
+  Logger.info('bg', 'ReviewVision start', { title, textLen: text?.length, imageCount: images?.length });
+
+  // Phase 1: 이미지 병렬 분석 (fetch → base64 → Vision API)
+  const visionResults = [];
+  if (images && images.length > 0) {
+    // 최대 10개 이미지만 분석 (비용/시간 제한)
+    const targetImages = images.slice(0, 10);
+    Logger.info('bg', 'Vision analyzing images', { total: images.length, analyzing: targetImages.length });
+
+    const analyzeImage = async (img, idx) => {
+      const start = Date.now();
+      try {
+        // Fetch image and convert to base64
+        const response = await fetch(img.src);
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const blob = await response.blob();
+        const buffer = await blob.arrayBuffer();
+        const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+        const mediaType = blob.type || 'image/png';
+
+        // Call Vision API
+        // 기획 문서 요약(앞 15000자) + 이미지 주변 맥락을 함께 전달
+        const docContext = text.slice(0, 15000);
+        const userContent = [
+          { type: 'text', text: `## 기획 문서: ${title}\n\n${docContext}\n\n---\n\n## 이미지 위치 맥락\n이미지 주변 텍스트: ${img.context || '없음'}\nalt: ${img.alt || '없음'}\n\n아래 이미지를 위 기획 문서의 맥락에서 분석해주세요:` },
+          { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
+        ];
+        const analysis = await ApiClient.callVision(VISION_ANALYZE_PROMPT, userContent, settings);
+        const elapsed = Date.now() - start;
+        Logger.info('bg', `Vision image ${idx} done`, { elapsed, src: img.src.slice(0, 80) });
+        return { idx, src: img.src, alt: img.alt, width: img.width, height: img.height, analysis, elapsed, error: null };
+      } catch (e) {
+        const elapsed = Date.now() - start;
+        Logger.error('bg', `Vision image ${idx} failed`, { error: e.message, src: img.src.slice(0, 80) });
+        return { idx, src: img.src, alt: img.alt, width: img.width, height: img.height, analysis: null, elapsed, error: e.message };
+      }
+    };
+
+    // 병렬 실행 (최대 5개 동시)
+    const CONCURRENCY = 5;
+    for (let i = 0; i < targetImages.length; i += CONCURRENCY) {
+      const batch = targetImages.slice(i, i + CONCURRENCY);
+      const results = await Promise.all(batch.map((img, batchIdx) => analyzeImage(img, i + batchIdx)));
+      visionResults.push(...results);
+    }
+  }
+
+  // Phase 2: Vision 결과를 텍스트에 포함하여 리뷰
+  let enrichedText = text;
+  const successResults = visionResults.filter(r => r.analysis);
+  if (successResults.length > 0) {
+    enrichedText += '\n\n--- 이미지 분석 결과 (AI Vision) ---\n';
+    successResults.forEach(r => {
+      enrichedText += `\n[이미지 ${r.idx + 1}] ${r.alt || '(alt 없음)'} (${r.width}x${r.height})\n${r.analysis}\n`;
+    });
+  }
+
+  // Phase 3: 기존 리뷰 실행 (enriched text로)
+  const result = await ApiClient.call(
+    PROMPTS.review.system,
+    PROMPTS.review.user(title, enrichedText),
+    settings
+  );
+  Logger.info('bg', 'ReviewVision review done', { resultLen: result?.length, visionCount: successResults.length });
+
+  return { review: result, visionDebug: visionResults };
 }
 
 async function handleDraftAssist({ title, text, instruction, history }, settings) {

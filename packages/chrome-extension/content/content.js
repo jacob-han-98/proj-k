@@ -81,6 +81,39 @@
     return null;
   }
 
+  function getPageImages() {
+    const selectors = [
+      '[data-testid="renderer-page"]',
+      '.ak-renderer-document',
+      '#content-body .wiki-content',
+      '#content .wiki-content',
+      '#main-content',
+      '[role="main"]',
+    ];
+
+    for (const sel of selectors) {
+      const el = document.querySelector(sel);
+      if (el) {
+        const imgs = [];
+        el.querySelectorAll('img').forEach(img => {
+          const src = img.src;
+          if (!src) return;
+          // 아이콘/이모지 등 작은 이미지 제외 (32px 이하)
+          const w = img.naturalWidth || img.width || 0;
+          const h = img.naturalHeight || img.height || 0;
+          if (w > 0 && w <= 32 && h > 0 && h <= 32) return;
+          // Confluence 시스템 아이콘 제외
+          if (/emoticon|icon|avatar|logo|spinner/i.test(src)) return;
+          const alt = img.alt || '';
+          const context = img.closest('td, li, p, div')?.innerText?.slice(0, 100) || '';
+          imgs.push({ src, alt, width: w, height: h, context });
+        });
+        return imgs;
+      }
+    }
+    return [];
+  }
+
   // --- Sidebar Injection ---
 
   let sidebarFrame = null;
@@ -195,6 +228,12 @@
         sendToSidebar('PAGE_CONTENT', {
           meta: getPageMeta(),
           content: getPageContent(),
+        });
+        break;
+
+      case 'REQUEST_PAGE_IMAGES':
+        sendToSidebar('PAGE_IMAGES', {
+          images: getPageImages(),
         });
         break;
 

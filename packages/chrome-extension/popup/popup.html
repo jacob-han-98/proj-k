@@ -74,10 +74,17 @@
     <!-- Proxy Settings -->
     <section id="proxy-settings" class="settings-section hidden">
       <h2>Backend Proxy Settings</h2>
+      <p class="help-text">QnA를 백엔드 프록시를 통해 호출합니다 (위 Backend URL 사용).</p>
+    </section>
+
+    <!-- Backend URL (항상 표시 — 리뷰 시 RAG 검색용) -->
+    <section class="settings-section">
+      <h2>Backend URL (리뷰 + QnA)</h2>
       <div class="form-group">
-        <label for="backendUrl">Backend URL</label>
-        <input type="text" id="backendUrl" placeholder="http://127.0.0.1:8088">
+        <label for="backendUrl">URL</label>
+        <input type="text" id="backendUrl" placeholder="https://cp.tech2.hybe.im/proj-k/api">
       </div>
+      <p class="help-text">리뷰 시 전체 기획서/데이터시트 교차 검증에 사용됩니다. 미설정 시 Claude 직접 호출로 폴백.</p>
     </section>
 
     <!-- Confluence Settings -->

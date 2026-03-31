@@ -1028,17 +1028,30 @@
         return;
       }
 
-      // 섹션별 병렬 호출
+      // 섹션별 순차 체이닝 — 이전 섹션 변경사항을 다음에 전달
+      const sectionOrder = ['issues', 'verifications', 'suggestions'];
       const sectionLabels = { issues: '⚠️ 보강 필요', verifications: '🔍 검증 필요', suggestions: '💡 제안' };
-      const activeSections = Object.entries(sections).filter(([, items]) => items.length > 0);
+      const activeSections = sectionOrder.filter(cat => sections[cat] && sections[cat].length > 0);
 
-      setStatus(`수정안 생성 중... (${activeSections.length}개 섹션 병렬 처리)`);
+      let allChanges = [];
+      const resultSummary = [];
 
-      const sectionPromises = activeSections.map(async ([cat, items]) => {
-        const label = sectionLabels[cat] || cat;
-        setStatus(`${label} ${items.length}건 수정안 생성 중...`);
+      for (let si = 0; si < activeSections.length; si++) {
+        const cat = activeSections[si];
+        const items = sections[cat];
+        const label = sectionLabels[cat];
+        const step = `${si + 1}/${activeSections.length}`;
+
+        setStatus(`${label} ${items.length}건 수정안 생성 중... (${step})`);
+
+        // 이전 섹션에서 이미 생성된 변경사항을 컨텍스트로 전달
+        let chainContext = '';
+        if (allChanges.length > 0) {
+          chainContext = `\n\n⚠️ 이전 단계에서 이미 반영된 수정사항 (중복/충돌 방지):\n${allChanges.map((c, i) => `${i+1}. [${c.section || ''}] "${c.before?.slice(0, 40)}..." → "${c.after?.slice(0, 40)}..."`).join('\n')}\n\n위 수정사항과 중복되거나 충돌하는 변경은 생성하지 마세요.`;
+        }
+
         try {
-          const instruction = `[${label}] 다음 항목을 반영하여 문서를 수정해주세요:\n${items.map((it, i) => `${i+1}. ${it}`).join('\n')}`;
+          const instruction = `[${label}] 다음 항목을 반영하여 문서를 수정해주세요:\n${items.map((it, i) => `${i+1}. ${it}`).join('\n')}${chainContext}`;
           const response = await callBackground('SUGGEST_EDITS', {
             title: pageMeta.title,
             text: pageContent.text,
@@ -1046,66 +1059,15 @@
             instruction,
             maxChanges: items.length,
           });
-          return { cat, label, changes: response.changes || [], error: null };
+          const changes = response.changes || [];
+          resultSummary.push(`${label}: ✅ ${changes.length}건`);
+          allChanges = allChanges.concat(changes);
         } catch (e) {
-          return { cat, label, changes: [], error: e.message };
-        }
-      });
-
-      const sectionResults = await Promise.all(sectionPromises);
-
-      // 결과 취합
-      let allChanges = [];
-      const resultSummary = [];
-      sectionResults.forEach(r => {
-        if (r.error) {
-          resultSummary.push(`${r.label}: ❌ 실패 (${r.error.slice(0, 50)})`);
-        } else {
-          resultSummary.push(`${r.label}: ✅ ${r.changes.length}건`);
-          allChanges = allChanges.concat(r.changes);
-        }
-      });
-
-      // 충돌 검사 — 같은 before 텍스트를 다른 섹션에서 수정하는 경우
-      const beforeMap = {};
-      const conflicts = [];
-      allChanges.forEach((ch, idx) => {
-        const key = ch.before?.trim();
-        if (!key) return;
-        if (beforeMap[key] !== undefined) {
-          conflicts.push({ idx1: beforeMap[key], idx2: idx, before: key });
-        } else {
-          beforeMap[key] = idx;
-        }
-      });
-
-      removeMessage(loadingId);
-
-      if (conflicts.length > 0) {
-        // 충돌 있으면 정리 요청
-        setStatus(`충돌 ${conflicts.length}건 감지 — 정리 중...`);
-        const conflictDesc = conflicts.map(c =>
-          `변경 #${c.idx1+1} vs #${c.idx2+1}: 같은 텍스트 "${c.before.slice(0, 40)}..." 를 다르게 수정`
-        ).join('\n');
-
-        const mergeLoadingId = addMessage({ role: 'assistant', content: '', type: 'loading' });
-        try {
-          const mergeInstruction = `다음 수정안 목록에서 충돌(같은 텍스트를 다르게 수정)이 있습니다. 충돌을 해결하여 최종 수정안을 정리해주세요:\n\n현재 수정안:\n${JSON.stringify(allChanges, null, 2)}\n\n충돌:\n${conflictDesc}\n\n충돌을 해결하고, 중복을 제거한 최종 수정안만 JSON 배열로 반환하세요.`;
-          const mergeResponse = await callBackground('SUGGEST_EDITS', {
-            title: pageMeta.title,
-            text: pageContent.text,
-            html: pageContent.html,
-            instruction: mergeInstruction,
-            maxChanges: allChanges.length,
-          });
-          removeMessage(mergeLoadingId);
-          allChanges = mergeResponse.changes || allChanges;
-          resultSummary.push(`🔄 충돌 ${conflicts.length}건 정리 완료`);
-        } catch (e) {
-          removeMessage(mergeLoadingId);
-          resultSummary.push(`🔄 충돌 정리 실패 — 원본 수정안 사용`);
+          resultSummary.push(`${label}: ❌ 실패 (${e.message.slice(0, 50)})`);
         }
       }
+
+      removeMessage(loadingId);
 
       // 결과 표시
       addMessage({ role: 'system', content: resultSummary.join('\n') });

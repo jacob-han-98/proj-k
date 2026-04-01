@@ -2404,8 +2404,12 @@ def review_document(title: str, text: str,
 
     context_text = "\n\n\n".join(context_parts)
 
-    # 공통 컨텍스트 (모든 섹션에 동일하게 전달)
-    base_user_msg = f"""## 리뷰 대상 문서: {title}
+    # 리뷰 프롬프트
+    review_prompt = REVIEW_PROMPT
+    if prompt_overrides and "review" in prompt_overrides:
+        review_prompt = prompt_overrides["review"]
+
+    user_msg = f"""## 리뷰 대상 문서: {title}
 
 {text[:80000]}
 
@@ -2416,99 +2420,28 @@ def review_document(title: str, text: str,
 {context_text[:60000]}
 
 ════════════════════════════════════
-"""
 
-    review_prompt = REVIEW_PROMPT
-    if prompt_overrides and "review" in prompt_overrides:
-        review_prompt = prompt_overrides["review"]
+위 리뷰 대상 문서를 참조 자료와 교차 검증하여 리뷰해주세요. JSON만 출력:"""
 
     from src.generator import call_bedrock
+    result = call_bedrock(
+        messages=[{"role": "user", "content": user_msg}],
+        system=review_prompt,
+        model=model,
+        max_tokens=16384,
+        temperature=0,
+    )
 
-    # 2단계 분할 호출 — 핵심(issues/verifications) 먼저, 부가(suggestions/flow/QA/readability) 이후
-    sections = [
-        {
-            "key": "core",
-            "label": "보강/검증 필요 항목",
-            "instruction": '위 문서를 리뷰하여 issues(보강 필요)와 verifications(검증 필요) 항목을 생성하세요. 각 항목에 perspective(기획팀장/프로그래머)를 명시하세요. GameData 실제 값이 참조 자료에 있으면 반드시 "Enum명=값" 형식으로 인용하세요.\n\n출력 (JSON만): {"score": 0-100, "issues": [{"text":"...","perspective":"기획팀장|프로그래머"}], "verifications": [{"text":"...","perspective":"기획팀장|프로그래머"}]}',
-            "max_tokens": 8192,
-        },
-        {
-            "key": "supplementary",
-            "label": "제안/플로우/QA/가독성",
-            "instruction": '위 문서를 리뷰하여 다음을 생성하세요:\n- suggestions: 제안 사항\n- flow: 전체 동작 로직 텍스트 순서도 ("1. → [조건] → 2. ..." 형식)\n- qa_checklist: QA 테스트 케이스 (Happy Path 최우선, 이후 엣지/경계값)\n- readability: 문서 가독성 평가 (score 0-100 + issues)\n- cross_refs: 관련 문서 목록\n\n출력 (JSON만): {"suggestions": ["..."], "flow": "...", "qa_checklist": ["..."], "readability": {"score": 0-100, "issues": ["..."]}, "cross_refs": [{"document":"...","relevance":"..."}]}',
-            "max_tokens": 8192,
-        },
-    ]
-
-    merged_review = {"score": 0}
-    section_tokens = 0
-
-    for si, section in enumerate(sections):
-        section_label = section["label"]
-        if status_callback:
-            status_callback(f"📝 리뷰 작성 중... (Step 3: {section_label} — {si+1}/{len(sections)})")
-
-        t_section = time.time()
-        user_msg = base_user_msg + section["instruction"]
-
-        result = call_bedrock(
-            messages=[{"role": "user", "content": user_msg}],
-            system=review_prompt,
-            model=model,
-            max_tokens=section["max_tokens"],
-            temperature=0,
-        )
-
-        section_text = result.get("text", "")
-        section_tok = result.get("input_tokens", 0) + result.get("output_tokens", 0)
-        section_tokens += section_tok
-        section_time = time.time() - t_section
-
-        log.info(f"  REVIEW_SECTION {section['key']}: {section_tok:,} tok, {section_time:.1f}s")
-
-        # JSON 파싱 + 머지
-        try:
-            cleaned = re.sub(r'```json\s*', '', section_text)
-            cleaned = re.sub(r'```\s*', '', cleaned).strip()
-            match = re.search(r'\{[\s\S]*\}', cleaned)
-            if match:
-                parsed = _json.loads(match.group(0))
-                merged_review.update(parsed)
-        except Exception as e:
-            log.warning(f"  REVIEW_SECTION {section['key']} parse failed: {e}")
-
-        # 중간 결과를 status_callback으로 전달 (SSE partial result)
-        if status_callback:
-            import json as _json2
-            partial_json = _json2.dumps(merged_review, ensure_ascii=False)
-            status_callback(f"__PARTIAL_REVIEW__{partial_json}")
-
-        trace.append({
-            "step": f"review_{section['key']}",
-            "description": f"{section_label} — {section_tok:,} 토큰",
-            "model": model,
-            "tokens": section_tok,
-            "seconds": round(section_time, 1),
-        })
-
-    # 전체 점수 계산 (issues/verifications 수 기반)
-    n_issues = len(merged_review.get("issues", []))
-    n_verif = len(merged_review.get("verifications", []))
-    readability_score = merged_review.get("readability", {}).get("score", 50)
-    # 점수 = (100 - issues*3 - verifications*2 + readability_score) / 2, clamped 0-100
-    merged_review["score"] = max(0, min(100, int((100 - n_issues * 3 - n_verif * 2 + readability_score) / 2)))
-
-    total_tokens += section_tokens
+    review_text = result.get("text", "")
+    review_tokens = result.get("input_tokens", 0) + result.get("output_tokens", 0)
+    total_tokens += review_tokens
     review_time = time.time() - t_review
-
-    # 최종 JSON 문자열로 변환
-    review_text = _json.dumps(merged_review, ensure_ascii=False, indent=2)
 
     trace.append({
         "step": "review_generation",
-        "description": f"리뷰 생성 완료 — {section_tokens:,} 토큰 ({len(sections)}단계 분할)",
+        "description": f"리뷰 생성 완료 — {review_tokens:,} 토큰",
         "model": model,
-        "tokens": section_tokens,
+        "tokens": review_tokens,
         "context_chunks": len(all_chunks),
         "seconds": round(review_time, 1),
     })

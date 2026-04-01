@@ -245,12 +245,20 @@ async function handleMessage(message) {
 
 // --- Handlers ---
 
+// proxy 모드에서도 LLM 직접 호출이 필요한 경우 Bedrock으로 폴백
+function _llmSettings(settings) {
+  if (settings.apiMode === 'proxy' && settings.bedrockToken) {
+    return { ...settings, apiMode: 'bedrock' };
+  }
+  return settings;
+}
+
 async function handleSummarize({ title, text }, settings) {
   Logger.info('bg', 'Summarize start', { title, textLen: text?.length });
   const result = await ApiClient.call(
     PROMPTS.summary.system,
     PROMPTS.summary.user(title, text),
-    settings
+    _llmSettings(settings)
   );
   Logger.info('bg', 'Summarize done', { resultLen: result?.length });
   return { summary: result };
@@ -267,7 +275,7 @@ async function handleSuggestEdits({ title, text, html, instruction, maxChanges }
   const result = await ApiClient.call(
     PROMPTS.editSuggestion.system,
     PROMPTS.editSuggestion.user(title, content, instruction, maxChanges),
-    settings
+    _llmSettings(settings)
   );
   Logger.info('bg', 'SuggestEdits API response', { resultLen: result?.length, preview: result?.slice(0, 300) });
 
@@ -399,7 +407,7 @@ async function handleReview({ title, text, reviewInstruction, _senderId }, setti
   const result = await ApiClient.call(
     PROMPTS.review.system,
     PROMPTS.review.user(title, text),
-    settings
+    _llmSettings(settings)
   );
   Logger.info('bg', 'Review direct done', { resultLen: result?.length });
   return { review: result };
@@ -485,7 +493,7 @@ async function handleDraftAssist({ title, text, instruction, history }, settings
   const result = await ApiClient.call(
     PROMPTS.draftAssist.system,
     PROMPTS.draftAssist.user(title, text, instruction, history),
-    settings
+    _llmSettings(settings)
   );
   Logger.info('bg', 'DraftAssist done', { resultLen: result?.length });
   return { answer: result };
@@ -515,7 +523,7 @@ async function handleChatDirect({ title, text, question, history }, settings) {
   const result = await ApiClient.call(
     PROMPTS.chat.system,
     PROMPTS.chat.user(title, text, question, history),
-    settings
+    _llmSettings(settings)
   );
   Logger.info('bg', 'Chat done (direct)', { resultLen: result?.length });
   return { answer: result };

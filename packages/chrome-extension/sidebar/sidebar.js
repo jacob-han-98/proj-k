@@ -466,8 +466,8 @@
 
   // ── 리뷰 옵션 기본값 ──
   let reviewOptions = {
-    issues: 'max', verifications: 'max', suggestions: 'max',
-    flow: true, qa_checklist: true, readability: true,
+    issues: '5', verifications: '5', suggestions: '5',
+    flow: true, qa_checklist: false, readability: true,
     perspective_lead: true, perspective_dev: true,
   };
 

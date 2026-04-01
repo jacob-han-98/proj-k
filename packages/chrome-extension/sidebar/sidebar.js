@@ -698,27 +698,30 @@
       if (jsonMatch) reviewData = JSON.parse(jsonMatch[0]);
     } catch { /* fall through to text display */ }
 
-    // 스트리밍 영역 또는 partial로 이미 렌더링되었는지 확인
-    const streamEl = document.querySelector('.review-stream');
-    if (streamEl) {
-      streamEl.closest('.chat-msg')?.remove();
-    }
+    // 최종 결과로 업데이트 — 기존 스트리밍/카드 영역을 재활용
+    removeMessage(loadingId);
+
+    // 이미 렌더링된 카드 또는 스트리밍 영역 찾기
     const existingCard = document.getElementById('review-card');
-    if (existingCard && reviewData) {
-      // 최종 결과로 업데이트
+    const streamEl = document.querySelector('.review-stream');
+    const targetEl = (existingCard && existingCard.closest('.chat-msg')) || (streamEl && streamEl.closest('.chat-msg'));
+
+    if (reviewData) {
       latestReviewData = reviewData;
       reviewFeedback = {};
-      existingCard.closest('.chat-msg').innerHTML = renderReviewCard(reviewData);
-      // 로딩 메시지 제거
-      removeMessage(loadingId);
-    } else {
-      removeMessage(loadingId);
-      if (reviewData) {
-        latestReviewData = reviewData;
-        reviewFeedback = {};
-        addMessage({ role: 'assistant', content: '', type: 'review', reviewData });
+      if (targetEl) {
+        // 기존 영역을 최종 카드로 교체 (isStreaming=false → 버튼 표시)
+        targetEl.innerHTML = renderReviewCard(reviewData);
       } else {
-        addMessage({ role: 'assistant', content: response.review });
+        addMessage({ role: 'assistant', content: '', type: 'review', reviewData });
+      }
+    } else if (!targetEl) {
+      // 파싱 실패 + 기존 영역 없음 → raw 텍스트 표시
+      addMessage({ role: 'assistant', content: reviewText || '리뷰 결과를 파싱할 수 없습니다.' });
+    } else {
+      // 파싱 실패했지만 스트리밍으로 이미 카드가 있으면 그대로 유지 + 버튼만 추가
+      if (latestReviewData) {
+        targetEl.innerHTML = renderReviewCard(latestReviewData);
       }
     }
     setStatus('리뷰 완료');

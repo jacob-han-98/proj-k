@@ -318,6 +318,57 @@ body {
   50% { opacity: 0.6; }
 }
 
+/* ── Review Streaming Indicator ── */
+.review-streaming-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--accent-text);
+  background: var(--accent-soft);
+  border-radius: 8px;
+  margin-top: 4px;
+}
+
+.streaming-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: var(--accent);
+  border-radius: 50%;
+  animation: streamPulse 1s ease-in-out infinite;
+}
+
+@keyframes streamPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.3; transform: scale(0.7); }
+}
+
+/* ── Review Item Animation ── */
+.review-item-outer {
+  animation: reviewItemSlideIn 0.3s ease-out;
+}
+
+.review-item {
+  animation: reviewItemSlideIn 0.3s ease-out;
+}
+
+@keyframes reviewItemSlideIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Review Section Animation ── */
+.review-section {
+  animation: reviewSectionFadeIn 0.4s ease-out;
+}
+
+@keyframes reviewSectionFadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* ── Review Stream ── */
 .review-stream {
   background: var(--assistant-bubble-bg);

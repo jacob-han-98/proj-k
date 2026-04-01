@@ -184,7 +184,7 @@
           const cardContainer = document.getElementById('review-card');
           const target = (streamContainer && streamContainer.closest('.chat-msg')) || (cardContainer && cardContainer.closest('.chat-msg'));
           if (target) {
-            target.innerHTML = renderReviewCard(parsed);
+            target.innerHTML = renderReviewCard(parsed, true);
           }
         } else {
           // raw 텍스트 표시 (파싱 불가 시)
@@ -745,7 +745,7 @@
 
   let reviewItemCounter = 0;
 
-  function renderReviewCard(data) {
+  function renderReviewCard(data, isStreaming) {
     reviewItemCounter = 0;
     let html = '<div class="review-card" id="review-card">';
 
@@ -831,20 +831,29 @@
       html += '</div>';
     }
 
-    // Primary action: fix now
-    html += `<div class="review-cta">`;
-    html += `<button class="btn-fix-now" data-action="fix-from-review">✏️ 원본 Confluence 문서 수정안 정리</button>`;
-    html += `<div class="review-cta-hint">각 항목의 👍👎 로 반영 여부를 조정할 수 있어요</div>`;
-    html += `</div>`;
+    // 스트리밍 중 표시
+    if (isStreaming) {
+      html += `<div class="review-streaming-indicator">리뷰 생성 중... <span class="streaming-dot"></span></div>`;
+    }
 
-    // Secondary actions
-    html += `<div class="review-actions">`;
-    html += `<button class="btn-sm btn-copy-review" data-action="copy-review">📋 복사</button>`;
-    html += `<button class="btn-sm btn-comment-review" data-action="comment-review">💬 Confluence 댓글</button>`;
+    // Primary action: fix now (스트리밍 중에는 숨김)
+    if (!isStreaming) {
+      html += `<div class="review-cta">`;
+      html += `<button class="btn-fix-now" data-action="fix-from-review">✏️ 원본 Confluence 문서 수정안 정리</button>`;
+      html += `<div class="review-cta-hint">각 항목의 👍👎 로 반영 여부를 조정할 수 있어요</div>`;
+      html += `</div>`;
+    }
+
+    // Secondary actions (스트리밍 중에는 숨김)
+    if (!isStreaming) {
+      html += `<div class="review-actions">`;
+      html += `<button class="btn-sm btn-copy-review" data-action="copy-review">📋 복사</button>`;
+      html += `<button class="btn-sm btn-comment-review" data-action="comment-review">💬 Confluence 댓글</button>`;
     if (latestVisionDebug && latestVisionDebug.length > 0) {
       html += `<button class="btn-sm btn-vision-debug" data-action="vision-debug">🔍 Vision 디버그</button>`;
     }
     html += `</div>`;
+    } // end if (!isStreaming)
 
     // Vision debug panel (hidden by default)
     if (latestVisionDebug && latestVisionDebug.length > 0) {

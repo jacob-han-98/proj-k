@@ -2201,7 +2201,7 @@ def review_document(title: str, text: str,
     plan_result = call_bedrock(
         messages=[{"role": "user", "content": review_plan_user}],
         system=REVIEW_PLANNING_PROMPT,
-        model="claude-sonnet-4-6",  # Planning은 Sonnet으로 빠르게
+        model="claude-opus-4-6",
         max_tokens=1024,
         temperature=0,
     )

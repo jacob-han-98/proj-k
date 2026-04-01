@@ -39,6 +39,7 @@
 
       switch (action) {
         case 'fix-from-review': window._fixFromReview(); break;
+        case 'start-review': window._startReview(); break;
         case 'copy-review': window._copyReview(); break;
         case 'comment-review': window._commentReview(); break;
         case 'vision-debug': {
@@ -417,8 +418,10 @@
           await handleSummarize(loadingId);
           break;
         case 'REVIEW':
-          await handleReview(loadingId);
-          break;
+          removeMessage(loadingId);
+          chatState = 'IDLE';
+          showReviewOptions();
+          return;
         case 'REVIEW_VISION':
           await handleReviewVision(loadingId);
           break;
@@ -461,11 +464,145 @@
     setStatus('요약 완료');
   }
 
+  // ── 리뷰 옵션 기본값 ──
+  let reviewOptions = {
+    issues: 'max', verifications: 'max', suggestions: 'max',
+    flow: true, qa_checklist: true, readability: true,
+    perspective_lead: true, perspective_dev: true,
+  };
+
+  function showReviewOptions() {
+    const welcome = $('#welcome');
+    if (welcome) welcome.style.display = 'none';
+
+    function optBtn(field, val, label) {
+      const active = reviewOptions[field] === val ? 'active' : '';
+      return `<button class="ro-btn ${active}" data-field="${field}" data-val="${val}">${label}</button>`;
+    }
+    function togBtn(field, label) {
+      const active = reviewOptions[field] ? 'active' : '';
+      return `<label class="ro-toggle ${active}"><input type="checkbox" ${reviewOptions[field] ? 'checked' : ''} data-field="${field}" />${label}</label>`;
+    }
+
+    let html = '<div class="review-options-card">';
+    html += '<div class="ro-title">리뷰 옵션</div>';
+
+    html += '<div class="ro-group"><span class="ro-label">⚠️ 보강 필요</span><div class="ro-btns">';
+    html += optBtn('issues','0','없음') + optBtn('issues','5','5개') + optBtn('issues','10','10개') + optBtn('issues','max','전체');
+    html += '</div></div>';
+
+    html += '<div class="ro-group"><span class="ro-label">🔍 검증 필요</span><div class="ro-btns">';
+    html += optBtn('verifications','0','없음') + optBtn('verifications','5','5개') + optBtn('verifications','10','10개') + optBtn('verifications','max','전체');
+    html += '</div></div>';
+
+    html += '<div class="ro-group"><span class="ro-label">💡 제안</span><div class="ro-btns">';
+    html += optBtn('suggestions','0','없음') + optBtn('suggestions','5','5개') + optBtn('suggestions','10','10개') + optBtn('suggestions','max','전체');
+    html += '</div></div>';
+
+    html += '<div class="ro-group ro-toggles">';
+    html += togBtn('flow', '🔀 로직 플로우');
+    html += togBtn('qa_checklist', '✅ QA 체크리스트');
+    html += togBtn('readability', '📖 문서 가독성');
+    html += '</div>';
+
+    html += '<div class="ro-group"><span class="ro-label">리뷰어</span><div class="ro-toggles">';
+    html += togBtn('perspective_lead', '기획팀장');
+    html += togBtn('perspective_dev', '프로그래머');
+    html += '</div></div>';
+
+    html += '<button class="btn-start-review" data-action="start-review">리뷰 시작</button>';
+    html += '</div>';
+
+    addMessage({ role: 'assistant', content: '', type: 'review_options', _html: html });
+
+    // 렌더링 후 이벤트 바인딩
+    setTimeout(() => {
+      // 라디오 버튼 (issues/verifications/suggestions)
+      document.querySelectorAll('.ro-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const field = btn.dataset.field;
+          const val = btn.dataset.val;
+          reviewOptions[field] = val;
+          // 같은 그룹의 active 토글
+          btn.closest('.ro-btns').querySelectorAll('.ro-btn').forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+        });
+      });
+      // 토글 체크박스
+      document.querySelectorAll('.ro-toggle input').forEach(cb => {
+        cb.addEventListener('change', () => {
+          reviewOptions[cb.dataset.field] = cb.checked;
+          cb.closest('.ro-toggle').classList.toggle('active', cb.checked);
+        });
+      });
+    }, 50);
+  }
+
+  // start-review 액션 핸들러 (기존 데이터 액션 체계에 추가)
+  window._startReview = async () => {
+    // 옵션 카드 제거
+    const optCard = document.querySelector('.review-options-card');
+    if (optCard) optCard.closest('.chat-msg')?.remove();
+
+    chatState = 'PROCESSING';
+    const loadingId = addMessage({ role: 'assistant', content: '', type: 'loading' });
+    setStatus('리뷰 시작...');
+
+    try {
+      await refreshPageContent();
+      if (!pageContent) {
+        removeMessage(loadingId);
+        addMessage({ role: 'system', content: '페이지 내용을 추출할 수 없습니다.' });
+        chatState = 'IDLE'; setStatus('Ready'); return;
+      }
+      await handleReview(loadingId);
+    } catch (err) {
+      removeMessage(loadingId);
+      addMessage({ role: 'system', content: `오류: ${err.message}` });
+      setStatus('Error');
+    }
+    if (chatState === 'PROCESSING') chatState = 'IDLE';
+    if (chatState === 'IDLE') setStatus('Ready');
+  };
+
   async function handleReview(loadingId) {
     window._reviewStreamBuffer = '';  // 스트림 버퍼 초기화
+
+    // 리뷰 옵션을 instruction으로 변환
+    const opts = reviewOptions;
+    let reviewInstruction = '';
+    const outputParts = [];
+    if (opts.issues !== '0') outputParts.push(`issues(보강 필요): ${opts.issues === 'max' ? '전부' : '최대 ' + opts.issues + '개'}`);
+    if (opts.verifications !== '0') outputParts.push(`verifications(검증 필요): ${opts.verifications === 'max' ? '전부' : '최대 ' + opts.verifications + '개'}`);
+    if (opts.suggestions !== '0') outputParts.push(`suggestions(제안): ${opts.suggestions === 'max' ? '전부' : '최대 ' + opts.suggestions + '개'}`);
+    if (opts.flow) outputParts.push('flow(로직 플로우)');
+    if (opts.qa_checklist) outputParts.push('qa_checklist(QA 체크리스트)');
+    if (opts.readability) outputParts.push('readability(문서 가독성)');
+
+    const skipParts = [];
+    if (opts.issues === '0') skipParts.push('issues');
+    if (opts.verifications === '0') skipParts.push('verifications');
+    if (opts.suggestions === '0') skipParts.push('suggestions');
+    if (!opts.flow) skipParts.push('flow');
+    if (!opts.qa_checklist) skipParts.push('qa_checklist');
+    if (!opts.readability) skipParts.push('readability');
+
+    const perspectives = [];
+    if (opts.perspective_lead) perspectives.push('기획팀장');
+    if (opts.perspective_dev) perspectives.push('프로그래머');
+
+    if (skipParts.length > 0 || perspectives.length < 2) {
+      reviewInstruction = `\n\n## 출력 제한\n`;
+      if (skipParts.length > 0) reviewInstruction += `다음 항목은 출력하지 마세요 (빈 배열/null로): ${skipParts.join(', ')}\n`;
+      if (outputParts.length > 0) reviewInstruction += `출력할 항목: ${outputParts.join(', ')}\n`;
+      if (perspectives.length === 1) reviewInstruction += `리뷰 관점: ${perspectives[0]}만 (다른 관점은 제외)\n`;
+      if (perspectives.length === 0) reviewInstruction += `리뷰 관점: 일반 (perspective 생략)\n`;
+    }
+
     const response = await callBackground('REVIEW', {
       title: pageMeta.title,
       text: pageContent.text,
+      reviewInstruction: reviewInstruction,
     });
 
     // 최종 결과 파싱
@@ -726,6 +863,8 @@
 
     if (msg.type === 'loading') {
       el.innerHTML = '<div class="loading-dots"><span></span><span></span><span></span></div>';
+    } else if (msg.type === 'review_options' && msg._html) {
+      el.innerHTML = msg._html;
     } else if (msg.type === 'review' && msg.reviewData) {
       el.innerHTML = renderReviewCard(msg.reviewData);
     } else if (msg.type === 'vision_review' && msg.visionResults) {
@@ -796,7 +935,12 @@
     if (data.flow) {
       html += '<div class="review-section flow">';
       html += `<div class="review-section-title">🔀 로직 플로우</div>`;
-      html += `<div class="review-flow-content">${escapeHtml(data.flow).replace(/\n/g, '<br>')}</div>`;
+      // flow 텍스트 포맷팅: 번호(1. 2. ...) 앞에서 줄바꿈
+      let flowText = escapeHtml(data.flow);
+      flowText = flowText.replace(/(\d+)\.\s/g, '\n$1. ');  // "1. " 앞에 줄바꿈
+      flowText = flowText.replace(/^\n/, '');  // 첫 줄바꿈 제거
+      flowText = flowText.replace(/\n/g, '<br>');
+      html += `<div class="review-flow-content">${flowText}</div>`;
       html += '</div>';
     }
 

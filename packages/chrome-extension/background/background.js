@@ -299,7 +299,7 @@ async function handleSuggestEdits({ title, text, html, instruction, maxChanges }
   return { changes };
 }
 
-async function handleReview({ title, text, _senderId }, settings) {
+async function handleReview({ title, text, reviewInstruction, _senderId }, settings) {
   Logger.info('bg', 'Review start', { title, textLen: text?.length });
 
   const backendUrl = settings.backendUrl || '';
@@ -311,7 +311,7 @@ async function handleReview({ title, text, _senderId }, settings) {
       const response = await fetch(`${backendUrl}/review_stream`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title, text, model: settings.bedrockModel || 'claude-opus-4-6' }),
+        body: JSON.stringify({ title, text, model: settings.bedrockModel || 'claude-opus-4-6', review_instruction: reviewInstruction || '' }),
       });
 
       if (response.ok && response.body) {

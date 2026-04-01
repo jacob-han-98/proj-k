@@ -312,6 +312,7 @@ class ReviewRequest(BaseModel):
     text: str
     model: str = "claude-opus-4-6"
     prompt_overrides: dict[str, str] | None = None
+    review_instruction: str = ""
 
 
 @app.post("/review")
@@ -323,6 +324,7 @@ def review_document_api(req: ReviewRequest):
         text=req.text,
         model=req.model,
         prompt_overrides=req.prompt_overrides,
+        review_instruction=req.review_instruction,
     )
     return result
 
@@ -352,6 +354,7 @@ def review_stream_api(req: ReviewRequest):
                 model=req.model,
                 status_callback=on_status,
                 prompt_overrides=req.prompt_overrides,
+                review_instruction=req.review_instruction,
             )
             result_holder.append(res)
         except Exception as e:

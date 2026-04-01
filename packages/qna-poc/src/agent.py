@@ -2144,7 +2144,8 @@ DEFAULT_PROMPTS["review"] = REVIEW_PROMPT
 def review_document(title: str, text: str,
                     model: str = "claude-opus-4-6",
                     status_callback=None,
-                    prompt_overrides: dict[str, str] | None = None) -> dict:
+                    prompt_overrides: dict[str, str] | None = None,
+                    review_instruction: str = "") -> dict:
     """기획서 리뷰 파이프라인 — RAG + game_data + KG 기반 교차 검증 리뷰.
 
     Args:
@@ -2421,7 +2422,7 @@ def review_document(title: str, text: str,
 
 ════════════════════════════════════
 
-위 리뷰 대상 문서를 참조 자료와 교차 검증하여 리뷰해주세요. JSON만 출력:"""
+위 리뷰 대상 문서를 참조 자료와 교차 검증하여 리뷰해주세요. JSON만 출력:{review_instruction}"""
 
     from src.generator import call_bedrock_stream
 

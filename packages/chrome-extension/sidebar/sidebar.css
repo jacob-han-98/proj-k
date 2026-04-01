@@ -345,30 +345,6 @@ body {
   50% { opacity: 0.3; transform: scale(0.7); }
 }
 
-/* ── Review Item Animation ── */
-.review-item-outer {
-  animation: reviewItemSlideIn 0.3s ease-out;
-}
-
-.review-item {
-  animation: reviewItemSlideIn 0.3s ease-out;
-}
-
-@keyframes reviewItemSlideIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* ── Review Section Animation ── */
-.review-section {
-  animation: reviewSectionFadeIn 0.4s ease-out;
-}
-
-@keyframes reviewSectionFadeIn {
-  from { opacity: 0; transform: translateY(12px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
 /* ── Review Stream ── */
 .review-stream {
   background: var(--assistant-bubble-bg);

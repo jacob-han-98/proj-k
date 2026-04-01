@@ -164,33 +164,39 @@
         if (!window._reviewStreamBuffer) window._reviewStreamBuffer = '';
         window._reviewStreamBuffer += tokenText;
 
-        // 점진적 JSON 파싱 — 완결된 항목만 추출하여 UI 렌더링
-        const partial = _parsePartialReviewJSON(window._reviewStreamBuffer);
-        if (partial && (partial.issues?.length || partial.verifications?.length || partial.suggestions?.length || partial.score != null)) {
-          // 리뷰 카드로 렌더링
-          latestReviewData = partial;
-
-          // 로딩/진행 영역을 리뷰 카드로 교체
-          const progressEl = document.querySelector('.review-progress') || document.querySelector('.loading-dots') || document.querySelector('.review-stream');
-          if (progressEl) {
-            const container = progressEl.closest('.chat-msg');
-            if (container) {
-              container.innerHTML = renderReviewCard(partial);
-              container.id = container.id || `msg-stream-review`;
-            }
-          } else {
-            // 이미 리뷰 카드가 있으면 업데이트
-            const existingCard = document.getElementById('review-card');
-            if (existingCard) {
-              const container = existingCard.closest('.chat-msg');
-              if (container) container.innerHTML = renderReviewCard(partial);
-            }
+        // 로딩/진행 영역을 스트리밍 영역으로 교체 (아직 없으면)
+        const progressEl = document.querySelector('.review-progress') || document.querySelector('.loading-dots');
+        if (progressEl) {
+          const container = progressEl.closest('.chat-msg');
+          if (container) {
+            container.innerHTML = '<div class="review-stream" id="review-stream-container"><pre class="review-stream-text"></pre></div>';
+            container.id = container.id || 'msg-stream-review';
           }
-
-          // 자동 스크롤 (새 항목 추가 시)
-          const chatArea = document.querySelector('.chat-messages');
-          if (chatArea) chatArea.scrollTop = chatArea.scrollHeight;
         }
+
+        // 점진적 파싱 시도 — 성공하면 카드, 실패하면 raw 텍스트
+        let parsed = null;
+        try { parsed = _parsePartialReviewJSON(window._reviewStreamBuffer); } catch {}
+
+        if (parsed && (parsed.issues?.length || parsed.verifications?.length || parsed.suggestions?.length)) {
+          latestReviewData = parsed;
+          const streamContainer = document.getElementById('review-stream-container');
+          const cardContainer = document.getElementById('review-card');
+          const target = (streamContainer && streamContainer.closest('.chat-msg')) || (cardContainer && cardContainer.closest('.chat-msg'));
+          if (target) {
+            target.innerHTML = renderReviewCard(parsed);
+          }
+        } else {
+          // raw 텍스트 표시 (파싱 불가 시)
+          const streamEl = document.querySelector('.review-stream-text');
+          if (streamEl) {
+            streamEl.textContent = window._reviewStreamBuffer;
+          }
+        }
+
+        // 자동 스크롤
+        const chatArea = document.querySelector('.chat-messages');
+        if (chatArea) chatArea.scrollTop = chatArea.scrollHeight;
         break;
       }
       case 'PARTIAL_REVIEW': {

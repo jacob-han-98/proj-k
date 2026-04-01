@@ -165,6 +165,113 @@ def call_bedrock(
     }
 
 
+def call_bedrock_stream(
+    messages: list[dict],
+    system: str = SYSTEM_PROMPT,
+    model: str = None,
+    max_tokens: int = 2048,
+    temperature: float = 0,
+):
+    """Bedrock Claude API 스트리밍 호출 — 토큰 단위 yield.
+
+    Yields:
+        {"type": "text", "text": "토큰"} — 텍스트 delta
+        {"type": "done", "text": "전체텍스트", "input_tokens": N, "output_tokens": N, "api_seconds": N}
+    """
+    token = os.environ.get("AWS_BEARER_TOKEN_BEDROCK")
+    if not token:
+        raise RuntimeError("AWS_BEARER_TOKEN_BEDROCK 환경변수 미설정")
+    region = os.environ.get("AWS_REGION", "us-east-1")
+
+    if model is None:
+        model = os.environ.get("LLM_MODEL", "claude-opus-4-6")
+    model_id = MODEL_MAPPING.get(model, f"global.anthropic.{model}-v1:0")
+
+    url = f"https://bedrock-runtime.{region}.amazonaws.com/model/{model_id}/invoke-with-response-stream"
+
+    body = {
+        "anthropic_version": "bedrock-2023-05-31",
+        "max_tokens": max_tokens,
+        "temperature": temperature,
+        "system": system,
+        "messages": messages,
+    }
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": f"Bearer {token}",
+    }
+
+    _sys_logger.debug(f"API_STREAM model={model} max_tokens={max_tokens}")
+    t_start = time.time()
+
+    resp = requests.post(url, json=body, headers=headers, timeout=600, stream=True)
+    if resp.status_code != 200:
+        raise RuntimeError(f"API error {resp.status_code}: {resp.text[:500]}")
+
+    # Bedrock EventStream 파싱
+    # 바이너리 프레임: [4B total_len][4B header_len][4B header_crc][headers][payload][4B msg_crc]
+    # payload 내 JSON: {"bytes": "<base64>"} → decode → {"type": "content_block_delta", "delta": {"text": "..."}}
+    import base64
+    full_text = ""
+    input_tokens = 0
+    output_tokens = 0
+    buf = b""
+
+    for chunk in resp.iter_content(chunk_size=None):
+        buf += chunk
+
+        while len(buf) >= 12:  # 최소 프레임 헤더
+            if len(buf) < 4:
+                break
+            total_len = int.from_bytes(buf[:4], "big")
+            if len(buf) < total_len:
+                break  # 프레임 미완성
+
+            frame = buf[:total_len]
+            buf = buf[total_len:]
+
+            header_len = int.from_bytes(frame[4:8], "big")
+            payload_start = 12 + header_len
+            payload_end = total_len - 4  # CRC 제외
+            payload = frame[payload_start:payload_end]
+
+            try:
+                payload_json = json.loads(payload)
+                b64_data = payload_json.get("bytes", "")
+                if not b64_data:
+                    continue
+                event = json.loads(base64.b64decode(b64_data))
+
+                if event.get("type") == "content_block_delta":
+                    delta_text = event.get("delta", {}).get("text", "")
+                    if delta_text:
+                        full_text += delta_text
+                        yield {"type": "text", "text": delta_text}
+
+                elif event.get("type") == "message_start":
+                    usage = event.get("message", {}).get("usage", {})
+                    input_tokens = usage.get("input_tokens", 0)
+
+                elif event.get("type") == "message_delta":
+                    usage = event.get("usage", {})
+                    output_tokens = usage.get("output_tokens", 0)
+
+            except (json.JSONDecodeError, Exception):
+                pass
+
+    t_api = time.time() - t_start
+    _sys_logger.debug(f"API_STREAM_DONE model={model} in={input_tokens} out={output_tokens} time={t_api:.1f}s")
+
+    yield {
+        "type": "done",
+        "text": full_text.strip(),
+        "input_tokens": input_tokens,
+        "output_tokens": output_tokens,
+        "api_seconds": round(t_api, 1),
+        "model": model,
+    }
+
+
 def generate_answer(
     question: str,
     context: str,

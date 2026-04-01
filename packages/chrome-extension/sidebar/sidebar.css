@@ -318,6 +318,26 @@ body {
   50% { opacity: 0.6; }
 }
 
+/* ── Review Stream ── */
+.review-stream {
+  background: var(--assistant-bubble-bg);
+  border: 1px solid var(--border);
+  border-radius: 4px 14px 14px 14px;
+  padding: 12px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.review-stream-text {
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  margin: 0;
+}
+
 /* ── Review Card ── */
 .review-card {
   background: var(--assistant-bubble-bg);

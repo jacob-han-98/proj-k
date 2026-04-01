@@ -343,8 +343,17 @@ async function handleReview({ title, text, _senderId }, settings) {
                     }).catch(() => {});
                   }
                 });
+              } else if (event.type === 'token') {
+                // 스트리밍 토큰을 탭에 브로드캐스트
+                chrome.tabs.query({ url: '*://*.atlassian.net/*' }, (tabs) => {
+                  for (const tab of tabs) {
+                    chrome.tabs.sendMessage(tab.id, {
+                      type: 'REVIEW_TOKEN',
+                      text: event.text,
+                    }).catch(() => {});
+                  }
+                });
               } else if (event.type === 'partial_review') {
-                // 섹션별 중간 결과를 탭에 브로드캐스트
                 chrome.tabs.query({ url: '*://*.atlassian.net/*' }, (tabs) => {
                   for (const tab of tabs) {
                     chrome.tabs.sendMessage(tab.id, {

@@ -157,6 +157,34 @@
         }
         break;
       }
+      case 'REVIEW_TOKEN': {
+        // 스트리밍 토큰 — 리뷰 텍스트를 실시간으로 표시
+        const tokenText = msg.payload?.text || '';
+        if (tokenText) {
+          // _reviewStreamBuffer에 누적
+          if (!window._reviewStreamBuffer) window._reviewStreamBuffer = '';
+          window._reviewStreamBuffer += tokenText;
+
+          // 로딩/진행 상태 영역을 스트리밍 영역으로 교체
+          const progressEl = document.querySelector('.review-progress') || document.querySelector('.loading-dots');
+          if (progressEl) {
+            const container = progressEl.closest('.chat-msg');
+            if (container && !container.querySelector('.review-stream')) {
+              container.innerHTML = '<div class="review-stream"><pre class="review-stream-text"></pre></div>';
+            }
+          }
+
+          // 텍스트 업데이트
+          const streamEl = document.querySelector('.review-stream-text');
+          if (streamEl) {
+            streamEl.textContent = window._reviewStreamBuffer;
+            // 자동 스크롤
+            const chatArea = document.querySelector('.chat-messages');
+            if (chatArea) chatArea.scrollTop = chatArea.scrollHeight;
+          }
+        }
+        break;
+      }
       case 'PARTIAL_REVIEW': {
         // 섹션별 중간 결과 — 리뷰 카드를 점진적으로 렌더링
         try {
@@ -420,6 +448,7 @@
   }
 
   async function handleReview(loadingId) {
+    window._reviewStreamBuffer = '';  // 스트림 버퍼 초기화
     const response = await callBackground('REVIEW', {
       title: pageMeta.title,
       text: pageContent.text,
@@ -433,7 +462,11 @@
       if (jsonMatch) reviewData = JSON.parse(jsonMatch[0]);
     } catch { /* fall through to text display */ }
 
-    // partial_review로 이미 렌더링되었는지 확인
+    // 스트리밍 영역 또는 partial로 이미 렌더링되었는지 확인
+    const streamEl = document.querySelector('.review-stream');
+    if (streamEl) {
+      streamEl.closest('.chat-msg')?.remove();
+    }
     const existingCard = document.getElementById('review-card');
     if (existingCard && reviewData) {
       // 최종 결과로 업데이트

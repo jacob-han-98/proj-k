@@ -363,12 +363,21 @@ def review_stream_api(req: ReviewRequest):
     t.start()
 
     def event_generator():
+        token_buffer = ""
         while True:
             msg = status_q.get()
             if msg is None:
+                # 남은 토큰 버퍼 flush
+                if token_buffer:
+                    yield json.dumps({"type": "token", "text": token_buffer}, ensure_ascii=False) + "\n"
                 break
-            # 섹션별 partial review 결과 분기
-            if msg.startswith("__PARTIAL_REVIEW__"):
+            if msg.startswith("__STREAM_TOKEN__"):
+                token_buffer += msg[len("__STREAM_TOKEN__"):]
+                # 50자마다 flush (너무 빈번하지 않게)
+                if len(token_buffer) >= 50:
+                    yield json.dumps({"type": "token", "text": token_buffer}, ensure_ascii=False) + "\n"
+                    token_buffer = ""
+            elif msg.startswith("__PARTIAL_REVIEW__"):
                 partial_json = msg[len("__PARTIAL_REVIEW__"):]
                 yield json.dumps({"type": "partial_review", "data": partial_json}, ensure_ascii=False) + "\n"
             else:

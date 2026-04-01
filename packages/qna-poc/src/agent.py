@@ -2423,17 +2423,25 @@ def review_document(title: str, text: str,
 
 위 리뷰 대상 문서를 참조 자료와 교차 검증하여 리뷰해주세요. JSON만 출력:"""
 
-    from src.generator import call_bedrock
-    result = call_bedrock(
+    from src.generator import call_bedrock_stream
+
+    # 스트리밍으로 리뷰 생성 — 토큰 단위 콜백
+    review_text = ""
+    review_tokens = 0
+    for event in call_bedrock_stream(
         messages=[{"role": "user", "content": user_msg}],
         system=review_prompt,
         model=model,
         max_tokens=16384,
         temperature=0,
-    )
-
-    review_text = result.get("text", "")
-    review_tokens = result.get("input_tokens", 0) + result.get("output_tokens", 0)
+    ):
+        if event["type"] == "text":
+            review_text += event["text"]
+            if status_callback:
+                status_callback(f"__STREAM_TOKEN__{event['text']}")
+        elif event["type"] == "done":
+            review_text = event["text"]
+            review_tokens = event.get("input_tokens", 0) + event.get("output_tokens", 0)
     total_tokens += review_tokens
     review_time = time.time() - t_review
 

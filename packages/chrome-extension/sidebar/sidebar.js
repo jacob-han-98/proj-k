@@ -1363,49 +1363,37 @@
         return;
       }
 
-      // 섹션별 순차 체이닝 — 이전 섹션 변경사항을 다음에 전달
-      const sectionOrder = ['issues', 'verifications', 'suggestions'];
+      // 전체 항목을 한번에 수정안 생성
+      const allItems = [];
       const sectionLabels = { issues: '⚠️ 보강 필요', verifications: '🔍 검증 필요', suggestions: '💡 제안' };
-      const activeSections = sectionOrder.filter(cat => sections[cat] && sections[cat].length > 0);
-
-      let allChanges = [];
-      const resultSummary = [];
-
-      for (let si = 0; si < activeSections.length; si++) {
-        const cat = activeSections[si];
-        const items = sections[cat];
-        const label = sectionLabels[cat];
-        const step = `${si + 1}/${activeSections.length}`;
-
-        setStatus(`${label} ${items.length}건 수정안 생성 중... (${step})`);
-
-        // 이전 섹션에서 이미 생성된 변경사항을 컨텍스트로 전달
-        let chainContext = '';
-        if (allChanges.length > 0) {
-          chainContext = `\n\n⚠️ 이전 단계에서 이미 반영된 수정사항 (중복/충돌 방지):\n${allChanges.map((c, i) => `${i+1}. [${c.section || ''}] "${c.before?.slice(0, 40)}..." → "${c.after?.slice(0, 40)}..."`).join('\n')}\n\n위 수정사항과 중복되거나 충돌하는 변경은 생성하지 마세요.`;
-        }
-
-        try {
-          const instruction = `[${label}] 다음 항목을 반영하여 문서를 수정해주세요:\n${items.map((it, i) => `${i+1}. ${it}`).join('\n')}${chainContext}`;
-          const response = await callBackground('SUGGEST_EDITS', {
-            title: pageMeta.title,
-            text: pageContent.text,
-            html: pageContent.html,
-            instruction,
-            maxChanges: items.length,
-          });
-          const changes = response.changes || [];
-          resultSummary.push(`${label}: ✅ ${changes.length}건`);
-          allChanges = allChanges.concat(changes);
-        } catch (e) {
-          resultSummary.push(`${label}: ❌ 실패 (${e.message.slice(0, 50)})`);
+      for (const cat of ['issues', 'verifications', 'suggestions']) {
+        if (sections[cat] && sections[cat].length > 0) {
+          sections[cat].forEach(item => allItems.push(`[${sectionLabels[cat]}] ${item}`));
         }
       }
 
-      removeMessage(loadingId);
+      setStatus(`수정안 생성 중... (${allItems.length}건)`);
 
-      // 결과 표시
-      addMessage({ role: 'system', content: resultSummary.join('\n') });
+      let allChanges = [];
+      try {
+        const instruction = `다음 리뷰 항목을 반영하여 문서를 수정해주세요:\n${allItems.map((it, i) => `${i+1}. ${it}`).join('\n')}`;
+        const response = await callBackground('SUGGEST_EDITS', {
+          title: pageMeta.title,
+          text: pageContent.text,
+          html: pageContent.html,
+          instruction,
+          maxChanges: allItems.length,
+        });
+        allChanges = response.changes || [];
+      } catch (e) {
+        removeMessage(loadingId);
+        addMessage({ role: 'system', content: `수정안 생성 실패: ${e.message.slice(0, 100)}` });
+        chatState = 'IDLE';
+        setStatus('Error');
+        return;
+      }
+
+      removeMessage(loadingId);
 
       if (allChanges.length > 0) {
         // 기존 changes 표시 로직 재활용

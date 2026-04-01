@@ -158,30 +158,38 @@
         break;
       }
       case 'REVIEW_TOKEN': {
-        // 스트리밍 토큰 — 리뷰 텍스트를 실시간으로 표시
         const tokenText = msg.payload?.text || '';
-        if (tokenText) {
-          // _reviewStreamBuffer에 누적
-          if (!window._reviewStreamBuffer) window._reviewStreamBuffer = '';
-          window._reviewStreamBuffer += tokenText;
+        if (!tokenText) break;
 
-          // 로딩/진행 상태 영역을 스트리밍 영역으로 교체
-          const progressEl = document.querySelector('.review-progress') || document.querySelector('.loading-dots');
+        if (!window._reviewStreamBuffer) window._reviewStreamBuffer = '';
+        window._reviewStreamBuffer += tokenText;
+
+        // 점진적 JSON 파싱 — 완결된 항목만 추출하여 UI 렌더링
+        const partial = _parsePartialReviewJSON(window._reviewStreamBuffer);
+        if (partial && (partial.issues?.length || partial.verifications?.length || partial.suggestions?.length || partial.score != null)) {
+          // 리뷰 카드로 렌더링
+          latestReviewData = partial;
+
+          // 로딩/진행 영역을 리뷰 카드로 교체
+          const progressEl = document.querySelector('.review-progress') || document.querySelector('.loading-dots') || document.querySelector('.review-stream');
           if (progressEl) {
             const container = progressEl.closest('.chat-msg');
-            if (container && !container.querySelector('.review-stream')) {
-              container.innerHTML = '<div class="review-stream"><pre class="review-stream-text"></pre></div>';
+            if (container) {
+              container.innerHTML = renderReviewCard(partial);
+              container.id = container.id || `msg-stream-review`;
+            }
+          } else {
+            // 이미 리뷰 카드가 있으면 업데이트
+            const existingCard = document.getElementById('review-card');
+            if (existingCard) {
+              const container = existingCard.closest('.chat-msg');
+              if (container) container.innerHTML = renderReviewCard(partial);
             }
           }
 
-          // 텍스트 업데이트
-          const streamEl = document.querySelector('.review-stream-text');
-          if (streamEl) {
-            streamEl.textContent = window._reviewStreamBuffer;
-            // 자동 스크롤
-            const chatArea = document.querySelector('.chat-messages');
-            if (chatArea) chatArea.scrollTop = chatArea.scrollHeight;
-          }
+          // 자동 스크롤 (새 항목 추가 시)
+          const chatArea = document.querySelector('.chat-messages');
+          if (chatArea) chatArea.scrollTop = chatArea.scrollHeight;
         }
         break;
       }
@@ -1350,6 +1358,113 @@
 
   function setStatus(text) {
     $('#status-text').textContent = text;
+  }
+
+  function _parsePartialReviewJSON(raw) {
+    // 불완전한 JSON에서 완결된 항목만 추출
+    // 전략: 각 배열 필드에서 닫힌 객체(})만 추출
+    try {
+      // 우선 전체 파싱 시도
+      const cleaned = raw.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+      const match = cleaned.match(/\{[\s\S]*\}/);
+      if (match) return JSON.parse(match[0]);
+    } catch { /* 불완전 — 아래 로직 */ }
+
+    const result = {};
+
+    // score 추출
+    const scoreMatch = raw.match(/"score"\s*:\s*(\d+)/);
+    if (scoreMatch) result.score = parseInt(scoreMatch[1]);
+
+    // 배열 필드 추출 (issues, verifications, suggestions, qa_checklist, cross_refs)
+    const arrayFields = ['issues', 'verifications', 'suggestions', 'qa_checklist', 'cross_refs'];
+    for (const field of arrayFields) {
+      const fieldStart = raw.indexOf(`"${field}"`);
+      if (fieldStart === -1) continue;
+
+      const arrStart = raw.indexOf('[', fieldStart);
+      if (arrStart === -1) continue;
+
+      // 닫힌 객체/문자열만 수집
+      const items = [];
+      let depth = 0;
+      let inStr = false;
+      let escape = false;
+      let itemStart = -1;
+
+      for (let i = arrStart + 1; i < raw.length; i++) {
+        const ch = raw[i];
+        if (escape) { escape = false; continue; }
+        if (ch === '\\') { escape = true; continue; }
+        if (ch === '"') { inStr = !inStr; continue; }
+        if (inStr) continue;
+
+        if (ch === '{') {
+          if (depth === 0) itemStart = i;
+          depth++;
+        } else if (ch === '}') {
+          depth--;
+          if (depth === 0 && itemStart !== -1) {
+            try {
+              items.push(JSON.parse(raw.slice(itemStart, i + 1)));
+            } catch { /* skip malformed */ }
+            itemStart = -1;
+          }
+        } else if (ch === '"' || (ch !== ',' && ch !== ' ' && ch !== '\n' && ch !== '\r' && depth === 0)) {
+          // 문자열 배열 항목 (suggestions, qa_checklist)
+          if (depth === 0 && ch === '"') {
+            // 이미 위에서 처리됨
+          }
+        } else if (ch === ']') {
+          break; // 배열 끝
+        }
+      }
+
+      // 문자열 배열도 처리 (suggestions, qa_checklist)
+      if (items.length === 0 && (field === 'suggestions' || field === 'qa_checklist')) {
+        const strRegex = new RegExp(`"${field}"\\s*:\\s*\\[([\\s\\S]*?)(?:\\]|$)`);
+        const strMatch = raw.match(strRegex);
+        if (strMatch) {
+          const strItems = [];
+          const strContent = strMatch[1];
+          let si = false, start = -1;
+          for (let i = 0; i < strContent.length; i++) {
+            if (strContent[i] === '"' && (i === 0 || strContent[i-1] !== '\\')) {
+              if (!si) { si = true; start = i + 1; }
+              else { strItems.push(strContent.slice(start, i)); si = false; }
+            }
+          }
+          if (strItems.length > 0) {
+            result[field] = strItems;
+            continue;
+          }
+        }
+      }
+
+      if (items.length > 0) result[field] = items;
+    }
+
+    // flow 추출
+    const flowMatch = raw.match(/"flow"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+    if (flowMatch) {
+      try { result.flow = JSON.parse('"' + flowMatch[1] + '"'); } catch { result.flow = flowMatch[1]; }
+    }
+
+    // readability 추출
+    const readMatch = raw.match(/"readability"\s*:\s*\{[^}]*"score"\s*:\s*(\d+)/);
+    if (readMatch) {
+      result.readability = { score: parseInt(readMatch[1]), issues: [] };
+      // readability.issues도 추출 시도
+      const readSection = raw.match(/"readability"\s*:\s*(\{[\s\S]*?\})\s*[,}]/);
+      if (readSection) {
+        try {
+          const parsed = JSON.parse(readSection[1]);
+          result.readability = parsed;
+        } catch { /* partial */ }
+      }
+    }
+
+    return Object.keys(result).length > 0 ? result : null;
   }
 
   function escapeHtml(text) {

@@ -367,7 +367,12 @@ def review_stream_api(req: ReviewRequest):
             msg = status_q.get()
             if msg is None:
                 break
-            yield json.dumps({"type": "status", "message": msg}, ensure_ascii=False) + "\n"
+            # 섹션별 partial review 결과 분기
+            if msg.startswith("__PARTIAL_REVIEW__"):
+                partial_json = msg[len("__PARTIAL_REVIEW__"):]
+                yield json.dumps({"type": "partial_review", "data": partial_json}, ensure_ascii=False) + "\n"
+            else:
+                yield json.dumps({"type": "status", "message": msg}, ensure_ascii=False) + "\n"
 
         t.join()
 

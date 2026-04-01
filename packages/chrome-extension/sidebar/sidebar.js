@@ -147,16 +147,39 @@
         break;
       }
       case 'REVIEW_STATUS': {
-        // 백엔드 SSE에서 전달된 리뷰 진행 상태
         const statusMsg = msg.payload?.message || '';
         if (statusMsg) {
           setStatus(statusMsg);
-          // 로딩 메시지도 업데이트
-          const loadingEl = document.querySelector('.loading-dots');
+          const loadingEl = document.querySelector('.loading-dots') || document.querySelector('.review-progress');
           if (loadingEl) {
-            loadingEl.parentElement.innerHTML = `<div class="review-progress">${escapeHtml(statusMsg)}</div>`;
+            loadingEl.closest('.chat-msg').innerHTML = `<div class="review-progress">${escapeHtml(statusMsg)}</div>`;
           }
         }
+        break;
+      }
+      case 'PARTIAL_REVIEW': {
+        // 섹션별 중간 결과 — 리뷰 카드를 점진적으로 렌더링
+        try {
+          const partialData = typeof msg.payload.data === 'string' ? JSON.parse(msg.payload.data) : msg.payload.data;
+          latestReviewData = partialData;
+          reviewFeedback = {};
+
+          // 로딩 메시지를 리뷰 카드로 교체
+          const progressEl = document.querySelector('.review-progress');
+          if (progressEl) {
+            const cardEl = progressEl.closest('.chat-msg');
+            if (cardEl) {
+              cardEl.innerHTML = renderReviewCard(partialData);
+              scrollToMessage(cardEl.id);
+            }
+          } else {
+            // 이미 리뷰 카드가 있으면 업데이트
+            const existingCard = document.getElementById('review-card');
+            if (existingCard) {
+              existingCard.closest('.chat-msg').innerHTML = renderReviewCard(partialData);
+            }
+          }
+        } catch (e) { /* ignore parse errors */ }
         break;
       }
     }
@@ -401,9 +424,8 @@
       title: pageMeta.title,
       text: pageContent.text,
     });
-    removeMessage(loadingId);
 
-    // Try to parse structured review
+    // 최종 결과 파싱
     let reviewData;
     try {
       const cleaned = response.review.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
@@ -411,12 +433,24 @@
       if (jsonMatch) reviewData = JSON.parse(jsonMatch[0]);
     } catch { /* fall through to text display */ }
 
-    if (reviewData) {
+    // partial_review로 이미 렌더링되었는지 확인
+    const existingCard = document.getElementById('review-card');
+    if (existingCard && reviewData) {
+      // 최종 결과로 업데이트
       latestReviewData = reviewData;
-      reviewFeedback = {}; // reset feedback for new review
-      addMessage({ role: 'assistant', content: '', type: 'review', reviewData });
+      reviewFeedback = {};
+      existingCard.closest('.chat-msg').innerHTML = renderReviewCard(reviewData);
+      // 로딩 메시지 제거
+      removeMessage(loadingId);
     } else {
-      addMessage({ role: 'assistant', content: response.review });
+      removeMessage(loadingId);
+      if (reviewData) {
+        latestReviewData = reviewData;
+        reviewFeedback = {};
+        addMessage({ role: 'assistant', content: '', type: 'review', reviewData });
+      } else {
+        addMessage({ role: 'assistant', content: response.review });
+      }
     }
     setStatus('리뷰 완료');
   }

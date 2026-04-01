@@ -343,6 +343,16 @@ async function handleReview({ title, text, _senderId }, settings) {
                     }).catch(() => {});
                   }
                 });
+              } else if (event.type === 'partial_review') {
+                // 섹션별 중간 결과를 탭에 브로드캐스트
+                chrome.tabs.query({ url: '*://*.atlassian.net/*' }, (tabs) => {
+                  for (const tab of tabs) {
+                    chrome.tabs.sendMessage(tab.id, {
+                      type: 'PARTIAL_REVIEW',
+                      data: event.data,
+                    }).catch(() => {});
+                  }
+                });
               } else if (event.type === 'result') {
                 finalResult = event.data;
               } else if (event.type === 'error') {

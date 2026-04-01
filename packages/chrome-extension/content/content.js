@@ -710,6 +710,8 @@
   chrome.runtime.onMessage.addListener((msg) => {
     if (msg && msg.type === 'REVIEW_STATUS') {
       sendToSidebar('REVIEW_STATUS', { message: msg.message });
+    } else if (msg && msg.type === 'PARTIAL_REVIEW') {
+      sendToSidebar('PARTIAL_REVIEW', { data: msg.data });
     }
   });
 

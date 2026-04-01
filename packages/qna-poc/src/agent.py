@@ -2424,25 +2424,19 @@ def review_document(title: str, text: str,
 
     from src.generator import call_bedrock
 
-    # 섹션별 분할 호출
+    # 2단계 분할 호출 — 핵심(issues/verifications) 먼저, 부가(suggestions/flow/QA/readability) 이후
     sections = [
         {
-            "key": "issues_verifications",
-            "label": "보강 필요 + 검증 필요",
-            "instruction": '위 문서를 리뷰하여 issues(보강 필요)와 verifications(검증 필요) 항목만 생성하세요. 각 항목에 perspective(기획팀장/프로그래머)를 명시하세요.\n\n출력: {"issues": [{"text":"...","perspective":"기획팀장|프로그래머"}], "verifications": [{"text":"...","perspective":"기획팀장|프로그래머"}]}',
-            "max_tokens": 6144,
+            "key": "core",
+            "label": "보강/검증 필요 항목",
+            "instruction": '위 문서를 리뷰하여 issues(보강 필요)와 verifications(검증 필요) 항목을 생성하세요. 각 항목에 perspective(기획팀장/프로그래머)를 명시하세요. GameData 실제 값이 참조 자료에 있으면 반드시 "Enum명=값" 형식으로 인용하세요.\n\n출력 (JSON만): {"score": 0-100, "issues": [{"text":"...","perspective":"기획팀장|프로그래머"}], "verifications": [{"text":"...","perspective":"기획팀장|프로그래머"}]}',
+            "max_tokens": 8192,
         },
         {
-            "key": "suggestions_flow",
-            "label": "제안 + 로직 플로우",
-            "instruction": '위 문서를 리뷰하여 suggestions(제안 사항)과 flow(전체 동작 로직 텍스트 순서도)를 생성하세요.\n\n출력: {"suggestions": ["..."], "flow": "1. → 2. → 3. ..."}',
-            "max_tokens": 4096,
-        },
-        {
-            "key": "qa_readability",
-            "label": "QA 체크리스트 + 가독성 + 관련 문서",
-            "instruction": '위 문서를 리뷰하여 qa_checklist(QA 테스트 케이스, Happy Path 최우선), readability(문서 가독성 평가), cross_refs(관련 문서 목록)를 생성하세요.\n\n출력: {"qa_checklist": ["..."], "readability": {"score": 0-100, "issues": ["..."]}, "cross_refs": [{"document":"...","relevance":"..."}]}',
-            "max_tokens": 6144,
+            "key": "supplementary",
+            "label": "제안/플로우/QA/가독성",
+            "instruction": '위 문서를 리뷰하여 다음을 생성하세요:\n- suggestions: 제안 사항\n- flow: 전체 동작 로직 텍스트 순서도 ("1. → [조건] → 2. ..." 형식)\n- qa_checklist: QA 테스트 케이스 (Happy Path 최우선, 이후 엣지/경계값)\n- readability: 문서 가독성 평가 (score 0-100 + issues)\n- cross_refs: 관련 문서 목록\n\n출력 (JSON만): {"suggestions": ["..."], "flow": "...", "qa_checklist": ["..."], "readability": {"score": 0-100, "issues": ["..."]}, "cross_refs": [{"document":"...","relevance":"..."}]}',
+            "max_tokens": 8192,
         },
     ]
 

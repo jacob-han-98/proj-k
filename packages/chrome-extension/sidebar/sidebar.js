@@ -566,7 +566,7 @@
   };
 
   async function handleReview(loadingId) {
-    window._reviewStreamBuffer = '';  // 스트림 버퍼 초기화
+    window._reviewStreamBuffer = '';
 
     // 리뷰 옵션을 instruction으로 변환
     const opts = reviewOptions;
@@ -599,16 +599,101 @@
       if (perspectives.length === 0) reviewInstruction += `리뷰 관점: 일반 (perspective 생략)\n`;
     }
 
-    const response = await callBackground('REVIEW', {
-      title: pageMeta.title,
-      text: pageContent.text,
-      reviewInstruction: reviewInstruction,
-    });
+    // sidebar에서 직접 SSE fetch (background service worker idle timeout 우회)
+    const settings = await callBackground('GET_SETTINGS', {});
+    const backendUrl = settings.backendUrl || '';
+
+    let response = null;
+    if (backendUrl) {
+      try {
+        const fetchResp = await fetch(`${backendUrl}/review_stream`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: pageMeta.title,
+            text: pageContent.text,
+            model: 'claude-opus-4-6',
+            review_instruction: reviewInstruction,
+          }),
+        });
+
+        if (fetchResp.ok && fetchResp.body) {
+          const reader = fetchResp.body.getReader();
+          const decoder = new TextDecoder();
+          let buffer = '';
+
+          while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+
+            const lines = buffer.split('\n');
+            buffer = lines.pop() || '';
+            for (const line of lines) {
+              if (!line.trim()) continue;
+              try {
+                const event = JSON.parse(line);
+                if (event.type === 'status') {
+                  setStatus(event.message);
+                  const progressEl = document.querySelector('.review-progress') || document.querySelector('.loading-dots');
+                  if (progressEl) {
+                    progressEl.closest('.chat-msg').innerHTML = `<div class="review-progress">${escapeHtml(event.message)}</div>`;
+                  }
+                } else if (event.type === 'token') {
+                  window._reviewStreamBuffer += event.text;
+                  // 점진적 파싱 + 렌더링
+                  const progressEl2 = document.querySelector('.review-progress') || document.querySelector('.loading-dots');
+                  if (progressEl2) {
+                    const container = progressEl2.closest('.chat-msg');
+                    if (container) {
+                      container.innerHTML = '<div class="review-stream" id="review-stream-container"><pre class="review-stream-text"></pre></div>';
+                      container.id = container.id || 'msg-stream-review';
+                    }
+                  }
+                  let parsed = null;
+                  try { parsed = _parsePartialReviewJSON(window._reviewStreamBuffer); } catch {}
+                  if (parsed && (parsed.issues?.length || parsed.verifications?.length || parsed.suggestions?.length)) {
+                    latestReviewData = parsed;
+                    const target = document.getElementById('review-stream-container')?.closest('.chat-msg') || document.getElementById('review-card')?.closest('.chat-msg');
+                    if (target) target.innerHTML = renderReviewCard(parsed, true);
+                  } else {
+                    const streamEl = document.querySelector('.review-stream-text');
+                    if (streamEl) streamEl.textContent = window._reviewStreamBuffer;
+                  }
+                  const chatArea = document.querySelector('.chat-messages');
+                  if (chatArea) chatArea.scrollTop = chatArea.scrollHeight;
+                } else if (event.type === 'result') {
+                  response = event.data;
+                } else if (event.type === 'error') {
+                  throw new Error(event.message);
+                }
+              } catch (e) {
+                if (e.message && !e.message.includes('Unexpected') && !e.message.includes('JSON')) throw e;
+              }
+            }
+          }
+        }
+      } catch (e) {
+        // SSE 실패 시 background 경유 폴백
+        response = await callBackground('REVIEW', {
+          title: pageMeta.title,
+          text: pageContent.text,
+          reviewInstruction: reviewInstruction,
+        });
+      }
+    } else {
+      response = await callBackground('REVIEW', {
+        title: pageMeta.title,
+        text: pageContent.text,
+        reviewInstruction: reviewInstruction,
+      });
+    }
 
     // 최종 결과 파싱
     let reviewData;
+    const reviewText = response?.review || window._reviewStreamBuffer || '';
     try {
-      const cleaned = response.review.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+      const cleaned = reviewText.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
       const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
       if (jsonMatch) reviewData = JSON.parse(jsonMatch[0]);
     } catch { /* fall through to text display */ }

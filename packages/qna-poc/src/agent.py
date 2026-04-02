@@ -2386,20 +2386,40 @@ def review_document(title: str, text: str,
 
     t_review = time.time()
 
-    # 컨텍스트 구성 — GameData를 상단에 배치하여 LLM이 반드시 참조하도록
-    gd_parts = []
+    # 컨텍스트 구성 — GameData를 하나의 통합 테이블로 합쳐서 상단에 배치
+    gd_texts = []
     doc_parts = []
     for c in all_chunks[:40]:
         wb = c.get("workbook", "?")
         sh = c.get("sheet", "")
         if c.get("_game_data"):
-            gd_parts.append(f"--- ⚡ [GameData 실제 값] {wb}/{sh} ---\n{c['text'][:3000]}")
+            gd_texts.append(c['text'][:3000])
         else:
             doc_parts.append(f"--- [기획서] {wb}/{sh} ---\n{c['text'][:3000]}")
 
+    # GameData 중복 제거 + 통합 (개별 1건 테이블 → 하나의 통합 테이블)
     context_parts = []
-    if gd_parts:
-        context_parts.append("═══ 데이터시트 실제 값 (아래 값을 기획서와 반드시 교차 비교하세요) ═══\n\n" + "\n\n".join(gd_parts))
+    if gd_texts:
+        # 각 청크에서 테이블 행만 추출하여 통합
+        seen_rows = set()
+        merged_rows = []
+        for gd_text in gd_texts:
+            for line in gd_text.split('\n'):
+                stripped = line.strip()
+                if stripped.startswith('|') and '---' not in stripped and 'ContentSettingEnum' not in stripped and stripped not in seen_rows:
+                    seen_rows.add(stripped)
+                    merged_rows.append(stripped)
+        if merged_rows:
+            merged_table = "| ContentSettingEnum | Value | Comment | Type |\n| --- | --- | --- | --- |\n" + "\n".join(merged_rows)
+            gd_section = f"""═══ ⚡ 데이터시트 실제 값 (기획서와 반드시 교차 비교하세요!) ═══
+
+아래는 ContentSetting 테이블의 **실제 데이터**입니다. 기획서에 플레이스홀더("ItemId입력" 등)가 있으면 아래 실제 값을 인용하세요.
+
+{merged_table}"""
+            context_parts.append(gd_section)
+        else:
+            context_parts.append("═══ 데이터시트 실제 값 ═══\n\n" + "\n\n".join(gd_texts))
+
     if doc_parts:
         context_parts.append("═══ 관련 기획서 ═══\n\n" + "\n\n".join(doc_parts))
 

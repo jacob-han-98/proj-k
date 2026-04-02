@@ -38,7 +38,8 @@ CRITICAL RULES:
 - Ensure valid JSON: escape quotes with \\", no literal newlines in strings.
 - Generate one change per instruction item. Do NOT skip items.
 - When referencing other documents: you do NOT know which documents actually exist. Never invent document names or links. Instead, write "[TODO: 관련 문서 링크 추가 필요]" so the author can fill in real links later.
-- For features planned but not yet designed, mark as "[TODO]" with a brief note.`,
+- For features planned but not yet designed, mark as "[TODO]" with a brief note.
+- IMPORTANT: When editing table cells, ONLY include the text from the SINGLE CELL being changed in "before" and "after". Do NOT merge or mix content from different columns. Each table cell is independent — if column 1 has "KeywordA" and column 2 has "텍스트A", edit them as separate changes if both need changes.`,
     user: (title, text, instruction, maxChanges) => `Page Title: ${title}
 
 Page Text:

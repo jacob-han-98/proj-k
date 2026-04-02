@@ -2314,28 +2314,42 @@ def review_document(title: str, text: str,
         if mod and mod.is_db_ready():
             db_path = mod.get_db_path()
 
-            # ContentSetting 일괄 조회 (LIKE 대신 OR로 한번에)
+            # ContentSetting 조회 — 각 키의 핵심 부분으로 LIKE 검색 + 중복 제거
+            seen_enums = set()
             for key in all_data_keys[:20]:
-                try:
-                    result = mod.execute_game_query({
-                        "action": "query",
-                        "table": "ContentSetting",
-                        "filters": [{"column": "ContentSettingEnum", "op": "LIKE", "value": f"%{key}%"}],
-                        "limit": 10,
-                    }, db_path)
-                    if getattr(result, "rows", None):
-                        formatted = mod.format_game_data_result(result)
-                        gd_chunks.append({
-                            "id": f"gamedata_cs_{key}",
-                            "workbook": "GameData/ContentSetting",
-                            "sheet": key,
-                            "text": formatted,
-                            "score": 1.5,
-                            "source": "game_data_review",
-                            "_game_data": True,
-                        })
-                except Exception as e:
-                    log.debug(f"game_data query for {key}: {e}")
+                # 키에서 핵심 부분 추출 (HudHpPotionCondition → HpPotion)
+                search_patterns = [key]
+                # 공통 접두사/접미사 변형도 시도
+                if len(key) > 8:
+                    # 앞 8자 이상이면 부분 매칭
+                    search_patterns.append(key[:min(len(key), 15)])
+
+                for pattern in search_patterns:
+                    try:
+                        result = mod.execute_game_query({
+                            "action": "query",
+                            "table": "ContentSetting",
+                            "filters": [{"column": "ContentSettingEnum", "op": "LIKE", "value": f"%{pattern}%"}],
+                            "limit": 10,
+                        }, db_path)
+                        if getattr(result, "rows", None):
+                            formatted = mod.format_game_data_result(result)
+                            new_rows = [r for r in result.rows if r[0] not in seen_enums]
+                            if new_rows:
+                                for r in new_rows:
+                                    seen_enums.add(r[0])
+                                gd_chunks.append({
+                                    "id": f"gamedata_cs_{key}",
+                                    "workbook": "GameData/ContentSetting",
+                                    "sheet": key,
+                                    "text": formatted,
+                                    "score": 1.5,
+                                    "source": "game_data_review",
+                                    "_game_data": True,
+                                })
+                            break  # 첫 매칭 성공하면 다음 키로
+                    except Exception as e:
+                        log.debug(f"game_data query for {pattern}: {e}")
 
             # 참조 테이블 조회 (스키마 + 샘플)
             for tbl in all_table_refs[:8]:

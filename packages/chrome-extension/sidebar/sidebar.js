@@ -1397,7 +1397,7 @@
 
       if (allChanges.length > 0) {
         // 기존 changes 표시 로직 재활용
-        editSession = { changes: allChanges, acceptedIds: new Set(), rejectedIds: new Set(), unmatchedIds: new Set() };
+        editSession = { changes: allChanges, decisions: {}, autoApply: false };
         addMessage({ role: 'assistant', content: '', type: 'changes', changes: allChanges });
         setStatus(`${allChanges.length}건 수정 제안`);
         chatState = 'CHANGES_PENDING';

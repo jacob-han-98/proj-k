@@ -1396,9 +1396,15 @@
       removeMessage(loadingId);
 
       if (allChanges.length > 0) {
-        // 기존 changes 표시 로직 재활용
         editSession = { changes: allChanges, decisions: {}, autoApply: false };
+        pendingChanges = allChanges;
         addMessage({ role: 'assistant', content: '', type: 'changes', changes: allChanges });
+
+        // Confluence 페이지에 인라인 프리뷰 표시
+        sendToContent('PREVIEW_CHANGES', {
+          changes: allChanges.map(c => ({ id: c.id, before: c.before, after: c.after })),
+        });
+
         setStatus(`${allChanges.length}건 수정 제안`);
         chatState = 'CHANGES_PENDING';
       } else {

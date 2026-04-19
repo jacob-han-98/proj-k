@@ -9,7 +9,11 @@ export interface Source {
   sheet: string;
   section_path: string;
   score: number;
-  source_url?: string;
+  source_url?: string;    // legacy (qna-poc 호환)
+  path?: string;          // 내부 파일 경로 (디버그/스플릿 뷰)
+  source?: 'xlsx' | 'confluence' | 'other';
+  origin_label?: string;  // 사용자 표시용 원본 라벨
+  origin_url?: string;    // Confluence 원본 링크 등
 }
 
 export interface Proposal {
@@ -114,6 +118,24 @@ export interface PresetPrompt {
 export const fetchPresetPrompts = async (): Promise<{ presets: PresetPrompt[] }> => {
   const res = await fetch(`${API_BASE_URL}/preset_prompts`);
   if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res.json();
+};
+
+export interface SourceView {
+  path: string;
+  section: string;
+  content: string;
+  section_range: { start_line: number; end_line: number } | null;
+  origin_label: string;
+  origin_url: string;
+  source: 'xlsx' | 'confluence' | 'other';
+}
+
+export const fetchSourceView = async (path: string, section = ''): Promise<SourceView> => {
+  const qs = new URLSearchParams({ path });
+  if (section) qs.set('section', section);
+  const res = await fetch(`${API_BASE_URL}/source_view?${qs.toString()}`);
+  if (!res.ok) throw new Error(`source_view ${res.status}`);
   return res.json();
 };
 

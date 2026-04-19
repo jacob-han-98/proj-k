@@ -173,32 +173,87 @@ def strip_progress_prefix(answer: str) -> str:
     return answer
 
 
+# ── Confluence manifest 로더 (page path → pageId) ─────────────
+
+_CONFLU_MANIFEST = _ROOT.parent / "confluence-downloader" / "output" / "_manifest.json"
+_CONFLU_BASE = "https://bighitcorp.atlassian.net/wiki/pages/viewpage.action?pageId="
+_confluence_path_to_id: dict[str, str] = {}
+
+
+def _load_confluence_manifest():
+    """manifest 를 walk 하여 'title/chain' → pageId 매핑 생성."""
+    if not _CONFLU_MANIFEST.exists():
+        return
+    try:
+        root = json.loads(_CONFLU_MANIFEST.read_text(encoding="utf-8"))
+    except Exception as e:
+        print(f"[storage] confluence manifest 로드 실패: {e}")
+        return
+
+    def walk(node: dict, chain: list[str]):
+        title = node.get("title", "")
+        pid = node.get("id", "")
+        depth = node.get("depth", 0)
+        # depth 0 은 root 공간 (로컬 디렉터리의 한 단계 위). skip.
+        if depth > 0 and title and pid:
+            new_chain = chain + [title]
+            _confluence_path_to_id["/".join(new_chain)] = pid
+        else:
+            new_chain = chain
+        for c in node.get("children", []) or []:
+            walk(c, new_chain)
+
+    walk(root, [])
+    print(f"[storage] confluence pageId 매핑 {len(_confluence_path_to_id)}개 로드")
+
+
+_load_confluence_manifest()
+
+
+def _confluence_url_for(chain_parts: tuple[str, ...]) -> str:
+    """디렉터리 체인에서 pageId 탐색 (가장 긴 prefix 매치부터)."""
+    key = "/".join(chain_parts)
+    pid = _confluence_path_to_id.get(key)
+    if pid:
+        return _CONFLU_BASE + pid
+    # 최장 prefix 매칭 (일부 페이지는 manifest 에 누락될 수 있음)
+    for i in range(len(chain_parts) - 1, 0, -1):
+        pid = _confluence_path_to_id.get("/".join(chain_parts[:i]))
+        if pid:
+            return _CONFLU_BASE + pid
+    return ""
+
+
 def _path_to_source_meta(path: str) -> dict:
     """
-    packages/xlsx-extractor/output/7_System/PK_HUD 시스템/HUD_전투/_final/content.md
-      → {workbook: "PK_HUD 시스템", sheet: "HUD_전투", source: "xlsx"}
-
-    packages/confluence-downloader/output/시스템 디자인/NPC/content.md
-      → {workbook: "시스템 디자인", sheet: "NPC", source: "confluence"}
+    xlsx: packages/xlsx-extractor/output/7_System/PK_HUD 시스템/HUD_전투/_final/content.md
+      → workbook="PK_HUD 시스템", sheet="HUD_전투",
+         origin_label="PK_HUD 시스템.xlsx / HUD_전투 시트",
+         origin_url="" (xlsx 는 내부 링크 없음)
+    confluence: packages/confluence-downloader/output/시스템 디자인/NPC/content.md
+      → workbook="시스템 디자인", sheet="NPC",
+         origin_label="Confluence / 시스템 디자인 / NPC",
+         origin_url="https://bighitcorp.atlassian.net/wiki/pages/viewpage.action?pageId=<id>"
     """
     parts = path.split("/")
     if "xlsx-extractor" in parts:
         try:
             i = parts.index("output")
-            # parts after "output": <category>/<workbook>/<sheet>/_final/content.md
-            # or <workbook>/<sheet>/_final/content.md
             rest = parts[i + 1 :]
-            # strip _final/content.md
             if rest and rest[-1] == "content.md":
                 rest = rest[:-1]
             if rest and rest[-1] == "_final":
                 rest = rest[:-1]
             if len(rest) >= 2:
+                workbook = rest[-2]
+                sheet = rest[-1]
                 return {
-                    "workbook": rest[-2],
-                    "sheet": rest[-1],
-                    "path": path,
+                    "workbook": workbook,
+                    "sheet": sheet,
+                    "path": path,  # 내부 로그용
                     "source": "xlsx",
+                    "origin_label": f"{workbook}.xlsx / {sheet} 시트",
+                    "origin_url": "",
                 }
         except ValueError:
             pass
@@ -208,16 +263,29 @@ def _path_to_source_meta(path: str) -> dict:
             rest = parts[i + 1 :]
             if rest and rest[-1] == "content.md":
                 rest = rest[:-1]
-            if len(rest) >= 1:
+            if rest:
+                chain = tuple(rest)
+                space = rest[0]
+                title = rest[-1]
+                display_chain = " / ".join(rest)
                 return {
-                    "workbook": rest[0] if len(rest) > 1 else "",
-                    "sheet": rest[-1],
+                    "workbook": space,
+                    "sheet": title,
                     "path": path,
                     "source": "confluence",
+                    "origin_label": f"Confluence / {display_chain}",
+                    "origin_url": _confluence_url_for(chain),
                 }
         except ValueError:
             pass
-    return {"workbook": "", "sheet": path.split("/")[-1], "path": path, "source": "other"}
+    return {
+        "workbook": "",
+        "sheet": path.split("/")[-1],
+        "path": path,
+        "source": "other",
+        "origin_label": path,
+        "origin_url": "",
+    }
 
 
 # ── Turn / Conversation CRUD ─────────────────────────────────

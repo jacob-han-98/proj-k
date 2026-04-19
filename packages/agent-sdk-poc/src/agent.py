@@ -52,7 +52,9 @@ DISALLOWED_TOOLS = [
 
 # 모델 별칭 → Bedrock ID (CLI가 수용하는 형태)
 MODEL_ALIASES = {
-    "opus": "global.anthropic.claude-opus-4-6-v1",
+    "opus": "global.anthropic.claude-opus-4-7",
+    "opus-4-7": "global.anthropic.claude-opus-4-7",
+    "opus-4-6": "global.anthropic.claude-opus-4-6-v1",
     "sonnet": "global.anthropic.claude-sonnet-4-6",
     "haiku": "global.anthropic.claude-haiku-4-5-20251001-v1:0",
 }

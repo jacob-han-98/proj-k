@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import './App.css'
-import { askQuestionStream, fetchPresetPrompts } from './api'
-import type { AskResponse, StreamEvent, PresetPrompt } from './api'
+import { askQuestionStream, fetchPresetPrompts, fetchSourceView } from './api'
+import type { AskResponse, StreamEvent, PresetPrompt, SourceView } from './api'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import mermaid from 'mermaid'
@@ -96,8 +96,27 @@ function App() {
   ))
 
   const [presets, setPresets] = useState<PresetPrompt[]>([])
+  const [sourceView, setSourceView] = useState<SourceView | null>(null)
+  const [sourceViewLoading, setSourceViewLoading] = useState(false)
+  const [sourceViewError, setSourceViewError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+
+  const openSourceView = useCallback(async (path: string, section: string) => {
+    setSourceViewLoading(true)
+    setSourceViewError(null)
+    try {
+      const v = await fetchSourceView(path, section)
+      setSourceView(v)
+    } catch (e: any) {
+      setSourceViewError(e?.message || String(e))
+    } finally {
+      setSourceViewLoading(false)
+    }
+  }, [])
+  const closeSourceView = useCallback(() => {
+    setSourceView(null); setSourceViewError(null)
+  }, [])
 
   useEffect(() => {
     fetchPresetPrompts()
@@ -432,11 +451,11 @@ function App() {
 
   const renderSources = (sources: AskResponse['sources']) => {
     if (!sources || sources.length === 0) return null;
-    // workbook+sheet 기준 그룹화 → 한 시트의 여러 섹션은 한 카드 아래 접힘
-    type SrcAny = typeof sources[number] & { path?: string; source?: string };
+    type SrcAny = typeof sources[number] & { path?: string; source?: string; origin_label?: string; origin_url?: string };
+    // path 기준 그룹화 → 한 문서의 여러 섹션은 한 카드로 접힘
     const groups = new Map<string, { src: SrcAny; sections: string[] }>();
     sources.forEach((s: SrcAny) => {
-      const key = (s as any).path || `${s.workbook}/${s.sheet}`;
+      const key = s.path || `${s.workbook}/${s.sheet}`;
       const g = groups.get(key);
       const sec = (s.section_path || '').trim();
       if (g) {
@@ -450,25 +469,44 @@ function App() {
         <p className="sources-title">출처</p>
         <div className="source-cards-container">
           {Array.from(groups.values()).map(({ src, sections }, i) => {
-            const isConfluence = (src as any).source === 'confluence' || src.workbook.startsWith('Confluence');
-            let link = '#';
-            if (src.source_url) {
-              link = src.source_url;
-            } else if (isConfluence) {
-              const searchTerm = src.sheet || src.workbook.split('/').pop();
-              link = `https://bighitcorp.atlassian.net/wiki/search?text=${encodeURIComponent(searchTerm || '')}&where=PK`;
-            }
-            const displayLabel = [src.workbook, src.sheet].filter(Boolean).join(' / ') || (src as any).path || '(unknown)';
+            const isConfluence = src.source === 'confluence' || src.workbook.startsWith('Confluence');
+            // 사용자 표시 라벨: 원본 라벨(origin_label) 우선 → 없으면 워크북/시트
+            const displayLabel =
+              src.origin_label ||
+              [src.workbook, src.sheet].filter(Boolean).join(' / ') ||
+              src.path || '(unknown)';
+            // 클릭 동작:
+            //  - 주 클릭: 우측 스플릿 뷰 오픈 (해당 문서 섹션 하이라이트)
+            //  - 원본 링크(Confluence 등)는 별도 ↗ 버튼
+            const extLink = src.origin_url || src.source_url || '';
+            const firstSection = sections[0] || '';
+            const canOpen = !!src.path;
             return (
-              <a key={i} href={link} target={link !== '#' ? "_blank" : undefined} rel="noreferrer" className="source-link-card glass" title={(src as any).path}>
-                <span className="source-icon">{isConfluence ? <ConfluenceIcon /> : <ExcelIcon />}</span>
-                <div className="source-body">
-                  <span className="source-text">{displayLabel}</span>
-                  {sections.length > 0 && (
-                    <span className="source-sections">{sections.slice(0, 4).join(' · ')}{sections.length > 4 ? ` …+${sections.length - 4}` : ''}</span>
-                  )}
-                </div>
-              </a>
+              <div key={i} className="source-link-card glass" title={src.path || displayLabel}>
+                <button
+                  className="source-card-main"
+                  onClick={() => canOpen && openSourceView(src.path!, firstSection)}
+                  disabled={!canOpen}
+                  type="button"
+                >
+                  <span className="source-icon">{isConfluence ? <ConfluenceIcon /> : <ExcelIcon />}</span>
+                  <div className="source-body">
+                    <span className="source-text">{displayLabel}</span>
+                    {sections.length > 0 && (
+                      <span className="source-sections">{sections.slice(0, 4).join(' · ')}{sections.length > 4 ? ` …+${sections.length - 4}` : ''}</span>
+                    )}
+                  </div>
+                </button>
+                {extLink && (
+                  <a
+                    className="source-card-ext"
+                    href={extLink}
+                    target="_blank"
+                    rel="noreferrer"
+                    title="원본 링크 새 창에서 열기"
+                  >↗</a>
+                )}
+              </div>
             );
           })}
         </div>
@@ -514,8 +552,70 @@ function App() {
     );
   }
 
+  const renderSourceViewPanel = () => {
+    if (!sourceView && !sourceViewLoading && !sourceViewError) return null;
+    const lines = sourceView?.content.split('\n') ?? [];
+    const sr = sourceView?.section_range;
+    return (
+      <aside className="source-view-panel glass">
+        <header className="source-view-header">
+          <div className="source-view-title">
+            {sourceView?.origin_label || (sourceViewLoading ? '로딩 중...' : '출처 뷰')}
+          </div>
+          {sourceView?.origin_url && (
+            <a href={sourceView.origin_url} target="_blank" rel="noreferrer" className="source-view-ext" title="원본 링크">↗ 원본</a>
+          )}
+          <button className="source-view-close" onClick={closeSourceView} title="닫기">✕</button>
+        </header>
+        {sourceViewLoading && <div className="source-view-loading"><span className="loading-spinner" /> 로딩 중...</div>}
+        {sourceViewError && <div className="source-view-error">오류: {sourceViewError}</div>}
+        {sourceView && (
+          <>
+            {sr && (
+              <div className="source-view-section-badge">
+                하이라이트: {sourceView.section}  ·  라인 {sr.start_line}–{sr.end_line}
+              </div>
+            )}
+            <div className="source-view-body markdown-body">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  code({ className, children, ...props }: any) {
+                    const match = /language-(\w+)/.exec(className || '');
+                    if (match && match[1] === 'mermaid') {
+                      return <MermaidBlock code={String(children).replace(/\n$/, '')} theme={resolvedTheme} />;
+                    }
+                    return <code className={className} {...props}>{children}</code>;
+                  },
+                  // 하이라이트된 섹션 감싸기: 간단히 별도 <section> 으로 split
+                } as any}
+              >
+                {/* 섹션 range 가 있으면 세 구간으로 분리 렌더 */}
+                {sr
+                  ? lines.slice(0, sr.start_line - 1).join('\n')
+                  : sourceView.content}
+              </ReactMarkdown>
+              {sr && (
+                <div className="source-view-highlight">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {lines.slice(sr.start_line - 1, sr.end_line).join('\n')}
+                  </ReactMarkdown>
+                </div>
+              )}
+              {sr && (
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {lines.slice(sr.end_line).join('\n')}
+                </ReactMarkdown>
+              )}
+            </div>
+          </>
+        )}
+      </aside>
+    );
+  };
+
   return (
-    <div className="layout">
+    <div className={`layout ${sourceView || sourceViewLoading || sourceViewError ? 'has-source-view' : ''}`}>
       {/* Sidebar */}
       <aside className="sidebar glass">
         <div className="sidebar-header">
@@ -700,6 +800,7 @@ function App() {
           )}
         </div>
       </main>
+      {renderSourceViewPanel()}
     </div>
   )
 }

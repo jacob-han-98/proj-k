@@ -420,6 +420,100 @@ async def shared_conversation(conv_id: str):
     return conv
 
 
+@app.get("/source_view")
+async def source_view(path: str, section: str = ""):
+    """출처 카드 클릭 시 해당 content.md 본문 반환.
+    `path` 는 Agent 가 인용한 내부 경로(상대) 또는 절대 경로.
+    응답: {path, section, content, origin_label, origin_url, section_range}
+    """
+    from pathlib import Path as _P
+    agent_dir = _P(__file__).resolve().parent.parent          # agent-sdk-poc/
+    repo_root = agent_dir.parent.parent                        # repo root (proj-k-agent on server)
+    normalized = path.lstrip("/").strip()
+    if not normalized:
+        raise HTTPException(status_code=400, detail="invalid path")
+
+    # Agent 가 인용한 '../xlsx-extractor/...' / '../confluence-downloader/...' →
+    # repo_root 기준 'packages/…' 로 정규화
+    if normalized.startswith("../xlsx-extractor/"):
+        normalized = "packages/" + normalized[3:]
+    elif normalized.startswith("../confluence-downloader/"):
+        normalized = "packages/" + normalized[3:]
+
+    # 기준 디렉터리 선택: index/summaries/ 는 agent-sdk-poc 하위, 나머지는 repo_root.
+    allowed_under_repo = ("packages/xlsx-extractor/output/", "packages/confluence-downloader/output/")
+    allowed_under_agent = ("index/summaries/",)
+    if normalized.startswith(allowed_under_repo):
+        base = repo_root
+    elif normalized.startswith(allowed_under_agent):
+        base = agent_dir
+    else:
+        raise HTTPException(status_code=403, detail="path not allowed")
+
+    candidate = (base / normalized).resolve()
+    try:
+        candidate.relative_to(base)
+    except ValueError:
+        raise HTTPException(status_code=403, detail="path escapes base")
+
+    if not candidate.exists() or not candidate.is_file():
+        raise HTTPException(status_code=404, detail="file not found")
+
+    content = candidate.read_text(encoding="utf-8", errors="replace")
+
+    # 섹션 위치 (Markdown heading 매칭 — 정규화 후 비교)
+    def _norm_heading(s: str) -> str:
+        # 백슬래시 이스케이프 제거, 공백·구두점 관대하게 비교
+        import re as _re
+        s = s.replace("\\[", "[").replace("\\]", "]").replace("\\(", "(").replace("\\)", ")").replace("\\.", ".")
+        s = _re.sub(r"\s+", " ", s).strip()
+        return s
+
+    def _heading_level(line: str) -> int:
+        m = 0
+        for ch in line:
+            if ch == "#": m += 1
+            else: break
+        return m
+
+    section_range = None
+    if section:
+        target = _norm_heading(section)
+        target_low = target.lower()
+        lines = content.splitlines()
+        start = -1
+        start_level = 99
+        for i, line in enumerate(lines):
+            s = line.strip()
+            if not s.startswith("#"):
+                continue
+            lvl = _heading_level(s)
+            hd = _norm_heading(s.lstrip("#"))
+            hd_low = hd.lower()
+            if start < 0:
+                if hd_low == target_low or target_low in hd_low or hd_low in target_low:
+                    start = i
+                    start_level = lvl
+            else:
+                # 동급/상위 헤딩을 만나면 구간 종료
+                if lvl <= start_level:
+                    section_range = {"start_line": start + 1, "end_line": i}
+                    break
+        if start >= 0 and section_range is None:
+            section_range = {"start_line": start + 1, "end_line": len(lines)}
+
+    meta = storage._path_to_source_meta(normalized)
+    return {
+        "path": normalized,
+        "section": section,
+        "content": content,
+        "section_range": section_range,
+        "origin_label": meta.get("origin_label"),
+        "origin_url": meta.get("origin_url"),
+        "source": meta.get("source"),
+    }
+
+
 @app.post("/query")
 async def query_endpoint(req: QueryRequest):
     web_sid = req.session_id or str(uuid.uuid4())

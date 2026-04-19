@@ -501,7 +501,28 @@ async def source_view(path: str, section: str = ""):
     from pathlib import Path as _P
     agent_dir = _P(__file__).resolve().parent.parent          # agent-sdk-poc/
     repo_root = agent_dir.parent.parent                        # repo root (proj-k-agent on server)
-    normalized = path.lstrip("/").strip()
+    raw_path = path.strip()
+
+    # Agent 의 Read 툴은 절대 경로(/home/ubuntu/proj-k-agent/packages/…)를 그대로 넘긴다.
+    # repo_root / agent_dir 하위면 상대 경로로 정규화해 whitelist 검사와 호환시킴.
+    if raw_path.startswith("/"):
+        try:
+            ap = _P(raw_path)
+            rel = None
+            # agent_dir 을 먼저 시도. agent_dir 은 repo_root 의 하위라 repo_root 가 먼저면
+            # index/summaries/... 경로가 'packages/agent-sdk-poc/index/...' 로 되어 whitelist 를 통과하지 못함.
+            for base_try in (agent_dir, repo_root):
+                try:
+                    rel = ap.relative_to(base_try)
+                    break
+                except ValueError:
+                    continue
+            if rel is not None:
+                raw_path = str(rel)
+        except Exception:
+            pass
+
+    normalized = raw_path.lstrip("/").strip()
     if not normalized:
         raise HTTPException(status_code=400, detail="invalid path")
 

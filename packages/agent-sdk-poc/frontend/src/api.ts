@@ -130,7 +130,7 @@ export interface SourceView {
   section_range: { start_line: number; end_line: number } | null;
   origin_label: string;
   origin_url: string;
-  source: 'xlsx' | 'confluence' | 'other';
+  source: 'xlsx' | 'confluence' | 'summary' | 'image' | 'other';
 }
 
 export const fetchSourceView = async (path: string, section = ''): Promise<SourceView> => {

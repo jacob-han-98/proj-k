@@ -471,6 +471,37 @@ def _path_to_source_meta(path: str) -> dict:
                 }
         except ValueError:
             pass
+    # Haiku 로 생성한 요약본(`index/summaries/...`) — 원본 문서가 아니라
+    # 요약이라는 점을 UI 에 분명히 알려주기 위해 별도 분류한다.
+    if "index" in parts and "summaries" in parts:
+        try:
+            si = parts.index("summaries")
+            rest = parts[si + 1 :]
+            if rest:
+                basename = rest[-1]
+                stem = basename[:-3] if basename.lower().endswith(".md") else basename
+                kind = rest[0] if rest else ""
+                # xlsx: ["xlsx", "<category>", "<workbook>", "<sheet>.md"]
+                # confluence: ["confluence", "<space>", ..., "<page>.md"]
+                if kind in ("xlsx", "confluence") and len(rest) >= 3:
+                    display_parts = rest[1:-1] + [stem]
+                    # xlsx 는 카테고리(7_System 등)를 보여도 의미 없으니 생략
+                    if kind == "xlsx" and len(display_parts) >= 2:
+                        display_parts = display_parts[1:]
+                else:
+                    display_parts = rest[:-1] + [stem]
+                display = " / ".join(display_parts)
+                return {
+                    "workbook": "",
+                    "sheet": stem,
+                    "path": path,
+                    "source": "summary",
+                    "origin_label": f"{display} (생성된 요약본)",
+                    "origin_url": "",
+                }
+        except ValueError:
+            pass
+
     if "confluence-downloader" in parts:
         try:
             i = parts.index("output")

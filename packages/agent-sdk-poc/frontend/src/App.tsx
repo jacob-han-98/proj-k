@@ -623,10 +623,24 @@ function App() {
           {tools.map((t, i) => {
             const displayLabel = t.doneLabel || t.label;
             const hasDetail = !!t.preview || !!t.input;
+            // Read 툴이면 클릭 시 우측 패널 오픈. 내부 인덱스 파일은 제외.
+            const readPath: string = (t.tool === 'Read' && t.input && typeof t.input.file_path === 'string')
+              ? t.input.file_path : '';
+            const isInternalIdx = /^index\/(MASTER_INDEX|TERM_INDEX)\.md$/.test(readPath);
+            const canOpenInView = !!readPath && !isInternalIdx;
             return (
               <details key={t.id || i} className={`tool-entry ${t.summary ? 'tool-done' : 'tool-running'}`}>
                 <summary>
-                  <span className="tool-label">{displayLabel}</span>
+                  {canOpenInView ? (
+                    <button
+                      className="tool-label-link"
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); openSourceView(readPath, ''); }}
+                      title="우측 패널에서 열기"
+                      type="button"
+                    >{displayLabel}</button>
+                  ) : (
+                    <span className="tool-label">{displayLabel}</span>
+                  )}
                   {t.summary && <span className="tool-summary">· {t.summary}</span>}
                   {!t.summary && <span className="loading-spinner inline-spinner" />}
                 </summary>
@@ -664,6 +678,9 @@ function App() {
       <aside className="source-view-panel glass">
         <header className="source-view-header">
           <div className="source-view-title">
+            {sourceView?.source === 'summary' && (
+              <span className="source-view-summary-badge" title="Haiku 로 생성한 요약본입니다. 원본이 아닙니다.">📝 요약본</span>
+            )}
             {sourceView?.origin_label || (sourceViewLoading ? '로딩 중...' : '출처 뷰')}
           </div>
           {sourceView?.origin_url && (
@@ -671,6 +688,11 @@ function App() {
           )}
           <button className="source-view-close" onClick={closeSourceView} title="닫기">✕</button>
         </header>
+        {sourceView?.source === 'summary' && (
+          <div className="source-view-summary-notice">
+            ⚠ 이 문서는 <strong>원본 기획서가 아니라 검색용 요약본</strong>입니다. 세부 내용은 원본 문서를 확인해 주세요.
+          </div>
+        )}
         {sourceViewLoading && <div className="source-view-loading"><span className="loading-spinner" /> 로딩 중...</div>}
         {sourceViewError && <div className="source-view-error">오류: {sourceViewError}</div>}
         {sourceView && (

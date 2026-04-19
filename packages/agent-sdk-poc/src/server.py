@@ -372,24 +372,36 @@ async def ask_stream(req: AskStreamRequest):
             # 최종 결과 조립
             answer_raw = "".join(answer_text_parts).strip()
             answer_stripped = storage.strip_progress_prefix(answer_raw)
-            sources = storage.extract_sources(answer_stripped)
-            answer = storage.rewrite_source_paths(answer_stripped)
+            # 1차: (출처: <path>) 패턴 치환
+            answer_rewritten = storage.rewrite_source_paths(answer_stripped)
+            # 2차: 본문 전체에서 내부 경로/인덱스 경로 sanitize
+            answer, path_findings = storage.sanitize_internal_paths(answer_rewritten)
+            # sources 추출은 원문 path 기반으로 (치환 이후엔 path 사라짐)
+            sources = storage.extract_sources(answer_rewritten)
 
-            # 🚨 Confluence 누락 검증 — CLAUDE.md 워크플로우 위반 감지
+            qa_warnings: list[str] = []
+
+            # 🚨 Confluence 누락 검증
             has_confluence_source = any(s.get("source") == "confluence" for s in sources)
-            # 실제 Agent 가 Confluence summary/content 를 탐색했는지
             explored_confluence = any(
                 "confluence" in json.dumps(t.get("input", {}), ensure_ascii=False).lower()
                 for t in tool_trace
             )
-            qa_warnings: list[str] = []
             if not explored_confluence:
-                msg = f"[warn] conv={conv_id[:8]} Confluence 미탐색 — Excel only 답변"
-                log.warning(msg)
+                log.warning(f"[warn] conv={conv_id[:8]} Confluence 미탐색")
                 qa_warnings.append("Confluence 미탐색")
             elif not has_confluence_source:
                 log.warning(f"[warn] conv={conv_id[:8]} Confluence 탐색했으나 인용 없음")
                 qa_warnings.append("Confluence 탐색했으나 인용 없음")
+
+            # 🚨 내부 경로 누출 검증 — sanitize 가 치환 수행했으면 findings 있음
+            if path_findings:
+                log.warning(f"[warn] conv={conv_id[:8]} 내부 경로 {len(path_findings)}건 치환됨")
+                qa_warnings.append(f"내부 경로 노출 {len(path_findings)}건 (자동 치환됨)")
+            # 최종 잔여 검증 — 남아있으면 치명적
+            if "packages/xlsx-extractor" in answer or "packages/confluence-downloader" in answer:
+                log.error(f"[err] conv={conv_id[:8]} 치환 후에도 내부 경로 잔여!")
+                qa_warnings.append("⚠ 치환 실패 (잔여 내부 경로)")
             elapsed_s = round(time.time() - start, 2)
 
             # 저장 — tool_trace 에 input 포함 (admin/shared 에서 실제 탐색 경로 확인 가능)

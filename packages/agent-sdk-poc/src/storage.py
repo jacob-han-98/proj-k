@@ -165,7 +165,6 @@ def rewrite_source_paths(answer: str) -> str:
             if last_path:
                 label_path = last_path
             else:
-                # 치환할 수 없음 — 원형 유지
                 out.append(answer[m.start():end+1])
                 i = end + 1
                 continue
@@ -179,6 +178,74 @@ def rewrite_source_paths(answer: str) -> str:
             out.append(f"(출처: {label_path})")
         i = end + 1
     return "".join(out)
+
+
+# 본문 전체에서 내부 경로를 탐지하는 패턴
+# 경로 세그먼트에 한글·공백·괄호 등이 들어가므로 최소한의 terminal 만 제외.
+# 제외: /, 개행, 탭, 백틱, 따옴표, 꺾쇠, 대괄호
+_SEG = r"[^/\r\n`'\"<>\[\]\t]+?"   # non-greedy — 다음 `/` 나 terminal 전까지. ()는 허용.
+
+_INTERNAL_PATH_RE = re.compile(
+    r"""(?x)
+    (?: packages/ | \.\./ )
+    (?: xlsx-extractor/output
+      | confluence-downloader/output )
+    (?: / """ + _SEG + r""" )+?
+    /content\.md
+    """
+)
+_INTERNAL_IMG_RE = re.compile(
+    r"""(?x)
+    (?: packages/ | \.\./ )
+    xlsx-extractor/output
+    (?: / """ + _SEG + r""" )+?
+    /images/
+    """ + _SEG + r"""
+    \.(?:png|jpg|jpeg|gif|webp|svg)
+    """
+)
+_INDEX_PATH_RE = re.compile(
+    r"""(?x)
+    index/
+    (?: MASTER_INDEX\.md
+      | TERM_INDEX\.md
+      | summaries (?: / """ + _SEG + r""" )* / """ + _SEG + r""" \.md )
+    """
+)
+
+
+def sanitize_internal_paths(answer: str) -> tuple[str, list[str]]:
+    """답변 본문 전체에서 내부 경로(및 index/ 파일)를 사용자 친화 라벨로 일괄 치환.
+
+    반환: (치환된 answer, 발견된 내부 경로 목록)
+    - packages/.../content.md → origin_label
+    - packages/.../images/*.png → origin_label (이미지)
+    - index/MASTER_INDEX.md 등 → `(내부 인덱스)` 로 대체 + 경고
+    """
+    findings: list[str] = []
+
+    def _replace_path(m):
+        path = m.group(0).lstrip("./").lstrip("/")
+        # ../ 로 시작한 경우 정규화
+        if path.startswith("xlsx-extractor/"):
+            path = "packages/" + path
+        elif path.startswith("confluence-downloader/"):
+            path = "packages/" + path
+        meta = _path_to_source_meta(path)
+        label = meta.get("origin_label") or path
+        findings.append(m.group(0))
+        return label
+
+    def _replace_index(m):
+        findings.append(m.group(0))
+        # 사용자에겐 혼란 방지 위해 중립적 문구로
+        return "(내부 인덱스 파일)"
+
+    text = answer
+    text = _INTERNAL_PATH_RE.sub(_replace_path, text)
+    text = _INTERNAL_IMG_RE.sub(_replace_path, text)
+    text = _INDEX_PATH_RE.sub(_replace_index, text)
+    return text, findings
 
 
 def strip_progress_prefix(answer: str) -> str:

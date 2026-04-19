@@ -526,6 +526,11 @@
 .progress-panel[open] > summary::before {
   transform: rotate(90deg);
 }
+/* 진행 중에는 화살표 숨김 (맨 아래에 놓인 상태 라인에서 어색함 방지).
+   완료된 뒤에만 접힘/펼침 마커 유지. */
+.loading .progress-panel > summary::before {
+  display: none;
+}
 .progress-head {
   flex: 1;
   overflow: hidden;

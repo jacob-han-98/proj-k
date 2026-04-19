@@ -159,13 +159,34 @@ function App() {
   const activeStatus = activeThreadId ? (threadStatuses[activeThreadId] || '') : ''
   const activeProgress = activeThreadId ? threadProgress[activeThreadId] : undefined
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
+  // 마지막 user 메시지를 화면 상단에 정렬 — 질문과 답변을 함께 보기 좋게.
+  const scrollLastUserToTop = useCallback(() => {
+    const els = document.querySelectorAll('.message-wrapper.user')
+    const last = els[els.length - 1] as HTMLElement | undefined
+    if (last) last.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [])
 
+  // (1) 새 user 메시지가 추가되면(방금 질문 보낸 시점) 상단 정렬
+  const lastMsgRoleRef = useRef<'user' | 'assistant' | undefined>(undefined)
+  const lastMsgLenRef = useRef<number>(0)
   useEffect(() => {
-    scrollToBottom()
-  }, [messages, isCurrentLoading])
+    const lastMsg = messages[messages.length - 1]
+    const grew = messages.length > lastMsgLenRef.current
+    if (grew && lastMsg?.role === 'user') {
+      setTimeout(scrollLastUserToTop, 60)
+    }
+    lastMsgLenRef.current = messages.length
+    lastMsgRoleRef.current = lastMsg?.role
+  }, [messages, scrollLastUserToTop])
+
+  // (2) 답변이 방금 완료됐을 때 다시 한 번 정렬 (진행 타임라인 접힘 등으로 높이 재계산됨)
+  const prevLoadingRef = useRef(false)
+  useEffect(() => {
+    if (prevLoadingRef.current && !isCurrentLoading) {
+      setTimeout(scrollLastUserToTop, 120)
+    }
+    prevLoadingRef.current = isCurrentLoading
+  }, [isCurrentLoading, scrollLastUserToTop])
 
   // 초기 랜딩 시 자동 포커스 + fork 대화 로드
   useEffect(() => {

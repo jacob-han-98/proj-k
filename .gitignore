@@ -75,6 +75,9 @@ packages/qna-poc/test_*.png
 
 # Claude Code 로컬 설정
 .claude/
+# 단, 프로젝트 공유 자산은 커밋
+!.claude/skills/
+!.claude/skills/**
 
 # Telegram 봇 상태 (토큰, access.json)
 scripts/telegram/state/

@@ -4,11 +4,11 @@ After=network.target
 
 [Service]
 Type=simple
-User=jacob
-WorkingDirectory=/home/jacob/proj-k-agent/packages/agent-sdk-poc
-Environment="PATH=/home/jacob/proj-k-agent/packages/agent-sdk-poc/.venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+User=ubuntu
+WorkingDirectory=/home/ubuntu/proj-k-agent/packages/agent-sdk-poc
+Environment="PATH=/home/ubuntu/proj-k-agent/packages/agent-sdk-poc/.venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 Environment="PORT=8090"
-ExecStart=/home/jacob/proj-k-agent/packages/agent-sdk-poc/.venv/bin/uvicorn src.server:app --host 127.0.0.1 --port 8090
+ExecStart=/home/ubuntu/proj-k-agent/packages/agent-sdk-poc/.venv/bin/uvicorn src.server:app --host 127.0.0.1 --port 8090
 Restart=on-failure
 RestartSec=5
 StandardOutput=append:/var/log/proj-k-agentsdk.log

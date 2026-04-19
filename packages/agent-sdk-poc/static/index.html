@@ -159,7 +159,8 @@ async function sendPrompt(text) {
     while (true) {
       const {done, value} = await reader.read();
       if (done) break;
-      buf += decoder.decode(value, {stream: true});
+      // Normalize CRLF → LF so the \n\n splitter works regardless of server line ending.
+      buf += decoder.decode(value, {stream: true}).replace(/\r\n/g, '\n');
 
       let idx;
       while ((idx = buf.indexOf('\n\n')) !== -1) {

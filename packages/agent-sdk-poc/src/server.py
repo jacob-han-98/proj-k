@@ -512,6 +512,14 @@ async def source_view(path: str, section: str = ""):
     elif normalized.startswith("../confluence-downloader/"):
         normalized = "packages/" + normalized[3:]
 
+    # 라벨 형식(`Confluence / ...`, `PK_xxx.xlsx / 시트`) 도 수용:
+    # 프론트의 인라인 출처 링크는 sources 매칭 실패 시 라벨을 그대로 보낸다.
+    # _path_to_source_meta 가 라벨→내부 경로를 복원하므로 활용.
+    if not normalized.startswith(("packages/", "index/")):
+        resolved = storage._path_to_source_meta(normalized).get("path", "")
+        if resolved and resolved.startswith(("packages/", "index/")):
+            normalized = resolved
+
     # 기준 디렉터리 선택: index/summaries/ 는 agent-sdk-poc 하위, 나머지는 repo_root.
     allowed_under_repo = ("packages/xlsx-extractor/output/", "packages/confluence-downloader/output/")
     allowed_under_agent = ("index/summaries/",)

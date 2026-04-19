@@ -452,6 +452,21 @@
   color: var(--text-secondary);
 }
 
+/* 본문 인라인 출처 링크 — (출처: …) 전체가 클릭 가능. */
+.inline-source-link {
+  color: var(--accent, #6b7cff);
+  text-decoration: none;
+  border-bottom: 1px dotted currentColor;
+  cursor: pointer;
+  padding: 0 1px;
+  border-radius: 2px;
+  transition: background-color 0.15s, opacity 0.15s;
+}
+.inline-source-link:hover {
+  background-color: color-mix(in srgb, var(--accent, #6b7cff) 12%, transparent);
+  opacity: 0.95;
+}
+
 .sources-title {
   font-weight: 600;
   margin-bottom: 8px;

@@ -19,6 +19,40 @@ function applyTheme(mode: ThemeMode) {
   document.documentElement.setAttribute('data-theme', mode);
 }
 
+// ── 답변 본문의 `(출처: …)` 를 클릭 가능한 링크로 전처리 ───
+// balanced-paren 스캔으로 중첩된 `(n)` · `§` 섹션을 안전하게 포함.
+// 결과: `[(출처: body)](projk-source:<encoded-body>)` — ReactMarkdown 이 anchor 로 렌더,
+// href prefix 로 감지해 핸들러가 우측 뷰를 연다.
+function linkifyInlineSources(text: string): string {
+  if (!text) return text
+  const re = /\(\s*출처\s*[:：]\s*/g
+  let out = ''
+  let last = 0
+  let m: RegExpExecArray | null
+  while ((m = re.exec(text)) !== null) {
+    const start = m.index
+    const afterPrefix = m.index + m[0].length
+    let depth = 1
+    let i = afterPrefix
+    while (i < text.length) {
+      const ch = text[i]
+      if (ch === '(') depth++
+      else if (ch === ')') { depth--; if (depth === 0) break }
+      i++
+    }
+    if (i >= text.length) break
+    const body = text.slice(afterPrefix, i).trim()
+    // 링크 표시 텍스트에서 [ ] 는 escape (markdown 파서가 중첩 bracket 을 오해석하지 않게)
+    const displayBody = body.replace(/[\[\]]/g, (c) => '\\' + c)
+    const enc = encodeURIComponent(body)
+    out += text.slice(last, start) + `[(출처: ${displayBody})](projk-source:${enc})`
+    last = i + 1
+    re.lastIndex = last
+  }
+  out += text.slice(last)
+  return out
+}
+
 // Mermaid component for rendering diagrams
 const MermaidBlock = ({ code, theme }: { code: string; theme: 'light' | 'dark' }) => {
   const ref = useRef<HTMLDivElement>(null)
@@ -120,6 +154,24 @@ function App() {
   const closeSourceView = useCallback(() => {
     setSourceView(null); setSourceViewError(null)
   }, [])
+
+  // 본문 인라인 출처 클릭 — 라벨을 해당 메시지의 sources 에서 찾아 path 로 변환 후 오픈.
+  // 매칭 실패 시 라벨을 그대로 전달 (서버가 _path_to_source_meta 로 해석).
+  const openInlineSource = useCallback((body: string, sources?: AskResponse['sources']) => {
+    let label = body
+    let section = ''
+    const sep = body.indexOf('§')
+    if (sep >= 0) {
+      label = body.slice(0, sep).trim()
+      section = body.slice(sep + 1).trim()
+    }
+    const match = sources?.find(s => ((s.origin_label || '').trim()) === label)
+    if (match?.path) {
+      openSourceView(match.path, section)
+      return
+    }
+    openSourceView(label, section)
+  }, [openSourceView])
 
   useEffect(() => {
     fetchPresetPrompts()
@@ -787,10 +839,25 @@ function App() {
                                   return <MermaidBlock code={String(children).replace(/\n$/, '')} theme={resolvedTheme} />;
                                 }
                                 return <code className={className} {...props}>{children}</code>;
+                              },
+                              a({ href, children, ...props }: any) {
+                                const h = href || '';
+                                if (h.startsWith('projk-source:')) {
+                                  const body = decodeURIComponent(h.slice('projk-source:'.length));
+                                  return (
+                                    <a
+                                      href="#"
+                                      className="inline-source-link"
+                                      onClick={(e) => { e.preventDefault(); openInlineSource(body, msg.sources); }}
+                                      title="우측 패널에서 열기"
+                                    >{children}</a>
+                                  );
+                                }
+                                return <a href={h} target="_blank" rel="noreferrer" {...props}>{children}</a>;
                               }
                             }}
                           >
-                            {msg.content}
+                            {linkifyInlineSources(msg.content)}
                           </ReactMarkdown>
                         </>
                       )}

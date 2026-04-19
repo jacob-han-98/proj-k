@@ -372,12 +372,14 @@ async def ask_stream(req: AskStreamRequest):
             # 최종 결과 조립
             answer_raw = "".join(answer_text_parts).strip()
             answer_stripped = storage.strip_progress_prefix(answer_raw)
-            # 1차: (출처: <path>) 패턴 치환
+            # sources 추출은 반드시 내부 경로가 살아있는 원문 기준으로 먼저
+            # (rewrite 이후 경로가 origin_label 로 바뀌면 _path_to_source_meta 가
+            #  분류에 실패해 source='other', path=label 이 되어 source_view 403 유발)
+            sources = storage.extract_sources(answer_stripped)
+            # 1차: (출처: <path>) 패턴 치환 → 사용자 표시용
             answer_rewritten = storage.rewrite_source_paths(answer_stripped)
             # 2차: 본문 전체에서 내부 경로/인덱스 경로 sanitize
             answer, path_findings = storage.sanitize_internal_paths(answer_rewritten)
-            # sources 추출은 원문 path 기반으로 (치환 이후엔 path 사라짐)
-            sources = storage.extract_sources(answer_rewritten)
 
             qa_warnings: list[str] = []
 

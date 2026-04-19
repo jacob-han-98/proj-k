@@ -325,6 +325,34 @@ def _load_confluence_manifest():
 _load_confluence_manifest()
 
 
+# ── xlsx 워크북 → 카테고리 디렉터리 매핑 ───────────────────────
+
+_XLSX_ROOT = _ROOT.parent / "xlsx-extractor" / "output"
+_xlsx_workbook_to_category: dict[str, str] = {}
+
+
+def _load_xlsx_workbook_index():
+    """`packages/xlsx-extractor/output/<category>/<workbook>/` 구조를 스캔해
+    워크북 이름 → 카테고리(7_System 등) 매핑을 만든다.
+    Agent 가 `(출처: PK_xxx.xlsx / <시트>)` 라벨로 인용할 때 실제 content.md 경로를 복원하는 데 사용.
+    """
+    if not _XLSX_ROOT.exists():
+        return
+    for cat in _XLSX_ROOT.iterdir():
+        if not cat.is_dir():
+            continue
+        # 숫자 prefix 카테고리만 (예: 7_System, 8_Contents, 3_Base …)
+        if not (cat.name and cat.name[0].isdigit()):
+            continue
+        for wb in cat.iterdir():
+            if wb.is_dir():
+                _xlsx_workbook_to_category[wb.name] = cat.name
+    print(f"[storage] xlsx workbook→category 매핑 {len(_xlsx_workbook_to_category)}개 로드")
+
+
+_load_xlsx_workbook_index()
+
+
 def _confluence_url_for(chain_parts: tuple[str, ...]) -> str:
     """디렉터리 체인에서 pageId 탐색 (가장 긴 prefix 매치부터)."""
     key = "/".join(chain_parts)
@@ -339,6 +367,11 @@ def _confluence_url_for(chain_parts: tuple[str, ...]) -> str:
     return ""
 
 
+_LABEL_XLSX_RE = re.compile(
+    r"""^\s*(?P<wb>.+?)\.xlsx\s*/\s*(?P<sheet>.+?)(?:\s+시트)?\s*$"""
+)
+
+
 def _path_to_source_meta(path: str) -> dict:
     """
     xlsx: packages/xlsx-extractor/output/7_System/PK_HUD 시스템/HUD_전투/_final/content.md
@@ -350,7 +383,50 @@ def _path_to_source_meta(path: str) -> dict:
       → workbook="시스템 디자인", sheet="NPC",
          origin_label="Confluence / 시스템 디자인 / NPC",
          origin_url="https://bighitcorp.atlassian.net/wiki/pages/viewpage.action?pageId=<id>"
+
+    Label 형식도 허용 (Agent 가 qna-output-format 규칙에 따라 바로 라벨로 인용한 경우):
+      - "Confluence / <space> / <chain>..."
+      - "<workbook>.xlsx / <sheet>" 또는 "<workbook>.xlsx / <sheet> 시트"
+    → 내부 경로를 복원하여 source_view / 아이콘 분류가 정상 동작하게 한다.
     """
+    # Confluence 라벨 형식
+    if path.startswith("Confluence /") or path.startswith("Confluence/"):
+        tail = path.split("/", 1)[1] if "/" in path else ""
+        chain_parts = [p.strip() for p in tail.split("/") if p.strip()]
+        if chain_parts:
+            space = chain_parts[0]
+            title = chain_parts[-1]
+            internal_path = (
+                "packages/confluence-downloader/output/" + "/".join(chain_parts) + "/content.md"
+            )
+            return {
+                "workbook": space,
+                "sheet": title,
+                "path": internal_path,
+                "source": "confluence",
+                "origin_label": f"Confluence / {' / '.join(chain_parts)}",
+                "origin_url": _confluence_url_for(tuple(chain_parts)),
+            }
+
+    # xlsx 라벨 형식 — 카테고리 디렉터리는 워크북 이름으로 조회
+    m = _LABEL_XLSX_RE.match(path)
+    if m and ".xlsx" in path and not path.startswith(("packages/", "../", "/")):
+        workbook = m.group("wb").strip()
+        sheet = m.group("sheet").strip()
+        category = _xlsx_workbook_to_category.get(workbook)
+        if category:
+            internal_path = (
+                f"packages/xlsx-extractor/output/{category}/{workbook}/{sheet}/_final/content.md"
+            )
+            return {
+                "workbook": workbook,
+                "sheet": sheet,
+                "path": internal_path,
+                "source": "xlsx",
+                "origin_label": f"{workbook}.xlsx / {sheet} 시트",
+                "origin_url": "",
+            }
+
     parts = path.split("/")
     low = path.lower()
     is_image = low.endswith((".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"))

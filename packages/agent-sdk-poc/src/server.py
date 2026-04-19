@@ -97,11 +97,10 @@ class AskStreamRequest(BaseModel):
     """qna-poc 호환 /ask_stream 요청 — React 프론트엔드 공통."""
     question: str
     conversation_id: str | None = None
-    # 아래 필드들은 qna-poc 호환용. agent-sdk 에서는 사용하지 않음.
-    role: str | None = None
-    model: str | None = None
-    prompt_style: str | None = None
-    prompt_overrides: dict | None = None
+    model: str | None = None        # "opus" | "sonnet" | "haiku" | 전체 ID
+    role: str | None = None         # qna-poc 호환 — 미사용
+    prompt_style: str | None = None # qna-poc 호환 — 미사용
+    prompt_overrides: dict | None = None  # qna-poc 호환 — 미사용
 
 
 # web session (conversation_id) → SDK session id
@@ -154,6 +153,31 @@ TOOL_LABEL = {
 }
 
 
+def _read_label(file_path: str) -> str:
+    """content.md 처럼 범용 이름이면 parent dir 중 의미있는 이름(_final 제외) 사용.
+
+    예:
+      .../PK_HUD 시스템/HUD_전투/_final/content.md → "PK_HUD 시스템 / HUD_전투"
+      .../시스템 디자인/NPC/content.md            → "시스템 디자인 / NPC"
+      .../foo.md                                   → "foo.md"
+    """
+    if not file_path:
+        return "(unknown)"
+    parts = [p for p in file_path.split("/") if p]
+    if not parts:
+        return file_path
+    base = parts[-1]
+    if base != "content.md":
+        return base
+    # skip _final 및 content.md, 의미있는 부모 2단 조합
+    meaningful = [p for p in parts[:-1] if p and p != "_final"]
+    if len(meaningful) >= 2:
+        return f"{meaningful[-2]} / {meaningful[-1]}"
+    if meaningful:
+        return meaningful[-1]
+    return base
+
+
 def _tool_status_msg(tool: str, tool_input: dict) -> str:
     emoji = TOOL_LABEL.get(tool, "🔧")
     if tool == "Grep":
@@ -163,9 +187,7 @@ def _tool_status_msg(tool: str, tool_input: dict) -> str:
     if tool == "Glob":
         return f"{emoji} 패턴 매칭: `{(tool_input or {}).get('pattern', '')}`"
     if tool == "Read":
-        fp = (tool_input or {}).get("file_path", "")
-        base = fp.rsplit("/", 1)[-1] if fp else ""
-        return f"{emoji} `{base}` 읽는 중"
+        return f"{emoji} {_read_label((tool_input or {}).get('file_path', ''))} 읽는 중"
     if tool.startswith("mcp__projk__"):
         return f"{emoji} 시스템 관계 조회 ({tool.removeprefix('mcp__projk__')})"
     return f"{emoji} {tool}"
@@ -201,18 +223,23 @@ async def ask_stream(req: AskStreamRequest):
         log_event(conv_id, "ask_stream", question[:100])
 
         answer_text_parts: list[str] = []
-        tool_trace: list[dict] = []
+        tool_trace: list[dict] = []     # 저장용 (input 포함)
+        tool_id_map: dict[str, int] = {}   # SDK tool_use id → trace idx
+        writing_announced = False         # "답변 작성 중..." 이벤트를 이 라운드에서 내보냈는가
         cost = None
-        duration_ms = None
         nonlocal_sdk_sid = sdk_sid
 
         yield json.dumps(
             {"type": "status", "message": "🧠 질문을 분석하고 있습니다..."},
             ensure_ascii=False,
         ) + "\n"
+        yield json.dumps(
+            {"type": "stage", "stage": "planning", "label": "질문 분석"},
+            ensure_ascii=False,
+        ) + "\n"
 
         try:
-            async for msg in run_query_with_session(question, session_id=nonlocal_sdk_sid):
+            async for msg in run_query_with_session(question, session_id=nonlocal_sdk_sid, model=req.model):
                 if isinstance(msg, SystemMessage):
                     subtype = getattr(msg, "subtype", "")
                     if subtype == "init" and hasattr(msg, "data"):
@@ -225,39 +252,96 @@ async def ask_stream(req: AskStreamRequest):
                 if isinstance(msg, AssistantMessage):
                     for block in msg.content:
                         if isinstance(block, ThinkingBlock):
-                            preview = (block.thinking or "").strip().replace("\n", " ")[:100]
-                            if preview:
+                            text = (block.thinking or "").strip()
+                            if text:
                                 yield json.dumps(
-                                    {"type": "status", "message": f"💭 {preview}..."},
+                                    {"type": "thinking", "text": text},
+                                    ensure_ascii=False,
+                                ) + "\n"
+                                yield json.dumps(
+                                    {"type": "status", "message": f"💭 {text.replace(chr(10), ' ')[:100]}..."},
                                     ensure_ascii=False,
                                 ) + "\n"
                         elif isinstance(block, TextBlock):
                             if block.text.strip():
+                                # 새 라운드의 TextBlock 시작 — writing stage 알림 (이모지 shimmer 유지)
+                                if not writing_announced:
+                                    yield json.dumps(
+                                        {"type": "stage", "stage": "writing", "label": "답변 작성"},
+                                        ensure_ascii=False,
+                                    ) + "\n"
+                                    yield json.dumps(
+                                        {"type": "status", "message": "✨ 답변을 작성하고 있습니다..."},
+                                        ensure_ascii=False,
+                                    ) + "\n"
+                                    writing_announced = True
                                 answer_text_parts.append(block.text)
+                                # 누적 글자 수 주기적으로 알림 (200자 단위)
+                                total_chars = sum(len(s) for s in answer_text_parts)
+                                if total_chars // 200 > (total_chars - len(block.text)) // 200:
+                                    yield json.dumps(
+                                        {"type": "status", "message": f"✨ 답변 작성 중... ({total_chars:,}자)"},
+                                        ensure_ascii=False,
+                                    ) + "\n"
                         elif isinstance(block, ToolUseBlock):
+                            # 툴 호출이 재개되면 다음 텍스트 블록이 올 때 다시 writing stage 알림
+                            writing_announced = False
                             inp = block.input if isinstance(block.input, dict) else {}
-                            tool_trace.append({"tool": block.name, "input": inp})
+                            idx = len(tool_trace)
+                            tool_trace.append({"tool": block.name, "input": inp, "id": block.id})
+                            tool_id_map[block.id] = idx
+                            yield json.dumps(
+                                {
+                                    "type": "tool_start",
+                                    "id": block.id,
+                                    "tool": block.name,
+                                    "input": inp,
+                                    "label": _tool_status_msg(block.name, inp),
+                                },
+                                ensure_ascii=False,
+                            ) + "\n"
                             yield json.dumps(
                                 {"type": "status", "message": _tool_status_msg(block.name, inp)},
                                 ensure_ascii=False,
                             ) + "\n"
 
+                elif isinstance(msg, UserMessage):
+                    # Tool results — 해당 tool_start 에 summary 동반
+                    if hasattr(msg, "content") and isinstance(msg.content, list):
+                        for block in msg.content:
+                            if isinstance(block, ToolResultBlock):
+                                tool_id = getattr(block, "tool_use_id", None) or getattr(block, "id", None)
+                                c = ""
+                                if isinstance(block.content, str):
+                                    c = block.content
+                                elif isinstance(block.content, list):
+                                    for x in block.content:
+                                        if hasattr(x, "text"):
+                                            c += x.text
+                                        elif isinstance(x, dict) and "text" in x:
+                                            c += x["text"]
+                                summary = _summarize_tool_result(c)
+                                yield json.dumps(
+                                    {"type": "tool_end", "id": tool_id, "summary": summary},
+                                    ensure_ascii=False,
+                                ) + "\n"
+
                 elif isinstance(msg, ResultMessage):
                     cost = getattr(msg, "total_cost_usd", None)
-                    duration_ms = getattr(msg, "total_duration_ms", None)
 
             # 최종 결과 조립
-            answer = "".join(answer_text_parts).strip()
+            answer_raw = "".join(answer_text_parts).strip()
+            answer = storage.strip_progress_prefix(answer_raw)
             sources = storage.extract_sources(answer)
             elapsed_s = round(time.time() - start, 2)
 
-            # 저장
+            # 저장 — tool_trace 에 input 포함 (admin/shared 에서 실제 탐색 경로 확인 가능)
             storage.save_turn(
                 conv_id,
                 question,
                 answer=answer,
                 sources=sources,
-                tool_trace=[{"tool": t["tool"]} for t in tool_trace],
+                tool_trace=[{"tool": t["tool"], "input": t.get("input", {})} for t in tool_trace],
                 elapsed_s=elapsed_s,
                 cost_usd=cost,
                 sdk_session_id=nonlocal_sdk_sid,
@@ -266,12 +350,13 @@ async def ask_stream(req: AskStreamRequest):
             payload = {
                 "answer": answer,
                 "confidence": "high" if sources else "medium",
-                "sources": sources[:10],
+                "sources": sources[:20],
                 "conversation_id": conv_id,
-                "total_tokens": 0,  # agent-sdk 는 ResultMessage 가 token 세부 제공 X
+                "total_tokens": 0,
                 "api_seconds": elapsed_s,
                 "cost_usd": cost,
                 "tool_calls": len(tool_trace),
+                "tool_trace": [{"tool": t["tool"], "input": t.get("input", {})} for t in tool_trace],
             }
             yield json.dumps({"type": "result", "data": payload}, ensure_ascii=False) + "\n"
             log_event(conv_id, "done", f"{elapsed_s}s cost=${cost} tools={len(tool_trace)}")
@@ -281,6 +366,23 @@ async def ask_stream(req: AskStreamRequest):
             yield json.dumps({"type": "error", "message": str(e)}, ensure_ascii=False) + "\n"
 
     return StreamingResponse(event_gen(), media_type="application/x-ndjson")
+
+
+def _summarize_tool_result(text: str) -> str:
+    """Tool result 한 줄 요약 (UI collapsible 카드의 summary용)."""
+    if not text:
+        return ""
+    t = text.strip()
+    first = t.split("\n", 1)[0].strip()
+    # Grep "Found N file(s)" 첫 줄
+    if first.startswith("Found ") and "file" in first:
+        return first
+    # Read 결과: 길이 / 라인 수 안내
+    line_count = t.count("\n") + 1
+    # 너무 길면 라인수만
+    if len(t) > 200:
+        return f"{line_count} 라인 ({len(t):,} 자)"
+    return first[:160] + ("…" if len(first) > 160 else "")
 
 
 @app.get("/admin/conversations")

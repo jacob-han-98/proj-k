@@ -41,10 +41,25 @@ const MermaidBlock = ({ code, theme }: { code: string; theme: 'light' | 'dark' }
   return <div ref={ref} className="mermaid-wrapper" />
 }
 
+interface ToolCallEntry {
+  id: string;          // SDK tool_use id
+  tool: string;        // "Grep" / "Read" / "mcp__projk__…"
+  input: any;
+  label: string;       // "🔎 `변신` 검색 중 …"
+  summary?: string;    // tool_end 시 채워짐 ("Found 1 file" 등)
+}
+
+interface Progress {
+  thinking: string[];            // 누적 사고 (최신이 마지막)
+  tools: ToolCallEntry[];        // 호출된 툴 목록 (시간순)
+  lastStatus: string;            // 현재 진행 상태 (원시 message)
+}
+
 interface Message {
   role: 'user' | 'assistant';
   content: string;
   sources?: AskResponse['sources'];
+  progress?: Progress;           // assistant 메시지 기준 실시간 진행 스냅샷
 }
 
 interface Thread {
@@ -65,7 +80,14 @@ function App() {
   const [activeThreadId, setActiveThreadId] = useState<string | undefined>()
   const [loadingThreads, setLoadingThreads] = useState<Set<string>>(new Set())
   const [threadStatuses, setThreadStatuses] = useState<Record<string, string>>({})
+  const [threadProgress, setThreadProgress] = useState<Record<string, Progress>>({})
+  const threadProgressRef = useRef<Record<string, Progress>>({})
+  useEffect(() => { threadProgressRef.current = threadProgress }, [threadProgress])
   const abortControllers = useRef<Record<string, AbortController>>({})
+  const [model, setModel] = useState<'opus' | 'sonnet'>(() => {
+    return (localStorage.getItem('projk-model') as 'opus' | 'sonnet') || 'opus'
+  })
+  useEffect(() => { localStorage.setItem('projk-model', model) }, [model])
   const [themeMode, setThemeMode] = useState<ThemeMode>(() => {
     return (localStorage.getItem('qna-theme') as ThemeMode) || 'system'
   })
@@ -113,6 +135,7 @@ function App() {
   const messages = activeThread ? activeThread.messages : []
   const isCurrentLoading = activeThreadId ? loadingThreads.has(activeThreadId) : false
   const activeStatus = activeThreadId ? (threadStatuses[activeThreadId] || '') : ''
+  const activeProgress = activeThreadId ? threadProgress[activeThreadId] : undefined
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -199,22 +222,57 @@ function App() {
     abortControllers.current[threadId] = ac;
     setLoadingThreads(prev => new Set(prev).add(threadId));
 
+    // 진행 스냅샷 초기화
+    setThreadProgress(prev => ({ ...prev, [threadId]: { thinking: [], tools: [], lastStatus: '' } }));
+
     try {
       await askQuestionStream(
         userMsg,
         (event: StreamEvent) => {
           if (event.type === 'status') {
             setThreadStatuses(prev => ({ ...prev, [threadId]: event.message }));
+            setThreadProgress(prev => ({
+              ...prev,
+              [threadId]: { ...(prev[threadId] || { thinking: [], tools: [] }), lastStatus: event.message },
+            }));
+          } else if (event.type === 'thinking') {
+            setThreadProgress(prev => {
+              const cur = prev[threadId] || { thinking: [], tools: [], lastStatus: '' };
+              return { ...prev, [threadId]: { ...cur, thinking: [...cur.thinking, event.text] } };
+            });
+          } else if (event.type === 'tool_start') {
+            setThreadProgress(prev => {
+              const cur = prev[threadId] || { thinking: [], tools: [], lastStatus: '' };
+              return {
+                ...prev,
+                [threadId]: {
+                  ...cur,
+                  tools: [...cur.tools, { id: event.id, tool: event.tool, input: event.input, label: event.label }],
+                },
+              };
+            });
+          } else if (event.type === 'tool_end') {
+            setThreadProgress(prev => {
+              const cur = prev[threadId] || { thinking: [], tools: [], lastStatus: '' };
+              return {
+                ...prev,
+                [threadId]: {
+                  ...cur,
+                  tools: cur.tools.map(t => t.id === event.id ? { ...t, summary: event.summary } : t),
+                },
+              };
+            });
           } else if (event.type === 'result') {
             const res = event.data;
             const realId = res.conversation_id || threadId;
 
+            const finalProgress = (threadProgressRef.current[threadId]) || { thinking: [], tools: [], lastStatus: '' };
             setThreads(prev => prev.map(t => {
               if (t.id === threadId) {
                 return {
                   ...t,
                   id: realId,
-                  messages: [...t.messages, { role: 'assistant', content: res.answer, sources: res.sources }]
+                  messages: [...t.messages, { role: 'assistant', content: res.answer, sources: res.sources, progress: finalProgress }]
                 }
               }
               return t;
@@ -233,7 +291,7 @@ function App() {
             ));
           }
         },
-        undefined,
+        model,
         undefined,
         threadId,
         ac.signal,
@@ -374,12 +432,25 @@ function App() {
 
   const renderSources = (sources: AskResponse['sources']) => {
     if (!sources || sources.length === 0) return null;
+    // workbook+sheet 기준 그룹화 → 한 시트의 여러 섹션은 한 카드 아래 접힘
+    type SrcAny = typeof sources[number] & { path?: string; source?: string };
+    const groups = new Map<string, { src: SrcAny; sections: string[] }>();
+    sources.forEach((s: SrcAny) => {
+      const key = (s as any).path || `${s.workbook}/${s.sheet}`;
+      const g = groups.get(key);
+      const sec = (s.section_path || '').trim();
+      if (g) {
+        if (sec && !g.sections.includes(sec)) g.sections.push(sec);
+      } else {
+        groups.set(key, { src: s, sections: sec ? [sec] : [] });
+      }
+    });
     return (
       <div className="message-sources">
-        <p className="sources-title">출처:</p>
+        <p className="sources-title">출처</p>
         <div className="source-cards-container">
-          {sources.map((src, i) => {
-            const isConfluence = src.workbook.startsWith('Confluence');
+          {Array.from(groups.values()).map(({ src, sections }, i) => {
+            const isConfluence = (src as any).source === 'confluence' || src.workbook.startsWith('Confluence');
             let link = '#';
             if (src.source_url) {
               link = src.source_url;
@@ -387,16 +458,59 @@ function App() {
               const searchTerm = src.sheet || src.workbook.split('/').pop();
               link = `https://bighitcorp.atlassian.net/wiki/search?text=${encodeURIComponent(searchTerm || '')}&where=PK`;
             }
+            const displayLabel = [src.workbook, src.sheet].filter(Boolean).join(' / ') || (src as any).path || '(unknown)';
             return (
-              <a key={i} href={link} target={link !== '#' ? "_blank" : undefined} rel="noreferrer" className="source-link-card glass">
+              <a key={i} href={link} target={link !== '#' ? "_blank" : undefined} rel="noreferrer" className="source-link-card glass" title={(src as any).path}>
                 <span className="source-icon">{isConfluence ? <ConfluenceIcon /> : <ExcelIcon />}</span>
-                <span className="source-text">{src.workbook}{src.sheet ? ` / ${src.sheet}` : ''}</span>
-                <span className="source-score">({src.score.toFixed(2)})</span>
+                <div className="source-body">
+                  <span className="source-text">{displayLabel}</span>
+                  {sections.length > 0 && (
+                    <span className="source-sections">{sections.slice(0, 4).join(' · ')}{sections.length > 4 ? ` …+${sections.length - 4}` : ''}</span>
+                  )}
+                </div>
               </a>
             );
           })}
         </div>
       </div>
+    );
+  }
+
+  // ── 진행 타임라인 렌더 ──────────────────────────────────
+  const renderProgress = (progress: Progress, opts: { collapsed?: boolean; loading?: boolean }) => {
+    const { thinking, tools, lastStatus } = progress;
+    if (thinking.length === 0 && tools.length === 0 && !lastStatus) return null;
+    return (
+      <details className="progress-panel" open={!opts.collapsed}>
+        <summary className="progress-summary">
+          {opts.loading ? (
+            <>
+              <span className="loading-spinner" />
+              <span className="progress-head">{lastStatus || '처리 중...'}</span>
+            </>
+          ) : (
+            <span className="progress-head">
+              ✅ 진행 내역 펼치기 · 툴 {tools.length}회{thinking.length ? ` · 사고 ${thinking.length}` : ''}
+            </span>
+          )}
+        </summary>
+        <div className="progress-body">
+          {tools.map((t, i) => (
+            <div key={t.id || i} className="tool-entry">
+              <div className="tool-label">{t.label}</div>
+              {t.summary && <div className="tool-summary">← {t.summary}</div>}
+            </div>
+          ))}
+          {thinking.length > 0 && (
+            <details className="thinking-entry">
+              <summary>💭 사고 {thinking.length}회</summary>
+              {thinking.map((t, i) => (
+                <div key={i} className="thinking-chunk">{t}</div>
+              ))}
+            </details>
+          )}
+        </div>
+      </details>
     );
   }
 
@@ -503,20 +617,23 @@ function App() {
                           </button>
                         </div>
                       ) : (
-                        <ReactMarkdown
-                          remarkPlugins={[remarkGfm]}
-                          components={{
-                            code({ node, inline, className, children, ...props }: any) {
-                              const match = /language-(\w+)/.exec(className || '');
-                              if (!inline && match && match[1] === 'mermaid') {
-                                return <MermaidBlock code={String(children).replace(/\n$/, '')} theme={resolvedTheme} />;
+                        <>
+                          {msg.progress && renderProgress(msg.progress, { collapsed: true, loading: false })}
+                          <ReactMarkdown
+                            remarkPlugins={[remarkGfm]}
+                            components={{
+                              code({ node, inline, className, children, ...props }: any) {
+                                const match = /language-(\w+)/.exec(className || '');
+                                if (!inline && match && match[1] === 'mermaid') {
+                                  return <MermaidBlock code={String(children).replace(/\n$/, '')} theme={resolvedTheme} />;
+                                }
+                                return <code className={className} {...props}>{children}</code>;
                               }
-                              return <code className={className} {...props}>{children}</code>;
-                            }
-                          }}
-                        >
-                          {msg.content}
-                        </ReactMarkdown>
+                            }}
+                          >
+                            {msg.content}
+                          </ReactMarkdown>
+                        </>
                       )}
                     </div>
                     {msg.role === 'assistant' && (
@@ -537,10 +654,14 @@ function App() {
               {isCurrentLoading && (
                 <div className="message-wrapper assistant">
                   <div className="message glass assistant loading">
-                    <span className="loading-status">
-                      <span className="loading-spinner"></span>
-                      {activeStatus || '처리 중...'}
-                    </span>
+                    {activeProgress
+                      ? renderProgress(activeProgress, { collapsed: false, loading: true })
+                      : (
+                        <span className="loading-status">
+                          <span className="loading-spinner"></span>
+                          {activeStatus || '처리 중...'}
+                        </span>
+                      )}
                   </div>
                 </div>
               )}
@@ -564,6 +685,12 @@ function App() {
               t.style.height = Math.min(t.scrollHeight, 120) + 'px';
             }}
           />
+          <div className="model-selector">
+            <select value={model} onChange={(e) => setModel(e.target.value as 'opus' | 'sonnet')} title="Claude 모델 선택">
+              <option value="opus">Opus</option>
+              <option value="sonnet">Sonnet</option>
+            </select>
+          </div>
           {isCurrentLoading ? (
             <button className="stop-btn" onClick={handleStop} title="응답 중단">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><rect width="14" height="14" rx="2"/></svg>

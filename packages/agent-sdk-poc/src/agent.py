@@ -50,17 +50,34 @@ DISALLOWED_TOOLS = [
 ]
 
 
-def _make_options(resume: str | None = None) -> ClaudeAgentOptions:
+# 모델 별칭 → Bedrock ID (CLI가 수용하는 형태)
+MODEL_ALIASES = {
+    "opus": "global.anthropic.claude-opus-4-6-v1",
+    "sonnet": "global.anthropic.claude-sonnet-4-6",
+    "haiku": "global.anthropic.claude-haiku-4-5-20251001-v1:0",
+}
+DEFAULT_MODEL = "opus"
+
+
+def _resolve_model(model: str | None) -> str | None:
+    if not model:
+        model = DEFAULT_MODEL
+    return MODEL_ALIASES.get(model, model)
+
+
+def _make_options(resume: str | None = None, model: str | None = None) -> ClaudeAgentOptions:
     projk_server = create_projk_server()
 
+    resolved = _resolve_model(model)
     return ClaudeAgentOptions(
         system_prompt=f"오늘 날짜: {date.today().isoformat()}",
         mcp_servers={"projk": projk_server},
         allowed_tools=ALLOWED_TOOLS,
         disallowed_tools=DISALLOWED_TOOLS,
-        permission_mode="default",              # 허용 외 도구 요청은 기본 차단
+        permission_mode="default",
         cwd=str(POC_DIR),
         max_turns=20,
+        model=resolved,
         env={
             "CLAUDE_CODE_USE_BEDROCK": os.environ.get("CLAUDE_CODE_USE_BEDROCK", "1"),
             "AWS_BEARER_TOKEN_BEDROCK": os.environ.get("AWS_BEARER_TOKEN_BEDROCK", ""),
@@ -70,13 +87,13 @@ def _make_options(resume: str | None = None) -> ClaudeAgentOptions:
     )
 
 
-async def run_query(prompt: str):
+async def run_query(prompt: str, model: str | None = None):
     """단일 질의."""
-    async for message in query(prompt=prompt, options=_make_options()):
+    async for message in query(prompt=prompt, options=_make_options(model=model)):
         yield message
 
 
-async def run_query_with_session(prompt: str, session_id: str | None = None):
+async def run_query_with_session(prompt: str, session_id: str | None = None, model: str | None = None):
     """세션 지원 질의."""
-    async for message in query(prompt=prompt, options=_make_options(resume=session_id)):
+    async for message in query(prompt=prompt, options=_make_options(resume=session_id, model=model)):
         yield message

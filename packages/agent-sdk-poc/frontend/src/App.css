@@ -488,6 +488,130 @@
   to { transform: rotate(360deg); }
 }
 
+/* ── Progress timeline (Claude Code 스타일) ─────────────── */
+.progress-panel {
+  margin: 0 0 12px 0;
+  padding: 10px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--bg-secondary, #f8f9fa) 70%, transparent);
+  font-size: 0.88rem;
+}
+.progress-panel > summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-secondary);
+  user-select: none;
+}
+.progress-panel > summary::-webkit-details-marker { display: none; }
+.progress-panel > summary::before {
+  content: '▶';
+  font-size: 0.7rem;
+  color: var(--text-tertiary, #94a3b8);
+  transition: transform 0.15s;
+  display: inline-block;
+  width: 0.7rem;
+}
+.progress-panel[open] > summary::before {
+  transform: rotate(90deg);
+}
+.progress-head {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* 로딩 중 진행 헤더는 shimmer 애니메이션으로 살아 있음을 보여줌 */
+.loading .progress-head {
+  background: linear-gradient(
+    90deg,
+    var(--text-secondary, #64748b) 0%,
+    var(--text-primary, #1e293b) 45%,
+    var(--text-secondary, #64748b) 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: progressShimmer 2.2s ease-in-out infinite;
+}
+@keyframes progressShimmer {
+  0%   { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+/* 진행 중 패널 자체도 은은하게 pulse */
+.loading .progress-panel {
+  animation: progressBorderPulse 2.4s ease-in-out infinite;
+}
+@keyframes progressBorderPulse {
+  0%, 100% { border-color: var(--border-color); }
+  50%      { border-color: color-mix(in srgb, var(--accent-primary, #818cf8) 60%, var(--border-color)); }
+}
+
+.progress-body {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  border-left: 2px solid var(--border-color);
+  padding-left: 12px;
+}
+.tool-entry {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.tool-label {
+  font-family: 'SFMono-Regular', Consolas, monospace;
+  font-size: 0.82rem;
+  color: var(--text-primary);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.tool-summary {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  padding-left: 12px;
+}
+.thinking-entry {
+  margin-top: 4px;
+  font-size: 0.82rem;
+}
+.thinking-entry > summary {
+  cursor: pointer;
+  color: var(--text-secondary);
+  padding: 4px 0;
+}
+.thinking-chunk {
+  color: var(--text-secondary);
+  font-style: italic;
+  margin: 6px 0 6px 14px;
+  padding: 6px 10px;
+  border-left: 2px solid var(--border-color);
+  background: color-mix(in srgb, var(--bg-primary, #fff) 50%, transparent);
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+/* 출처 카드 — section 목록 지원 */
+.source-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.source-sections {
+  color: var(--text-secondary);
+  font-size: 0.76rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
 .send-btn:disabled {
   opacity: 0.3;
   cursor: not-allowed;

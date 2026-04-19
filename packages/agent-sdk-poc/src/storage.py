@@ -64,14 +64,30 @@ def _balanced_paren_end(s: str, start: int) -> int:
     return -1
 
 
+_ABBREV_PHRASES = (
+    "위와 동일", "위와동일", "위 동일", "위동일", "상기와 동일", "상동",
+    "동일", "같음", "위 참조", "위참조", "above", "same as above", "ibid",
+)
+
+
+def _is_abbrev(path: str) -> bool:
+    p = path.strip().strip("`'\"")
+    if not p:
+        return True
+    low = p.lower()
+    return any(low == a.lower() or low.startswith(a.lower()) for a in _ABBREV_PHRASES)
+
+
 def extract_sources(answer: str) -> list[dict]:
     """Agent 답변 텍스트에서 `(출처: <path> § <section>)` 를 추출.
 
     Parens-balanced 파서 — section 안에 `(7)` 같은 중첩 괄호가 있어도 잘리지 않음.
+    '위와 동일' 등 축약 표기는 직전 유효 path 로 승계.
     반환 스키마: {workbook, sheet, path, source, section_path, score, source_url}
     """
     seen: set[tuple[str, str]] = set()
     out: list[dict] = []
+    last_path = ""
     for m in _SOURCE_START.finditer(answer):
         end = _balanced_paren_end(answer, m.end())
         if end < 0:
@@ -83,8 +99,12 @@ def extract_sources(answer: str) -> list[dict]:
             path_raw, section = body, ""
         path_raw = path_raw.strip().strip("`'\" ").lstrip("/")
         section = section.strip()
-        # path 는 공백으로 끝나는 복수 인용 구분 방지: 첫 번째 ; 나 ' 또는 ',' 이전까지 라인으로
-        # (실 사례에선 한 출처당 한 인용 블록이 정상)
+        if _is_abbrev(path_raw):
+            if not last_path:
+                continue
+            path_raw = last_path
+        else:
+            last_path = path_raw
         if not path_raw:
             continue
         key = (path_raw, section)
@@ -98,6 +118,59 @@ def extract_sources(answer: str) -> list[dict]:
             "source_url": "",
         })
     return out[:20]
+
+
+# ── Answer post-processing ────────────────────────────────────
+
+_PROGRESS_EMOJIS = set("🧠💭🔎📂📖🔗🔤✨✅❌")
+
+
+_META_KEYWORDS = (
+    "요약에서", "요약을", "정독", "탐색", "확인했습니다", "찾았습니다",
+    "답변 준비", "관련 문서", "근거를 확보", "원본 문서", "찾아보겠습니다",
+    "읽어보겠습니다", "검색하겠습니다", "조사하겠습니다", "확인하겠습니다",
+    "살펴보겠습니다", "진행하겠습니다", "관련 자료", "먼저 관련",
+)
+
+
+def strip_progress_prefix(answer: str) -> str:
+    """Agent 답변 본문 시작부의 메타 서술/진행 이모지 블록 제거 + H2 앞 개행 보정.
+
+    처리 케이스:
+    1) "🔎 ... 📖 ... ✅ ..." 이모지 누적 → 첫 `## ` 앞까지 제거
+    2) "요약에서 ... 확인했습니다. 원본 문서를 정독..." 메타 서술 → 첫 `## ` 앞까지 제거
+    3) "...확인하겠습니다.## 결론" 처럼 개행 없이 붙은 H2 → 첫 `##` 위치에서 잘라 라인 시작으로 정규화
+    """
+    if not answer:
+        return answer
+
+    # 1) 첫 '## 결론' / '## 근거' / '## 답변' / 기타 '## ' 헤딩 탐색
+    headings = ["## 결론", "## 근거", "## 답변"]
+    pos = -1
+    for h in headings:
+        p = answer.find(h)
+        if p >= 0 and (pos < 0 or p < pos):
+            pos = p
+    # fallback: 아무 `## ` (라인 시작 아니어도) 찾기
+    if pos < 0:
+        pos = answer.find("## ")
+        if pos < 0:
+            return answer
+
+    prefix = answer[:pos].strip()
+    if not prefix:
+        return answer.lstrip()
+
+    emoji_count = sum(1 for ch in prefix if ch in _PROGRESS_EMOJIS)
+    has_meta = any(k in prefix for k in _META_KEYWORDS)
+    short = len(prefix) <= 600
+
+    if emoji_count >= 2 or has_meta or (short and len(prefix.splitlines()) <= 3):
+        # lead-in 제거. 헤딩 앞이 라인 시작이 되도록 반환 문자열에 newline 보장은 불필요
+        # (시작 자체가 '## ' 이므로 Markdown H2 로 파싱됨)
+        return answer[pos:].lstrip()
+
+    return answer
 
 
 def _path_to_source_meta(path: str) -> dict:

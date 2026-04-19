@@ -563,6 +563,10 @@ export const searchGameData = async (q: string): Promise<{ results: any[]; query
 /** NDJSON 스트리밍 이벤트 타입 */
 export type StreamEvent =
   | { type: 'status'; message: string }
+  | { type: 'stage'; stage: string; label: string }
+  | { type: 'thinking'; text: string }
+  | { type: 'tool_start'; id: string; tool: string; input: any; label: string }
+  | { type: 'tool_end'; id: string; summary: string }
   | { type: 'result'; data: AskResponse }
   | { type: 'error'; message: string };
 

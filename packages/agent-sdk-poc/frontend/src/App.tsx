@@ -157,13 +157,18 @@ function App() {
 
   // 본문 인라인 출처 클릭 — 라벨을 해당 메시지의 sources 에서 찾아 path 로 변환 후 오픈.
   // 매칭 실패 시 라벨을 그대로 전달 (서버가 _path_to_source_meta 로 해석).
+  // 복합 섹션 인용(§ A, § B, § C)은 **첫 섹션만** 하이라이트 대상으로 사용.
   const openInlineSource = useCallback((body: string, sources?: AskResponse['sources']) => {
     let label = body
     let section = ''
     const sep = body.indexOf('§')
     if (sep >= 0) {
       label = body.slice(0, sep).trim()
-      section = body.slice(sep + 1).trim()
+      let sec = body.slice(sep + 1).trim()
+      // `2-3 대미지 증가, § 2-4 치명타 판정` → `2-3 대미지 증가`
+      const nextSec = sec.search(/[,;]\s*§/)
+      if (nextSec >= 0) sec = sec.slice(0, nextSec).trim()
+      section = sec
     }
     const match = sources?.find(s => ((s.origin_label || '').trim()) === label)
     if (match?.path) {
@@ -854,6 +859,7 @@ function App() {
                           {msg.progress && renderProgress(msg.progress, { collapsed: true, loading: false })}
                           <ReactMarkdown
                             remarkPlugins={[remarkGfm]}
+                            urlTransform={(url) => url}
                             components={{
                               code({ node, inline, className, children, ...props }: any) {
                                 const match = /language-(\w+)/.exec(className || '');
@@ -870,7 +876,7 @@ function App() {
                                     <a
                                       href="#"
                                       className="inline-source-link"
-                                      onClick={(e) => { e.preventDefault(); openInlineSource(body, msg.sources); }}
+                                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); openInlineSource(body, msg.sources); }}
                                       title="우측 패널에서 열기"
                                     >{children}</a>
                                   );

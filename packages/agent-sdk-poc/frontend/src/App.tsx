@@ -45,8 +45,10 @@ interface ToolCallEntry {
   id: string;          // SDK tool_use id
   tool: string;        // "Grep" / "Read" / "mcp__projk__…"
   input: any;
-  label: string;       // "🔎 `변신` 검색 중 …"
-  summary?: string;    // tool_end 시 채워짐 ("Found 1 file" 등)
+  label: string;       // 진행 중 "🔎 `변신` 검색 중 …"
+  doneLabel?: string;  // 완료 후 "🔎 `변신` 검색 …"
+  summary?: string;    // "Found 1 file" 등
+  preview?: string;    // 전체 결과 일부 (상세 펼치기용)
 }
 
 interface Progress {
@@ -277,7 +279,12 @@ function App() {
                 ...prev,
                 [threadId]: {
                   ...cur,
-                  tools: cur.tools.map(t => t.id === event.id ? { ...t, summary: event.summary } : t),
+                  tools: cur.tools.map(t => t.id === event.id ? {
+                    ...t,
+                    summary: event.summary,
+                    doneLabel: event.label || t.label.replace(/\s중\b/g, ''),
+                    preview: event.preview,
+                  } : t),
                 },
               };
             });
@@ -533,12 +540,29 @@ function App() {
           )}
         </summary>
         <div className="progress-body">
-          {tools.map((t, i) => (
-            <div key={t.id || i} className="tool-entry">
-              <div className="tool-label">{t.label}</div>
-              {t.summary && <div className="tool-summary">← {t.summary}</div>}
-            </div>
-          ))}
+          {tools.map((t, i) => {
+            const displayLabel = t.doneLabel || t.label;
+            const hasDetail = !!t.preview || !!t.input;
+            return (
+              <details key={t.id || i} className={`tool-entry ${t.summary ? 'tool-done' : 'tool-running'}`}>
+                <summary>
+                  <span className="tool-label">{displayLabel}</span>
+                  {t.summary && <span className="tool-summary">· {t.summary}</span>}
+                  {!t.summary && <span className="loading-spinner inline-spinner" />}
+                </summary>
+                {hasDetail && (
+                  <div className="tool-entry-body">
+                    {t.input && (
+                      <pre className="tool-input"><code>{JSON.stringify(t.input, null, 2)}</code></pre>
+                    )}
+                    {t.preview && (
+                      <pre className="tool-preview"><code>{t.preview}</code></pre>
+                    )}
+                  </div>
+                )}
+              </details>
+            );
+          })}
           {thinking.length > 0 && (
             <details className="thinking-entry">
               <summary>💭 사고 {thinking.length}회</summary>

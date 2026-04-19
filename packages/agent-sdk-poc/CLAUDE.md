@@ -28,9 +28,13 @@
    - `grep` 후보가 0개면: 유의어로 재시도 (예: "확률" ↔ "률", "전투" ↔ "기본전투"), 또는 `mcp__projk__glossary_lookup`으로 공식명 조회
    - 카테고리/개요 질문(예: "시스템 목록", "던전 종류")이면 `Read index/MASTER_INDEX.md` 단 **offset/limit로 관련 섹션만** 읽기 (이 파일은 ~430KB, 전체 Read 금지) 또는 `Grep` 사용
 3. **요약 정독** — 좁혀진 요약을 `Read`해서 2~3개의 유력 후보 확정
-4. **원본 정독** — 확정된 시스템의 **실제 `content.md`를 `Read`**하여 근거 인용 가능한 본문 확보
-5. **관계 확장 (선택)** — 교차 시스템 질문이면 `mcp__projk__find_related_systems`로 연결된 시스템 탐색
-6. **답변 작성** — 규칙에 따라 답변 출력
+4. **🚨 Confluence 병행 탐색 (필수 · 생략 금지)** — 질문이 어떤 시스템/공식/규칙에 관한 것이든, `index/summaries/confluence/` 에서도 같은 키워드로 **반드시** `Grep`하고 관련 summary 를 Read 한다.
+   - **Confluence 는 Excel 기획서보다 최신 설계 의도/개선안/변경 이력을 담고 있다**. Excel 은 "현재 스펙", Confluence 는 "왜/어떻게/다음"을 담는다.
+   - 예: "기본 전투 공식" 질문이면 Excel 의 `PK_스탯 및 공식` 외에도 Confluence 의 `시스템 디자인 / 대미지 공식 개편`, `시스템 디자인 / 명중률 공식 개선` 등을 **항상** 확인.
+   - **Confluence 를 탐색하지 않고 답변하는 것은 오류**로 간주한다. 결과가 정말 0건일 때만 "Confluence 에서 관련 내용 확인되지 않음"이라 명시 가능.
+5. **원본 정독** — 확정된 시스템의 **실제 `content.md`를 `Read`** (Excel + Confluence 양쪽 모두).
+6. **관계 확장 (선택)** — 교차 시스템 질문이면 `mcp__projk__find_related_systems`로 연결된 시스템 탐색
+7. **답변 작성** — 규칙에 따라 답변 출력. 답변에 **Excel 출처와 Confluence 출처가 각각 하나 이상 포함**되어야 한다 (Confluence 가 정말 없을 때만 Excel only 허용).
 
 Tip:
 - `TERM_INDEX.md`도 ~4MB로 크니 **Grep만 쓰고 전체 Read 금지**. 용어를 찾고 싶으면 `Grep -A5 "### 용어명" index/TERM_INDEX.md`.

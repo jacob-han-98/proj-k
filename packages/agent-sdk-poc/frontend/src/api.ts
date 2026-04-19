@@ -588,7 +588,7 @@ export type StreamEvent =
   | { type: 'stage'; stage: string; label: string }
   | { type: 'thinking'; text: string }
   | { type: 'tool_start'; id: string; tool: string; input: any; label: string }
-  | { type: 'tool_end'; id: string; summary: string }
+  | { type: 'tool_end'; id: string; summary: string; label?: string; preview?: string }
   | { type: 'result'; data: AskResponse }
   | { type: 'error'; message: string };
 

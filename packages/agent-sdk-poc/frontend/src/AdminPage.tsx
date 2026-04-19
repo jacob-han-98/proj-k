@@ -135,25 +135,41 @@ function AdminPage() {
 
   const renderSources = (sources: Source[]) => {
     if (!sources || sources.length === 0) return null
+    type S = Source & { path?: string; source?: string; origin_label?: string; origin_url?: string }
+    const groups = new Map<string, { src: S; sections: string[] }>()
+    sources.forEach((s: S) => {
+      const key = s.path || `${s.workbook}/${s.sheet}`
+      const g = groups.get(key)
+      const sec = (s.section_path || '').trim()
+      if (g) {
+        if (sec && !g.sections.includes(sec)) g.sections.push(sec)
+      } else {
+        groups.set(key, { src: s, sections: sec ? [sec] : [] })
+      }
+    })
     return (
       <div className="message-sources">
-        <p className="sources-title">출처:</p>
+        <p className="sources-title">출처</p>
         <div className="source-cards-container">
-          {sources.map((src, i) => {
-            const isConfluence = src.workbook.startsWith('Confluence')
-            let link = '#'
-            if (src.source_url) {
-              link = src.source_url
-            } else if (isConfluence) {
-              const searchTerm = src.sheet || src.workbook.split('/').pop()
-              link = `https://bighitcorp.atlassian.net/wiki/search?text=${encodeURIComponent(searchTerm || '')}&where=PK`
-            }
+          {Array.from(groups.values()).map(({ src, sections }, i) => {
+            const isConfluence = src.source === 'confluence' || src.workbook.startsWith('Confluence')
+            const displayLabel = src.origin_label || [src.workbook, src.sheet].filter(Boolean).join(' / ') || src.path || '(unknown)'
+            const extLink = src.origin_url || src.source_url || ''
             return (
-              <a key={i} href={link} target={link !== '#' ? '_blank' : undefined} rel="noreferrer" className="source-link-card glass">
-                <span className="source-icon">{isConfluence ? <ConfluenceIcon /> : <ExcelIcon />}</span>
-                <span className="source-text">{src.workbook}{src.sheet ? ` / ${src.sheet}` : ''}</span>
-                <span className="source-score">({src.score.toFixed(2)})</span>
-              </a>
+              <div key={i} className="source-link-card glass" title={src.path || displayLabel}>
+                <span className="source-card-main">
+                  <span className="source-icon">{isConfluence ? <ConfluenceIcon /> : <ExcelIcon />}</span>
+                  <div className="source-body">
+                    <span className="source-text">{displayLabel}</span>
+                    {sections.length > 0 && (
+                      <span className="source-sections">{sections.slice(0, 4).join(' · ')}{sections.length > 4 ? ` …+${sections.length - 4}` : ''}</span>
+                    )}
+                  </div>
+                </span>
+                {extLink && (
+                  <a className="source-card-ext" href={extLink} target="_blank" rel="noreferrer" title="원본 링크">↗</a>
+                )}
+              </div>
             )
           })}
         </div>

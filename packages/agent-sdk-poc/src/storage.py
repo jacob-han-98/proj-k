@@ -133,6 +133,54 @@ _META_KEYWORDS = (
 )
 
 
+def rewrite_source_paths(answer: str) -> str:
+    """답변 본문의 ``(출처: <내부 경로> § <섹션>)`` 에서 경로를 ``origin_label`` 로 치환.
+
+    내부 가공 경로(`packages/xlsx-extractor/output/...` / `../xlsx-extractor/...`)를
+    사용자에게 노출하지 않기 위해 서버에서 일괄 치환. 섹션·백틱·축약 표기는 유지.
+    """
+    if not answer:
+        return answer
+    out: list[str] = []
+    i = 0
+    last_path = ""
+    while True:
+        m = _SOURCE_START.search(answer, i)
+        if not m:
+            out.append(answer[i:])
+            break
+        out.append(answer[i:m.start()])
+        end = _balanced_paren_end(answer, m.end())
+        if end < 0:
+            out.append(answer[m.start():])
+            break
+        body = answer[m.end():end]
+        if "§" in body:
+            path_raw, _sep, section = body.partition("§")
+        else:
+            path_raw, section = body, ""
+        path_stripped = path_raw.strip().strip("`'\" ").lstrip("/")
+        section = section.strip()
+        if _is_abbrev(path_stripped):
+            if last_path:
+                label_path = last_path
+            else:
+                # 치환할 수 없음 — 원형 유지
+                out.append(answer[m.start():end+1])
+                i = end + 1
+                continue
+        else:
+            last_path = path_stripped
+            meta = _path_to_source_meta(path_stripped)
+            label_path = meta.get("origin_label") or path_stripped
+        if section:
+            out.append(f"(출처: {label_path} § {section})")
+        else:
+            out.append(f"(출처: {label_path})")
+        i = end + 1
+    return "".join(out)
+
+
 def strip_progress_prefix(answer: str) -> str:
     """Agent 답변 본문 시작부의 메타 서술/진행 이모지 블록 제거 + H2 앞 개행 보정.
 

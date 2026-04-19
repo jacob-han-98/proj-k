@@ -154,12 +154,14 @@ TOOL_LABEL = {
 
 
 def _read_label(file_path: str) -> str:
-    """content.md 처럼 범용 이름이면 parent dir 중 의미있는 이름(_final 제외) 사용.
+    """파일 경로에서 사용자에게 보일 의미있는 라벨 생성.
 
     예:
       .../PK_HUD 시스템/HUD_전투/_final/content.md → "PK_HUD 시스템 / HUD_전투"
       .../시스템 디자인/NPC/content.md            → "시스템 디자인 / NPC"
-      .../foo.md                                   → "foo.md"
+      index/summaries/xlsx/7_System/PK_스탯 및 공식/공식.md → "PK_스탯 및 공식 / 공식"
+      index/summaries/confluence/시스템 디자인/대미지 공식 개편.md → "시스템 디자인 / 대미지 공식 개편"
+      foo.md → "foo.md"
     """
     if not file_path:
         return "(unknown)"
@@ -167,30 +169,59 @@ def _read_label(file_path: str) -> str:
     if not parts:
         return file_path
     base = parts[-1]
-    if base != "content.md":
+
+    # content.md → parent dir 조합
+    if base == "content.md":
+        meaningful = [p for p in parts[:-1] if p and p != "_final"]
+        if len(meaningful) >= 2:
+            return f"{meaningful[-2]} / {meaningful[-1]}"
+        if meaningful:
+            return meaningful[-1]
         return base
-    # skip _final 및 content.md, 의미있는 부모 2단 조합
-    meaningful = [p for p in parts[:-1] if p and p != "_final"]
-    if len(meaningful) >= 2:
-        return f"{meaningful[-2]} / {meaningful[-1]}"
-    if meaningful:
-        return meaningful[-1]
-    return base
+
+    # 일반 .md (summaries 등) → parent / basename
+    stem = base[:-3] if base.lower().endswith(".md") else base
+    meaningful = [p for p in parts[:-1] if p and p not in ("index", "summaries", "xlsx", "confluence")]
+    # summaries 아래 '7_System', '8_Contents' 같은 카테고리는 유지한 뒤 그 다음 워크북까지 prefix
+    if len(meaningful) >= 1:
+        workbook = meaningful[-1]
+        # 같은 이름일 경우 중복 방지
+        if workbook == stem:
+            return stem
+        return f"{workbook} / {stem}"
+    return stem
 
 
-def _tool_status_msg(tool: str, tool_input: dict) -> str:
+def _tool_label(tool: str, tool_input: dict, done: bool = False) -> str:
+    """툴 호출 UI 라벨. done=True 면 '중' 제거하고 '완료' 표기."""
     emoji = TOOL_LABEL.get(tool, "🔧")
+    verb_running = {"Grep": "검색 중", "Glob": "패턴 매칭 중", "Read": "읽는 중",
+                    "mcp_projk": "조회 중"}
+    verb_done = {"Grep": "검색", "Glob": "패턴 매칭", "Read": "읽음",
+                 "mcp_projk": "조회"}
     if tool == "Grep":
         pat = (tool_input or {}).get("pattern", "")
         path = (tool_input or {}).get("path", "")
-        return f"{emoji} `{pat}` 검색 중 ({path})"
+        v = verb_done["Grep"] if done else verb_running["Grep"]
+        return f"{emoji} `{pat}` {v} ({path})"
     if tool == "Glob":
-        return f"{emoji} 패턴 매칭: `{(tool_input or {}).get('pattern', '')}`"
+        pat = (tool_input or {}).get("pattern", "")
+        v = verb_done["Glob"] if done else verb_running["Glob"]
+        return f"{emoji} {v}: `{pat}`"
     if tool == "Read":
-        return f"{emoji} {_read_label((tool_input or {}).get('file_path', ''))} 읽는 중"
+        label = _read_label((tool_input or {}).get("file_path", ""))
+        v = verb_done["Read"] if done else verb_running["Read"]
+        return f"{emoji} {label} {v}"
     if tool.startswith("mcp__projk__"):
-        return f"{emoji} 시스템 관계 조회 ({tool.removeprefix('mcp__projk__')})"
+        name = tool.removeprefix("mcp__projk__")
+        v = verb_done["mcp_projk"] if done else verb_running["mcp_projk"]
+        return f"{emoji} 시스템 관계 {v} ({name})"
     return f"{emoji} {tool}"
+
+
+def _tool_status_msg(tool: str, tool_input: dict) -> str:
+    """기존 호환 — 진행중 라벨."""
+    return _tool_label(tool, tool_input, done=False)
 
 
 @app.get("/preset_prompts")
@@ -306,7 +337,7 @@ async def ask_stream(req: AskStreamRequest):
                             ) + "\n"
 
                 elif isinstance(msg, UserMessage):
-                    # Tool results — 해당 tool_start 에 summary 동반
+                    # Tool results — 해당 tool_start 에 summary + done_label + preview 동반
                     if hasattr(msg, "content") and isinstance(msg.content, list):
                         for block in msg.content:
                             if isinstance(block, ToolResultBlock):
@@ -321,8 +352,17 @@ async def ask_stream(req: AskStreamRequest):
                                         elif isinstance(x, dict) and "text" in x:
                                             c += x["text"]
                                 summary = _summarize_tool_result(c)
+                                # 해당 tool 의 input 을 찾아 done label 생성
+                                done_label = ""
+                                for t in tool_trace:
+                                    if t.get("id") == tool_id:
+                                        done_label = _tool_label(t["tool"], t.get("input", {}), done=True)
+                                        break
+                                # 전체 결과 일부 (UI 상세 펼치기용, 8KB 제한)
+                                preview = c[:8000] + ("\n…(더 있음)" if len(c) > 8000 else "")
                                 yield json.dumps(
-                                    {"type": "tool_end", "id": tool_id, "summary": summary},
+                                    {"type": "tool_end", "id": tool_id,
+                                     "summary": summary, "label": done_label, "preview": preview},
                                     ensure_ascii=False,
                                 ) + "\n"
 
@@ -331,8 +371,25 @@ async def ask_stream(req: AskStreamRequest):
 
             # 최종 결과 조립
             answer_raw = "".join(answer_text_parts).strip()
-            answer = storage.strip_progress_prefix(answer_raw)
-            sources = storage.extract_sources(answer)
+            answer_stripped = storage.strip_progress_prefix(answer_raw)
+            sources = storage.extract_sources(answer_stripped)
+            answer = storage.rewrite_source_paths(answer_stripped)
+
+            # 🚨 Confluence 누락 검증 — CLAUDE.md 워크플로우 위반 감지
+            has_confluence_source = any(s.get("source") == "confluence" for s in sources)
+            # 실제 Agent 가 Confluence summary/content 를 탐색했는지
+            explored_confluence = any(
+                "confluence" in json.dumps(t.get("input", {}), ensure_ascii=False).lower()
+                for t in tool_trace
+            )
+            qa_warnings: list[str] = []
+            if not explored_confluence:
+                msg = f"[warn] conv={conv_id[:8]} Confluence 미탐색 — Excel only 답변"
+                log.warning(msg)
+                qa_warnings.append("Confluence 미탐색")
+            elif not has_confluence_source:
+                log.warning(f"[warn] conv={conv_id[:8]} Confluence 탐색했으나 인용 없음")
+                qa_warnings.append("Confluence 탐색했으나 인용 없음")
             elapsed_s = round(time.time() - start, 2)
 
             # 저장 — tool_trace 에 input 포함 (admin/shared 에서 실제 탐색 경로 확인 가능)
@@ -357,6 +414,7 @@ async def ask_stream(req: AskStreamRequest):
                 "cost_usd": cost,
                 "tool_calls": len(tool_trace),
                 "tool_trace": [{"tool": t["tool"], "input": t.get("input", {})} for t in tool_trace],
+                "qa_warnings": qa_warnings,
             }
             yield json.dumps({"type": "result", "data": payload}, ensure_ascii=False) + "\n"
             log_event(conv_id, "done", f"{elapsed_s}s cost=${cost} tools={len(tool_trace)}")

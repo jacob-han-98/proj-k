@@ -654,6 +654,29 @@
   line-height: 1.5;
 }
 
+/* 답변 품질 경고 배지 */
+.qa-warnings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.qa-warning-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  background: color-mix(in srgb, #f59e0b 20%, transparent);
+  border: 1px solid color-mix(in srgb, #f59e0b 50%, transparent);
+  color: #b45309;
+}
+[data-theme="dark"] .qa-warning-badge,
+[data-theme="system"] .qa-warning-badge {
+  color: #fbbf24;
+}
+
 /* 출처 카드 — section 목록 지원 + 클릭/외부링크 분리 */
 .source-body {
   display: flex;

@@ -276,18 +276,41 @@ def _path_to_source_meta(path: str) -> dict:
     """
     xlsx: packages/xlsx-extractor/output/7_System/PK_HUD 시스템/HUD_전투/_final/content.md
       → workbook="PK_HUD 시스템", sheet="HUD_전투",
-         origin_label="PK_HUD 시스템.xlsx / HUD_전투 시트",
-         origin_url="" (xlsx 는 내부 링크 없음)
+         origin_label="PK_HUD 시스템.xlsx / HUD_전투 시트"
+    xlsx image: .../HUD_전투/_final/images/HUD_전투_detail_r0_fig1.png
+      → source="image", origin_label="PK_HUD 시스템 / HUD_전투 / HUD_전투_detail_r0_fig1.png"
     confluence: packages/confluence-downloader/output/시스템 디자인/NPC/content.md
       → workbook="시스템 디자인", sheet="NPC",
          origin_label="Confluence / 시스템 디자인 / NPC",
          origin_url="https://bighitcorp.atlassian.net/wiki/pages/viewpage.action?pageId=<id>"
     """
     parts = path.split("/")
+    low = path.lower()
+    is_image = low.endswith((".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg"))
+
     if "xlsx-extractor" in parts:
         try:
             i = parts.index("output")
             rest = parts[i + 1 :]
+            if is_image:
+                # .../<workbook>/<sheet>/_final/images/<file>.png
+                try:
+                    img_idx = rest.index("images")
+                    before = [p for p in rest[:img_idx] if p != "_final"]
+                    img_name = rest[-1]
+                    workbook = before[-2] if len(before) >= 2 else (before[-1] if before else "")
+                    sheet = before[-1] if before else ""
+                    parts_label = [p for p in [workbook, sheet, img_name] if p]
+                    return {
+                        "workbook": workbook,
+                        "sheet": sheet,
+                        "path": path,
+                        "source": "image",
+                        "origin_label": " / ".join(parts_label),
+                        "origin_url": "",
+                    }
+                except ValueError:
+                    pass
             if rest and rest[-1] == "content.md":
                 rest = rest[:-1]
             if rest and rest[-1] == "_final":
@@ -298,7 +321,7 @@ def _path_to_source_meta(path: str) -> dict:
                 return {
                     "workbook": workbook,
                     "sheet": sheet,
-                    "path": path,  # 내부 로그용
+                    "path": path,
                     "source": "xlsx",
                     "origin_label": f"{workbook}.xlsx / {sheet} 시트",
                     "origin_url": "",

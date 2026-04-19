@@ -36,6 +36,8 @@ export interface AskResponse {
   total_tokens: number;
   api_seconds: number;
   proposals?: Proposal[];
+  qa_warnings?: string[];
+  tool_calls?: number;
 }
 
 export const askQuestion = async (

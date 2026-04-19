@@ -62,6 +62,7 @@ interface Message {
   content: string;
   sources?: AskResponse['sources'];
   progress?: Progress;           // assistant 메시지 기준 실시간 진행 스냅샷
+  qaWarnings?: string[];         // 서버 품질 체크 경고 (Confluence 미탐색 등)
 }
 
 interface Thread {
@@ -298,7 +299,13 @@ function App() {
                 return {
                   ...t,
                   id: realId,
-                  messages: [...t.messages, { role: 'assistant', content: res.answer, sources: res.sources, progress: finalProgress }]
+                  messages: [...t.messages, {
+                    role: 'assistant',
+                    content: res.answer,
+                    sources: res.sources,
+                    progress: finalProgress,
+                    qaWarnings: res.qa_warnings || [],
+                  }]
                 }
               }
               return t;
@@ -742,6 +749,13 @@ function App() {
                         </div>
                       ) : (
                         <>
+                          {msg.qaWarnings && msg.qaWarnings.length > 0 && (
+                            <div className="qa-warnings" title="이 답변의 품질 체크 경고">
+                              {msg.qaWarnings.map((w, wi) => (
+                                <span key={wi} className="qa-warning-badge">⚠ {w}</span>
+                              ))}
+                            </div>
+                          )}
                           {msg.progress && renderProgress(msg.progress, { collapsed: true, loading: false })}
                           <ReactMarkdown
                             remarkPlugins={[remarkGfm]}

@@ -562,10 +562,19 @@ async def source_view(path: str, section: str = ""):
 
     content = candidate.read_text(encoding="utf-8", errors="replace")
 
+    # Confluence ADF decision/task block 의 localId(UUID)가 raw 로 본문에 찍혀 나오는 케이스를
+    # 사용자에게 노출하지 않도록 제거. 1~2개의 UUID 가 연달아 붙은 뒤 상태 토큰이 오는 패턴.
+    import re as _re
+    _UUID = r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+    content = _re.sub(
+        rf"(?:{_UUID}){{1,3}}(?:DECIDED|NOT_STARTED|IN_PROGRESS|DONE|TASK|ACTION_ITEM)",
+        "",
+        content,
+    )
+
     # 섹션 위치 (Markdown heading 매칭 — 정규화 후 비교)
     def _norm_heading(s: str) -> str:
         # 백슬래시 이스케이프 제거, 공백·구두점 관대하게 비교
-        import re as _re
         s = s.replace("\\[", "[").replace("\\]", "]").replace("\\(", "(").replace("\\)", ")").replace("\\.", ".")
         s = _re.sub(r"\s+", " ", s).strip()
         return s
@@ -577,6 +586,29 @@ async def source_view(path: str, section: str = ""):
             else: break
         return m
 
+    def _unwrap_heading(line: str) -> tuple[str, int] | None:
+        """라인을 분석해 (제목, 레벨) 반환 — heading 이 아니면 None.
+
+        지원:
+          - 일반 `## 제목`
+          - blockquote `> # 제목`, `> ## 제목`
+          - Confluence bold-only 줄 `****제목****` (decision/task 타이틀) — 가장 약한 레벨 6
+        """
+        s = line.strip()
+        if not s:
+            return None
+        # blockquote 제거
+        while s.startswith(">"):
+            s = s[1:].lstrip()
+        if s.startswith("#"):
+            lvl = _heading_level(s)
+            return (_norm_heading(s.lstrip("#")), lvl)
+        # bold-only line — `**...**` / `***...***` / `****...****`
+        m = _re.match(r"^(\*{2,})(.+?)\1\s*$", s)
+        if m and m.group(2).strip():
+            return (_norm_heading(m.group(2)), 6)
+        return None
+
     section_range = None
     if section:
         target = _norm_heading(section)
@@ -585,11 +617,10 @@ async def source_view(path: str, section: str = ""):
         start = -1
         start_level = 99
         for i, line in enumerate(lines):
-            s = line.strip()
-            if not s.startswith("#"):
+            res = _unwrap_heading(line)
+            if not res:
                 continue
-            lvl = _heading_level(s)
-            hd = _norm_heading(s.lstrip("#"))
+            hd, lvl = res
             hd_low = hd.lower()
             if start < 0:
                 if hd_low == target_low or target_low in hd_low or hd_low in target_low:

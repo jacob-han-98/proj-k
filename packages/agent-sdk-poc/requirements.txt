@@ -1,0 +1,8 @@
+claude-agent-sdk>=0.1.60
+fastapi>=0.110
+uvicorn[standard]>=0.27
+sse-starlette>=2.0
+pydantic>=2.0
+python-dotenv>=1.0
+anthropic>=0.30  # Haiku index build (build_summaries.py)
+anyio>=4.0

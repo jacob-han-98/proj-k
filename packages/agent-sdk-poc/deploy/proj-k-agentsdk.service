@@ -1,0 +1,18 @@
+[Unit]
+Description=Project K Agent SDK (cp.tech2.hybe.im/proj-k/agentsdk)
+After=network.target
+
+[Service]
+Type=simple
+User=jacob
+WorkingDirectory=/home/jacob/proj-k-agent/packages/agent-sdk-poc
+Environment="PATH=/home/jacob/proj-k-agent/packages/agent-sdk-poc/.venv/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+Environment="PORT=8090"
+ExecStart=/home/jacob/proj-k-agent/packages/agent-sdk-poc/.venv/bin/uvicorn src.server:app --host 127.0.0.1 --port 8090
+Restart=on-failure
+RestartSec=5
+StandardOutput=append:/var/log/proj-k-agentsdk.log
+StandardError=append:/var/log/proj-k-agentsdk.log
+
+[Install]
+WantedBy=multi-user.target

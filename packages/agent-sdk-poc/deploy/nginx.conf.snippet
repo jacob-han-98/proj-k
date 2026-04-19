@@ -1,0 +1,28 @@
+# ── Project K Agent SDK (cp.tech2.hybe.im/proj-k/agentsdk) ──
+# 기존 server 블록에 아래 두 location 을 추가한다.
+# sudo nginx -t && sudo systemctl reload nginx
+
+# 정적 UI
+location /proj-k/agentsdk/ {
+    alias /home/jacob/proj-k-agent/packages/agent-sdk-poc/static/;
+    index index.html;
+    try_files $uri $uri/ /proj-k/agentsdk/index.html;
+}
+
+# FastAPI + SSE 백엔드
+# 브라우저 클라이언트는 fetch('/proj-k/agentsdk/api/query') 로 호출한다.
+location /proj-k/agentsdk/api/ {
+    proxy_pass http://127.0.0.1:8090/;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+
+    # SSE 스트리밍 — 버퍼링 금지
+    proxy_buffering off;
+    proxy_cache off;
+    chunked_transfer_encoding off;
+    proxy_read_timeout 300s;
+    proxy_send_timeout 300s;
+}

@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Project K — Agent SDK PoC</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #161a22;
+    --border: #242a35;
+    --text: #d7dce4;
+    --muted: #8a93a3;
+    --accent: #7aa2ff;
+    --tool: #f5a65b;
+    --thinking: #9aa0a6;
+    --error: #ff6b6b;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; height: 100%; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Noto Sans KR", sans-serif;
+    background: var(--bg); color: var(--text);
+    display: flex; flex-direction: column; height: 100vh;
+  }
+  header {
+    padding: 14px 20px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 12px;
+  }
+  header h1 { margin: 0; font-size: 16px; font-weight: 600; }
+  header .tag {
+    background: #2a3244; color: var(--muted);
+    padding: 3px 8px; border-radius: 12px; font-size: 11px;
+  }
+  #log {
+    flex: 1; overflow-y: auto; padding: 16px 20px;
+    font-size: 14px; line-height: 1.6;
+  }
+  .entry { margin-bottom: 14px; }
+  .entry .label {
+    display: inline-block; font-size: 11px; color: var(--muted);
+    text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;
+  }
+  .entry.user .label { color: var(--accent); }
+  .entry.thinking { color: var(--thinking); font-style: italic; font-size: 13px; }
+  .entry.tool_call .label { color: var(--tool); }
+  .entry.tool_call code {
+    display: block; background: var(--panel); padding: 8px 10px;
+    border-radius: 6px; font-size: 12px; white-space: pre-wrap;
+    color: var(--muted); border: 1px solid var(--border);
+  }
+  .entry.tool_result {
+    background: #111419; border: 1px solid var(--border);
+    padding: 8px 10px; border-radius: 6px;
+    font-size: 12px; color: var(--muted); white-space: pre-wrap;
+    max-height: 200px; overflow-y: auto;
+  }
+  .entry.text { color: var(--text); }
+  .entry.text pre {
+    background: var(--panel); padding: 10px; border-radius: 6px;
+    overflow-x: auto; font-size: 13px;
+  }
+  .entry.error { color: var(--error); }
+  .entry.done {
+    color: var(--muted); font-size: 12px; border-top: 1px dashed var(--border);
+    padding-top: 8px;
+  }
+  #inputbar {
+    display: flex; gap: 10px; padding: 14px 20px;
+    border-top: 1px solid var(--border); background: var(--panel);
+  }
+  #prompt {
+    flex: 1; background: #0b0d12; color: var(--text);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 12px; font-size: 14px; font-family: inherit;
+    resize: none; min-height: 44px; max-height: 200px;
+  }
+  #send {
+    background: var(--accent); color: #0b0d12; border: 0;
+    padding: 0 18px; border-radius: 8px; font-weight: 600; cursor: pointer;
+  }
+  #send:disabled { opacity: 0.4; cursor: not-allowed; }
+  details summary { cursor: pointer; color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Project K · Agent SDK PoC</h1>
+  <span class="tag" id="session-tag">new session</span>
+  <span class="tag" id="status-tag">idle</span>
+</header>
+
+<div id="log"></div>
+
+<form id="inputbar">
+  <textarea id="prompt" placeholder="기획에 대해 질문하세요 (예: 크리티컬 공격 확률은 어떻게 계산되나요?)" rows="2"></textarea>
+  <button id="send" type="submit">보내기</button>
+</form>
+
+<script>
+const log = document.getElementById('log');
+const prompt = document.getElementById('prompt');
+const sendBtn = document.getElementById('send');
+const form = document.getElementById('inputbar');
+const sessionTag = document.getElementById('session-tag');
+const statusTag = document.getElementById('status-tag');
+
+let sessionId = null;
+let currentTextEntry = null;
+
+// API base — supports both /query (same-origin) and /proj-k/agentsdk/api/query (prod)
+const API_BASE = (() => {
+  const p = location.pathname;
+  if (p.includes('/proj-k/agentsdk/')) return '/proj-k/agentsdk/api';
+  return '';
+})();
+
+function addEntry(kind, content) {
+  const div = document.createElement('div');
+  div.className = 'entry ' + kind;
+  const label = document.createElement('div');
+  label.className = 'label';
+  label.textContent = kind;
+  div.appendChild(label);
+  const body = document.createElement('div');
+  body.innerHTML = content;
+  div.appendChild(body);
+  log.appendChild(div);
+  log.scrollTop = log.scrollHeight;
+  return div;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  }[c]));
+}
+
+async function sendPrompt(text) {
+  addEntry('user', escapeHtml(text));
+  currentTextEntry = null;
+  sendBtn.disabled = true;
+  statusTag.textContent = 'running…';
+
+  try {
+    const res = await fetch(`${API_BASE}/query`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({prompt: text, session_id: sessionId}),
+    });
+
+    if (!res.ok || !res.body) throw new Error('HTTP ' + res.status);
+
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = '';
+
+    while (true) {
+      const {done, value} = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, {stream: true});
+
+      let idx;
+      while ((idx = buf.indexOf('\n\n')) !== -1) {
+        const raw = buf.slice(0, idx);
+        buf = buf.slice(idx + 2);
+        handleSseBlock(raw);
+      }
+    }
+  } catch (e) {
+    addEntry('error', 'Error: ' + escapeHtml(String(e.message || e)));
+  } finally {
+    sendBtn.disabled = false;
+    statusTag.textContent = 'idle';
+  }
+}
+
+function handleSseBlock(raw) {
+  const lines = raw.split('\n');
+  let event = 'message', data = '';
+  for (const line of lines) {
+    if (line.startsWith('event:')) event = line.slice(6).trim();
+    else if (line.startsWith('data:')) data += line.slice(5).trim();
+  }
+  if (!data) return;
+  let payload;
+  try { payload = JSON.parse(data); } catch { payload = {raw: data}; }
+
+  switch (event) {
+    case 'session':
+      sessionId = payload.session_id;
+      sessionTag.textContent = sessionId ? sessionId.slice(0, 8) : 'new';
+      break;
+    case 'system':
+      // subtle — skip rendering to keep log clean
+      break;
+    case 'thinking':
+      addEntry('thinking', escapeHtml(payload.text));
+      currentTextEntry = null;
+      break;
+    case 'tool_call':
+      addEntry('tool_call',
+        `<strong>${escapeHtml(payload.tool)}</strong><code>${escapeHtml(JSON.stringify(payload.input, null, 2))}</code>`);
+      currentTextEntry = null;
+      break;
+    case 'tool_result':
+      addEntry('tool_result', escapeHtml(payload.content));
+      currentTextEntry = null;
+      break;
+    case 'text':
+      if (!currentTextEntry) currentTextEntry = addEntry('text', '');
+      currentTextEntry.querySelector('div:last-child').innerHTML += escapeHtml(payload.text) + '<br>';
+      log.scrollTop = log.scrollHeight;
+      break;
+    case 'error':
+      addEntry('error', escapeHtml(payload.message));
+      break;
+    case 'done':
+      const e = payload.elapsed != null ? `${payload.elapsed}s` : '';
+      const c = payload.cost != null ? `$${payload.cost}` : '';
+      addEntry('done', `완료 · ${e} · ${c}`);
+      break;
+  }
+}
+
+form.addEventListener('submit', (e) => {
+  e.preventDefault();
+  const text = prompt.value.trim();
+  if (!text || sendBtn.disabled) return;
+  prompt.value = '';
+  sendPrompt(text);
+});
+
+prompt.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    form.requestSubmit();
+  }
+});
+</script>
+</body>
+</html>

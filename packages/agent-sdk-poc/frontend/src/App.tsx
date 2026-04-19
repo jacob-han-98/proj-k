@@ -19,7 +19,7 @@ function applyTheme(mode: ThemeMode) {
   document.documentElement.setAttribute('data-theme', mode);
 }
 
-// ── 답변 본문의 `(출처: …)` 를 클릭 가능한 링크로 전처리 ───
+// ── 답변 본문의 `(출처: …)` 및 bold 소스 라벨을 클릭 가능한 링크로 전처리 ───
 // balanced-paren 스캔으로 중첩된 `(n)` · `§` 섹션을 안전하게 포함.
 // 결과: `[(출처: body)](projk-source:<encoded-body>)` — ReactMarkdown 이 anchor 로 렌더,
 // href prefix 로 감지해 핸들러가 우측 뷰를 연다.
@@ -50,6 +50,20 @@ function linkifyInlineSources(text: string): string {
     re.lastIndex = last
   }
   out += text.slice(last)
+
+  // 2단계: "더 볼만한 곳" 등 본문 내 **<워크북>.xlsx / <시트>** 또는
+  // **Confluence / <공간> / ...** bold 라벨을 동일한 링크로 감싼다.
+  // - `/` 뒤에 시트/페이지가 반드시 하나는 있어야 함 (단독 워크북명은 경로 미확인으로 제외)
+  // - 이미 link 표기(`[...](...)`) 가 있거나 괄호가 들어가면 false-positive 가능 — 제외.
+  out = out.replace(/\*\*([^*\n]+?)\*\*/g, (match, label) => {
+    const trimmed = label.trim()
+    if (trimmed.includes('[') || trimmed.includes('](')) return match
+    const isXlsx = /\.xlsx\s*\/\s*\S.*/.test(trimmed)
+    const isConfluence = /^Confluence\s*\/\s*\S.*/.test(trimmed)
+    if (!isXlsx && !isConfluence) return match
+    const enc = encodeURIComponent(trimmed)
+    return `**[${label}](projk-source:${enc})**`
+  })
   return out
 }
 

@@ -190,6 +190,20 @@ function App() {
   const [screenshotState, setScreenshotState] = useState<{ url: string; label: string } | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
+  const sourceHighlightRef = useRef<HTMLDivElement>(null)
+
+  // 우측 패널 로드 완료 후 section 하이라이트가 있으면 해당 위치로 자동 스크롤.
+  useEffect(() => {
+    if (!sourceView || !sourceView.section_range) return
+    let alive = true
+    const tryScroll = () => {
+      if (!alive) return
+      sourceHighlightRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+    const id1 = requestAnimationFrame(() => requestAnimationFrame(tryScroll))
+    const backup = setTimeout(tryScroll, 350)
+    return () => { alive = false; cancelAnimationFrame(id1); clearTimeout(backup) }
+  }, [sourceView?.path, sourceView?.section, sourceView?.section_range?.start_line])
 
   const openSourceView = useCallback(async (path: string, section: string) => {
     setSourceViewLoading(true)
@@ -812,7 +826,7 @@ function App() {
                   : sourceView.content}
               </ReactMarkdown>
               {sr && (
-                <div className="source-view-highlight">
+                <div className="source-view-highlight" ref={sourceHighlightRef}>
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
                     {lines.slice(sr.start_line - 1, sr.end_line).join('\n')}
                   </ReactMarkdown>

@@ -330,6 +330,31 @@ export function SourceViewPanel({
   onClose: () => void
   onScreenshot: (path: string, label: string) => void
 }) {
+  const highlightRef = useRef<HTMLDivElement>(null)
+
+  // 로드 완료 후 section 하이라이트가 있으면 해당 위치로 자동 스크롤.
+  // ReactMarkdown 렌더는 동기이지만 mermaid/이미지/레이아웃이 한 틱 뒤에
+  // 확정되므로 약간의 지연 + rAF 로 이중 대기.
+  useEffect(() => {
+    if (!sourceView || !sourceView.section_range) return
+    let alive = true
+    const tryScroll = () => {
+      if (!alive) return
+      const el = highlightRef.current
+      if (!el) return
+      // 스크롤 컨테이너(.source-view-body) 의 상단에서 살짝 여유.
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }
+    // 2 프레임 뒤에 실행 (lay­out + paint 완료 후)
+    const id1 = requestAnimationFrame(() => {
+      const id2 = requestAnimationFrame(tryScroll)
+      ;(tryScroll as any)._id2 = id2
+    })
+    // 혹시 늦게 렌더되는 요소(코드블록/이미지) 대비 백업 타이머
+    const backup = setTimeout(tryScroll, 350)
+    return () => { alive = false; cancelAnimationFrame(id1); clearTimeout(backup) }
+  }, [sourceView?.path, sourceView?.section, sourceView?.section_range?.start_line])
+
   if (!sourceView && !loading && !err) return null
   const lines = sourceView?.content.split('\n') ?? []
   const sr = sourceView?.section_range
@@ -374,7 +399,7 @@ export function SourceViewPanel({
               {sr ? lines.slice(0, sr.start_line - 1).join('\n') : sourceView.content}
             </ReactMarkdown>
             {sr && (
-              <div className="source-view-highlight">
+              <div className="source-view-highlight" ref={highlightRef}>
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
                   {lines.slice(sr.start_line - 1, sr.end_line).join('\n')}
                 </ReactMarkdown>

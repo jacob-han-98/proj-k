@@ -718,6 +718,39 @@ async def screenshot(path: str):
     else:
         sheet_dir = cand
     vision_in = sheet_dir / "_vision_input"
+
+    # 1) 가로 폭을 제한한 detail_r{n}.png 가 여러 장이면 세로로 이어붙여 캐시.
+    #    full_original.png 는 실제 Excel 렌더 폭 그대로라 매우 넓고(~5000px) 여백이
+    #    많아 보기 불편. detail 타일은 콘텐츠 폭 기준(보통 ~1400px)으로 잘려 있다.
+    detail_tiles = sorted(vision_in.glob("detail_r*.png"))
+    if len(detail_tiles) >= 1:
+        stitched = vision_in / "detail_stitched.png"
+        # mtime 비교 — 원본이 더 새로우면 재생성
+        def _needs_rebuild() -> bool:
+            if not stitched.exists():
+                return True
+            s_m = stitched.stat().st_mtime
+            return any(t.stat().st_mtime > s_m for t in detail_tiles)
+        if _needs_rebuild():
+            try:
+                from PIL import Image  # 서버에 Pillow 설치됨
+                imgs = [Image.open(p) for p in detail_tiles]
+                max_w = max(i.width for i in imgs)
+                total_h = sum(i.height for i in imgs)
+                canvas = Image.new("RGB", (max_w, total_h), (255, 255, 255))
+                y = 0
+                for i in imgs:
+                    # 좌측 정렬로 붙이기 (폭이 서로 달라도 OK)
+                    canvas.paste(i, (0, y))
+                    y += i.height
+                canvas.save(stitched, "PNG", optimize=True)
+            except Exception as e:
+                log.warning(f"detail stitch 실패 path={normalized}: {e}")
+        if stitched.exists():
+            return FileResponse(stitched, media_type="image/png",
+                                headers={"Cache-Control": "private, max-age=3600"})
+
+    # 2) fallback — overview → full_original 순
     for name in ("overview.png", "full_original.png"):
         img = vision_in / name
         if img.exists() and img.is_file():

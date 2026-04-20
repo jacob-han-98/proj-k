@@ -159,8 +159,8 @@ def _read_label(file_path: str) -> str:
     예:
       .../PK_HUD 시스템/HUD_전투/_final/content.md → "PK_HUD 시스템 / HUD_전투"
       .../시스템 디자인/NPC/content.md            → "시스템 디자인 / NPC"
-      index/summaries/xlsx/7_System/PK_스탯 및 공식/공식.md → "PK_스탯 및 공식 / 공식"
-      index/summaries/confluence/시스템 디자인/대미지 공식 개편.md → "시스템 디자인 / 대미지 공식 개편"
+      index/summaries/xlsx/7_System/PK_스탯 및 공식/공식.md → "PK_스탯 및 공식 / 공식 (요약본)"
+      index/summaries/confluence/시스템 디자인/대미지 공식 개편.md → "시스템 디자인 / 대미지 공식 개편 (요약본)"
       foo.md → "foo.md"
     """
     if not file_path:
@@ -170,13 +170,17 @@ def _read_label(file_path: str) -> str:
         return file_path
     base = parts[-1]
 
+    # Haiku 생성 요약본(`index/summaries/...`) 여부 — 라벨 뒤에 " (요약본)" 표시.
+    is_summary = "index" in parts and "summaries" in parts
+    suffix = " (요약본)" if is_summary else ""
+
     # content.md → parent dir 조합
     if base == "content.md":
         meaningful = [p for p in parts[:-1] if p and p != "_final"]
         if len(meaningful) >= 2:
-            return f"{meaningful[-2]} / {meaningful[-1]}"
+            return f"{meaningful[-2]} / {meaningful[-1]}{suffix}"
         if meaningful:
-            return meaningful[-1]
+            return f"{meaningful[-1]}{suffix}"
         return base
 
     # 일반 .md (summaries 등) → parent / basename
@@ -187,9 +191,9 @@ def _read_label(file_path: str) -> str:
         workbook = meaningful[-1]
         # 같은 이름일 경우 중복 방지
         if workbook == stem:
-            return stem
-        return f"{workbook} / {stem}"
-    return stem
+            return f"{stem}{suffix}"
+        return f"{workbook} / {stem}{suffix}"
+    return f"{stem}{suffix}"
 
 
 def _tool_label(tool: str, tool_input: dict, done: bool = False) -> str:

@@ -6,6 +6,9 @@ import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import mermaid from 'mermaid'
 import html2pdf from 'html2pdf.js'
+// 단일 source of truth — App / SharedPage / AdminPage 가 모두 여기서 import.
+// inline 으로 ExcelIcon / parseInlineSourceBody 등을 또 만들면 화면별 갈라짐 재발.
+import { RenderAssistantMarkdown, RenderSourceCards } from './assistantRender'
 
 // ── Theme ──
 type ThemeMode = 'system' | 'light' | 'dark';
@@ -19,117 +22,7 @@ function applyTheme(mode: ThemeMode) {
   document.documentElement.setAttribute('data-theme', mode);
 }
 
-// ── 답변 본문의 `(출처: …)` 및 bold 소스 라벨을 클릭 가능한 링크로 전처리 ───
-// balanced-paren 스캔으로 중첩된 `(n)` · `§` 섹션을 안전하게 포함.
-// 결과: `[(출처: body)](projk-source:<encoded-body>)` — ReactMarkdown 이 anchor 로 렌더,
-// href prefix 로 감지해 핸들러가 우측 뷰를 연다.
-function linkifyInlineSources(text: string): string {
-  if (!text) return text
-  const re = /\(\s*출처\s*[:：]\s*/g
-  let out = ''
-  let last = 0
-  let m: RegExpExecArray | null
-  while ((m = re.exec(text)) !== null) {
-    const start = m.index
-    const afterPrefix = m.index + m[0].length
-    let depth = 1
-    let i = afterPrefix
-    while (i < text.length) {
-      const ch = text[i]
-      if (ch === '(') depth++
-      else if (ch === ')') { depth--; if (depth === 0) break }
-      i++
-    }
-    if (i >= text.length) break
-    const body = text.slice(afterPrefix, i).trim()
-    // 링크 표시 텍스트에서 [ ] 는 escape (markdown 파서가 중첩 bracket 을 오해석하지 않게)
-    const displayBody = body.replace(/[\[\]]/g, (c) => '\\' + c)
-    const enc = encodeURIComponent(body)
-    out += text.slice(last, start) + `[(출처: ${displayBody})](projk-source:${enc})`
-    last = i + 1
-    re.lastIndex = last
-  }
-  out += text.slice(last)
-
-  // 2단계: "더 볼만한 곳" 등 본문 내 **<워크북>.xlsx / <시트>** 또는
-  // **Confluence / <공간> / ...** bold 라벨을 동일한 링크로 감싼다.
-  // - `/` 뒤에 시트/페이지가 반드시 하나는 있어야 함 (단독 워크북명은 경로 미확인으로 제외)
-  // - 이미 link 표기(`[...](...)`) 가 있거나 괄호가 들어가면 false-positive 가능 — 제외.
-  out = out.replace(/\*\*([^*\n]+?)\*\*/g, (match, label) => {
-    const trimmed = label.trim()
-    if (trimmed.includes('[') || trimmed.includes('](')) return match
-    const isXlsx = /\.xlsx\s*\/\s*\S.*/.test(trimmed)
-    const isConfluence = /^Confluence\s*\/\s*\S.*/.test(trimmed)
-    if (!isXlsx && !isConfluence) return match
-    const enc = encodeURIComponent(trimmed)
-    return `**[${label}](projk-source:${enc})**`
-  })
-  return out
-}
-
-// ── 인라인 출처 body 파서 — 아이콘 + 계층 표시용 ───
-// 입력: "PK_스탯 및 공식.xlsx / 공식 시트 § ① 공통 규칙 > 5) 최종 피해량"
-//        또는 "Confluence / 시스템 디자인 / 성장 밸런스 / 스탯 리스트 § 2-4 치명타 판정"
-// 결과: { kind, levels: [...] } — 렌더러가 › 로 구분해 순차 표시.
-interface ParsedSourceBody {
-  kind: 'xlsx' | 'confluence' | 'external' | 'web' | 'other';
-  levels: string[];  // 첫 항목은 워크북/Confluence/게임명/도메인 (무인용), 나머지는 따옴표 포함 완성본
-  url?: string;       // web 일 때만: 클릭 시 새창 이동용
-}
-
-function parseInlineSourceBody(body: string): ParsedSourceBody {
-  let label = body.trim()
-  let section = ''
-  const sep = body.indexOf('§')
-  if (sep >= 0) {
-    label = body.slice(0, sep).trim()
-    section = body.slice(sep + 1).trim()
-  }
-  const sections = section
-    ? section.split(/\s*>\s*/).map(s => s.trim()).filter(Boolean)
-    : []
-  const sectionLevels = sections.map(s => `"${s}"`)
-
-  // Deep Research — web/<도메인>/<페이지 제목> 또는 "<도메인> (웹) / ..."
-  if (/^web\//i.test(label)) {
-    const parts = label.replace(/^web\//i, '').split(/\s*\/\s*/).map(p => p.trim()).filter(Boolean)
-    const domain = parts[0] || ''
-    const title = parts.slice(1).map(p => `"${p}"`)
-    const url = domain && domain.includes('.') ? `https://${domain}` : undefined
-    return { kind: 'web', levels: [`${domain} (웹)`, ...title, ...sectionLevels], url }
-  }
-  if (/\(웹\)/.test(label)) {
-    const parts = label.split(/\s*\/\s*/).map(p => p.trim()).filter(Boolean)
-    const domain = (parts[0] || '').replace(/\s*\(웹\)\s*$/, '').trim()
-    const url = domain && domain.includes('.') ? `https://${domain}` : undefined
-    return { kind: 'web', levels: [parts[0] || label, ...parts.slice(1).map(p => `"${p}"`), ...sectionLevels], url }
-  }
-
-  // 비교 모드 — external/<게임>/<카테고리>/<항목> 또는 origin_label "<게임> (참고 자료) / ..."
-  if (/^external\//i.test(label)) {
-    const parts = label.replace(/^external\//i, '').split(/\s*\/\s*/).map(p => p.trim()).filter(Boolean)
-    const game = parts[0] || '타게임'
-    const rest = parts.slice(1).map(p => `"${p}"`)
-    return { kind: 'external', levels: [`${game} (참고)`, ...rest, ...sectionLevels] }
-  }
-  if (/\(참고 자료\)/.test(label)) {
-    const parts = label.split(/\s*\/\s*/).map(p => p.trim()).filter(Boolean)
-    return { kind: 'external', levels: [parts[0] || label, ...parts.slice(1).map(p => `"${p}"`), ...sectionLevels] }
-  }
-
-  // Confluence / <space> / <chain>...
-  if (/^Confluence\s*\//.test(label)) {
-    const rest = label.replace(/^Confluence\s*\/\s*/, '').trim()
-    const parts = rest.split(/\s*\/\s*/).map(p => p.trim()).filter(Boolean)
-    return { kind: 'confluence', levels: ['Confluence', ...parts.map(p => `"${p}"`), ...sectionLevels] }
-  }
-  // <workbook>.xlsx / <sheet> (+ "시트" 접미사)
-  const xm = label.match(/^(.+?\.xlsx)\s*\/\s*(.+?)(?:\s+시트)?\s*$/)
-  if (xm) {
-    return { kind: 'xlsx', levels: [xm[1], `"${xm[2]}" 시트`, ...sectionLevels] }
-  }
-  return { kind: 'other', levels: [label, ...sectionLevels] }
-}
+// 본문 전처리 / 인라인 출처 파서는 assistantRender 의 단일 구현 사용 (여기 inline 정의 두지 말 것).
 
 // Mermaid component for rendering diagrams
 const MermaidBlock = ({ code, theme }: { code: string; theme: 'light' | 'dark' }) => {
@@ -266,28 +159,8 @@ function App() {
     return () => window.removeEventListener('keydown', onKey)
   }, [sourceView, sourceViewLoading, sourceViewError, screenshotState, closeScreenshot, closeSourceView])
 
-  // 본문 인라인 출처 클릭 — 라벨을 해당 메시지의 sources 에서 찾아 path 로 변환 후 오픈.
-  // 매칭 실패 시 라벨을 그대로 전달 (서버가 _path_to_source_meta 로 해석).
-  // 복합 섹션 인용(§ A, § B, § C)은 **첫 섹션만** 하이라이트 대상으로 사용.
-  const openInlineSource = useCallback((body: string, sources?: AskResponse['sources']) => {
-    let label = body
-    let section = ''
-    const sep = body.indexOf('§')
-    if (sep >= 0) {
-      label = body.slice(0, sep).trim()
-      let sec = body.slice(sep + 1).trim()
-      // `2-3 대미지 증가, § 2-4 치명타 판정` → `2-3 대미지 증가`
-      const nextSec = sec.search(/[,;]\s*§/)
-      if (nextSec >= 0) sec = sec.slice(0, nextSec).trim()
-      section = sec
-    }
-    const match = sources?.find(s => ((s.origin_label || '').trim()) === label)
-    if (match?.path) {
-      openSourceView(match.path, section)
-      return
-    }
-    openSourceView(label, section)
-  }, [openSourceView])
+  // openInlineSource(body, sources) 정규화는 assistantRender.openInlineSourceFromBody 가 처리.
+  // App.tsx 는 RenderAssistantMarkdown 의 onOpenSource 에 openSourceView 만 넘기면 됨.
 
   useEffect(() => {
     fetchPresetPrompts()
@@ -574,39 +447,7 @@ function App() {
     }
   }
 
-  const ExcelIcon = () => (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" style={{flexShrink: 0}}>
-      <rect width="18" height="18" rx="3" fill="#217346"/>
-      <path d="M4.5 4.5L8 9L4.5 13.5H6.5L9 10L11.5 13.5H13.5L10 9L13.5 4.5H11.5L9 8L6.5 4.5H4.5Z" fill="white"/>
-    </svg>
-  )
-
-  const ConfluenceIcon = () => (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" style={{flexShrink: 0}}>
-      <rect width="18" height="18" rx="3" fill="#1868DB"/>
-      <path d="M3.5 12.5C3.5 12.5 4 11.5 5 11.5C6.5 11.5 7 13 9 13C11 13 12 11 13.5 11C14.5 11 14.5 12 14.5 12L14.5 13.5C14.5 13.5 14 14.5 13 14.5C11.5 14.5 11 13 9 13C7 13 6 15 4.5 15C3.5 15 3.5 14 3.5 14V12.5Z" fill="white"/>
-      <path d="M14.5 5.5C14.5 5.5 14 6.5 13 6.5C11.5 6.5 11 5 9 5C7 5 6 7 4.5 7C3.5 7 3.5 6 3.5 6L3.5 4.5C3.5 4.5 4 3.5 5 3.5C6.5 3.5 7 5 9 5C11 5 12 3 13.5 3C14.5 3 14.5 4 14.5 4V5.5Z" fill="white"/>
-    </svg>
-  )
-
-  // 비교 모드 — 타게임 참고 자료 출처 아이콘 (📚 책 모티프)
-  const ExternalIcon = () => (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" style={{flexShrink: 0}}>
-      <rect width="18" height="18" rx="3" fill="#9333ea"/>
-      <path d="M4 4.5C4 4.22 4.22 4 4.5 4H8.5V13.5L8 13.2L7.5 13.5L7 13.2L6.5 13.5L6 13.2L5.5 13.5L5 13.2L4.5 13.5C4.22 13.5 4 13.28 4 13V4.5Z" fill="white"/>
-      <path d="M9.5 4.5C9.5 4.22 9.72 4 10 4H13.5C13.78 4 14 4.22 14 4.5V13C14 13.28 13.78 13.5 13.5 13.5L13 13.2L12.5 13.5L12 13.2L11.5 13.5L11 13.2L10.5 13.5L10 13.2L9.5 13.5V4.5Z" fill="white"/>
-    </svg>
-  )
-
-  // Deep Research — WebSearch/WebFetch 결과 출처 아이콘 (🌐)
-  const WebIcon = () => (
-    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" style={{flexShrink: 0}}>
-      <rect width="18" height="18" rx="3" fill="#0891b2"/>
-      <circle cx="9" cy="9" r="5" fill="none" stroke="white" strokeWidth="1.2"/>
-      <ellipse cx="9" cy="9" rx="2" ry="5" fill="none" stroke="white" strokeWidth="1.2"/>
-      <line x1="4" y1="9" x2="14" y2="9" stroke="white" strokeWidth="1.2"/>
-    </svg>
-  )
+  // Icons (ExcelIcon/ConfluenceIcon/ExternalIcon/WebIcon) 는 assistantRender 단일 정의 사용.
 
   // ── PDF Export ──
   const [pdfExporting, setPdfExporting] = useState<string | null>(null) // 'all' | message index | null
@@ -684,112 +525,8 @@ function App() {
     }
   }, [messages, activeThread, exportToPdf])
 
-  const renderSources = (sources: AskResponse['sources']) => {
-    if (!sources || sources.length === 0) return null;
-    type SrcAny = typeof sources[number] & { path?: string; source?: string; origin_label?: string; origin_url?: string };
-    // path 기준 그룹화 → 한 문서의 여러 섹션은 한 카드로 접힘
-    const groups = new Map<string, { src: SrcAny; sections: string[] }>();
-    sources.forEach((s: SrcAny) => {
-      const key = s.path || `${s.workbook}/${s.sheet}`;
-      const g = groups.get(key);
-      const sec = (s.section_path || '').trim();
-      if (g) {
-        if (sec && !g.sections.includes(sec)) g.sections.push(sec);
-      } else {
-        groups.set(key, { src: s, sections: sec ? [sec] : [] });
-      }
-    });
-    const allEntries = Array.from(groups.values());
-    // 비교 모드: 출처를 3개 그룹으로 분리
-    //   primary  = PK (xlsx/confluence/summary/image/other)
-    //   external = oracle 큐레이트 타게임 자료 (📚)
-    //   web      = WebSearch/WebFetch 결과 (🌐)
-    const primary = allEntries.filter(({ src }) => src.source !== 'external' && src.source !== 'web');
-    const external = allEntries.filter(({ src }) => src.source === 'external');
-    const web = allEntries.filter(({ src }) => src.source === 'web');
-
-    const renderCard = (
-      { src, sections }: { src: SrcAny; sections: string[] },
-      i: number,
-    ) => {
-      const isConfluence = src.source === 'confluence' || src.workbook.startsWith('Confluence');
-      const isExternal = src.source === 'external';
-      const isWeb = src.source === 'web';
-      const displayLabel =
-        src.origin_label ||
-        [src.workbook, src.sheet].filter(Boolean).join(' / ') ||
-        src.path || '(unknown)';
-      const extLink = src.origin_url || src.source_url || '';
-      const firstSection = sections[0] || '';
-      // external 은 v1 에서 source_view 호출 안 함; web 은 origin_url 새창
-      const canOpen = !!src.path && !isExternal && !isWeb;
-      const Icon = isWeb ? WebIcon : (isExternal ? ExternalIcon : (isConfluence ? ConfluenceIcon : ExcelIcon));
-      const cardClass = `source-link-card glass${isExternal ? ' source-link-card-external' : ''}${isWeb ? ' source-link-card-web' : ''}`;
-      const onCardClick = () => {
-        if (canOpen) openSourceView(src.path!, firstSection);
-        else if (isWeb && extLink) window.open(extLink, '_blank', 'noopener,noreferrer');
-      };
-      const cardTitle = isWeb
-        ? `웹 자료 새 창에서 열기 — ${extLink || '링크 없음'}`
-        : (isExternal ? '외부 참고 자료 — 원문 링크는 v1.1 지원 예정' : (src.path || displayLabel));
-      return (
-        <div key={i} className={cardClass} title={cardTitle}>
-          <button
-            className="source-card-main"
-            onClick={onCardClick}
-            disabled={!canOpen && !isWeb}
-            type="button"
-          >
-            <span className="source-icon"><Icon /></span>
-            <div className="source-body">
-              <span className="source-text">{displayLabel}</span>
-              {sections.length > 0 && (
-                <span className="source-sections">{sections.slice(0, 4).join(' · ')}{sections.length > 4 ? ` …+${sections.length - 4}` : ''}</span>
-              )}
-            </div>
-          </button>
-          {extLink && !isWeb && (
-            <a
-              className="source-card-ext"
-              href={extLink}
-              target="_blank"
-              rel="noreferrer"
-              title="원본 링크 새 창에서 열기"
-            >↗</a>
-          )}
-        </div>
-      );
-    };
-
-    return (
-      <div className="message-sources">
-        {primary.length > 0 && (
-          <>
-            <p className="sources-title">출처</p>
-            <div className="source-cards-container">
-              {primary.map(renderCard)}
-            </div>
-          </>
-        )}
-        {external.length > 0 && (
-          <>
-            <p className="sources-title sources-title-external">참고 자료 (타게임)</p>
-            <div className="source-cards-container">
-              {external.map(renderCard)}
-            </div>
-          </>
-        )}
-        {web.length > 0 && (
-          <>
-            <p className="sources-title sources-title-web">참고 자료 (웹)</p>
-            <div className="source-cards-container">
-              {web.map(renderCard)}
-            </div>
-          </>
-        )}
-      </div>
-    );
-  }
+  // 출처 카드 렌더는 assistantRender.RenderSourceCards 단일 구현 사용
+  // (App / SharedPage / AdminPage 동일 — web/external 그룹 분리, 아이콘, 클릭 동작 일관)
 
   // ── 진행 타임라인 렌더 ──────────────────────────────────
   const renderProgress = (progress: Progress, opts: { collapsed?: boolean; loading?: boolean }) => {
@@ -1063,70 +800,12 @@ function App() {
                             </div>
                           )}
                           {msg.progress && renderProgress(msg.progress, { collapsed: true, loading: false })}
-                          <ReactMarkdown
-                            remarkPlugins={[remarkGfm]}
-                            urlTransform={(url) => url}
-                            components={{
-                              code({ node, inline, className, children, ...props }: any) {
-                                const match = /language-(\w+)/.exec(className || '');
-                                if (!inline && match && match[1] === 'mermaid') {
-                                  return <MermaidBlock code={String(children).replace(/\n$/, '')} theme={resolvedTheme} />;
-                                }
-                                return <code className={className} {...props}>{children}</code>;
-                              },
-                              a({ href, children, ...props }: any) {
-                                const h = href || '';
-                                if (h.startsWith('projk-source:')) {
-                                  const body = decodeURIComponent(h.slice('projk-source:'.length));
-                                  const parsed = parseInlineSourceBody(body);
-                                  const Icon = parsed.kind === 'confluence'
-                                    ? ConfluenceIcon
-                                    : parsed.kind === 'external' ? ExternalIcon
-                                    : parsed.kind === 'web' ? WebIcon
-                                    : ExcelIcon;
-                                  const isExternal = parsed.kind === 'external';
-                                  const isWeb = parsed.kind === 'web';
-                                  return (
-                                    <a
-                                      href={isWeb && parsed.url ? parsed.url : '#'}
-                                      target={isWeb ? '_blank' : undefined}
-                                      rel={isWeb ? 'noreferrer' : undefined}
-                                      className={`inline-source-link inline-source-${parsed.kind}`}
-                                      onClick={(e) => {
-                                        if (isWeb) {
-                                          // 새 창 이동 — 기본 동작 유지
-                                          e.stopPropagation();
-                                          return;
-                                        }
-                                        e.preventDefault();
-                                        e.stopPropagation();
-                                        if (isExternal) {
-                                          return;  // external 원문 보기 미지원 (v1.1)
-                                        }
-                                        openInlineSource(body, msg.sources);
-                                      }}
-                                      title={
-                                        isWeb ? `웹 자료 새 창에서 열기 — ${parsed.url || '도메인 정보 없음'}`
-                                        : isExternal ? '외부 참고 자료 — 원문 링크는 v1.1 지원 예정'
-                                        : '우측 패널에서 열기'
-                                      }
-                                    >
-                                      <span className="inline-source-icon"><Icon /></span>
-                                      {parsed.levels.map((lvl, i) => (
-                                        <span key={i} className="inline-source-part">
-                                          {i > 0 && <span className="inline-source-sep"> › </span>}
-                                          <span>{lvl}</span>
-                                        </span>
-                                      ))}
-                                    </a>
-                                  );
-                                }
-                                return <a href={h} target="_blank" rel="noreferrer" {...props}>{children}</a>;
-                              }
-                            }}
-                          >
-                            {linkifyInlineSources(msg.content)}
-                          </ReactMarkdown>
+                          <RenderAssistantMarkdown
+                            content={msg.content}
+                            sources={msg.sources}
+                            onOpenSource={openSourceView}
+                            theme={resolvedTheme}
+                          />
                         </>
                       )}
                     </div>
@@ -1141,7 +820,9 @@ function App() {
                         </button>
                       </div>
                     )}
-                    {msg.sources && renderSources(msg.sources)}
+                    {msg.sources && msg.sources.length > 0 && (
+                      <RenderSourceCards sources={msg.sources} onOpen={openSourceView} />
+                    )}
                     {msg.role === 'assistant' && msg.followUps && msg.followUps.length > 0 && (
                       <div className="followups">
                         <p className="followups-title">이어서 물어볼 만한 질문</p>

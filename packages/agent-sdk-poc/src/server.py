@@ -38,6 +38,7 @@ from claude_agent_sdk import (
 
 from agent import run_query_with_session
 import storage
+import followups as followups_mod
 from preset_prompts import PRESETS
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -410,6 +411,14 @@ async def ask_stream(req: AskStreamRequest):
                 qa_warnings.append("⚠ 치환 실패 (잔여 내부 경로)")
             elapsed_s = round(time.time() - start, 2)
 
+            # 후속 질문 3~5개 (Haiku). 실패해도 답변 본체에는 영향 없음.
+            import asyncio as _asyncio
+            try:
+                follow_ups = await _asyncio.to_thread(followups_mod.generate, question, answer)
+            except Exception as _fe:
+                log.warning(f"followups 생성 실패: {_fe}")
+                follow_ups = []
+
             # 저장 — tool_trace 에 input 포함 (admin/shared 에서 실제 탐색 경로 확인 가능)
             storage.save_turn(
                 conv_id,
@@ -420,6 +429,8 @@ async def ask_stream(req: AskStreamRequest):
                 elapsed_s=elapsed_s,
                 cost_usd=cost,
                 sdk_session_id=nonlocal_sdk_sid,
+                qa_warnings=qa_warnings,
+                follow_ups=follow_ups,
             )
 
             payload = {
@@ -433,9 +444,10 @@ async def ask_stream(req: AskStreamRequest):
                 "tool_calls": len(tool_trace),
                 "tool_trace": [{"tool": t["tool"], "input": t.get("input", {})} for t in tool_trace],
                 "qa_warnings": qa_warnings,
+                "follow_ups": follow_ups,
             }
             yield json.dumps({"type": "result", "data": payload}, ensure_ascii=False) + "\n"
-            log_event(conv_id, "done", f"{elapsed_s}s cost=${cost} tools={len(tool_trace)}")
+            log_event(conv_id, "done", f"{elapsed_s}s cost=${cost} tools={len(tool_trace)} follow_ups={len(follow_ups)}")
 
         except Exception as e:
             log.exception("ask_stream failed")
@@ -648,6 +660,61 @@ async def source_view(path: str, section: str = ""):
         "origin_url": meta.get("origin_url"),
         "source": meta.get("source"),
     }
+
+
+@app.get("/screenshot")
+async def screenshot(path: str):
+    """xlsx sheet 의 원본 스크린샷 반환.
+    `path` 는 /source_view 와 같은 xlsx content.md 경로. 동일 시트 디렉터리
+    하위의 `_vision_input/overview.png` (세로 이어붙인 전체 뷰) 또는
+    `full_original.png` 를 찾아 이미지로 응답.
+    """
+    from pathlib import Path as _P
+    agent_dir = _P(__file__).resolve().parent.parent
+    repo_root = agent_dir.parent.parent
+    raw = path.strip()
+    if raw.startswith("/"):
+        try:
+            ap = _P(raw)
+            for base_try in (agent_dir, repo_root):
+                try:
+                    raw = str(ap.relative_to(base_try))
+                    break
+                except ValueError:
+                    continue
+        except Exception:
+            pass
+    normalized = raw.lstrip("/").strip()
+    if normalized.startswith("../xlsx-extractor/"):
+        normalized = "packages/" + normalized[3:]
+    # 라벨 형식도 수용
+    if not normalized.startswith("packages/xlsx-extractor/output/"):
+        resolved = storage._path_to_source_meta(normalized).get("path", "")
+        if resolved.startswith("packages/xlsx-extractor/output/"):
+            normalized = resolved
+    if not normalized.startswith("packages/xlsx-extractor/output/"):
+        raise HTTPException(status_code=403, detail="not an xlsx path")
+
+    # <sheet>/_final/content.md → <sheet>/_vision_input/<img>
+    cand = (repo_root / normalized).resolve()
+    try:
+        cand.relative_to(repo_root)
+    except ValueError:
+        raise HTTPException(status_code=403, detail="path escapes")
+    # _final 디렉터리 위로
+    if cand.name == "content.md":
+        sheet_dir = cand.parent
+        if sheet_dir.name == "_final":
+            sheet_dir = sheet_dir.parent
+    else:
+        sheet_dir = cand
+    vision_in = sheet_dir / "_vision_input"
+    for name in ("overview.png", "full_original.png"):
+        img = vision_in / name
+        if img.exists() and img.is_file():
+            return FileResponse(img, media_type="image/png",
+                                headers={"Cache-Control": "private, max-age=3600"})
+    raise HTTPException(status_code=404, detail="screenshot not found")
 
 
 @app.post("/query")

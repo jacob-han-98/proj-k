@@ -38,6 +38,8 @@ export interface AskResponse {
   proposals?: Proposal[];
   qa_warnings?: string[];
   tool_calls?: number;
+  tool_trace?: Array<{ tool: string; input?: any }>;
+  follow_ups?: string[];
 }
 
 export const askQuestion = async (
@@ -132,6 +134,11 @@ export interface SourceView {
   origin_url: string;
   source: 'xlsx' | 'confluence' | 'summary' | 'image' | 'other';
 }
+
+export const screenshotUrl = (path: string): string => {
+  const qs = new URLSearchParams({ path });
+  return `${API_BASE_URL}/screenshot?${qs.toString()}`;
+};
 
 export const fetchSourceView = async (path: string, section = ''): Promise<SourceView> => {
   const qs = new URLSearchParams({ path });

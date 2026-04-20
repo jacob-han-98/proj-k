@@ -1,45 +1,22 @@
-import { useState, useRef, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams } from 'react-router-dom'
 import './App.css'
 import { fetchConversationDetail } from './api'
 import type { ConversationDetail, Source } from './api'
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
-import mermaid from 'mermaid'
+import {
+  RenderAssistantMarkdown,
+  RenderSourceCards,
+  FollowUpCards,
+  SourceViewPanel,
+  ScreenshotModal,
+  useSourceAndScreenshot,
+} from './assistantRender'
 
 // ── Theme ──
 type ThemeMode = 'system' | 'light' | 'dark';
 function applyTheme(mode: ThemeMode) {
   document.documentElement.setAttribute('data-theme', mode);
 }
-
-const MermaidBlock = ({ code, theme }: { code: string; theme: 'light' | 'dark' }) => {
-  const ref = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    mermaid.initialize({ startOnLoad: false, theme: theme === 'light' ? 'default' : 'dark' })
-    if (ref.current) {
-      const id = `mermaid-${Math.random().toString(36).substring(2, 11)}`
-      mermaid.render(id, code)
-        .then((res) => { if (ref.current) ref.current.innerHTML = res.svg })
-        .catch(() => { if (ref.current) ref.current.innerHTML = '<pre>Error rendering diagram</pre>' })
-    }
-  }, [code, theme])
-  return <div ref={ref} className="mermaid-wrapper" />
-}
-
-const ExcelIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 18 18" fill="none" style={{ flexShrink: 0 }}>
-    <rect width="18" height="18" rx="3" fill="#217346" />
-    <path d="M4.5 4.5L8 9L4.5 13.5H6.5L9 10L11.5 13.5H13.5L10 9L13.5 4.5H11.5L9 8L6.5 4.5H4.5Z" fill="white" />
-  </svg>
-)
-const ConfluenceIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 18 18" fill="none" style={{ flexShrink: 0 }}>
-    <rect width="18" height="18" rx="3" fill="#1868DB" />
-    <path d="M3.5 12.5C3.5 12.5 4 11.5 5 11.5C6.5 11.5 7 13 9 13C11 13 12 11 13.5 11C14.5 11 14.5 12 14.5 12L14.5 13.5C14.5 13.5 14 14.5 13 14.5C11.5 14.5 11 13 9 13C7 13 6 15 4.5 15C3.5 15 3.5 14 3.5 14V12.5Z" fill="white" />
-    <path d="M14.5 5.5C14.5 5.5 14 6.5 13 6.5C11.5 6.5 11 5 9 5C7 5 6 7 4.5 7C3.5 7 3.5 6 3.5 6L3.5 4.5C3.5 4.5 4 3.5 5 3.5C6.5 3.5 7 5 9 5C11 5 12 3 13.5 3C14.5 3 14.5 4 14.5 4V5.5Z" fill="white" />
-  </svg>
-)
 
 function formatTime(iso: string): string {
   const d = new Date(iso)
@@ -93,33 +70,7 @@ function SharedPage() {
     setTimeout(() => setCopied(false), 2000)
   }
 
-  const renderSources = (sources: Source[]) => {
-    if (!sources || sources.length === 0) return null
-    return (
-      <div className="message-sources">
-        <p className="sources-title">출처:</p>
-        <div className="source-cards-container">
-          {sources.map((src, i) => {
-            const isConfluence = src.workbook.startsWith('Confluence')
-            let link = '#'
-            if (src.source_url) {
-              link = src.source_url
-            } else if (isConfluence) {
-              const searchTerm = src.sheet || src.workbook.split('/').pop()
-              link = `https://bighitcorp.atlassian.net/wiki/search?text=${encodeURIComponent(searchTerm || '')}&where=PK`
-            }
-            return (
-              <a key={i} href={link} target={link !== '#' ? '_blank' : undefined} rel="noreferrer" className="source-link-card glass">
-                <span className="source-icon">{isConfluence ? <ConfluenceIcon /> : <ExcelIcon />}</span>
-                <span className="source-text">{src.workbook}{src.sheet ? ` / ${src.sheet}` : ''}</span>
-                <span className="source-score">({src.score.toFixed(2)})</span>
-              </a>
-            )
-          })}
-        </div>
-      </div>
-    )
-  }
+  const sv = useSourceAndScreenshot()
 
   if (loading) {
     return (
@@ -142,8 +93,24 @@ function SharedPage() {
   }
 
   const messages = detail.turns.flatMap(turn => [
-    { role: 'user' as const, content: turn.question, sources: undefined as Source[] | undefined, seconds: turn.api_seconds },
-    { role: 'assistant' as const, content: turn.answer, sources: turn.sources, seconds: turn.api_seconds },
+    {
+      role: 'user' as const,
+      content: turn.question,
+      sources: undefined as Source[] | undefined,
+      seconds: turn.api_seconds,
+      qaWarnings: undefined as string[] | undefined,
+      followUps: undefined as string[] | undefined,
+      toolTrace: undefined as any[] | undefined,
+    },
+    {
+      role: 'assistant' as const,
+      content: turn.answer,
+      sources: turn.sources,
+      seconds: turn.api_seconds,
+      qaWarnings: (turn as any).qa_warnings as string[] | undefined,
+      followUps: (turn as any).follow_ups as string[] | undefined,
+      toolTrace: (turn as any).tool_trace as any[] | undefined,
+    },
   ])
 
   return (
@@ -185,23 +152,50 @@ function SharedPage() {
                   {msg.role === 'user' ? (
                     msg.content
                   ) : (
-                    <ReactMarkdown
-                      remarkPlugins={[remarkGfm]}
-                      components={{
-                        code({ className, children, ...props }: any) {
-                          const match = /language-(\w+)/.exec(className || '')
-                          if (match && match[1] === 'mermaid') {
-                            return <MermaidBlock code={String(children).replace(/\n$/, '')} theme={resolvedTheme} />
-                          }
-                          return <code className={className} {...props}>{children}</code>
-                        }
-                      }}
-                    >
-                      {msg.content}
-                    </ReactMarkdown>
+                    <>
+                      {msg.qaWarnings && msg.qaWarnings.length > 0 && (
+                        <div className="qa-warnings" title="품질 체크 경고">
+                          {msg.qaWarnings.map((w, wi) => (
+                            <span key={wi} className="qa-warning-badge">⚠ {w}</span>
+                          ))}
+                        </div>
+                      )}
+                      {msg.toolTrace && msg.toolTrace.length > 0 && (
+                        <details className="progress-panel">
+                          <summary className="progress-summary">
+                            <span className="progress-head">🔧 진행 내역 펼치기 · 툴 {msg.toolTrace.length}회</span>
+                          </summary>
+                          <div className="progress-body">
+                            {msg.toolTrace.map((t, ti) => (
+                              <details key={ti} className="tool-entry tool-done">
+                                <summary>
+                                  <span className="tool-label">🔧 {t.tool} {t.input?.file_path ? `· ${t.input.file_path.split('/').slice(-3).join('/')}` : t.input?.pattern ? `· \`${t.input.pattern}\`` : ''}</span>
+                                </summary>
+                                {t.input && (
+                                  <div className="tool-entry-body">
+                                    <pre className="tool-input"><code>{JSON.stringify(t.input, null, 2)}</code></pre>
+                                  </div>
+                                )}
+                              </details>
+                            ))}
+                          </div>
+                        </details>
+                      )}
+                      <RenderAssistantMarkdown
+                        content={msg.content}
+                        sources={msg.sources}
+                        onOpenSource={sv.openSource}
+                        theme={resolvedTheme}
+                      />
+                    </>
                   )}
                 </div>
-                {msg.sources && renderSources(msg.sources)}
+                {msg.sources && msg.role === 'assistant' && (
+                  <RenderSourceCards sources={msg.sources} onOpen={sv.openSource} />
+                )}
+                {msg.role === 'assistant' && (
+                  <FollowUpCards followUps={msg.followUps} disabled onPick={() => {}} />
+                )}
               </div>
             </div>
           ))}
@@ -214,6 +208,14 @@ function SharedPage() {
           </a>
         </div>
       </div>
+      <SourceViewPanel
+        sourceView={sv.sourceView}
+        loading={sv.loading}
+        err={sv.err}
+        onClose={sv.closeSource}
+        onScreenshot={sv.openScreenshot}
+      />
+      <ScreenshotModal state={sv.screenshot} onClose={sv.closeScreenshot} />
     </div>
   )
 }

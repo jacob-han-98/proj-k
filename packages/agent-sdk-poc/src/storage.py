@@ -547,6 +547,8 @@ def save_turn(
     cost_usd: float | None = None,
     sdk_session_id: str | None = None,
     title: str | None = None,
+    qa_warnings: list[str] | None = None,
+    follow_ups: list[str] | None = None,
 ) -> dict:
     """대화 턴 추가 후 저장. 없는 경우 새 대화 생성."""
     now = now_iso()
@@ -555,6 +557,8 @@ def save_turn(
         "answer": answer,
         "sources": sources or [],
         "tool_trace": tool_trace or [],
+        "qa_warnings": qa_warnings or [],
+        "follow_ups": follow_ups or [],
         "elapsed_s": elapsed_s,
         "cost_usd": cost_usd,
         "sdk_session_id": sdk_session_id,

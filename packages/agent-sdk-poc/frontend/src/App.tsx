@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import './App.css'
-import { askQuestionStream, fetchPresetPrompts, fetchSourceView } from './api'
+import { askQuestionStream, fetchPresetPrompts, fetchSourceView, screenshotUrl } from './api'
 import type { AskResponse, StreamEvent, PresetPrompt, SourceView } from './api'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -147,6 +147,7 @@ interface Message {
   sources?: AskResponse['sources'];
   progress?: Progress;           // assistant 메시지 기준 실시간 진행 스냅샷
   qaWarnings?: string[];         // 서버 품질 체크 경고 (Confluence 미탐색 등)
+  followUps?: string[];          // 후속 질문 제안 (3~5)
 }
 
 interface Thread {
@@ -186,6 +187,7 @@ function App() {
   const [sourceView, setSourceView] = useState<SourceView | null>(null)
   const [sourceViewLoading, setSourceViewLoading] = useState(false)
   const [sourceViewError, setSourceViewError] = useState<string | null>(null)
+  const [screenshotState, setScreenshotState] = useState<{ url: string; label: string } | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
@@ -204,6 +206,18 @@ function App() {
   const closeSourceView = useCallback(() => {
     setSourceView(null); setSourceViewError(null)
   }, [])
+  const closeScreenshot = useCallback(() => setScreenshotState(null), [])
+  // ESC 로 모달/패널 닫기 — 모달 우선
+  useEffect(() => {
+    if (!sourceView && !sourceViewLoading && !sourceViewError && !screenshotState) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return
+      if (screenshotState) { closeScreenshot(); return }
+      closeSourceView()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [sourceView, sourceViewLoading, sourceViewError, screenshotState, closeScreenshot, closeSourceView])
 
   // 본문 인라인 출처 클릭 — 라벨을 해당 메시지의 sources 에서 찾아 path 로 변환 후 오픈.
   // 매칭 실패 시 라벨을 그대로 전달 (서버가 _path_to_source_meta 로 해석).
@@ -307,7 +321,15 @@ function App() {
         const fork = JSON.parse(forkRaw)
         const messages: Message[] = fork.turns.flatMap((t: any) => [
           { role: 'user' as const, content: t.question },
-          { role: 'assistant' as const, content: t.answer, sources: t.sources },
+          {
+            role: 'assistant' as const,
+            content: t.answer,
+            sources: t.sources,
+            qaWarnings: t.qa_warnings || [],
+            followUps: t.follow_ups || [],
+            // tool_trace 는 실시간 SSE 용 ToolCallEntry 스키마와 달라
+            // progress 로 변환 시 id/label 매핑이 복잡해 생략 (Admin/Shared 에서 보존).
+          },
         ])
         const newThread: Thread = {
           id: fork.id,
@@ -338,13 +360,14 @@ function App() {
     }
   }
 
-  const handleSend = async () => {
-    if (!input.trim()) return;
+  const handleSend = async (override?: string) => {
+    const src = (override ?? input).trim();
+    if (!src) return;
     // 현재 스레드가 로딩 중이면 차단 (다른 스레드는 OK)
     if (activeThreadId && loadingThreads.has(activeThreadId)) return;
 
-    const userMsg = input.trim();
-    setInput('');
+    const userMsg = src;
+    if (!override) setInput('');
 
     let currentThreadId = activeThreadId;
 
@@ -433,6 +456,7 @@ function App() {
                     sources: res.sources,
                     progress: finalProgress,
                     qaWarnings: res.qa_warnings || [],
+                    followUps: res.follow_ups || [],
                   }]
                 }
               }
@@ -741,7 +765,18 @@ function App() {
           {sourceView?.origin_url && (
             <a href={sourceView.origin_url} target="_blank" rel="noreferrer" className="source-view-ext" title="원본 링크">↗ 원본</a>
           )}
-          <button className="source-view-close" onClick={closeSourceView} title="닫기">✕</button>
+          {sourceView?.source === 'xlsx' && sourceView?.path && (
+            <button
+              className="source-view-ext"
+              type="button"
+              title="엑셀 원본 스크린샷 보기"
+              onClick={() => setScreenshotState({
+                url: screenshotUrl(sourceView.path),
+                label: sourceView.origin_label || sourceView.path,
+              })}
+            >📸 원본 스크린샷</button>
+          )}
+          <button className="source-view-close" onClick={closeSourceView} title="닫기 (Esc)">✕</button>
         </header>
         {sourceView?.source === 'summary' && (
           <div className="source-view-summary-notice">
@@ -962,6 +997,26 @@ function App() {
                       </div>
                     )}
                     {msg.sources && renderSources(msg.sources)}
+                    {msg.role === 'assistant' && msg.followUps && msg.followUps.length > 0 && (
+                      <div className="followups">
+                        <p className="followups-title">이어서 물어볼 만한 질문</p>
+                        <div className="followups-cards">
+                          {msg.followUps.map((q, qi) => (
+                            <button
+                              key={qi}
+                              className="followup-card"
+                              type="button"
+                              disabled={!!activeThreadId && loadingThreads.has(activeThreadId)}
+                              title="이 질문으로 이어서 물어보기"
+                              onClick={() => handleSend(q)}
+                            >
+                              <span className="followup-arrow">›</span>
+                              <span className="followup-text">{q}</span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -1010,11 +1065,26 @@ function App() {
               <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><rect width="14" height="14" rx="2"/></svg>
             </button>
           ) : (
-            <button className="send-btn" onClick={handleSend} disabled={!input.trim()}>↑</button>
+            <button className="send-btn" onClick={() => handleSend()} disabled={!input.trim()}>↑</button>
           )}
         </div>
       </main>
       {renderSourceViewPanel()}
+      {screenshotState && (
+        <div className="screenshot-modal-backdrop" onClick={closeScreenshot}>
+          <div className="screenshot-modal glass" onClick={(e) => e.stopPropagation()}>
+            <header className="screenshot-modal-header">
+              <span className="screenshot-modal-title" title={screenshotState.label}>
+                📸 {screenshotState.label}
+              </span>
+              <button className="screenshot-modal-close" onClick={closeScreenshot} title="닫기 (Esc)" type="button">✕</button>
+            </header>
+            <div className="screenshot-modal-body">
+              <img src={screenshotState.url} alt={screenshotState.label} loading="lazy" />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

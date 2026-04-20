@@ -661,14 +661,25 @@
   font-family: 'SFMono-Regular', Consolas, monospace;
   font-size: 0.82rem;
   color: var(--text-primary);
-  white-space: pre-wrap;
-  word-break: break-all;
-  flex: 1;
+  /* 한 줄로 유지하고 넘치면 ellipsis — 긴 경로·중문/영문 섞인 라벨이
+     옆의 long summary 와 충돌해 char-wrap 하던 문제 방지. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 .tool-summary {
   font-size: 0.78rem;
   color: var(--text-secondary);
-  flex-shrink: 0;
+  /* 요약도 길면 ellipsis — 과거 flex-shrink:0 로 label 을 밀어내 char-wrap
+     유발. */
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .inline-spinner {
   width: 10px !important; height: 10px !important;

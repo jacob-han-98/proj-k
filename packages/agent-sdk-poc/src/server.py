@@ -207,10 +207,19 @@ def _tool_label(tool: str, tool_input: dict, done: bool = False) -> str:
     if tool == "Grep":
         pat = (tool_input or {}).get("pattern", "")
         path = (tool_input or {}).get("path", "")
+        # 경로도 너무 길면 뒷부분만 남기기
+        if len(path) > 60:
+            parts = [p for p in path.split("/") if p]
+            path = ".../" + "/".join(parts[-2:]) if len(parts) > 2 else path
         v = verb_done["Grep"] if done else verb_running["Grep"]
         return f"{emoji} `{pat}` {v} ({path})"
     if tool == "Glob":
         pat = (tool_input or {}).get("pattern", "")
+        # 절대 경로를 패턴으로 쓴 케이스: 마지막 몇 세그먼트만 표시
+        if len(pat) > 70:
+            parts = [p for p in pat.split("/") if p]
+            if len(parts) > 3:
+                pat = ".../" + "/".join(parts[-3:])
         v = verb_done["Glob"] if done else verb_running["Glob"]
         return f"{emoji} {v}: `{pat}`"
     if tool == "Read":

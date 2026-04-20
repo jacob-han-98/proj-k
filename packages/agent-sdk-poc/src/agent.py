@@ -38,6 +38,8 @@ ALLOWED_TOOLS = [
 ]
 
 # 명시적으로 금지 (서버 배포 시 보안: Bash/Write/Edit 실수 호출 차단)
+# TodoWrite 는 에이전트 내부 플래닝 도구인데 사용자의 진행 타임라인에 노출되면
+# 의미 없이 자리만 차지 + 레이아웃을 깨뜨려 차단.
 DISALLOWED_TOOLS = [
     "Bash",
     "Write",
@@ -47,6 +49,7 @@ DISALLOWED_TOOLS = [
     "WebSearch",
     "ToolSearch",
     "Skill",
+    "TodoWrite",
 ]
 
 

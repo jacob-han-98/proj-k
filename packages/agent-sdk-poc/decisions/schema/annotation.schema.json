@@ -1,0 +1,62 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Annotation",
+  "description": "원본 문서의 특정 섹션에 대한 overlay 주석. Retrieval/QnA에서 조회되어 deprecated 라벨 부여에 사용.",
+  "type": "object",
+  "required": ["decision_id", "target", "status", "applied_at"],
+  "properties": {
+    "decision_id": {
+      "type": "string",
+      "pattern": "^D-\\d{4,}$",
+      "description": "대응하는 decisions.jsonl의 Decision ID"
+    },
+    "target": {
+      "$ref": "#/definitions/Source",
+      "description": "주석이 적용될 원본 위치 (workbook/sheet/section_path 또는 space/page/section)"
+    },
+    "status": {
+      "enum": ["active", "deprecated", "superseded", "revoked"],
+      "description": "섹션의 현재 상태. deprecated = 소프트 삭제. superseded = 다른 결정으로 대체됨"
+    },
+    "label": {
+      "type": "string",
+      "description": "UI에 노출될 라벨 (예: '⚠️ 2026-04-20 deprecated (결정 D-0001)')"
+    },
+    "reason": {
+      "type": "string",
+      "description": "왜 이 상태인지 (Judge rationale 또는 사용자 메모)"
+    },
+    "applied_at": {"type": "string", "format": "date"},
+    "expires_at": {
+      "type": "string",
+      "format": "date",
+      "description": "TTL. 경과 후 cleanup runbook이 하드 삭제 후보로 제시"
+    }
+  },
+  "definitions": {
+    "Source": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["workbook", "sheet"],
+          "properties": {
+            "kind": {"const": "excel"},
+            "workbook": {"type": "string"},
+            "sheet": {"type": "string"},
+            "section_path": {"type": "string"}
+          }
+        },
+        {
+          "type": "object",
+          "required": ["space", "page_path"],
+          "properties": {
+            "kind": {"const": "confluence"},
+            "space": {"type": "string"},
+            "page_path": {"type": "string"},
+            "section_path": {"type": "string"}
+          }
+        }
+      ]
+    }
+  }
+}

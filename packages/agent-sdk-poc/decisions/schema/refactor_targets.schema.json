@@ -1,0 +1,121 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "RefactorTargets",
+  "description": "Ranker 실행 결과. Top N 리팩토링 후보 + 등급 + rationale + evidence.",
+  "type": "object",
+  "required": ["generated_at", "ranker_version", "targets"],
+  "properties": {
+    "generated_at": {"type": "string", "format": "date-time"},
+    "ranker_version": {"type": "string", "description": "Ranker 파이프라인 버전 (v0.1 등)"},
+    "dimensions_used": {
+      "type": "array",
+      "description": "이번 실행에 포함된 차원들",
+      "items": {"enum": ["conflict", "hub", "staleness", "confusion", "term_drift"]}
+    },
+    "systems_scope": {
+      "type": "object",
+      "description": "스캔 대상 범위",
+      "properties": {
+        "total": {"type": "integer"},
+        "limited_to": {"type": "integer", "description": "Step 0.1의 30개 같은 제한"},
+        "selection_rule": {"type": "string", "description": "예: 'hub_degree_top_30'"}
+      }
+    },
+    "self_consistency": {
+      "type": "object",
+      "description": "Self-Consistency 샘플링 결과",
+      "properties": {
+        "samples": {"type": "integer"},
+        "top_k_agreement": {"type": "number", "description": "상위 K개 일치율 (0~1)"}
+      }
+    },
+    "targets": {
+      "type": "array",
+      "items": {"$ref": "#/definitions/Target"}
+    }
+  },
+  "definitions": {
+    "Target": {
+      "type": "object",
+      "required": ["rank", "name", "grade", "rationale", "dimension_scores", "evidence"],
+      "properties": {
+        "rank": {"type": "integer", "minimum": 1},
+        "name": {"type": "string", "description": "시스템 또는 문서 식별자"},
+        "grade": {
+          "enum": ["S", "A", "B", "C"],
+          "description": "사용자 노출용 등급. 숫자 점수는 숨기고 이걸 먼저 노출"
+        },
+        "rationale": {
+          "type": "string",
+          "description": "Judge가 작성한 자연어 근거 2~3문장. 왜 이 등급인지."
+        },
+        "dimension_scores": {
+          "type": "object",
+          "description": "차원별 raw 점수 (0~10). UI에서는 breakdown 펼쳤을 때 노출.",
+          "properties": {
+            "conflict": {"$ref": "#/definitions/Score"},
+            "hub": {"$ref": "#/definitions/Score"},
+            "staleness": {"$ref": "#/definitions/Score"},
+            "confusion": {"$ref": "#/definitions/Score"},
+            "term_drift": {"$ref": "#/definitions/Score"}
+          }
+        },
+        "evidence": {
+          "type": "array",
+          "description": "verified_evidence 최대 6건 (차원별 2건까지). 모두 Anthropic Citations의 cited_text 원문 인용.",
+          "items": {"$ref": "#/definitions/Evidence"}
+        },
+        "blast_radius": {
+          "type": "object",
+          "properties": {
+            "affected_count": {"type": "integer"},
+            "top_affected": {"type": "array", "items": {"type": "string"}}
+          }
+        },
+        "effort": {"enum": ["S", "M", "L"], "description": "예상 작업량 (시트 수 기반)"},
+        "confidence_flags": {
+          "type": "array",
+          "items": {"enum": ["self_consistency_low", "evidence_sparse", "domain_unclear"]}
+        }
+      }
+    },
+    "Score": {
+      "type": "object",
+      "required": ["value"],
+      "properties": {
+        "value": {"type": "number", "minimum": 0, "maximum": 10},
+        "raw": {"type": "number", "description": "정규화 전 raw 점수 (Stage 3 공식 기반)"},
+        "facts": {
+          "type": "object",
+          "description": "Stage 3가 집계한 수치 요약. Judge rationale의 근거로 사용."
+        },
+        "rationale": {"type": "string", "description": "(optional) 차원별 자연어 rationale"}
+      }
+    },
+    "Evidence": {
+      "type": "object",
+      "required": ["dimension", "cited_text", "source", "confidence"],
+      "properties": {
+        "dimension": {"enum": ["conflict", "hub", "staleness", "confusion", "term_drift"]},
+        "cited_text": {"type": "string", "description": "원문에서 그대로 인용한 문장 (Anthropic Citations 결과)"},
+        "source": {
+          "type": "object",
+          "description": "cited_text의 원본 위치",
+          "properties": {
+            "kind": {"enum": ["excel", "confluence", "graph_edge"]},
+            "workbook": {"type": "string"},
+            "sheet": {"type": "string"},
+            "space": {"type": "string"},
+            "page_path": {"type": "string"},
+            "section_path": {"type": "string"},
+            "target": {"type": "string", "description": "graph_edge 의 경우 상대 시스템 이름"},
+            "title": {"type": "string"}
+          }
+        },
+        "reason": {"type": "string", "description": "왜 이게 해당 차원의 증거인지 LLM이 설명"},
+        "confidence": {"enum": ["high", "medium", "low"]},
+        "verified_by_cov": {"type": "boolean", "description": "Stage 2 Chain-of-Verification 통과 여부"}
+      }
+    }
+  }
+}

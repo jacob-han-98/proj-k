@@ -1,0 +1,33 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Feedback",
+  "description": "Top N 리팩토링 후보에 대한 사용자 피드백. Ranker 재실행 시 Judge에 few-shot으로 주입되어 랭킹을 조정한다.",
+  "type": "object",
+  "required": ["id", "date", "target_name", "action", "author"],
+  "properties": {
+    "id": {"type": "string", "pattern": "^F-\\d{4,}$"},
+    "date": {"type": "string", "format": "date-time"},
+    "target_name": {
+      "type": "string",
+      "description": "피드백 대상 (refactor_targets의 Target.name)"
+    },
+    "action": {
+      "enum": ["dismiss", "regrade", "defer", "comment"],
+      "description": "dismiss=의도된거라 대상 아님, regrade=등급 조정 요청, defer=나중에, comment=의견만"
+    },
+    "regrade_to": {
+      "enum": ["S", "A", "B", "C"],
+      "description": "action == 'regrade' 일 때 제안 등급"
+    },
+    "comment": {
+      "type": "string",
+      "description": "자유 서술 (Judge에게 전달될 few-shot 본문)"
+    },
+    "author": {"type": "string"},
+    "expires_at": {
+      "type": "string",
+      "format": "date",
+      "description": "이 피드백의 유효기간. 지나면 few-shot에서 제외"
+    }
+  }
+}

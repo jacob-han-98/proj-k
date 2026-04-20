@@ -1,0 +1,104 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Decision",
+  "description": "사용자가 확정한 기획서 충돌 해결안 1건. decisions.jsonl의 각 줄이 이 스키마를 따른다.",
+  "type": "object",
+  "required": ["id", "date", "target_name", "conflict_summary", "options", "selected_option", "author", "status"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^D-\\d{4,}$",
+      "description": "결정 ID. D-0001 부터 시작하는 zero-padded 시퀀스"
+    },
+    "date": {
+      "type": "string",
+      "format": "date",
+      "description": "결정이 내려진 날짜 (YYYY-MM-DD)"
+    },
+    "target_name": {
+      "type": "string",
+      "description": "리팩토링 대상 시스템/문서 이름 (예: PK_기본 전투 시스템)"
+    },
+    "conflict_summary": {
+      "type": "string",
+      "description": "충돌 요약 1~2문장"
+    },
+    "options": {
+      "type": "array",
+      "minItems": 2,
+      "description": "사용자에게 제시된 선택지 (최소 2개)",
+      "items": {
+        "type": "object",
+        "required": ["key", "source", "summary"],
+        "properties": {
+          "key": {"type": "string", "description": "옵션 식별자 (A/B/C 또는 custom)"},
+          "source": {"$ref": "#/definitions/Source"},
+          "summary": {"type": "string"}
+        }
+      }
+    },
+    "selected_option": {
+      "type": "string",
+      "description": "사용자가 선택한 옵션 key. custom 입력이면 'other'"
+    },
+    "selected_custom_text": {
+      "type": "string",
+      "description": "selected_option == 'other' 일 때 사용자 자유 입력"
+    },
+    "deprecated_refs": {
+      "type": "array",
+      "description": "선택 안 돼서 deprecated 처리되는 원본 위치들 (annotations.jsonl과 대응)",
+      "items": {"$ref": "#/definitions/Source"}
+    },
+    "author": {"type": "string", "description": "결정자 (예: jacob)"},
+    "ttl_days": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "annotation이 유효한 기간(일). 경과 후 cleanup 후보로 전환"
+    },
+    "status": {
+      "enum": ["active", "revoked"],
+      "description": "결정 상태. revoke는 별도 레코드로 append (취소 사유 포함)"
+    },
+    "revoked_at": {"type": "string", "format": "date-time"},
+    "revoked_reason": {"type": "string"},
+    "evidence": {
+      "type": "array",
+      "description": "이 결정의 근거가 된 Ranker 증거들 (Citations 결과)",
+      "items": {
+        "type": "object",
+        "properties": {
+          "quote": {"type": "string"},
+          "source": {"$ref": "#/definitions/Source"},
+          "confidence": {"enum": ["high", "medium", "low"]}
+        }
+      }
+    }
+  },
+  "definitions": {
+    "Source": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["workbook", "sheet"],
+          "properties": {
+            "kind": {"const": "excel"},
+            "workbook": {"type": "string"},
+            "sheet": {"type": "string"},
+            "section_path": {"type": "string", "description": "시트 내 섹션 경로 (예: § 2 구버전)"}
+          }
+        },
+        {
+          "type": "object",
+          "required": ["space", "page_path"],
+          "properties": {
+            "kind": {"const": "confluence"},
+            "space": {"type": "string"},
+            "page_path": {"type": "string"},
+            "section_path": {"type": "string"}
+          }
+        }
+      ]
+    }
+  }
+}

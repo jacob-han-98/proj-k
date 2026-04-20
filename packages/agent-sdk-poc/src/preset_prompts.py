@@ -24,4 +24,46 @@ PRESETS: list[dict] = [
     {"label": "던전 종류와 명칭", "prompt": "Project K에 등장하는 던전을 유형별·명칭별로 모두 알려줘. 필드형/클리어형 구분도 포함.", "category": "content"},
     {"label": "7_System 시스템 목록", "prompt": "7_System 폴더에 어떤 시스템 기획서가 있는지 주요 카테고리(전투/성장/UI/사회/경제)별로 묶어서 알려줘.", "category": "overview"},
     {"label": "운영 공간 주요 문서", "prompt": "Confluence `운영` 공간에 어떤 정책/프로세스 문서가 있는지 목록과 한 줄 요약으로 정리해줘.", "category": "overview"},
+
+    # Deep Research — 비교 모드 + 웹 검색 (Tavily) 활용. 클릭 시 "📚 비교" 토글 자동 ON.
+    {
+        "label": "🌐 검은사막 거점전 vs PK 월드 공성전",
+        "prompt": (
+            "검은사막의 거점전·점령전 시스템을 공식 자료까지 조사해서 "
+            "PK 의 월드 공성전과 비교 분석해줘. PK가 도입할 만한 메카닉 3가지 이상을 "
+            "구체 수치와 위험·trade-off 와 함께 제안."
+        ),
+        "category": "deepresearch",
+        "compare_mode": True,
+    },
+    {
+        "label": "🌐 HIT2 서버별 버프 투표 시스템 조사",
+        "prompt": (
+            "HIT2의 서버별 버프 투표 시스템을 조사해서 PK에 적용한다면 어떤 형태가 좋을지 검토해줘. "
+            "PK 의 기존 서버 단위 메커니즘(연대기·공성전·서버 이동)과의 정합성도 같이."
+        ),
+        "category": "deepresearch",
+        "compare_mode": True,
+    },
+    {
+        "label": "🌐 모바일 MMORPG 거래소·세금 모델 비교",
+        "prompt": (
+            "리니지W·검은사막 모바일·Lord Nine 의 거래소 세금/수수료/등록 규칙을 공식 자료까지 조사해서 "
+            "PK 의 거래소 설계와 비교해줘. 세율 구조·성주 권한·서버별 세금 분배 방식의 차이를 표로 정리하고, "
+            "PK 가 도입할 만한 메카닉 2~3가지를 운영 리스크와 함께 제안."
+        ),
+        "category": "deepresearch",
+        "compare_mode": True,
+    },
+    {
+        "label": "🌐 한국 MMORPG 부활/사망 페널티 트렌드",
+        "prompt": (
+            "최근 한국 MMORPG(리니지M/W, Lord Nine, 검은사막 모바일, HIT2 등) 의 사망 시 페널티 "
+            "(경험치 감소·장비 내구도·디버프·부활 위치·시간 페널티) 디자인 트렌드를 공식·위키 자료로 조사해서, "
+            "PK 의 사망/부활 시스템과 비교해줘. PK 가 트렌드 대비 어떤 위치인지 평가하고, "
+            "도입 검토할 만한 변형 1~2가지를 위험과 함께 제안."
+        ),
+        "category": "deepresearch",
+        "compare_mode": True,
+    },
 ]

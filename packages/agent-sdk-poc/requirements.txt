@@ -8,3 +8,4 @@ anthropic>=0.30  # Haiku index build (build_summaries.py)
 anyio>=4.0
 pillow>=10.0   # /screenshot 엔드포인트: detail_r*.png 세로 합치기
 jsonschema>=4.0  # scripts/validate_overlay.py · decisions/schema 검증
+httpx>=0.27      # mcp__projk__web_search (Tavily REST 호출, compare_mode 전용)

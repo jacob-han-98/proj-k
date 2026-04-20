@@ -72,8 +72,9 @@ function linkifyInlineSources(text: string): string {
 //        또는 "Confluence / 시스템 디자인 / 성장 밸런스 / 스탯 리스트 § 2-4 치명타 판정"
 // 결과: { kind, levels: [...] } — 렌더러가 › 로 구분해 순차 표시.
 interface ParsedSourceBody {
-  kind: 'xlsx' | 'confluence' | 'other';
-  levels: string[];  // 첫 항목은 워크북/Confluence (무인용), 나머지는 따옴표 포함 완성본
+  kind: 'xlsx' | 'confluence' | 'external' | 'web' | 'other';
+  levels: string[];  // 첫 항목은 워크북/Confluence/게임명/도메인 (무인용), 나머지는 따옴표 포함 완성본
+  url?: string;       // web 일 때만: 클릭 시 새창 이동용
 }
 
 function parseInlineSourceBody(body: string): ParsedSourceBody {
@@ -88,6 +89,33 @@ function parseInlineSourceBody(body: string): ParsedSourceBody {
     ? section.split(/\s*>\s*/).map(s => s.trim()).filter(Boolean)
     : []
   const sectionLevels = sections.map(s => `"${s}"`)
+
+  // Deep Research — web/<도메인>/<페이지 제목> 또는 "<도메인> (웹) / ..."
+  if (/^web\//i.test(label)) {
+    const parts = label.replace(/^web\//i, '').split(/\s*\/\s*/).map(p => p.trim()).filter(Boolean)
+    const domain = parts[0] || ''
+    const title = parts.slice(1).map(p => `"${p}"`)
+    const url = domain && domain.includes('.') ? `https://${domain}` : undefined
+    return { kind: 'web', levels: [`${domain} (웹)`, ...title, ...sectionLevels], url }
+  }
+  if (/\(웹\)/.test(label)) {
+    const parts = label.split(/\s*\/\s*/).map(p => p.trim()).filter(Boolean)
+    const domain = (parts[0] || '').replace(/\s*\(웹\)\s*$/, '').trim()
+    const url = domain && domain.includes('.') ? `https://${domain}` : undefined
+    return { kind: 'web', levels: [parts[0] || label, ...parts.slice(1).map(p => `"${p}"`), ...sectionLevels], url }
+  }
+
+  // 비교 모드 — external/<게임>/<카테고리>/<항목> 또는 origin_label "<게임> (참고 자료) / ..."
+  if (/^external\//i.test(label)) {
+    const parts = label.replace(/^external\//i, '').split(/\s*\/\s*/).map(p => p.trim()).filter(Boolean)
+    const game = parts[0] || '타게임'
+    const rest = parts.slice(1).map(p => `"${p}"`)
+    return { kind: 'external', levels: [`${game} (참고)`, ...rest, ...sectionLevels] }
+  }
+  if (/\(참고 자료\)/.test(label)) {
+    const parts = label.split(/\s*\/\s*/).map(p => p.trim()).filter(Boolean)
+    return { kind: 'external', levels: [parts[0] || label, ...parts.slice(1).map(p => `"${p}"`), ...sectionLevels] }
+  }
 
   // Confluence / <space> / <chain>...
   if (/^Confluence\s*\//.test(label)) {
@@ -148,6 +176,7 @@ interface Message {
   progress?: Progress;           // assistant 메시지 기준 실시간 진행 스냅샷
   qaWarnings?: string[];         // 서버 품질 체크 경고 (Confluence 미탐색 등)
   followUps?: string[];          // 후속 질문 제안 (3~5)
+  compareMode?: boolean;         // 이 턴이 비교 모드로 실행됨 (badge 표기용)
 }
 
 interface Thread {
@@ -176,6 +205,10 @@ function App() {
     return (localStorage.getItem('projk-model') as 'opus' | 'sonnet') || 'opus'
   })
   useEffect(() => { localStorage.setItem('projk-model', model) }, [model])
+  const [compareMode, setCompareMode] = useState<boolean>(() => {
+    return localStorage.getItem('projk-compare-mode') === '1'
+  })
+  useEffect(() => { localStorage.setItem('projk-compare-mode', compareMode ? '1' : '0') }, [compareMode])
   const [themeMode, setThemeMode] = useState<ThemeMode>(() => {
     return (localStorage.getItem('qna-theme') as ThemeMode) || 'system'
   })
@@ -471,6 +504,7 @@ function App() {
                     progress: finalProgress,
                     qaWarnings: res.qa_warnings || [],
                     followUps: res.follow_ups || [],
+                    compareMode: !!res.compare_mode,
                   }]
                 }
               }
@@ -494,6 +528,8 @@ function App() {
         undefined,
         threadId,
         ac.signal,
+        undefined,
+        compareMode,
       );
     } catch (error: unknown) {
       if (error instanceof DOMException && error.name === 'AbortError') {
@@ -550,6 +586,25 @@ function App() {
       <rect width="18" height="18" rx="3" fill="#1868DB"/>
       <path d="M3.5 12.5C3.5 12.5 4 11.5 5 11.5C6.5 11.5 7 13 9 13C11 13 12 11 13.5 11C14.5 11 14.5 12 14.5 12L14.5 13.5C14.5 13.5 14 14.5 13 14.5C11.5 14.5 11 13 9 13C7 13 6 15 4.5 15C3.5 15 3.5 14 3.5 14V12.5Z" fill="white"/>
       <path d="M14.5 5.5C14.5 5.5 14 6.5 13 6.5C11.5 6.5 11 5 9 5C7 5 6 7 4.5 7C3.5 7 3.5 6 3.5 6L3.5 4.5C3.5 4.5 4 3.5 5 3.5C6.5 3.5 7 5 9 5C11 5 12 3 13.5 3C14.5 3 14.5 4 14.5 4V5.5Z" fill="white"/>
+    </svg>
+  )
+
+  // 비교 모드 — 타게임 참고 자료 출처 아이콘 (📚 책 모티프)
+  const ExternalIcon = () => (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" style={{flexShrink: 0}}>
+      <rect width="18" height="18" rx="3" fill="#9333ea"/>
+      <path d="M4 4.5C4 4.22 4.22 4 4.5 4H8.5V13.5L8 13.2L7.5 13.5L7 13.2L6.5 13.5L6 13.2L5.5 13.5L5 13.2L4.5 13.5C4.22 13.5 4 13.28 4 13V4.5Z" fill="white"/>
+      <path d="M9.5 4.5C9.5 4.22 9.72 4 10 4H13.5C13.78 4 14 4.22 14 4.5V13C14 13.28 13.78 13.5 13.5 13.5L13 13.2L12.5 13.5L12 13.2L11.5 13.5L11 13.2L10.5 13.5L10 13.2L9.5 13.5V4.5Z" fill="white"/>
+    </svg>
+  )
+
+  // Deep Research — WebSearch/WebFetch 결과 출처 아이콘 (🌐)
+  const WebIcon = () => (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" style={{flexShrink: 0}}>
+      <rect width="18" height="18" rx="3" fill="#0891b2"/>
+      <circle cx="9" cy="9" r="5" fill="none" stroke="white" strokeWidth="1.2"/>
+      <ellipse cx="9" cy="9" rx="2" ry="5" fill="none" stroke="white" strokeWidth="1.2"/>
+      <line x1="4" y1="9" x2="14" y2="9" stroke="white" strokeWidth="1.2"/>
     </svg>
   )
 
@@ -644,52 +699,94 @@ function App() {
         groups.set(key, { src: s, sections: sec ? [sec] : [] });
       }
     });
+    const allEntries = Array.from(groups.values());
+    // 비교 모드: 출처를 3개 그룹으로 분리
+    //   primary  = PK (xlsx/confluence/summary/image/other)
+    //   external = oracle 큐레이트 타게임 자료 (📚)
+    //   web      = WebSearch/WebFetch 결과 (🌐)
+    const primary = allEntries.filter(({ src }) => src.source !== 'external' && src.source !== 'web');
+    const external = allEntries.filter(({ src }) => src.source === 'external');
+    const web = allEntries.filter(({ src }) => src.source === 'web');
+
+    const renderCard = (
+      { src, sections }: { src: SrcAny; sections: string[] },
+      i: number,
+    ) => {
+      const isConfluence = src.source === 'confluence' || src.workbook.startsWith('Confluence');
+      const isExternal = src.source === 'external';
+      const isWeb = src.source === 'web';
+      const displayLabel =
+        src.origin_label ||
+        [src.workbook, src.sheet].filter(Boolean).join(' / ') ||
+        src.path || '(unknown)';
+      const extLink = src.origin_url || src.source_url || '';
+      const firstSection = sections[0] || '';
+      // external 은 v1 에서 source_view 호출 안 함; web 은 origin_url 새창
+      const canOpen = !!src.path && !isExternal && !isWeb;
+      const Icon = isWeb ? WebIcon : (isExternal ? ExternalIcon : (isConfluence ? ConfluenceIcon : ExcelIcon));
+      const cardClass = `source-link-card glass${isExternal ? ' source-link-card-external' : ''}${isWeb ? ' source-link-card-web' : ''}`;
+      const onCardClick = () => {
+        if (canOpen) openSourceView(src.path!, firstSection);
+        else if (isWeb && extLink) window.open(extLink, '_blank', 'noopener,noreferrer');
+      };
+      const cardTitle = isWeb
+        ? `웹 자료 새 창에서 열기 — ${extLink || '링크 없음'}`
+        : (isExternal ? '외부 참고 자료 — 원문 링크는 v1.1 지원 예정' : (src.path || displayLabel));
+      return (
+        <div key={i} className={cardClass} title={cardTitle}>
+          <button
+            className="source-card-main"
+            onClick={onCardClick}
+            disabled={!canOpen && !isWeb}
+            type="button"
+          >
+            <span className="source-icon"><Icon /></span>
+            <div className="source-body">
+              <span className="source-text">{displayLabel}</span>
+              {sections.length > 0 && (
+                <span className="source-sections">{sections.slice(0, 4).join(' · ')}{sections.length > 4 ? ` …+${sections.length - 4}` : ''}</span>
+              )}
+            </div>
+          </button>
+          {extLink && !isWeb && (
+            <a
+              className="source-card-ext"
+              href={extLink}
+              target="_blank"
+              rel="noreferrer"
+              title="원본 링크 새 창에서 열기"
+            >↗</a>
+          )}
+        </div>
+      );
+    };
+
     return (
       <div className="message-sources">
-        <p className="sources-title">출처</p>
-        <div className="source-cards-container">
-          {Array.from(groups.values()).map(({ src, sections }, i) => {
-            const isConfluence = src.source === 'confluence' || src.workbook.startsWith('Confluence');
-            // 사용자 표시 라벨: 원본 라벨(origin_label) 우선 → 없으면 워크북/시트
-            const displayLabel =
-              src.origin_label ||
-              [src.workbook, src.sheet].filter(Boolean).join(' / ') ||
-              src.path || '(unknown)';
-            // 클릭 동작:
-            //  - 주 클릭: 우측 스플릿 뷰 오픈 (해당 문서 섹션 하이라이트)
-            //  - 원본 링크(Confluence 등)는 별도 ↗ 버튼
-            const extLink = src.origin_url || src.source_url || '';
-            const firstSection = sections[0] || '';
-            const canOpen = !!src.path;
-            return (
-              <div key={i} className="source-link-card glass" title={src.path || displayLabel}>
-                <button
-                  className="source-card-main"
-                  onClick={() => canOpen && openSourceView(src.path!, firstSection)}
-                  disabled={!canOpen}
-                  type="button"
-                >
-                  <span className="source-icon">{isConfluence ? <ConfluenceIcon /> : <ExcelIcon />}</span>
-                  <div className="source-body">
-                    <span className="source-text">{displayLabel}</span>
-                    {sections.length > 0 && (
-                      <span className="source-sections">{sections.slice(0, 4).join(' · ')}{sections.length > 4 ? ` …+${sections.length - 4}` : ''}</span>
-                    )}
-                  </div>
-                </button>
-                {extLink && (
-                  <a
-                    className="source-card-ext"
-                    href={extLink}
-                    target="_blank"
-                    rel="noreferrer"
-                    title="원본 링크 새 창에서 열기"
-                  >↗</a>
-                )}
-              </div>
-            );
-          })}
-        </div>
+        {primary.length > 0 && (
+          <>
+            <p className="sources-title">출처</p>
+            <div className="source-cards-container">
+              {primary.map(renderCard)}
+            </div>
+          </>
+        )}
+        {external.length > 0 && (
+          <>
+            <p className="sources-title sources-title-external">참고 자료 (타게임)</p>
+            <div className="source-cards-container">
+              {external.map(renderCard)}
+            </div>
+          </>
+        )}
+        {web.length > 0 && (
+          <>
+            <p className="sources-title sources-title-web">참고 자료 (웹)</p>
+            <div className="source-cards-container">
+              {web.map(renderCard)}
+            </div>
+          </>
+        )}
       </div>
     );
   }
@@ -907,9 +1004,14 @@ function App() {
                 {presets.map((p, i) => (
                   <button
                     key={i}
-                    className="prompt-card glass"
-                    onClick={() => { setInput(p.prompt); inputRef.current?.focus() }}
-                    title={p.prompt}
+                    className={`prompt-card glass${p.compare_mode ? ' prompt-card-deepresearch' : ''}`}
+                    onClick={() => {
+                      setInput(p.prompt);
+                      // Deep Research 프리셋 — 비교 모드 자동 ON (사용자가 따로 토글 안 켜도 동작)
+                      if (p.compare_mode) setCompareMode(true);
+                      inputRef.current?.focus();
+                    }}
+                    title={p.compare_mode ? `${p.prompt}\n\n[Deep Research — 비교 모드 자동 ON, 웹 검색 활용]` : p.prompt}
                   >
                     {p.label}
                   </button>
@@ -948,6 +1050,11 @@ function App() {
                         </div>
                       ) : (
                         <>
+                          {msg.compareMode && (
+                            <div className="compare-mode-badge-row" title="이 답변은 타게임 비교 Deep Research 모드로 생성되었습니다">
+                              <span className="compare-mode-badge">📚 비교 모드</span>
+                            </div>
+                          )}
                           {msg.qaWarnings && msg.qaWarnings.length > 0 && (
                             <div className="qa-warnings" title="이 답변의 품질 체크 경고">
                               {msg.qaWarnings.map((w, wi) => (
@@ -972,13 +1079,37 @@ function App() {
                                 if (h.startsWith('projk-source:')) {
                                   const body = decodeURIComponent(h.slice('projk-source:'.length));
                                   const parsed = parseInlineSourceBody(body);
-                                  const Icon = parsed.kind === 'confluence' ? ConfluenceIcon : ExcelIcon;
+                                  const Icon = parsed.kind === 'confluence'
+                                    ? ConfluenceIcon
+                                    : parsed.kind === 'external' ? ExternalIcon
+                                    : parsed.kind === 'web' ? WebIcon
+                                    : ExcelIcon;
+                                  const isExternal = parsed.kind === 'external';
+                                  const isWeb = parsed.kind === 'web';
                                   return (
                                     <a
-                                      href="#"
+                                      href={isWeb && parsed.url ? parsed.url : '#'}
+                                      target={isWeb ? '_blank' : undefined}
+                                      rel={isWeb ? 'noreferrer' : undefined}
                                       className={`inline-source-link inline-source-${parsed.kind}`}
-                                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); openInlineSource(body, msg.sources); }}
-                                      title="우측 패널에서 열기"
+                                      onClick={(e) => {
+                                        if (isWeb) {
+                                          // 새 창 이동 — 기본 동작 유지
+                                          e.stopPropagation();
+                                          return;
+                                        }
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        if (isExternal) {
+                                          return;  // external 원문 보기 미지원 (v1.1)
+                                        }
+                                        openInlineSource(body, msg.sources);
+                                      }}
+                                      title={
+                                        isWeb ? `웹 자료 새 창에서 열기 — ${parsed.url || '도메인 정보 없음'}`
+                                        : isExternal ? '외부 참고 자료 — 원문 링크는 v1.1 지원 예정'
+                                        : '우측 패널에서 열기'
+                                      }
                                     >
                                       <span className="inline-source-icon"><Icon /></span>
                                       {parsed.levels.map((lvl, i) => (
@@ -1074,6 +1205,17 @@ function App() {
               <option value="sonnet">Sonnet</option>
             </select>
           </div>
+          <label
+            className={`compare-mode-toggle ${compareMode ? 'on' : ''}`}
+            title="비교 모드 — 리니지M/W, Lord Nine, Vampir 의 유사 사례를 함께 조사 (느려질 수 있음)"
+          >
+            <input
+              type="checkbox"
+              checked={compareMode}
+              onChange={(e) => setCompareMode(e.target.checked)}
+            />
+            <span className="compare-mode-toggle-label">📚 비교</span>
+          </label>
           {isCurrentLoading ? (
             <button className="stop-btn" onClick={handleStop} title="응답 중단">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><rect width="14" height="14" rx="2"/></svg>

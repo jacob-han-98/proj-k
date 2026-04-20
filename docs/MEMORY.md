@@ -3,9 +3,64 @@
 > 세션 간 항상성을 유지하기 위한 작업 상태 기록.
 > 세션 시작 시 반드시 이 파일을 먼저 읽는다.
 
-## 최종 업데이트: 2026-04-01
+## 최종 업데이트: 2026-04-20
 
-## 현재 단계: 크롬 확장 기획서 리뷰 시스템 구축 완료 + 안정화 중
+## 현재 단계: 크롬 확장 안정화 + agent-sdk-poc "비교 모드" PoC 추가
+
+---
+
+### [최근 작업 내역] 2026-04-20: agent-sdk-poc "타게임 비교 Deep Research" 모드 PoC
+
+**발단:** DRI_K기획팀 고주형님 사용 후 피드백 — "Deep research 기능처럼 실제 타 게임들의 예시를 비교해서 더 좋은 결과를 도출할 수 있는 논의/토론 기능". 또한 기획팀장 피드백 7가지 보강점 중 #7 "타게임 대비 UX 제안" 과 일치.
+
+**범위:** 단계 A + B 통합 (PoC + UI 토글), 게임 4종 (리니지M, 리니지W, Lord Nine, Vampir).
+
+**결정사항:**
+- **Opt-in 토글**: `compare_mode=false` 시 기존 동작 100% 동일 (regression 0)
+- **데이터 소스**: `/home/jacob/repos/oracle/data/game_knowledge/knowledge_graph.json` 직접 참조 (env `ORACLE_DATA_ROOT`, 복사·심볼릭 X)
+- **데이터 발견**: oracle 의 `extracted/*_entities.json` 22개 중 대부분 비어있음. 실제 데이터는 `knowledge_graph.json` 의 389 nodes (GameGuide 245, CommunityTopic 57, MediaReview 30, StreamerReview 20, ExtSystem 8, ExtMechanic 8). 4게임 모두 67~144 노드 보유.
+- **출처 라벨**: `external/<게임>/<카테고리>/<항목명>` → "리니지M (참고 자료) / 전투 / PVP 시스템 소개"
+- **confidence 정책**: external 출처는 점수 산정 제외 (xlsx OR confluence ≥1 일 때만 high)
+
+**구현 파일:**
+- NEW: `packages/agent-sdk-poc/src/external_games.py` — oracle 로더 + 4게임 노드 인덱스
+- 도구 추가: `src/projk_tools.py` `compare_with_reference_games(keyword, aspect, games)`
+- agent.py `ALLOWED_TOOLS` + `_make_options(compare_mode=...)` + 비교 모드 system prompt
+- server.py `AskStreamRequest.compare_mode` + `/ask_stream` stage 이벤트 + confidence 필터
+- storage.py `_path_to_source_meta` 에 `external/` 분기 추가
+- frontend `App.tsx` — 입력창 옆 "📚 비교" 토글 (sticky localStorage), 답변 헤더 배지, 출처 패널 "참고 자료 (타게임)" 그룹 분리, ExternalIcon
+- 단위 테스트: `tests/test_storage_external.py` (21 assertion 통과)
+- E2E + 회귀 harness: `tests/test_compare_mode.py` (4 케이스 — 비교 ON×3, OFF 회귀×1)
+- CLAUDE.md 비교 모드 섹션 추가
+
+**검색 품질 검증** (smoke):
+- "전투/강화/PVP/변신/성향/혈맹" — 4게임에서 관련 결과 다수
+- "명중률" 등 미세 키워드 — 0건 (oracle 데이터가 시스템 레벨까지만)
+
+**v1.1 보류:**
+- `embeddings_index.npz` (58MB) 시맨틱 검색 fallback
+- external 소스 클릭 시 원문 raw entity 표시 (`/external_source_view`)
+- 단계 C — 프로액티브 모드 ("이번 주 타게임 동향 → PK WIP 매칭 리포트")
+
+### [최근 작업 내역] 2026-04-20 (Phase B): 기획팀장 사용 패턴 흡수 — raw/ 검색 + 외부 게임 자동 발동
+
+**발단:** 사용자 공유 스레드 분석 (cp.tech2.hybe.im 1776674162264) — 기획팀장의 5턴 사용 패턴이 PoC 1차 범위를 초과.
+- Turn 1: 차별화 전략 dump 를 PK 와 대조 (multi-paragraph 분석)
+- Turn 3: **HIT2 직접 조사** → agent 가 "외부 검색 도구 없음" 으로 막힘 (핵심 갭)
+- Turn 5: 자기 답변 검증 / 환각 의심 (정직성 요구)
+
+**추가 구현:**
+1. **`external_games.search_raw()`** — oracle raw/ (55MB, 41 파일) 부분문자열 검색. KG가 비었거나 미세 키워드일 때 fallback.
+2. **새 MCP 도구 `mcp__projk__search_external_game(game_name, query)`** — 특정 게임명 직접 조회. 4게임이면 KG+raw, 그 외면 raw 전체에서 게임명+쿼리 동시 매칭.
+3. **게임명 alias 사전** (`GAME_ALIASES` + `EXTERNAL_GAME_TERMS`) — "HIT2" ↔ "히트2", "BDO" ↔ "검은사막", "WoW" ↔ "와우" 등 한↔영 양쪽 시도.
+4. **`compare_with_reference_games` 확장** — `include_raw: bool` 옵션 추가, KG 0건이면 자동으로 raw 검색.
+5. **`EXTERNAL_GAME_AUTO_PROMPT`** — compare_mode 토글 OFF 라도 외부 게임명 거론 시 자동 발동. PK 미확인 vs 외부 자료 미확인 vs 둘 다 미확인 분리 보고.
+6. **테스트 case 5 (전략 dump 분석)** + **case 6 (HIT2 직접 조회)** 추가 — 기획팀장 패턴 그대로.
+
+**검증 결과:**
+- Case 6 (HIT2, compare_mode=OFF) PASS — $0.33/27s, 4회 외부 도구 호출, **miss를 3-tier 로 분리 보고 + 3가지 actionable next step 제시**. 기존 deployed 인스턴스 Turn 3 (단순 거절)보다 우수.
+- Case 5 (전략 dump) — 실행 중 (이번 세션 기록 시점)
+- 단위 테스트 (test_storage_external.py) — ALL PASS regression 0
 
 ---
 

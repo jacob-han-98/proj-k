@@ -118,6 +118,7 @@ export interface PresetPrompt {
   label: string;
   prompt: string;
   category?: string;
+  compare_mode?: boolean;   // 클릭 시 "📚 비교" 토글 자동 ON 여부
 }
 
 export const fetchPresetPrompts = async (): Promise<{ presets: PresetPrompt[] }> => {

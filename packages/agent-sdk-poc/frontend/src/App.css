@@ -753,6 +753,94 @@
   color: #fbbf24;
 }
 
+/* 비교 모드 토글 (입력창 옆) */
+.compare-mode-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
+  cursor: pointer;
+  user-select: none;
+  font-size: 0.82rem;
+  transition: background 0.15s, border-color 0.15s;
+}
+.compare-mode-toggle:hover { border-color: #9333ea; }
+.compare-mode-toggle.on {
+  background: color-mix(in srgb, #9333ea 14%, transparent);
+  border-color: #9333ea;
+  color: #9333ea;
+}
+.compare-mode-toggle input { accent-color: #9333ea; }
+.compare-mode-toggle-label { white-space: nowrap; }
+
+/* 답변 헤더 비교 모드 배지 */
+.compare-mode-badge-row {
+  display: flex;
+  margin-bottom: 8px;
+}
+.compare-mode-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 10px;
+  font-size: 0.74rem;
+  font-weight: 600;
+  background: color-mix(in srgb, #9333ea 18%, transparent);
+  border: 1px solid color-mix(in srgb, #9333ea 45%, transparent);
+  color: #7e22ce;
+}
+[data-theme="dark"] .compare-mode-badge,
+[data-theme="system"] .compare-mode-badge { color: #c084fc; }
+
+/* 출처 패널 — 타게임 그룹 분리 + external 카드 시각 차별화 */
+.sources-title-external {
+  margin-top: 14px;
+  color: #9333ea;
+}
+.source-link-card-external {
+  border-color: color-mix(in srgb, #9333ea 35%, transparent);
+}
+.source-link-card-external:hover {
+  border-color: #9333ea;
+}
+
+/* 인라인 출처 (답변 본문 안의 (출처: external/...)) */
+.inline-source-external {
+  background: color-mix(in srgb, #9333ea 8%, transparent);
+}
+.inline-source-external:hover {
+  background: color-mix(in srgb, #9333ea 16%, transparent);
+}
+
+/* Deep Research 프리셋 카드 강조 (compare_mode 자동 ON 표시) */
+.prompt-card-deepresearch {
+  border-color: color-mix(in srgb, #9333ea 35%, transparent);
+}
+.prompt-card-deepresearch:hover {
+  border-color: #9333ea;
+  background: color-mix(in srgb, #9333ea 8%, transparent);
+}
+
+/* Deep Research 웹 출처 — 🌐 cyan 톤 */
+.sources-title-web {
+  margin-top: 14px;
+  color: #0891b2;
+}
+.source-link-card-web {
+  border-color: color-mix(in srgb, #0891b2 35%, transparent);
+}
+.source-link-card-web:hover {
+  border-color: #0891b2;
+}
+.inline-source-web {
+  background: color-mix(in srgb, #0891b2 8%, transparent);
+}
+.inline-source-web:hover {
+  background: color-mix(in srgb, #0891b2 16%, transparent);
+}
+
 /* 출처 카드 — section 목록 지원 + 클릭/외부링크 분리 */
 .source-body {
   display: flex;

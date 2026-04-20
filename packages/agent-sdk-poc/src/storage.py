@@ -523,6 +523,39 @@ def _path_to_source_meta(path: str) -> dict:
                 }
         except ValueError:
             pass
+    # 비교 모드 — external/<게임>/<카테고리>/<항목명> 형식 (oracle 게임 크롤 데이터)
+    if path.startswith("external/"):
+        ext_parts = [p for p in path.split("/") if p]
+        # ["external", "<게임>", "<카테고리>", "<항목명>", ...]
+        game = ext_parts[1] if len(ext_parts) > 1 else ""
+        rest = " / ".join(ext_parts[2:]) if len(ext_parts) > 2 else ""
+        return {
+            "workbook": game,
+            "sheet": ext_parts[-1] if len(ext_parts) > 2 else "",
+            "path": path,
+            "source": "external",
+            "origin_label": f"{game} (참고 자료) / {rest}" if rest else f"{game} (참고 자료)",
+            "origin_url": "",
+        }
+    # 비교 모드 + WebSearch/WebFetch — web/<도메인>/<페이지 제목> 형식 (실시간 웹)
+    if path.startswith("web/"):
+        web_parts = [p for p in path.split("/") if p]
+        # ["web", "<도메인>", "<page title>", ...]
+        domain = web_parts[1] if len(web_parts) > 1 else ""
+        title_parts = web_parts[2:] if len(web_parts) > 2 else []
+        title = " / ".join(title_parts) if title_parts else ""
+        # 도메인이 있으면 https://<domain> 으로 origin_url 채움 (사용자 클릭 편의)
+        origin_url = f"https://{domain}" if domain and "." in domain else ""
+        return {
+            "workbook": domain,
+            "sheet": title_parts[-1] if title_parts else "",
+            "path": path,
+            "source": "web",
+            "origin_label": (
+                f"{domain} (웹) / {title}" if title else f"{domain} (웹)"
+            ) if domain else "(웹)",
+            "origin_url": origin_url,
+        }
     return {
         "workbook": "",
         "sheet": path.split("/")[-1],

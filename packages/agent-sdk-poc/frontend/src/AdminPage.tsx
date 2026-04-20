@@ -1,7 +1,21 @@
 import { useState, useEffect, useCallback } from 'react'
 import './App.css'
-import { fetchConversations, fetchConversationDetail, forkConversation } from './api'
-import type { ConversationSummary, ConversationDetail, Source } from './api'
+import {
+  fetchConversations,
+  fetchConversationDetail,
+  forkConversation,
+  fetchRefactorOverview,
+  fetchRefactorTargets,
+} from './api'
+import type {
+  ConversationSummary,
+  ConversationDetail,
+  Source,
+  RefactorOverview,
+  RefactorTarget,
+  RefactorTargetsReport,
+  Grade,
+} from './api'
 import {
   RenderAssistantMarkdown,
   RenderSourceCards,
@@ -10,6 +24,16 @@ import {
   ScreenshotModal,
   useSourceAndScreenshot,
 } from './assistantRender'
+import { RefactorOverviewView, RefactorPanel } from './RefactorPanel'
+
+type AdminSection = 'conversations' | 'refactor'
+
+const GRADE_COLOR: Record<Grade, string> = {
+  S: '#ef4444',
+  A: '#f59e0b',
+  B: '#3b82f6',
+  C: '#6b7280',
+}
 
 // ── Theme (App.tsx와 동일) ──
 type ThemeMode = 'system' | 'light' | 'dark';
@@ -29,6 +53,15 @@ function formatTime(iso: string): string {
 }
 
 function AdminPage() {
+  const [section, setSection] = useState<AdminSection>(() => {
+    const saved = localStorage.getItem('admin-section') as AdminSection | null
+    return saved === 'refactor' ? 'refactor' : 'conversations'
+  })
+  const switchSection = (s: AdminSection) => {
+    setSection(s)
+    localStorage.setItem('admin-section', s)
+  }
+
   const [convList, setConvList] = useState<ConversationSummary[]>([])
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [detail, setDetail] = useState<ConversationDetail | null>(null)
@@ -36,6 +69,26 @@ function AdminPage() {
   const [error, setError] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  // Refactor state
+  const [refactorOverview, setRefactorOverview] = useState<RefactorOverview | null>(null)
+  const [refactorReport, setRefactorReport] = useState<RefactorTargetsReport | null>(null)
+  const [refactorError, setRefactorError] = useState<string | null>(null)
+  const [selectedTargetName, setSelectedTargetName] = useState<string | null>(null)
+  const [author, setAuthor] = useState<string>(() => localStorage.getItem('admin-author') || 'jacob')
+
+  const reloadRefactor = useCallback(() => {
+    fetchRefactorOverview()
+      .then(setRefactorOverview)
+      .catch(e => setRefactorError(e.message))
+    fetchRefactorTargets()
+      .then(setRefactorReport)
+      .catch(e => {
+        // 404인 경우: refactor_targets.json 없음
+        setRefactorReport(null)
+        setRefactorError(e.message)
+      })
+  }, [])
 
   const handleShare = () => {
     if (!selectedId) return
@@ -109,6 +162,17 @@ function AdminPage() {
     }
   }, [selectedId])
 
+  // Refactor 섹션 진입 시 한 번 로드
+  useEffect(() => {
+    if (section === 'refactor' && refactorOverview === null && refactorError === null) {
+      reloadRefactor()
+    }
+  }, [section, refactorOverview, refactorError, reloadRefactor])
+
+  const selectedTarget: RefactorTarget | null = selectedTargetName && refactorReport
+    ? refactorReport.targets.find(t => t.name === selectedTargetName) ?? null
+    : null
+
   // 우측 패널 + 스크린샷 모달 상태
   const sv = useSourceAndScreenshot()
 
@@ -144,34 +208,125 @@ function AdminPage() {
         <div className="sidebar-header">
           <h2 className="logo">Admin</h2>
         </div>
-        <div className="admin-stats">
-          {convList.length}개 대화 {loading && '(로딩...)'}
-          {error && <span style={{color: '#ef4444'}}> (연결 실패)</span>}
+
+        {/* 섹션 전환 탭 */}
+        <div className="theme-selector" style={{ margin: '8px 12px 12px' }}>
+          <button
+            className={`theme-btn ${section === 'conversations' ? 'active' : ''}`}
+            onClick={() => switchSection('conversations')}
+            style={{ flex: 1 }}
+          >대화</button>
+          <button
+            className={`theme-btn ${section === 'refactor' ? 'active' : ''}`}
+            onClick={() => switchSection('refactor')}
+            style={{ flex: 1 }}
+          >기획서 정리</button>
         </div>
-        <div className="sidebar-section">
-          <p className="section-title">전체 대화</p>
-          <div className="history-list">
-            {convList.map(conv => (
-              <div
-                key={conv.id}
-                className={`history-item ${selectedId === conv.id ? 'active' : ''}`}
-                onClick={() => setSelectedId(conv.id)}
-              >
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <span className="history-title">{conv.title}</span>
-                  <div className="conv-meta">
-                    {conv.turn_count}턴 · {formatTime(conv.updated_at)}
+
+        {section === 'conversations' ? (
+          <>
+            <div className="admin-stats">
+              {convList.length}개 대화 {loading && '(로딩...)'}
+              {error && <span style={{color: '#ef4444'}}> (연결 실패)</span>}
+            </div>
+            <div className="sidebar-section">
+              <p className="section-title">전체 대화</p>
+              <div className="history-list">
+                {convList.map(conv => (
+                  <div
+                    key={conv.id}
+                    className={`history-item ${selectedId === conv.id ? 'active' : ''}`}
+                    onClick={() => setSelectedId(conv.id)}
+                  >
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <span className="history-title">{conv.title}</span>
+                      <div className="conv-meta">
+                        {conv.turn_count}턴 · {formatTime(conv.updated_at)}
+                      </div>
+                    </div>
                   </div>
-                </div>
+                ))}
+                {convList.length === 0 && !loading && (
+                  <div style={{ padding: '20px 12px', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                    아직 대화가 없습니다.
+                  </div>
+                )}
               </div>
-            ))}
-            {convList.length === 0 && !loading && (
-              <div style={{ padding: '20px 12px', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
-                아직 대화가 없습니다.
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="admin-stats">
+              {refactorReport
+                ? `${refactorReport.targets.length}개 타겟 · dims: ${refactorReport.dimensions_used.join(', ')}`
+                : (refactorError ? <span style={{color: '#ef4444'}}>Ranker 결과 없음</span> : '로딩...')
+              }
+            </div>
+            <div className="sidebar-section">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 12px 8px' }}>
+                <p className="section-title" style={{ margin: 0 }}>리팩토링 타겟</p>
+                <button
+                  className="share-btn"
+                  onClick={() => { setRefactorError(null); reloadRefactor(); }}
+                  style={{ fontSize: '0.7rem', padding: '2px 8px' }}
+                  title="Overview / targets 재로드"
+                >↻</button>
               </div>
-            )}
-          </div>
-        </div>
+              <div className="history-list">
+                {refactorReport?.targets.map(t => {
+                  const color = GRADE_COLOR[t.grade] || '#6b7280'
+                  return (
+                    <div
+                      key={t.name}
+                      className={`history-item ${selectedTargetName === t.name ? 'active' : ''}`}
+                      onClick={() => setSelectedTargetName(t.name)}
+                    >
+                      <span style={{
+                        display: 'inline-block', minWidth: 20, textAlign: 'center',
+                        padding: '1px 6px', borderRadius: 4, marginRight: 8,
+                        background: color, color: 'white', fontWeight: 700, fontSize: '0.7rem',
+                      }}>{t.grade}</span>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <span className="history-title">#{t.rank} {t.name}</span>
+                        <div className="conv-meta">
+                          {Object.entries(t.dimension_scores)
+                            .map(([k, s]) => `${k}: ${s.value.toFixed(1)}`)
+                            .join(' · ')}
+                        </div>
+                      </div>
+                    </div>
+                  )
+                })}
+                {refactorReport && refactorReport.targets.length === 0 && (
+                  <div style={{ padding: '20px 12px', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                    Ranker 결과가 비어 있습니다.
+                  </div>
+                )}
+                {!refactorReport && refactorError && (
+                  <div style={{ padding: '20px 12px', color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                    Ranker 를 먼저 실행해야 합니다.<br/>
+                    <code style={{ fontSize: '0.75rem' }}>python scripts/rank_refactor_targets.py --dimensions conflict,hub --limit-systems 30</code>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="sidebar-section" style={{ padding: '0 12px' }}>
+              <p className="section-title">저자</p>
+              <input
+                type="text"
+                value={author}
+                onChange={e => { setAuthor(e.target.value); localStorage.setItem('admin-author', e.target.value); }}
+                style={{
+                  width: '100%', padding: '6px 8px', borderRadius: 6,
+                  border: '1px solid var(--border-color)', background: 'var(--bg-secondary)',
+                  color: 'var(--text-primary)', fontSize: '0.85rem',
+                }}
+                placeholder="결정/피드백 기록 시 남길 이름"
+              />
+            </div>
+          </>
+        )}
+
         <div className="sidebar-footer">
           <div className="theme-selector">
             <button className={`theme-btn ${themeMode === 'system' ? 'active' : ''}`} onClick={() => handleThemeChange('system')}>System</button>
@@ -185,7 +340,17 @@ function AdminPage() {
       {/* Main Content */}
       <main className="main-content">
         <div className="chat-scroll-area">
-          {!selectedId ? (
+          {section === 'refactor' ? (
+            selectedTarget ? (
+              <RefactorPanel
+                target={selectedTarget}
+                author={author}
+                onSaved={reloadRefactor}
+              />
+            ) : (
+              <RefactorOverviewView overview={refactorOverview} />
+            )
+          ) : !selectedId ? (
             <div className="welcome-area animate-fade-in">
               <h1 className="main-title">Admin Dashboard</h1>
               <p className="sub-title">왼쪽에서 대화를 선택하면 전체 내용을 볼 수 있습니다.</p>

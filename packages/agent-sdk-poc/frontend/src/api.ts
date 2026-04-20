@@ -11,7 +11,7 @@ export interface Source {
   score: number;
   source_url?: string;    // legacy (qna-poc 호환)
   path?: string;          // 내부 파일 경로 (디버그/스플릿 뷰)
-  source?: 'xlsx' | 'confluence' | 'other';
+  source?: 'xlsx' | 'confluence' | 'summary' | 'image' | 'external' | 'web' | 'other';
   origin_label?: string;  // 사용자 표시용 원본 라벨
   origin_url?: string;    // Confluence 원본 링크 등
 }
@@ -40,6 +40,7 @@ export interface AskResponse {
   tool_calls?: number;
   tool_trace?: Array<{ tool: string; input?: any }>;
   follow_ups?: string[];
+  compare_mode?: boolean;
 }
 
 export const askQuestion = async (
@@ -591,6 +592,202 @@ export const searchGameData = async (q: string): Promise<{ results: any[]; query
   return res.json();
 };
 
+// ── Refactor Ranker / Decision Overlay ─────────────────────────
+
+export type Grade = 'S' | 'A' | 'B' | 'C';
+
+export interface RefactorSource {
+  kind?: 'excel' | 'confluence' | 'graph_edge';
+  workbook?: string;
+  sheet?: string;
+  space?: string;
+  page_path?: string;
+  section_path?: string;
+  target?: string;
+  title?: string;
+}
+
+export interface RefactorEvidence {
+  dimension: string;
+  cited_text: string;
+  source: RefactorSource;
+  reason?: string;
+  confidence: 'high' | 'medium' | 'low';
+  verified_by_cov?: boolean;
+}
+
+export interface RefactorDimensionScore {
+  value: number;
+  raw?: number;
+  facts?: Record<string, any>;
+  rationale?: string;
+}
+
+export interface RefactorTarget {
+  rank: number;
+  name: string;
+  grade: Grade;
+  rationale: string;
+  dimension_scores: Record<string, RefactorDimensionScore>;
+  evidence: RefactorEvidence[];
+  blast_radius_note?: string;
+  effort?: 'S' | 'M' | 'L';
+  confidence_flags?: string[];
+}
+
+export interface RefactorTargetsReport {
+  generated_at: string;
+  ranker_version?: string;
+  dimensions_used: string[];
+  systems_scope?: { total: number; limited_to: number; selection_rule: string };
+  targets: RefactorTarget[];
+}
+
+export interface RefactorCardOption {
+  key: string;
+  source: RefactorSource;
+  summary: string;
+  side: 'excel' | 'confluence';
+}
+
+export interface RefactorCard {
+  target_name: string;
+  topic: string;
+  conflict_type: string;
+  severity: string;
+  recommendation: string | null;
+  options: RefactorCardOption[];
+}
+
+export interface DecisionRecord {
+  id: string;
+  date: string;
+  target_name: string;
+  conflict_summary: string;
+  selected_option: string;
+  author: string;
+  ttl_days?: number;
+  status: 'active' | 'revoked';
+  options: RefactorCardOption[];
+  deprecated_refs?: RefactorSource[];
+  selected_custom_text?: string;
+}
+
+export interface AnnotationRecord {
+  decision_id: string;
+  target: RefactorSource;
+  status: 'active' | 'deprecated' | 'superseded' | 'revoked';
+  label?: string;
+  reason?: string;
+  applied_at: string;
+  expires_at?: string;
+}
+
+export interface FeedbackRecord {
+  id: string;
+  date: string;
+  target_name: string;
+  action: 'dismiss' | 'regrade' | 'defer' | 'comment';
+  comment?: string;
+  regrade_to?: Grade;
+  author: string;
+  expires_at?: string;
+}
+
+export interface RefactorOverview {
+  targets_meta: {
+    generated_at?: string;
+    dimensions_used?: string[];
+    systems_scope?: { total: number; limited_to: number; selection_rule: string };
+    ranker_version?: string;
+    total_targets?: number;
+  };
+  grade_counts: Record<string, number>;
+  decisions: { total: number; recent: DecisionRecord[] };
+  annotations: { total: number; deprecated: number; recent: AnnotationRecord[] };
+  feedback: { total: number; recent: FeedbackRecord[] };
+}
+
+export const fetchRefactorOverview = async (): Promise<RefactorOverview> => {
+  const res = await fetch(`${API_BASE_URL}/admin/refactor/overview`);
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res.json();
+};
+
+export const fetchRefactorTargets = async (): Promise<RefactorTargetsReport> => {
+  const res = await fetch(`${API_BASE_URL}/admin/refactor/targets`);
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res.json();
+};
+
+export const fetchRefactorCards = async (target: string): Promise<{ target: string; count: number; cards: RefactorCard[] }> => {
+  const res = await fetch(`${API_BASE_URL}/admin/refactor/cards/${encodeURIComponent(target)}`);
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res.json();
+};
+
+export const applyRefactorDecision = async (req: {
+  target: string;
+  card_index: number;  // 1-based
+  option: string;
+  author: string;
+  ttl_days?: number;
+  custom?: string | null;
+}): Promise<{ decision: DecisionRecord; annotations: AnnotationRecord[] }> => {
+  const res = await fetch(`${API_BASE_URL}/admin/refactor/apply_decision`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(req),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: `HTTP ${res.status}` }));
+    throw new Error(err.detail || `API error: ${res.status}`);
+  }
+  return res.json();
+};
+
+export const recordRefactorFeedback = async (req: {
+  target: string;
+  action: 'dismiss' | 'regrade' | 'defer' | 'comment';
+  author: string;
+  comment?: string;
+  card_index?: number;  // 1-based
+  regrade_to?: Grade;
+  ttl_days?: number;
+}): Promise<{ feedback: FeedbackRecord }> => {
+  const res = await fetch(`${API_BASE_URL}/admin/refactor/feedback`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(req),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ detail: `HTTP ${res.status}` }));
+    throw new Error(err.detail || `API error: ${res.status}`);
+  }
+  return res.json();
+};
+
+export const fetchRefactorDecisions = async (limit?: number): Promise<{ decisions: DecisionRecord[] }> => {
+  const qs = limit ? `?limit=${limit}` : '';
+  const res = await fetch(`${API_BASE_URL}/admin/refactor/decisions${qs}`);
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res.json();
+};
+
+export const fetchRefactorAnnotations = async (limit?: number): Promise<{ annotations: AnnotationRecord[] }> => {
+  const qs = limit ? `?limit=${limit}` : '';
+  const res = await fetch(`${API_BASE_URL}/admin/refactor/annotations${qs}`);
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res.json();
+};
+
+export const fetchRefactorFeedbackList = async (limit?: number): Promise<{ feedback: FeedbackRecord[] }> => {
+  const qs = limit ? `?limit=${limit}` : '';
+  const res = await fetch(`${API_BASE_URL}/admin/refactor/feedback_list${qs}`);
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res.json();
+};
+
 /** NDJSON 스트리밍 이벤트 타입 */
 export type StreamEvent =
   | { type: 'status'; message: string }
@@ -612,10 +809,14 @@ export const askQuestionStream = async (
   conversation_id?: string,
   signal?: AbortSignal,
   prompt_overrides?: Record<string, string>,
+  compare_mode: boolean = false,
 ): Promise<void> => {
   const body: Record<string, unknown> = { question, conversation_id, model, prompt_style };
   if (prompt_overrides && Object.keys(prompt_overrides).length > 0) {
     body.prompt_overrides = prompt_overrides;
+  }
+  if (compare_mode) {
+    body.compare_mode = true;
   }
   const response = await fetch(`${API_BASE_URL}/ask_stream`, {
     method: 'POST',

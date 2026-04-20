@@ -99,6 +99,7 @@ class AskStreamRequest(BaseModel):
     question: str
     conversation_id: str | None = None
     model: str | None = None        # "opus" | "sonnet" | "haiku" | 전체 ID
+    compare_mode: bool = False      # 비교 모드 (타게임 Deep Research) opt-in
     role: str | None = None         # qna-poc 호환 — 미사용
     prompt_style: str | None = None # qna-poc 호환 — 미사용
     prompt_overrides: dict | None = None  # qna-poc 호환 — 미사용
@@ -274,6 +275,16 @@ async def ask_stream(req: AskStreamRequest):
         cost = None
         nonlocal_sdk_sid = sdk_sid
 
+        if req.compare_mode:
+            yield json.dumps(
+                {"type": "stage", "stage": "compare", "label": "타게임 비교 모드"},
+                ensure_ascii=False,
+            ) + "\n"
+            yield json.dumps(
+                {"type": "status", "message": "📚 타게임 비교 모드 — 리니지M/W, Lord Nine, Vampir 도 함께 조사합니다."},
+                ensure_ascii=False,
+            ) + "\n"
+
         yield json.dumps(
             {"type": "status", "message": "🧠 질문을 분석하고 있습니다..."},
             ensure_ascii=False,
@@ -284,7 +295,12 @@ async def ask_stream(req: AskStreamRequest):
         ) + "\n"
 
         try:
-            async for msg in run_query_with_session(question, session_id=nonlocal_sdk_sid, model=req.model):
+            async for msg in run_query_with_session(
+                question,
+                session_id=nonlocal_sdk_sid,
+                model=req.model,
+                compare_mode=req.compare_mode,
+            ):
                 if isinstance(msg, SystemMessage):
                     subtype = getattr(msg, "subtype", "")
                     if subtype == "init" and hasattr(msg, "data"):
@@ -442,9 +458,11 @@ async def ask_stream(req: AskStreamRequest):
                 follow_ups=follow_ups,
             )
 
+            # confidence: external/ 출처는 점수에 포함 안 함 — PK 1차 출처만 카운트
+            primary_sources = [s for s in sources if s.get("source") in ("xlsx", "confluence")]
             payload = {
                 "answer": answer,
-                "confidence": "high" if sources else "medium",
+                "confidence": "high" if primary_sources else "medium",
                 "sources": sources[:20],
                 "conversation_id": conv_id,
                 "total_tokens": 0,
@@ -454,6 +472,7 @@ async def ask_stream(req: AskStreamRequest):
                 "tool_trace": [{"tool": t["tool"], "input": t.get("input", {})} for t in tool_trace],
                 "qa_warnings": qa_warnings,
                 "follow_ups": follow_ups,
+                "compare_mode": req.compare_mode,
             }
             yield json.dumps({"type": "result", "data": payload}, ensure_ascii=False) + "\n"
             log_event(conv_id, "done", f"{elapsed_s}s cost=${cost} tools={len(tool_trace)} follow_ups={len(follow_ups)}")
@@ -847,6 +866,160 @@ async def query_endpoint(req: QueryRequest):
             yield _sse("done", {"status": "error", "session_id": web_sid})
 
     return EventSourceResponse(event_generator())
+
+
+# ─── Refactor Ranker / Decision Overlay ─────────────────────────
+
+from ranker import decision as ranker_decision  # noqa: E402
+
+DECISIONS_DIR = Path(__file__).parent.parent / "decisions"
+
+
+def _jsonl_read(path: Path, limit: int | None = None) -> list[dict]:
+    if not path.exists():
+        return []
+    out: list[dict] = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line:
+            continue
+        try:
+            out.append(json.loads(line))
+        except json.JSONDecodeError:
+            continue
+    if limit is not None:
+        out = out[-limit:]
+    return out
+
+
+@app.get("/admin/refactor/overview")
+async def refactor_overview():
+    """Ranker·Decision Overlay 전체 현황. Admin 대시보드 진입 시 가장 먼저 요청."""
+    targets_path = DECISIONS_DIR / "refactor_targets.json"
+    decisions = _jsonl_read(DECISIONS_DIR / "decisions.jsonl")
+    annotations = _jsonl_read(DECISIONS_DIR / "annotations.jsonl")
+    feedback = _jsonl_read(DECISIONS_DIR / "feedback.jsonl")
+
+    targets_meta: dict = {}
+    grade_counts: dict[str, int] = {}
+    if targets_path.exists():
+        data = json.loads(targets_path.read_text(encoding="utf-8"))
+        targets_meta = {
+            "generated_at": data.get("generated_at"),
+            "dimensions_used": data.get("dimensions_used"),
+            "systems_scope": data.get("systems_scope"),
+            "ranker_version": data.get("ranker_version"),
+            "total_targets": len(data.get("targets", [])),
+        }
+        for t in data.get("targets", []):
+            g = t.get("grade", "?")
+            grade_counts[g] = grade_counts.get(g, 0) + 1
+
+    return {
+        "targets_meta": targets_meta,
+        "grade_counts": grade_counts,
+        "decisions": {"total": len(decisions), "recent": decisions[-5:]},
+        "annotations": {
+            "total": len(annotations),
+            "deprecated": sum(1 for a in annotations if a.get("status") == "deprecated"),
+            "recent": annotations[-5:],
+        },
+        "feedback": {"total": len(feedback), "recent": feedback[-10:]},
+    }
+
+
+@app.get("/admin/refactor/targets")
+async def refactor_targets():
+    """전체 refactor_targets.json (Ranker 최신 출력)."""
+    targets_path = DECISIONS_DIR / "refactor_targets.json"
+    if not targets_path.exists():
+        raise HTTPException(404, "refactor_targets.json not found — run the Ranker first")
+    return json.loads(targets_path.read_text(encoding="utf-8"))
+
+
+@app.get("/admin/refactor/cards/{target:path}")
+async def refactor_cards(target: str):
+    """특정 시스템의 충돌 카드 (Stage 1 재활용, LLM 호출 없음)."""
+    cards = ranker_decision.build_cards(target)
+    return {
+        "target": target,
+        "count": len(cards),
+        "cards": [c.to_dict() for c in cards],
+    }
+
+
+class ApplyDecisionRequest(BaseModel):
+    target: str
+    card_index: int  # 1-based (decision_cli 와 동일)
+    option: str  # "A" / "B" / ... / "other"
+    author: str
+    ttl_days: int = 30
+    custom: str | None = None
+
+
+@app.post("/admin/refactor/apply_decision")
+async def apply_decision_api(req: ApplyDecisionRequest):
+    cards = ranker_decision.build_cards(req.target)
+    idx = req.card_index - 1
+    if idx < 0 or idx >= len(cards):
+        raise HTTPException(400, f"card_index out of range 1..{len(cards)}")
+    card = cards[idx]
+    d, anns = ranker_decision.apply_decision(
+        req.target,
+        card,
+        req.option,
+        author=req.author,
+        ttl_days=req.ttl_days,
+        selected_custom_text=req.custom,
+    )
+    return {"decision": d, "annotations": anns}
+
+
+class FeedbackRequest(BaseModel):
+    target: str
+    action: str  # defer / dismiss / regrade / comment
+    author: str
+    comment: str = ""
+    card_index: int | None = None  # 1-based
+    regrade_to: str | None = None  # S/A/B/C (action=regrade)
+    ttl_days: int = 30
+
+
+@app.post("/admin/refactor/feedback")
+async def refactor_feedback_api(req: FeedbackRequest):
+    comment = req.comment or ""
+    if req.card_index is not None:
+        cards = ranker_decision.build_cards(req.target)
+        idx = req.card_index - 1
+        if 0 <= idx < len(cards):
+            c = cards[idx]
+            prefix = f"[{c.conflict_type}:{c.topic}] "
+            if not comment.startswith(prefix):
+                comment = (prefix + comment).rstrip()
+    rec = ranker_decision.record_feedback(
+        req.target,
+        action=req.action,
+        author=req.author,
+        comment=comment,
+        regrade_to=req.regrade_to,
+        ttl_days=req.ttl_days,
+    )
+    return {"feedback": rec}
+
+
+@app.get("/admin/refactor/decisions")
+async def list_decisions(limit: int | None = None):
+    return {"decisions": _jsonl_read(DECISIONS_DIR / "decisions.jsonl", limit=limit)}
+
+
+@app.get("/admin/refactor/annotations")
+async def list_annotations(limit: int | None = None):
+    return {"annotations": _jsonl_read(DECISIONS_DIR / "annotations.jsonl", limit=limit)}
+
+
+@app.get("/admin/refactor/feedback_list")
+async def list_feedback(limit: int | None = None):
+    return {"feedback": _jsonl_read(DECISIONS_DIR / "feedback.jsonl", limit=limit)}
 
 
 if __name__ == "__main__":

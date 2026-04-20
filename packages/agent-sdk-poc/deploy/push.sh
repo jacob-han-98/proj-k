@@ -50,6 +50,8 @@ fi
 
 echo ""
 echo "=== [2/4] rsync backend + overlay schema ==="
+# 최초 배포라면 decisions/ 하위 폴더가 없을 수 있음 — 미리 준비
+ssh "$SERVER" "mkdir -p $REMOTE_POC/decisions/{schema,config,_history,_perf} $REMOTE_POC/static" 2>/dev/null || true
 # Backend 파이썬 소스 (__pycache__·.venv 제외)
 rsync -avz --delete \
   --exclude='__pycache__' --exclude='*.pyc' \

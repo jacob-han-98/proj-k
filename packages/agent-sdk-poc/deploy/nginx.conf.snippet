@@ -2,9 +2,10 @@
 # 기존 server 블록에 아래 두 location 을 추가한다.
 # sudo nginx -t && sudo systemctl reload nginx
 
-# 정적 UI
+# 정적 UI (React SPA)
+location = /proj-k/agentsdk { return 301 /proj-k/agentsdk/; }
 location /proj-k/agentsdk/ {
-    alias /home/ubuntu/proj-k-agent/packages/agent-sdk-poc/static/;
+    alias /home/ubuntu/proj-k-agent/packages/agent-sdk-poc/frontend/dist/;
     index index.html;
     try_files $uri $uri/ /proj-k/agentsdk/index.html;
 }

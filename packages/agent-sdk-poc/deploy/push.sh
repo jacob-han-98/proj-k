@@ -50,8 +50,8 @@ fi
 
 echo ""
 echo "=== [2/4] rsync backend + overlay schema ==="
-# 최초 배포라면 decisions/ 하위 폴더가 없을 수 있음 — 미리 준비
-ssh "$SERVER" "mkdir -p $REMOTE_POC/decisions/{schema,config,_history,_perf} $REMOTE_POC/static" 2>/dev/null || true
+# 최초 배포라면 decisions/frontend/dist 하위 폴더가 없을 수 있음 — 미리 준비
+ssh "$SERVER" "mkdir -p $REMOTE_POC/decisions/{schema,config,_history,_perf} $REMOTE_POC/frontend/dist" 2>/dev/null || true
 # Backend 파이썬 소스 (__pycache__·.venv 제외)
 rsync -avz --delete \
   --exclude='__pycache__' --exclude='*.pyc' \
@@ -72,8 +72,10 @@ rsync -avz decisions/.gitignore decisions/README.md \
   "$SERVER:$REMOTE_POC/decisions/"
 
 echo ""
-echo "=== [3/4] rsync frontend dist -> static ==="
-rsync -avz --delete frontend/dist/ "$SERVER:$REMOTE_POC/static/"
+echo "=== [3/4] rsync frontend dist -> frontend/dist ==="
+# nginx 는 $REMOTE_POC/frontend/dist/ 를 alias 로 서빙한다
+# (snippets/proj-k-agentsdk.conf 참조). static/ 이 아니다.
+rsync -avz --delete frontend/dist/ "$SERVER:$REMOTE_POC/frontend/dist/"
 
 echo ""
 echo "=== [4/4] pip install + systemd restart ==="

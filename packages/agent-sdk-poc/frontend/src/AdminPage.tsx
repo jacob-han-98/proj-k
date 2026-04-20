@@ -209,18 +209,48 @@ function AdminPage() {
           <h2 className="logo">Admin</h2>
         </div>
 
-        {/* 섹션 전환 탭 */}
-        <div className="theme-selector" style={{ margin: '8px 12px 12px' }}>
+        {/* 섹션 전환 탭 — 로고 바로 아래, 큼직하게 */}
+        <div style={{
+          display: 'flex',
+          gap: 6,
+          padding: '0 12px 12px',
+          marginBottom: 6,
+          borderBottom: '1px solid var(--border-color)',
+        }}>
           <button
-            className={`theme-btn ${section === 'conversations' ? 'active' : ''}`}
+            type="button"
             onClick={() => switchSection('conversations')}
-            style={{ flex: 1 }}
-          >대화</button>
+            style={{
+              flex: 1,
+              padding: '10px 8px',
+              borderRadius: 8,
+              background: section === 'conversations' ? 'var(--accent, #7aa2ff)' : 'transparent',
+              color: section === 'conversations' ? '#fff' : 'var(--text-primary)',
+              border: `1px solid ${section === 'conversations' ? 'var(--accent, #7aa2ff)' : 'var(--border-color)'}`,
+              cursor: 'pointer',
+              fontSize: '0.88rem',
+              fontWeight: section === 'conversations' ? 700 : 500,
+              textAlign: 'center',
+              whiteSpace: 'nowrap',
+            }}
+          >💬 대화</button>
           <button
-            className={`theme-btn ${section === 'refactor' ? 'active' : ''}`}
+            type="button"
             onClick={() => switchSection('refactor')}
-            style={{ flex: 1 }}
-          >기획서 정리</button>
+            style={{
+              flex: 1,
+              padding: '10px 8px',
+              borderRadius: 8,
+              background: section === 'refactor' ? 'var(--accent, #7aa2ff)' : 'transparent',
+              color: section === 'refactor' ? '#fff' : 'var(--text-primary)',
+              border: `1px solid ${section === 'refactor' ? 'var(--accent, #7aa2ff)' : 'var(--border-color)'}`,
+              cursor: 'pointer',
+              fontSize: '0.88rem',
+              fontWeight: section === 'refactor' ? 700 : 500,
+              textAlign: 'center',
+              whiteSpace: 'nowrap',
+            }}
+          >🛠 기획서 정리</button>
         </div>
 
         {section === 'conversations' ? (

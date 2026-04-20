@@ -265,6 +265,9 @@
   padding: 16px 24px;
   border-radius: 20px;
   line-height: 1.6;
+  /* flex child — 긴 자식 (tool-summary JSON 등) 이 부모를 뚫지 않도록 */
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .message.user {
@@ -282,6 +285,10 @@
 .message-content {
   font-size: 1rem;
   word-break: break-word;
+  /* flex child — 자식(progress-panel / markdown pre) overflow 제어 */
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 /* 유저 메시지만 pre-wrap (마크다운 없음) + 텍스트 색 강제 */
@@ -645,6 +652,18 @@
   gap: 8px;
   padding: 3px 0;
   user-select: none;
+  /* flex container — 자식 (tool-label / tool-summary) 의 폭이 부모를 뚫지 않게 */
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+.tool-entry {
+  min-width: 0;
+  max-width: 100%;
+}
+.progress-panel, .progress-body {
+  min-width: 0;
+  max-width: 100%;
 }
 .tool-entry > summary::-webkit-details-marker { display: none; }
 .tool-entry > summary::before {
@@ -673,11 +692,12 @@
 .tool-summary {
   font-size: 0.78rem;
   color: var(--text-secondary);
-  /* 요약도 길면 ellipsis — 과거 flex-shrink:0 로 label 을 밀어내 char-wrap
-     유발. */
+  /* 요약이 긴 JSON (예: search_external_game 결과) 이어도 summary 줄을
+     부모 (progress-panel / message) 밖으로 뚫지 않도록 ellipsis 보장.
+     max-width 는 부모 비율(60%) + 상한(600px) 둘 다 걸어 극단 케이스 방어. */
   flex: 0 1 auto;
   min-width: 0;
-  max-width: 60%;
+  max-width: min(60%, 600px);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

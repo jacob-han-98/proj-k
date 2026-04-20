@@ -911,24 +911,26 @@
 }
 .followups-cards {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 8px;
+  width: 100%;
 }
 .followup-card {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 12px 6px 10px;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 14px;
   border: 1px solid var(--border-color);
-  border-radius: 14px;
+  border-radius: 10px;
   background: var(--bg-secondary, #f9fafb);
   color: var(--text-primary);
-  font-size: 0.85rem;
-  line-height: 1.4;
+  font-size: 0.9rem;
+  line-height: 1.5;
   cursor: pointer;
   text-align: left;
   transition: border-color 0.15s, background-color 0.15s, color 0.15s;
-  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
 }
 .followup-card:hover {
   border-color: var(--accent-primary, #6b7cff);
@@ -942,12 +944,13 @@
   color: var(--accent-primary, #6b7cff);
   font-weight: 700;
   flex-shrink: 0;
+  line-height: 1.5;
 }
 .followup-text {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  max-width: 420px;
+  flex: 1;
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 /* 엑셀 원본 스크린샷 플로팅 모달 */

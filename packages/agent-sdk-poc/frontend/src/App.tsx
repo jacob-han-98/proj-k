@@ -67,6 +67,42 @@ function linkifyInlineSources(text: string): string {
   return out
 }
 
+// ── 인라인 출처 body 파서 — 아이콘 + 계층 표시용 ───
+// 입력: "PK_스탯 및 공식.xlsx / 공식 시트 § ① 공통 규칙 > 5) 최종 피해량"
+//        또는 "Confluence / 시스템 디자인 / 성장 밸런스 / 스탯 리스트 § 2-4 치명타 판정"
+// 결과: { kind, levels: [...] } — 렌더러가 › 로 구분해 순차 표시.
+interface ParsedSourceBody {
+  kind: 'xlsx' | 'confluence' | 'other';
+  levels: string[];  // 첫 항목은 워크북/Confluence (무인용), 나머지는 따옴표 포함 완성본
+}
+
+function parseInlineSourceBody(body: string): ParsedSourceBody {
+  let label = body.trim()
+  let section = ''
+  const sep = body.indexOf('§')
+  if (sep >= 0) {
+    label = body.slice(0, sep).trim()
+    section = body.slice(sep + 1).trim()
+  }
+  const sections = section
+    ? section.split(/\s*>\s*/).map(s => s.trim()).filter(Boolean)
+    : []
+  const sectionLevels = sections.map(s => `"${s}"`)
+
+  // Confluence / <space> / <chain>...
+  if (/^Confluence\s*\//.test(label)) {
+    const rest = label.replace(/^Confluence\s*\/\s*/, '').trim()
+    const parts = rest.split(/\s*\/\s*/).map(p => p.trim()).filter(Boolean)
+    return { kind: 'confluence', levels: ['Confluence', ...parts.map(p => `"${p}"`), ...sectionLevels] }
+  }
+  // <workbook>.xlsx / <sheet> (+ "시트" 접미사)
+  const xm = label.match(/^(.+?\.xlsx)\s*\/\s*(.+?)(?:\s+시트)?\s*$/)
+  if (xm) {
+    return { kind: 'xlsx', levels: [xm[1], `"${xm[2]}" 시트`, ...sectionLevels] }
+  }
+  return { kind: 'other', levels: [label, ...sectionLevels] }
+}
+
 // Mermaid component for rendering diagrams
 const MermaidBlock = ({ code, theme }: { code: string; theme: 'light' | 'dark' }) => {
   const ref = useRef<HTMLDivElement>(null)
@@ -886,13 +922,23 @@ function App() {
                                 const h = href || '';
                                 if (h.startsWith('projk-source:')) {
                                   const body = decodeURIComponent(h.slice('projk-source:'.length));
+                                  const parsed = parseInlineSourceBody(body);
+                                  const Icon = parsed.kind === 'confluence' ? ConfluenceIcon : ExcelIcon;
                                   return (
                                     <a
                                       href="#"
-                                      className="inline-source-link"
+                                      className={`inline-source-link inline-source-${parsed.kind}`}
                                       onClick={(e) => { e.preventDefault(); e.stopPropagation(); openInlineSource(body, msg.sources); }}
                                       title="우측 패널에서 열기"
-                                    >{children}</a>
+                                    >
+                                      <span className="inline-source-icon"><Icon /></span>
+                                      {parsed.levels.map((lvl, i) => (
+                                        <span key={i} className="inline-source-part">
+                                          {i > 0 && <span className="inline-source-sep"> › </span>}
+                                          <span>{lvl}</span>
+                                        </span>
+                                      ))}
+                                    </a>
                                   );
                                 }
                                 return <a href={h} target="_blank" rel="noreferrer" {...props}>{children}</a>;

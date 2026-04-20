@@ -469,19 +469,47 @@
   background-color: color-mix(in srgb, var(--accent-primary, #818cf8) 10%, transparent);
 }
 
-/* 본문 인라인 출처 링크 — (출처: …) 전체가 클릭 가능. */
+/* 본문 인라인 출처 링크 — 아이콘 + 계층(Breadcrumb) 구조. */
 .inline-source-link {
-  color: var(--accent, #6b7cff);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-secondary);
   text-decoration: none;
-  border-bottom: 1px dotted currentColor;
   cursor: pointer;
-  padding: 0 1px;
-  border-radius: 2px;
-  transition: background-color 0.15s, opacity 0.15s;
+  padding: 1px 6px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--bg-secondary, #fff) 85%, transparent);
+  font-size: 0.9em;
+  line-height: 1.4;
+  vertical-align: baseline;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
 }
 .inline-source-link:hover {
-  background-color: color-mix(in srgb, var(--accent, #6b7cff) 12%, transparent);
-  opacity: 0.95;
+  border-color: var(--accent-primary, #6b7cff);
+  background: color-mix(in srgb, var(--accent-primary, #6b7cff) 10%, transparent);
+  color: var(--text-primary);
+}
+.inline-source-icon {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
+.inline-source-icon svg {
+  width: 14px; height: 14px;
+}
+.inline-source-part { white-space: nowrap; }
+.inline-source-sep {
+  color: var(--text-tertiary, #9ca3af);
+  margin: 0 2px;
+  font-weight: 500;
+  opacity: 0.65;
+}
+/* 아이콘 옆 첫 항목(워크북/Confluence)은 강조 */
+.inline-source-link .inline-source-part:first-of-type {
+  font-weight: 600;
+  color: var(--text-primary);
 }
 
 .sources-title {

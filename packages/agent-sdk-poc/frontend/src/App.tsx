@@ -748,7 +748,7 @@ function App() {
                       if (p.compare_mode) setCompareMode(true);
                       inputRef.current?.focus();
                     }}
-                    title={p.compare_mode ? `${p.prompt}\n\n[Deep Research — 비교 모드 자동 ON, 웹 검색 활용]` : p.prompt}
+                    title={p.compare_mode ? `${p.prompt}\n\n[Deep Research 자동 ON — 내부 크롤링 + 인터넷 웹 검색]` : p.prompt}
                   >
                     {p.label}
                   </button>
@@ -788,8 +788,8 @@ function App() {
                       ) : (
                         <>
                           {msg.compareMode && (
-                            <div className="compare-mode-badge-row" title="이 답변은 타게임 비교 Deep Research 모드로 생성되었습니다">
-                              <span className="compare-mode-badge">📚 비교 모드</span>
+                            <div className="compare-mode-badge-row" title="이 답변은 Deep Research 모드 — 내부 크롤링 데이터 + 인터넷 웹 검색을 함께 활용해 생성되었습니다">
+                              <span className="compare-mode-badge">📚 Deep Research</span>
                             </div>
                           )}
                           {msg.qaWarnings && msg.qaWarnings.length > 0 && (
@@ -888,14 +888,14 @@ function App() {
           </div>
           <label
             className={`compare-mode-toggle ${compareMode ? 'on' : ''}`}
-            title="비교 모드 — 리니지M/W, Lord Nine, Vampir 의 유사 사례를 함께 조사 (느려질 수 있음)"
+            title="Deep Research — 내부 크롤링 데이터(타게임 oracle KG·raw) + 인터넷 웹(Gemini google_search)을 함께 검색합니다. 답변이 풍부해지지만 느려질 수 있습니다."
           >
             <input
               type="checkbox"
               checked={compareMode}
               onChange={(e) => setCompareMode(e.target.checked)}
             />
-            <span className="compare-mode-toggle-label">📚 비교</span>
+            <span className="compare-mode-toggle-label">📚 Deep Research</span>
           </label>
           {isCurrentLoading ? (
             <button className="stop-btn" onClick={handleStop} title="응답 중단">

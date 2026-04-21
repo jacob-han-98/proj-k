@@ -70,10 +70,12 @@ export const MermaidBlock = ({ code, theme }: { code: string; theme: 'light' | '
   return <div ref={ref} className="mermaid-wrapper" />
 }
 
-// ── 본문 전처리: (출처: …) + **xlsx/Confluence 라벨** → projk-source: 링크 ──
+// ── 본문 전처리: (출처: …) + (참고 자료: …) + **xlsx/Confluence 라벨** → projk-source: 링크 ──
+// 패턴 2개 모두 인식 — agent 가 web 인용 시 형식이 갈라지는 경우를 흡수.
 export function linkifyInlineSources(text: string): string {
   if (!text) return text
-  const re = /\(\s*출처\s*[:：]\s*/g
+  // (출처: …) 또는 (참고 자료: …) — 둘 다 같은 projk-source: 링크로 변환
+  const re = /\(\s*(?:출처|참고\s*자료)\s*[:：]\s*/g
   let out = ''
   let last = 0
   let m: RegExpExecArray | null
@@ -89,7 +91,12 @@ export function linkifyInlineSources(text: string): string {
       i++
     }
     if (i >= text.length) break
-    const body = text.slice(afterPrefix, i).trim()
+    let body = text.slice(afterPrefix, i).trim()
+    // (참고 자료: 실시간 웹 / web/...) 같이 prefix 가 추가된 경우 web/ 부터로 normalize
+    const webIdx = body.indexOf('web/')
+    if (webIdx > 0 && /^(실시간 웹|웹)\s*\/?\s*$/.test(body.slice(0, webIdx).trim().replace(/[,;]\s*$/, ''))) {
+      body = body.slice(webIdx)
+    }
     const displayBody = body.replace(/[\[\]]/g, (c) => '\\' + c)
     const enc = encodeURIComponent(body)
     out += text.slice(last, start) + `[(출처: ${displayBody})](projk-source:${enc})`
@@ -108,6 +115,18 @@ export function linkifyInlineSources(text: string): string {
     return `**[${label}](projk-source:${enc})**`
   })
   return out
+}
+
+// ── 도메인-스타일 inline 텍스트 (event-hit2.nexon.com/kr 등) → 자동 링크 ──
+// ReactMarkdown 의 code({inline}) 핸들러에서 사용.
+const URL_LIKE = /^[\w-]+(?:\.[\w-]+){1,}(?:\/[^\s)]*)?$/  // domain.tld(/path)?
+export function inlineCodeToUrl(text: string): string | null {
+  const t = text.trim()
+  if (!t || t.length > 200) return null
+  if (URL_LIKE.test(t)) {
+    return t.startsWith('http') ? t : `https://${t}`
+  }
+  return null
 }
 
 // ── 인라인 출처 body 파서 — kind 별 분기 (xlsx / confluence / external / web / other) ──
@@ -207,6 +226,18 @@ export function RenderAssistantMarkdown({ content, sources, onOpenSource, theme 
           const match = /language-(\w+)/.exec(className || '')
           if (!inline && match && match[1] === 'mermaid') {
             return <MermaidBlock code={String(children).replace(/\n$/, '')} theme={theme} />
+          }
+          // inline code 가 도메인-스타일 URL 이면 자동 링크 (예: event-hit2.nexon.com/kr)
+          if (inline) {
+            const txt = String(children)
+            const url = inlineCodeToUrl(txt)
+            if (url) {
+              return (
+                <a href={url} target="_blank" rel="noreferrer" className="inline-code-link" title={`${url} 새 창에서 열기`}>
+                  <code className={className} {...props}>{children}</code>
+                </a>
+              )
+            }
           }
           return <code className={className} {...props}>{children}</code>
         },

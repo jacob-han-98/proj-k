@@ -115,9 +115,15 @@ COMPARE_MODE_PROMPT = """
     (출처: external/<게임>/<카테고리>/<항목명> § <섹션>)         ← oracle KG (큐레이트)
     (출처: external/<게임>/raw/<파일명> § <발췌>)               ← oracle raw (커뮤니티)
     (출처: external/<발견된게임>/cross-mention/<파일명> § ...)  ← cross_mentions
-    (출처: web/<도메인>/<페이지 제목> § <섹션>)                  ← WebSearch/WebFetch 결과
+    (출처: web/<도메인>/<페이지 제목> § <섹션>)                  ← Gemini google_search / WebFetch 결과
     예: (출처: web/lineagem.plaync.com/PVP 시스템 소개 § 성향치)
         (출처: web/namu.wiki/HIT2 § 서버 시스템)
+
+★ web 인용 규칙 (반드시 지킬 것 — 프론트의 출처 카드 자동 분류와 클릭 동작이 이 형식에 의존):
+- 형식은 반드시 (출처: web/<도메인>/<페이지 제목>) — "(참고 자료: 실시간 웹 / web/…)" 같은 변형 금지
+- 도메인은 실제 호스트 (event-hit2.nexon.com, namu.wiki, kr.playblackdesert.com 등)
+- 검색 일자는 답변 본문 어디에든 한 번 명시 (예: "검색 일자: 2026-04-21")
+- 인라인에서 URL 을 단순 언급할 때는 백틱 ``url`` 로 감싸면 프론트가 자동 클릭 가능 링크로 변환
 
 규칙:
 - external/ 출처는 "참고 자료 (oracle 큐레이트)" 라고 명시.

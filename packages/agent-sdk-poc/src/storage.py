@@ -45,7 +45,9 @@ def now_iso() -> str:
 
 # ── Source extraction from Agent's inline citations ───────────
 
-_SOURCE_START = re.compile(r"\(\s*출처\s*[:：]\s*")
+# (출처: …) 또는 (참고 자료: …) — 둘 다 같은 source 로 처리.
+# 일부 답변에서 web 인용을 "(참고 자료: 실시간 웹 / web/…)" 로 쓰는 경우 흡수.
+_SOURCE_START = re.compile(r"\(\s*(?:출처|참고\s*자료)\s*[:：]\s*")
 
 
 def _balanced_paren_end(s: str, start: int) -> int:
@@ -93,6 +95,12 @@ def extract_sources(answer: str) -> list[dict]:
         if end < 0:
             continue
         body = answer[m.end():end].strip()
+        # "(참고 자료: 실시간 웹 / web/…)" 같이 prefix 있는 경우 web/ 부터로 normalize
+        if "web/" in body:
+            wi = body.find("web/")
+            prefix = body[:wi].rstrip().rstrip(",;").strip()
+            if prefix in ("실시간 웹", "웹", "실시간 웹 /", "웹 /"):
+                body = body[wi:].strip()
         if "§" in body:
             path_raw, _, section = body.partition("§")
         else:

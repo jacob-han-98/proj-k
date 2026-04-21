@@ -827,6 +827,17 @@
   border-color: #9333ea;
 }
 
+/* 인라인 code 가 URL 이면 자동 링크화 — assistantRender.inlineCodeToUrl */
+.inline-code-link { text-decoration: none; cursor: pointer; }
+.inline-code-link code {
+  color: var(--accent-primary, #818cf8);
+  border-bottom: 1px dashed currentColor;
+}
+.inline-code-link:hover code {
+  color: #6366f1;
+  border-bottom-style: solid;
+}
+
 /* 인라인 출처 (답변 본문 안의 (출처: external/...)) */
 .inline-source-external {
   background: color-mix(in srgb, #9333ea 8%, transparent);

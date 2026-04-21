@@ -318,31 +318,33 @@ async def search_external_game(args: dict):
     return _text_result(result)
 
 
-# ── Tool 6: web_search (Tavily) ──────────────────────────────
+# ── Tool 6: web_search (Gemini google_search grounding) ─────────
+# 2026-04-21: Tavily → Gemini swap. A/B 결과 (tests/ab_out/) 기준:
+#   - 답변 정확도: Gemini 우수 (요일별 인원 차등 수치까지 정확)
+#   - 비용: Tavily $0.08/q vs Gemini ~$0 (Gemini Flash + grounding free tier)
+#   - 속도: 동급 (~10초)
+# Tavily 코드는 git history 에 보존 (원복 필요시 commit 58f3e83 참조).
 
 @tool(
     name="web_search",
     description=(
-        "Tavily 웹 검색 — 인터넷에서 게임/시스템/메카닉을 실시간으로 조회한다.\n"
+        "Gemini google_search grounding 으로 인터넷에서 실시간 조회.\n"
         "Deep Research(compare_mode=True) 에서 oracle KG·raw 모두 0건이거나 빈약할 때만 호출.\n"
-        "결과: {answer, results:[{title, url, content, score}]}.\n"
-        "agent 는 results 의 url 중 핵심 1~2개를 WebFetch 로 본문 정독한 뒤 인용한다.\n"
-        "인용 형식: (출처: web/<도메인>/<페이지 제목> § <섹션>)"
+        "Gemini 가 자동으로 검색 쿼리 분해·결과 합성·citation 생성을 처리한다.\n"
+        "반환: {query, answer, citations:[{title, domain, url}], grounding_queries:[...]}.\n"
+        "agent 는 answer 를 토대로 답변하고, 사실 인용은 citations 의 domain 을 사용:\n"
+        "  형식: (출처: web/<domain>/<title> § <섹션>)"
     ),
     input_schema={
         "type": "object",
         "properties": {
             "query": {
                 "type": "string",
-                "description": "검색 쿼리 (예: '검은사막 길드 시스템', 'HIT2 서버 버프 투표')",
+                "description": "검색 쿼리 (예: '검은사막 거점전 인원 제한', 'HIT2 조율자의 제단')",
             },
-            "max_results": {
-                "type": "integer",
-                "description": "결과 개수 (기본 5, 최대 10)",
-            },
-            "search_depth": {
+            "model": {
                 "type": "string",
-                "description": "'basic' (빠름·기본) 또는 'advanced' (정확도↑·1 query=2 credit)",
+                "description": "'flash' (기본·빠름·저렴) | 'pro' (더 깊은 합성, 비용 ↑)",
             },
         },
         "required": ["query"],
@@ -350,65 +352,93 @@ async def search_external_game(args: dict):
 )
 async def web_search(args: dict):
     import os
-    import httpx
 
     query = (args.get("query") or "").strip()
     if not query:
         return _text_result({"status": "error", "error": "query required"})
 
-    api_key = os.environ.get("TAVILY_API_KEY", "").strip()
+    api_key = os.environ.get("GEMINI_API_KEY", "").strip()
     if not api_key:
         return _text_result({
             "status": "error",
-            "error": "TAVILY_API_KEY 미설정 — 답변에 'web 미확인 (key 부재)' 명시 후 진행.",
+            "error": "GEMINI_API_KEY 미설정 — 답변에 'web 미확인 (key 부재)' 명시 후 진행.",
         })
 
-    max_results = max(1, min(10, int(args.get("max_results", 5))))
-    depth = args.get("search_depth", "basic")
-    if depth not in ("basic", "advanced"):
-        depth = "basic"
-
-    payload = {
-        "api_key": api_key,
-        "query": query,
-        "search_depth": depth,
-        "max_results": max_results,
-        "include_answer": True,
-        "include_raw_content": False,
-    }
+    model_alias = (args.get("model") or "flash").lower()
+    model = "gemini-2.5-pro" if model_alias == "pro" else "gemini-2.5-flash"
 
     try:
-        with httpx.Client(timeout=20.0) as client:
-            resp = client.post("https://api.tavily.com/search", json=payload)
-            resp.raise_for_status()
-            data = resp.json()
-    except httpx.HTTPStatusError as e:
-        return _text_result({
-            "status": "error",
-            "error": f"Tavily HTTP {e.response.status_code}: {e.response.text[:200]}",
-        })
+        from google import genai
+        from google.genai import types
+        client = genai.Client(api_key=api_key)
+        resp = client.models.generate_content(
+            model=model,
+            contents=query,
+            config=types.GenerateContentConfig(
+                tools=[types.Tool(google_search=types.GoogleSearch())],
+                temperature=0.2,
+            ),
+        )
     except Exception as e:
         return _text_result({
             "status": "error",
-            "error": f"Tavily call failed: {type(e).__name__}: {str(e)[:200]}",
+            "error": f"Gemini call failed: {type(e).__name__}: {str(e)[:200]}",
         })
 
-    # 결과 정리 — agent 가 바로 인용할 수 있는 형태
-    results = []
-    for r in data.get("results", [])[:max_results]:
-        results.append({
-            "title": r.get("title", ""),
-            "url": r.get("url", ""),
-            "content": (r.get("content") or "")[:600],
-            "score": r.get("score"),
-        })
+    answer = getattr(resp, "text", None) or ""
+    grounding_queries: list[str] = []
+    citations: list[dict] = []
+    if resp.candidates:
+        gm = getattr(resp.candidates[0], "grounding_metadata", None)
+        if gm:
+            grounding_queries = list(getattr(gm, "web_search_queries", None) or [])
+            chunks = getattr(gm, "grounding_chunks", None) or []
+            for c in chunks:
+                web = getattr(c, "web", None)
+                if web:
+                    uri = getattr(web, "uri", "") or ""
+                    title = getattr(web, "title", "") or ""
+                    # Gemini grounding chunk 의 title 패턴 (실측):
+                    #   (a) "tistory.com"          ← title 자체가 도메인
+                    #   (b) "페이지 제목 - tistory.com"   ← 일부 사이트
+                    #   (c) "페이지 제목 | inven.co.kr"
+                    # uri 는 vertexaisearch redirect 라 호스트 추출 불가 → title 에서만 도출.
+                    if " - " in title:
+                        domain = title.rsplit(" - ", 1)[-1].strip()
+                        clean_title = title.rsplit(" - ", 1)[0].strip()
+                    elif " | " in title:
+                        domain = title.rsplit(" | ", 1)[-1].strip()
+                        clean_title = title.rsplit(" | ", 1)[0].strip()
+                    elif title and "." in title and "/" not in title and " " not in title:
+                        # title 자체가 도메인 (예: "tistory.com")
+                        domain = title
+                        clean_title = title
+                    else:
+                        domain = ""
+                        clean_title = title
+                    citations.append({
+                        "title": clean_title or domain or "(제목 없음)",
+                        "domain": domain,
+                        "url": uri,
+                    })
+
+    um = getattr(resp, "usage_metadata", None)
+    usage = {}
+    if um:
+        usage = {
+            "prompt_tokens": getattr(um, "prompt_token_count", None),
+            "output_tokens": getattr(um, "candidates_token_count", None),
+            "total_tokens": getattr(um, "total_token_count", None),
+        }
 
     return _text_result({
         "query": query,
-        "answer": (data.get("answer") or "")[:1000],   # Tavily 가 정리한 요약
-        "results": results,
-        "result_count": len(results),
-        "search_depth": depth,
+        "model": model,
+        "answer": answer[:4000],   # Gemini 종합 답변 (대부분 800~1500자)
+        "citations": citations[:10],
+        "citation_count": len(citations),
+        "grounding_queries": grounding_queries[:6],
+        "usage": usage,
     })
 
 

@@ -352,6 +352,7 @@ async def search_external_game(args: dict):
 )
 async def web_search(args: dict):
     import os
+    import httpx
 
     query = (args.get("query") or "").strip()
     if not query:
@@ -367,69 +368,79 @@ async def web_search(args: dict):
     model_alias = (args.get("model") or "flash").lower()
     model = "gemini-2.5-pro" if model_alias == "pro" else "gemini-2.5-flash"
 
+    # 2026-04-22: Gemini API 키 IP allowlist 가 IPv4 만 등록되어 있어
+    # AWS EC2 (dual-stack) 에서 IPv6 우선 호출 시 403 PERMISSION_DENIED.
+    # 우회 → httpx transport 의 local_address="0.0.0.0" 로 IPv4 강제.
+    # (google-genai SDK 는 transport 주입이 어려우므로 REST 직접 호출로 변경.)
+    # 사용자가 Cloud Console 에서 IPv6 prefix 추가하면 이 우회 없어도 됨.
+    transport = httpx.HTTPTransport(local_address="0.0.0.0")
+    payload = {
+        "contents": [{"parts": [{"text": query}]}],
+        "tools": [{"google_search": {}}],
+        "generationConfig": {"temperature": 0.2},
+    }
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={api_key}"
     try:
-        from google import genai
-        from google.genai import types
-        client = genai.Client(api_key=api_key)
-        resp = client.models.generate_content(
-            model=model,
-            contents=query,
-            config=types.GenerateContentConfig(
-                tools=[types.Tool(google_search=types.GoogleSearch())],
-                temperature=0.2,
-            ),
-        )
+        with httpx.Client(transport=transport, timeout=30.0) as c:
+            r = c.post(url, json=payload)
+            r.raise_for_status()
+            data = r.json()
+    except httpx.HTTPStatusError as e:
+        body = e.response.text[:400] if e.response is not None else ""
+        return _text_result({
+            "status": "error",
+            "error": f"Gemini HTTP {e.response.status_code}: {body}",
+        })
     except Exception as e:
         return _text_result({
             "status": "error",
             "error": f"Gemini call failed: {type(e).__name__}: {str(e)[:200]}",
         })
 
-    answer = getattr(resp, "text", None) or ""
+    # 응답 파싱 — REST 스키마 기준
+    candidates = data.get("candidates", []) or []
+    answer = ""
     grounding_queries: list[str] = []
     citations: list[dict] = []
-    if resp.candidates:
-        gm = getattr(resp.candidates[0], "grounding_metadata", None)
-        if gm:
-            grounding_queries = list(getattr(gm, "web_search_queries", None) or [])
-            chunks = getattr(gm, "grounding_chunks", None) or []
-            for c in chunks:
-                web = getattr(c, "web", None)
-                if web:
-                    uri = getattr(web, "uri", "") or ""
-                    title = getattr(web, "title", "") or ""
-                    # Gemini grounding chunk 의 title 패턴 (실측):
-                    #   (a) "tistory.com"          ← title 자체가 도메인
-                    #   (b) "페이지 제목 - tistory.com"   ← 일부 사이트
-                    #   (c) "페이지 제목 | inven.co.kr"
-                    # uri 는 vertexaisearch redirect 라 호스트 추출 불가 → title 에서만 도출.
-                    if " - " in title:
-                        domain = title.rsplit(" - ", 1)[-1].strip()
-                        clean_title = title.rsplit(" - ", 1)[0].strip()
-                    elif " | " in title:
-                        domain = title.rsplit(" | ", 1)[-1].strip()
-                        clean_title = title.rsplit(" | ", 1)[0].strip()
-                    elif title and "." in title and "/" not in title and " " not in title:
-                        # title 자체가 도메인 (예: "tistory.com")
-                        domain = title
-                        clean_title = title
-                    else:
-                        domain = ""
-                        clean_title = title
-                    citations.append({
-                        "title": clean_title or domain or "(제목 없음)",
-                        "domain": domain,
-                        "url": uri,
-                    })
+    if candidates:
+        cand = candidates[0]
+        parts = (cand.get("content") or {}).get("parts", []) or []
+        answer = "".join(p.get("text", "") or "" for p in parts)
+        gm = cand.get("groundingMetadata") or {}
+        grounding_queries = list(gm.get("webSearchQueries") or [])
+        chunks = gm.get("groundingChunks") or []
+        for c in chunks:
+            web = c.get("web") or {}
+            uri = web.get("uri") or ""
+            title = web.get("title") or ""
+            # Gemini grounding chunk 의 title 패턴 (실측):
+            #   (a) "tistory.com"             ← title 자체가 도메인
+            #   (b) "페이지 제목 - tistory.com"
+            #   (c) "페이지 제목 | inven.co.kr"
+            if " - " in title:
+                domain = title.rsplit(" - ", 1)[-1].strip()
+                clean_title = title.rsplit(" - ", 1)[0].strip()
+            elif " | " in title:
+                domain = title.rsplit(" | ", 1)[-1].strip()
+                clean_title = title.rsplit(" | ", 1)[0].strip()
+            elif title and "." in title and "/" not in title and " " not in title:
+                domain = title
+                clean_title = title
+            else:
+                domain = ""
+                clean_title = title
+            citations.append({
+                "title": clean_title or domain or "(제목 없음)",
+                "domain": domain,
+                "url": uri,
+            })
 
-    um = getattr(resp, "usage_metadata", None)
-    usage = {}
-    if um:
-        usage = {
-            "prompt_tokens": getattr(um, "prompt_token_count", None),
-            "output_tokens": getattr(um, "candidates_token_count", None),
-            "total_tokens": getattr(um, "total_token_count", None),
-        }
+    um = data.get("usageMetadata") or {}
+    usage = {
+        "prompt_tokens": um.get("promptTokenCount"),
+        "output_tokens": um.get("candidatesTokenCount"),
+        "total_tokens": um.get("totalTokenCount"),
+    }
 
     return _text_result({
         "query": query,

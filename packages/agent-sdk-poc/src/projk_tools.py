@@ -746,6 +746,294 @@ async def lookup_game_enum(args: dict):
     return _text_result({"enum": enum_name, "count": r.total_matched, "values": values})
 
 
+# ── DataSheet in GDD (기획서 내부 표) — foundation_tables.json 인덱스 ──
+
+# DataSheet (game_data) 와 다름:
+#   DataSheet         = 게임 런타임 데이터 (Resource/design/*.xlsx 의 lookup 테이블)
+#   DataSheet in GDD  = 기획자가 GDD 안에 그린 설계 표 (예: 'HUD 요소 상세 테이블')
+#
+# 자산: packages/xlsx-extractor/output/**/_final/foundation_tables.json (~817개 파일)
+# 파일 schema: {source_file, sheet_name, tables: [{table_id, table_name, description,
+#               sample_queries, headers, rows, notes}]}
+
+_GDD_INDEX: dict | None = None  # 1회 빌드 후 메모리 캐시
+_GDD_INDEX_CACHE_PATH = ROOT / "index" / "_gdd_index.json"  # 디스크 캐시
+
+
+def _build_gdd_index() -> dict:
+    """xlsx-extractor/output 의 foundation_tables.json 들을 1회 스캔.
+
+    Cold build: ~55s (817 파일 read+parse). 결과는 디스크 캐시
+    (`index/_gdd_index.json`, ~3.4MB) 에 저장 → 이후 콜드 스타트는 ~200ms.
+
+    캐시 invalidate 는 **명시적**:
+      - foundation_tables.json 가 갱신됐으면 캐시 파일 삭제 후 재빌드
+      - (817 파일 stat 호출이 WSL/NTFS 에서 ~40초 걸려 자동 mtime 검사는 비효율)
+
+    인덱스 구조:
+      {
+        "available": bool,
+        "meta": [{workbook, sheet, table_id, table_name, description, row_count, ...}],
+        "by_key": {"<workbook>|<sheet>|<table_id>": "/abs/path/foundation_tables.json"},
+        "built_at": float,  # cold build 시각 (정보용)
+      }
+    """
+    global _GDD_INDEX
+    if _GDD_INDEX is not None:
+        return _GDD_INDEX
+
+    # 1) 디스크 캐시 우선 사용 (mtime 검사 없음 — 명시적 invalidate)
+    if _GDD_INDEX_CACHE_PATH.exists():
+        try:
+            cached = json.loads(_GDD_INDEX_CACHE_PATH.read_text(encoding="utf-8"))
+            if cached.get("available"):
+                _GDD_INDEX = cached
+                return _GDD_INDEX
+        except Exception:
+            pass  # 캐시 손상 → 재빌드
+
+    # 2) Cold build
+    output_dir = REPO_ROOT / "packages" / "xlsx-extractor" / "output"
+    if not output_dir.exists():
+        _GDD_INDEX = {"available": False, "meta": [], "by_key": {}, "built_at": 0.0}
+        return _GDD_INDEX
+
+    import time as _time
+    meta: list[dict] = []
+    by_key: dict[str, str] = {}
+    for ft_path in output_dir.rglob("foundation_tables.json"):
+        try:
+            data = json.loads(ft_path.read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        wb = data.get("source_file", "") or ""
+        sh = data.get("sheet_name", "") or ""
+        for tbl in data.get("tables", []) or []:
+            tid = tbl.get("table_id", "") or ""
+            meta.append({
+                "workbook": wb,
+                "sheet": sh,
+                "table_id": tid,
+                "table_name": tbl.get("table_name", "") or "",
+                "description": (tbl.get("description") or "")[:240],
+                "row_count": len(tbl.get("rows", []) or []),
+                "header_count": len(tbl.get("headers", []) or []),
+                "sample_queries": (tbl.get("sample_queries") or [])[:5],
+            })
+            by_key[f"{wb}|{sh}|{tid}"] = str(ft_path)
+
+    _GDD_INDEX = {
+        "available": True,
+        "meta": meta,
+        "by_key": by_key,
+        "built_at": _time.time(),
+    }
+
+    # 디스크 캐시 저장
+    try:
+        _GDD_INDEX_CACHE_PATH.parent.mkdir(parents=True, exist_ok=True)
+        _GDD_INDEX_CACHE_PATH.write_text(
+            json.dumps(_GDD_INDEX, ensure_ascii=False), encoding="utf-8"
+        )
+    except Exception:
+        pass
+
+    return _GDD_INDEX
+
+
+# ── Tool 11: list_gdd_tables ─────────────────────────────────
+
+@tool(
+    name="list_gdd_tables",
+    description=(
+        "GDD (기획서 xlsx) 안에 박혀있는 표의 카탈로그를 반환한다. xlsx-extractor 가 추출한\n"
+        "foundation_tables.json 자산 (~817 파일, 수천 개 표).\n\n"
+        "**DataSheet 와의 차이**:\n"
+        "  - DataSheet (query_game_table): 게임 런타임 데이터 (Resource/design/*.xlsx)\n"
+        "  - DataSheet in GDD (이 도구): 기획자가 GDD 에 그린 설계 표 (예: 'HUD 요소 상세 테이블', '변신 등급별 스펙')\n\n"
+        "옵셔널 필터: workbook (워크북명 부분일치), sheet (시트명 부분일치).\n"
+        "반환: {count, tables:[{workbook, sheet, table_id, table_name, description, row_count, header_count, sample_queries}]}"
+    ),
+    input_schema={
+        "type": "object",
+        "properties": {
+            "workbook": {"type": "string", "description": "워크북명 부분일치 (예: 'PK_HUD 시스템')"},
+            "sheet": {"type": "string", "description": "시트명 부분일치 (예: 'HUD_기본')"},
+            "limit": {"type": "integer", "description": "최대 반환 (기본 100)"},
+        },
+    },
+)
+async def list_gdd_tables(args: dict):
+    idx = _build_gdd_index()
+    if not idx["available"]:
+        return _text_result({"status": "error", "error": "xlsx-extractor/output 디렉토리 미발견"})
+
+    wb = (args.get("workbook") or "").strip().lower()
+    sh = (args.get("sheet") or "").strip().lower()
+    limit = int(args.get("limit", 100))
+
+    items = idx["meta"]
+    if wb:
+        items = [t for t in items if wb in t["workbook"].lower()]
+    if sh:
+        items = [t for t in items if sh in t["sheet"].lower()]
+
+    return _text_result({
+        "count": len(items),
+        "total_indexed": len(idx["meta"]),
+        "tables": items[:limit],
+    })
+
+
+# ── Tool 12: find_gdd_tables ─────────────────────────────────
+
+@tool(
+    name="find_gdd_tables",
+    description=(
+        "키워드로 GDD 내부 표를 검색한다. table_name, description, sample_queries 안 매칭.\n"
+        "예: 'Button 분류' → 'HUD 요소 상세 테이블' 매칭 (description 에 'Button' 포함).\n\n"
+        "**용도**: 어느 워크북·시트에 어떤 표가 있는지 모를 때 첫 단계 탐색.\n"
+        "**다음 단계**: 결과에서 (workbook, sheet, table_id) 를 추출해 get_gdd_table 호출.\n"
+        "반환: {keyword, count, matches:[{workbook, sheet, table_id, table_name, matched_field, snippet}]}"
+    ),
+    input_schema={
+        "type": "object",
+        "properties": {
+            "keyword": {"type": "string", "description": "검색 키워드 (예: 'Button', '쿨타임', '등급별')"},
+            "limit": {"type": "integer", "description": "최대 반환 (기본 20)"},
+        },
+        "required": ["keyword"],
+    },
+)
+async def find_gdd_tables(args: dict):
+    idx = _build_gdd_index()
+    if not idx["available"]:
+        return _text_result({"status": "error", "error": "GDD 인덱스 빌드 실패"})
+
+    kw = (args.get("keyword") or "").strip()
+    if not kw:
+        return _text_result({"status": "error", "error": "keyword required"})
+    limit = int(args.get("limit", 20))
+    kwl = kw.lower()
+
+    matches: list[dict] = []
+    for t in idx["meta"]:
+        # 매칭 우선순위: table_name > description > sample_queries
+        if kwl in t["table_name"].lower():
+            entry = {**t, "matched_field": "table_name", "snippet": t["table_name"]}
+        elif kwl in t["description"].lower():
+            d = t["description"]
+            i = d.lower().find(kwl)
+            s_start = max(0, i - 60)
+            s_end = min(len(d), i + len(kw) + 60)
+            snip = ("..." if s_start > 0 else "") + d[s_start:s_end] + ("..." if s_end < len(d) else "")
+            entry = {**t, "matched_field": "description", "snippet": snip}
+        else:
+            sq_match = next((q for q in t.get("sample_queries", []) if kwl in q.lower()), None)
+            if sq_match:
+                entry = {**t, "matched_field": "sample_queries", "snippet": sq_match}
+            else:
+                continue
+        matches.append(entry)
+
+    if not matches:
+        return _text_result({
+            "keyword": kw,
+            "count": 0,
+            "matches": [],
+            "message": f"키워드 '{kw}' 매칭 GDD 표 없음. 다른 표현 시도 또는 list_gdd_tables 로 워크북 좁히기.",
+        })
+
+    return _text_result({"keyword": kw, "count": len(matches), "matches": matches[:limit]})
+
+
+# ── Tool 13: get_gdd_table ───────────────────────────────────
+
+@tool(
+    name="get_gdd_table",
+    description=(
+        "GDD 내부 표 한 개의 전체 내용 (헤더 + 행 + 메타) 을 가져온다.\n"
+        "list_gdd_tables / find_gdd_tables 결과에서 (workbook, sheet, table_id) 받아 호출.\n"
+        "table_id 모르면 table_name 으로도 조회 가능 (해당 시트 안에서 부분일치).\n\n"
+        "반환: {workbook, sheet, table_id, table_name, description, headers, rows, sample_queries, notes, citation}\n\n"
+        "**답변 인용 형식**: (출처: <workbook>.xlsx / <sheet> § <table_name>)\n"
+        "응답의 citation 필드를 그대로 사용 가능."
+    ),
+    input_schema={
+        "type": "object",
+        "properties": {
+            "workbook": {"type": "string", "description": "워크북명 (예: 'PK_HUD 시스템') — 정확히 일치"},
+            "sheet": {"type": "string", "description": "시트명 (예: 'HUD_기본') — 정확히 일치"},
+            "table_id": {"type": "string", "description": "표 ID (예: 't1'). table_name 과 둘 중 하나 필요."},
+            "table_name": {"type": "string", "description": "표 제목 부분일치 (예: 'HUD 요소 상세 테이블'). table_id 없을 때 사용."},
+        },
+        "required": ["workbook", "sheet"],
+    },
+)
+async def get_gdd_table(args: dict):
+    idx = _build_gdd_index()
+    if not idx["available"]:
+        return _text_result({"status": "error", "error": "GDD 인덱스 빌드 실패"})
+
+    wb = (args.get("workbook") or "").strip()
+    sh = (args.get("sheet") or "").strip()
+    tid = (args.get("table_id") or "").strip()
+    tname = (args.get("table_name") or "").strip()
+
+    if not wb or not sh:
+        return _text_result({"status": "error", "error": "workbook, sheet 필수"})
+    if not tid and not tname:
+        return _text_result({"status": "error", "error": "table_id 또는 table_name 중 하나 필요"})
+
+    path: str | None = None
+    if tid:
+        path = idx["by_key"].get(f"{wb}|{sh}|{tid}")
+        if not path:
+            return _text_result({
+                "status": "error",
+                "error": f"표 미발견: {wb} / {sh} / {tid}",
+                "hint": "list_gdd_tables(workbook=..., sheet=...) 로 정확한 table_id 확인",
+            })
+    else:
+        # table_name 부분일치로 해당 시트 안에서 매칭
+        prefix = f"{wb}|{sh}|"
+        candidates = [m for m in idx["meta"] if m["workbook"] == wb and m["sheet"] == sh]
+        match = next((m for m in candidates if tname.lower() in m["table_name"].lower()), None)
+        if not match:
+            return _text_result({
+                "status": "error",
+                "error": f"표 미발견: {wb} / {sh} / table_name~='{tname}'",
+                "hint": "list_gdd_tables 로 해당 시트의 table_name 목록 확인",
+            })
+        tid = match["table_id"]
+        path = idx["by_key"].get(f"{prefix}{tid}")
+        if not path:
+            return _text_result({"status": "error", "error": f"인덱스 불일치: {prefix}{tid}"})
+
+    try:
+        data = json.loads(Path(path).read_text(encoding="utf-8"))
+    except Exception as e:
+        return _text_result({"status": "error", "error": f"JSON 로드 실패: {e}"})
+
+    target = next((t for t in data.get("tables", []) or [] if t.get("table_id") == tid), None)
+    if not target:
+        return _text_result({"status": "error", "error": f"파일에 table_id={tid} 없음"})
+
+    citation = f"{wb}.xlsx / {sh} § {target.get('table_name', '')}"
+    return _text_result({
+        "workbook": wb,
+        "sheet": sh,
+        "table_id": tid,
+        "table_name": target.get("table_name", ""),
+        "description": target.get("description", ""),
+        "headers": target.get("headers", []),
+        "rows": target.get("rows", []),
+        "sample_queries": target.get("sample_queries", []),
+        "notes": target.get("notes", ""),
+        "citation": citation,
+    })
+
+
 # ── MCP Server Factory ───────────────────────────────────────
 
 def create_projk_server():
@@ -763,5 +1051,8 @@ def create_projk_server():
             describe_game_table,
             query_game_table,
             lookup_game_enum,
+            list_gdd_tables,
+            find_gdd_tables,
+            get_gdd_table,
         ],
     )

@@ -40,6 +40,10 @@ ALLOWED_TOOLS = [
     "mcp__projk__describe_game_table",
     "mcp__projk__query_game_table",
     "mcp__projk__lookup_game_enum",
+    # DataSheet in GDD (기획서 내부 표 — foundation_tables.json)
+    "mcp__projk__list_gdd_tables",
+    "mcp__projk__find_gdd_tables",
+    "mcp__projk__get_gdd_table",
     # 비교 모드 — 호출 게이팅은 system_prompt 의 compare_mode 블록이 담당
     "mcp__projk__compare_with_reference_games",
     "mcp__projk__search_external_game",

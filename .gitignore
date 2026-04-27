@@ -73,11 +73,14 @@ packages/qna-poc/test_*.png
 # DB 파일
 *.db
 
-# Claude Code 로컬 설정
-.claude/
-# 단, 프로젝트 공유 자산은 커밋
+# agent-sdk-poc 자동 생성 인덱스 캐시 (foundation_tables 인덱스, ~3.4MB)
+packages/agent-sdk-poc/index/_gdd_index.json
+packages/agent-sdk-poc/index/knowledge_graph.json
+
+# Claude Code 로컬 설정 — skills 는 프로젝트 공유 자산이므로 커밋
+.claude/*
 !.claude/skills/
-!.claude/skills/**
+.claude/skills/_archived/
 
 # Telegram 봇 상태 (토큰, access.json)
 scripts/telegram/state/

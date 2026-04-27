@@ -208,7 +208,9 @@ def _make_options(
         # WebFetch 도메인 화이트리스트도 우회되지만, 어차피 답변에 출처 인용 강제 + 사후 audit 가능.
         permission_mode="bypassPermissions",
         cwd=str(POC_DIR),
-        max_turns=30 if compare_mode else 20,
+        # 조사 깊이 제어: cross-check 류 timeout 방지 (CLAUDE.md '효율 가이드' 참조).
+        # compare_mode 는 oracle/web 단계가 추가되어 더 길게 허용.
+        max_turns=20 if compare_mode else 14,
         model=resolved,
         env={
             "CLAUDE_CODE_USE_BEDROCK": os.environ.get("CLAUDE_CODE_USE_BEDROCK", "1"),

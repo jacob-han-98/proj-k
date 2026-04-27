@@ -512,13 +512,36 @@ def _datasheet_citation(table_name: str) -> str:
 
 
 def get_datasheet_schema_summary() -> str:
-    """system_prompt 주입용 schema 요약. 실패 시 빈 문자열."""
+    """system_prompt 주입용 컴팩트 schema. 원본 get_schema_summary (~31KB) 의 다이어트
+    버전 (~10KB). cold call 비용 절감 목적.
+
+    포함: 테이블명 / 행수 / 컬럼수 / 도메인(c/s/cs) / source_file (xlsx).
+    제외: 컬럼 이름 목록, FK 관계, Enum 값 목록.
+    → 자세한 컬럼·Enum 정보는 describe_game_table / lookup_game_enum 도구로 분산.
+
+    실패 시 빈 문자열.
+    """
     ok, _ = _gd_ready()
     if not ok:
         return ""
     try:
         mod = _load_game_data()
-        return mod.get_schema_summary(mod.get_db_path())
+        db = mod.get_db_path()
+        r = mod.execute_game_query({"action": "list_tables"}, db)
+        if not r.rows:
+            return ""
+        lines = [f"## 게임 데이터 테이블 ({len(r.rows)}개) — DataSheet"]
+        lines.append("")
+        lines.append("도구 사용:")
+        lines.append("- 컬럼 정의: `describe_game_table(table)` — 호출 결과는 메모리에 두고 재호출 금지")
+        lines.append("- Enum 값:   `lookup_game_enum(enum_name)`")
+        lines.append("- 행 조회:   `query_game_table(table, columns, filters, limit)` — 반드시 columns 명시")
+        lines.append("")
+        # columns: ['table_name', 'source_file', 'rows', 'columns', 'cs']
+        for row in r.rows:
+            tn, src, rows_, cols, dom = row
+            lines.append(f"- **{tn}** ({rows_}행, {cols}컬럼, {dom}) `{src}`")
+        return "\n".join(lines)
     except Exception:
         return ""
 
@@ -656,6 +679,10 @@ async def describe_game_table(args: dict):
                 "type": "integer",
                 "description": "최대 반환 행 수 (기본 50, 최대 500)",
             },
+            "include_raw_rows": {
+                "type": "boolean",
+                "description": "true 면 rows (각 행 = 셀 list) 도 응답에 포함. default false — formatted (markdown 표) 만 반환해 토큰·SDK buffer 부담 절감. 셀 단위 후속 처리가 정말 필요할 때만 true.",
+            },
         },
         "required": ["table"],
     },
@@ -694,17 +721,20 @@ async def query_game_table(args: dict):
     if citation:
         formatted = formatted + f"\n\n**출처**: {citation} — 테이블 `{table}`"
 
-    return _text_result({
+    response: dict = {
         "table": table,
         "source_file": citation,
         "total_matched": r.total_matched,
         "execution_ms": r.execution_ms,
         "columns": r.columns,
-        "rows": r.rows[:50],
-        "row_truncated": len(r.rows) > 50,
         "formatted": formatted,
         "sql": r.sql[:400],
-    })
+    }
+    # 기본은 raw rows 생략 — formatted 만으로 충분. 명시 요청 시만 첨부.
+    if bool(args.get("include_raw_rows", False)):
+        response["rows"] = r.rows[:50]
+        response["row_truncated"] = len(r.rows) > 50
+    return _text_result(response)
 
 
 # ── Tool 10: lookup_game_enum ────────────────────────────────

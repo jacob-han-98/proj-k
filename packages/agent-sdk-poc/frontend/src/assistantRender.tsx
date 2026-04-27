@@ -56,6 +56,18 @@ export const WebIcon = () => (
   </svg>
 )
 
+// DataSheet — 게임 런타임 데이터 (Resource/design/*.xlsx → SQLite). 붉은 표 아이콘.
+export const DataSheetIcon = () => (
+  <svg width="18" height="18" viewBox="0 0 18 18" fill="none" style={{ flexShrink: 0 }}>
+    <rect width="18" height="18" rx="3" fill="#dc2626" />
+    <rect x="4" y="4" width="10" height="10" rx="1" fill="none" stroke="white" strokeWidth="1.1" />
+    <line x1="4" y1="7.5" x2="14" y2="7.5" stroke="white" strokeWidth="1.1" />
+    <line x1="4" y1="11" x2="14" y2="11" stroke="white" strokeWidth="1.1" />
+    <line x1="7.5" y1="4" x2="7.5" y2="14" stroke="white" strokeWidth="1.1" />
+    <line x1="11" y1="4" x2="11" y2="14" stroke="white" strokeWidth="1.1" />
+  </svg>
+)
+
 export const MermaidBlock = ({ code, theme }: { code: string; theme: 'light' | 'dark' }) => {
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
@@ -129,9 +141,9 @@ export function inlineCodeToUrl(text: string): string | null {
   return null
 }
 
-// ── 인라인 출처 body 파서 — kind 별 분기 (xlsx / confluence / external / web / other) ──
+// ── 인라인 출처 body 파서 — kind 별 분기 (xlsx / confluence / external / web / datasheet / other) ──
 export interface ParsedSourceBody {
-  kind: 'xlsx' | 'confluence' | 'external' | 'web' | 'other'
+  kind: 'xlsx' | 'confluence' | 'external' | 'web' | 'datasheet' | 'other'
   levels: string[]
   url?: string  // web 일 때만: 클릭 시 새창 이동용
 }
@@ -177,6 +189,12 @@ export function parseInlineSourceBody(body: string): ParsedSourceBody {
     const rest = label.replace(/^Confluence\s*\/\s*/, '').trim()
     const parts = rest.split(/\s*\/\s*/).map(p => p.trim()).filter(Boolean)
     return { kind: 'confluence', levels: ['Confluence', ...parts.map(p => `"${p}"`), ...sectionLevels] }
+  }
+  // DataSheet — 게임 런타임 데이터 직접 인용
+  if (/^DataSheet\s*\//i.test(label)) {
+    const rest = label.replace(/^DataSheet\s*\/\s*/i, '').trim()
+    const parts = rest.split(/\s*\/\s*/).map(p => p.trim()).filter(Boolean)
+    return { kind: 'datasheet', levels: ['DataSheet', ...parts.map(p => `"${p}"`), ...sectionLevels] }
   }
   const xm = label.match(/^(.+?\.xlsx)\s*\/\s*(.+?)(?:\s+시트)?\s*$/)
   if (xm) return { kind: 'xlsx', levels: [xm[1], `"${xm[2]}" 시트`, ...sectionLevels] }
@@ -249,6 +267,7 @@ export function RenderAssistantMarkdown({ content, sources, onOpenSource, theme 
             const Icon = parsed.kind === 'confluence' ? ConfluenceIcon
               : parsed.kind === 'external' ? ExternalIcon
               : parsed.kind === 'web' ? WebIcon
+              : parsed.kind === 'datasheet' ? DataSheetIcon
               : ExcelIcon
             const isExternal = parsed.kind === 'external'
             const isWeb = parsed.kind === 'web'
@@ -312,6 +331,7 @@ export function RenderSourceCards({
     const isConfluence = src.source === 'confluence' || src.workbook.startsWith('Confluence')
     const isExternal = src.source === 'external'
     const isWeb = src.source === 'web'
+    const isDataSheet = src.source === 'datasheet'
     const displayLabel =
       src.origin_label ||
       [src.workbook, src.sheet].filter(Boolean).join(' / ') ||
@@ -319,7 +339,11 @@ export function RenderSourceCards({
     const extLink = src.origin_url || src.source_url || ''
     const firstSection = sections[0] || ''
     const canOpen = !!src.path && !isExternal && !isWeb
-    const Icon = isWeb ? WebIcon : (isExternal ? ExternalIcon : (isConfluence ? ConfluenceIcon : ExcelIcon))
+    const Icon = isWeb ? WebIcon
+      : isExternal ? ExternalIcon
+      : isDataSheet ? DataSheetIcon
+      : isConfluence ? ConfluenceIcon
+      : ExcelIcon
     const cardClass = `source-link-card glass${isExternal ? ' source-link-card-external' : ''}${isWeb ? ' source-link-card-web' : ''}`
     const onCardClick = () => {
       if (canOpen) onOpen(src.path!, firstSection)

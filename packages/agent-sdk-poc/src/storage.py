@@ -379,6 +379,13 @@ _LABEL_XLSX_RE = re.compile(
     r"""^\s*(?P<wb>.+?)\.xlsx\s*/\s*(?P<sheet>.+?)(?:\s+시트)?\s*$"""
 )
 
+# DataSheet (게임 런타임 데이터) 인용 형식:
+#   "(출처: DataSheet / MonsterClass)"
+#   "(출처: DataSheet / Skill § Id=1001)"
+_LABEL_DATASHEET_RE = re.compile(
+    r"^\s*DataSheet\s*/\s*(?P<table>[^/§]+?)\s*$"
+)
+
 
 def _path_to_source_meta(path: str) -> dict:
     """
@@ -397,6 +404,20 @@ def _path_to_source_meta(path: str) -> dict:
       - "<workbook>.xlsx / <sheet>" 또는 "<workbook>.xlsx / <sheet> 시트"
     → 내부 경로를 복원하여 source_view / 아이콘 분류가 정상 동작하게 한다.
     """
+    # DataSheet 라벨 형식 (게임 런타임 데이터 — Resource/design/*.xlsx)
+    # path = "game-data:<table>" 인코딩으로 변환해 source_view 가 query 실행하게 함.
+    m = _LABEL_DATASHEET_RE.match(path)
+    if m:
+        table = m.group("table").strip()
+        return {
+            "workbook": "DataSheet",
+            "sheet": table,
+            "path": f"game-data:{table}",
+            "source": "datasheet",
+            "origin_label": f"DataSheet / {table}",
+            "origin_url": "",
+        }
+
     # Confluence 라벨 형식
     if path.startswith("Confluence /") or path.startswith("Confluence/"):
         tail = path.split("/", 1)[1] if "/" in path else ""
@@ -434,6 +455,17 @@ def _path_to_source_meta(path: str) -> dict:
                 "origin_label": f"{workbook}.xlsx / {sheet} 시트",
                 "origin_url": "",
             }
+        # 카테고리에 없는 .xlsx — DataSheet 원본 (Monster.xlsx, Skill.xlsx 등) 일 가능성.
+        # LLM 이 (출처: DataSheet / X) 를 (출처: Monster.xlsx / MonsterClass) 형식으로 변형해
+        # 적는 케이스 흡수. game-data:<sheet> 로 인코딩.
+        return {
+            "workbook": "DataSheet",
+            "sheet": sheet,
+            "path": f"game-data:{sheet}",
+            "source": "datasheet",
+            "origin_label": f"DataSheet / {sheet}",
+            "origin_url": "",
+        }
 
     parts = path.split("/")
     low = path.lower()

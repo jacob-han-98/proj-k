@@ -11,7 +11,7 @@ export interface Source {
   score: number;
   source_url?: string;    // legacy (qna-poc 호환)
   path?: string;          // 내부 파일 경로 (디버그/스플릿 뷰)
-  source?: 'xlsx' | 'confluence' | 'summary' | 'image' | 'external' | 'web' | 'other';
+  source?: 'xlsx' | 'confluence' | 'summary' | 'image' | 'external' | 'web' | 'datasheet' | 'other';
   origin_label?: string;  // 사용자 표시용 원본 라벨
   origin_url?: string;    // Confluence 원본 링크 등
 }

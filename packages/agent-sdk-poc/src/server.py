@@ -566,6 +566,56 @@ async def source_view(path: str, section: str = ""):
         except Exception:
             pass
 
+    # DataSheet 식별 — 다음 모두 동일하게 처리:
+    #   1) "game-data:<table>" prefix (storage 가 라벨 인코딩한 형태)
+    #   2) "DataSheet / <table>" 라벨 직격
+    #   3) "<file>.xlsx / <table>" 인데 _xlsx_workbook_to_category 매칭 실패
+    #      (storage 가 datasheet 로 fallback)
+    ds_table: str | None = None
+    if raw_path.startswith("game-data:"):
+        ds_table = raw_path[len("game-data:"):].strip()
+    else:
+        _meta_check = storage._path_to_source_meta(raw_path)
+        if _meta_check.get("source") == "datasheet":
+            _p = _meta_check.get("path", "") or ""
+            if _p.startswith("game-data:"):
+                ds_table = _p[len("game-data:"):].strip()
+
+    if ds_table:
+        try:
+            from projk_tools import (
+                _gd_ready,
+                _load_game_data,
+                _datasheet_citation,
+            )
+        except Exception as e:
+            raise HTTPException(status_code=503, detail=f"datasheet 모듈 로드 실패: {e}")
+        ok, err = _gd_ready()
+        if not ok:
+            raise HTTPException(status_code=503, detail=err)
+        mod = _load_game_data()
+        spec = {"action": "query", "table": ds_table, "limit": 50}
+        r = mod.execute_game_query(spec, mod.get_db_path())
+        if r.error:
+            raise HTTPException(status_code=404, detail=r.error)
+        formatted = mod.format_game_data_result(r, max_display=50)
+        citation = _datasheet_citation(ds_table)
+        content = f"# DataSheet · `{ds_table}` (미리보기)\n\n"
+        if citation:
+            content += f"> **원본**: `{citation}` (P4 경로)\n\n"
+        content += f"> 총 행 수: **{r.total_matched}**, 컬럼: **{len(r.columns)}**개, 쿼리 시간: {r.execution_ms:.0f}ms\n\n"
+        content += "_답변에서 언급된 필터·정렬 조건과 다른 일반 미리보기입니다. 답변 본문의 표가 정답._\n\n"
+        content += formatted
+        return {
+            "path": f"game-data:{ds_table}",
+            "section": section,
+            "content": content,
+            "section_range": None,
+            "origin_label": f"DataSheet / {ds_table}",
+            "origin_url": "",
+            "source": "datasheet",
+        }
+
     normalized = raw_path.lstrip("/").strip()
     if not normalized:
         raise HTTPException(status_code=400, detail="invalid path")
@@ -679,6 +729,63 @@ async def source_view(path: str, section: str = ""):
             section_range = {"start_line": start + 1, "end_line": len(lines)}
 
     meta = storage._path_to_source_meta(normalized)
+
+    # GDD 내부 표 매칭 — xlsx 출처 + section 이 표제목과 일치하는 foundation_tables 항목이
+    # 있으면 표를 markdown 으로 추출해 본문 앞에 prepend 한다. 답변 신뢰도 검증을 위해
+    # 답변에서 인용한 § <표제목> 의 헤더+행을 즉시 확인 가능하게 함.
+    if meta.get("source") == "xlsx" and section and meta.get("workbook") and meta.get("sheet"):
+        try:
+            from projk_tools import _build_gdd_index
+            idx = _build_gdd_index()
+            if idx.get("available"):
+                wb = meta["workbook"]
+                sh = meta["sheet"]
+                target_low = section.strip().lower()
+                matched_meta = None
+                for tm in idx["meta"]:
+                    if tm["workbook"] == wb and tm["sheet"] == sh:
+                        if target_low in tm["table_name"].lower() or tm["table_name"].lower() in target_low:
+                            matched_meta = tm
+                            break
+                if matched_meta:
+                    fp = idx["by_key"].get(f"{wb}|{sh}|{matched_meta['table_id']}")
+                    if fp:
+                        import json as _json
+                        from pathlib import Path as _Pp
+                        try:
+                            data = _json.loads(_Pp(fp).read_text(encoding="utf-8"))
+                            target = next(
+                                (tt for tt in data.get("tables", []) if tt.get("table_id") == matched_meta["table_id"]),
+                                None,
+                            )
+                            if target:
+                                tbl_md = f"## 📋 {target.get('table_name', '')}\n\n"
+                                desc = target.get("description") or ""
+                                if desc:
+                                    tbl_md += f"> {desc}\n\n"
+                                headers = [h.get("name", "") if isinstance(h, dict) else str(h) for h in target.get("headers", [])]
+                                if headers:
+                                    tbl_md += "| " + " | ".join(headers) + " |\n"
+                                    tbl_md += "| " + " | ".join("---" for _ in headers) + " |\n"
+                                    for row in target.get("rows", [])[:50]:
+                                        cells = []
+                                        for v in row:
+                                            if v is None:
+                                                cells.append("")
+                                            else:
+                                                s = str(v).replace("|", "\\|").replace("\n", " ")
+                                                cells.append(s[:120])
+                                        tbl_md += "| " + " | ".join(cells) + " |\n"
+                                    if len(target.get("rows", [])) > 50:
+                                        tbl_md += f"\n*... 외 {len(target['rows']) - 50}건 생략*\n"
+                                tbl_md += "\n---\n\n## 시트 본문 (참고)\n\n"
+                                content = tbl_md + content
+                                section_range = None  # 표를 prepend 했으므로 섹션 강조 무력화
+                        except Exception:
+                            pass  # JSON 손상 — 그냥 기본 동작
+        except Exception:
+            pass  # 인덱스 빌드 실패 — 기본 동작
+
     return {
         "path": normalized,
         "section": section,

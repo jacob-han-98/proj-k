@@ -744,11 +744,11 @@ function App() {
                     className={`prompt-card glass${p.compare_mode ? ' prompt-card-deepresearch' : ''}`}
                     onClick={() => {
                       setInput(p.prompt);
-                      // Deep Research 프리셋 — 비교 모드 자동 ON (사용자가 따로 토글 안 켜도 동작)
+                      // Google Deep Research 프리셋 — 비교 모드 자동 ON (사용자가 따로 토글 안 켜도 동작)
                       if (p.compare_mode) setCompareMode(true);
                       inputRef.current?.focus();
                     }}
-                    title={p.compare_mode ? `${p.prompt}\n\n[Deep Research 자동 ON — 내부 크롤링 + 인터넷 웹 검색]` : p.prompt}
+                    title={p.compare_mode ? `${p.prompt}\n\n[Google Deep Research 자동 ON — 내부 크롤링 + Gemini google_search 웹 검색]` : p.prompt}
                   >
                     {p.label}
                   </button>
@@ -788,8 +788,8 @@ function App() {
                       ) : (
                         <>
                           {msg.compareMode && (
-                            <div className="compare-mode-badge-row" title="이 답변은 Deep Research 모드 — 내부 크롤링 데이터 + 인터넷 웹 검색을 함께 활용해 생성되었습니다">
-                              <span className="compare-mode-badge">📚 Deep Research</span>
+                            <div className="compare-mode-badge-row" title="이 답변은 Google Deep Research 모드 — 내부 크롤링 데이터 + Gemini google_search grounding 으로 생성되었습니다">
+                              <span className="compare-mode-badge">✨ Google Deep Research</span>
                             </div>
                           )}
                           {msg.qaWarnings && msg.qaWarnings.length > 0 && (
@@ -888,14 +888,14 @@ function App() {
           </div>
           <label
             className={`compare-mode-toggle ${compareMode ? 'on' : ''}`}
-            title="Deep Research — 내부 크롤링 데이터(타게임 oracle KG·raw) + 인터넷 웹(Gemini google_search)을 함께 검색합니다. 답변이 풍부해지지만 느려질 수 있습니다."
+            title="Google Deep Research — 내부 크롤링 데이터(타게임 oracle KG·raw) + Gemini google_search grounding 으로 인터넷 웹을 함께 검색합니다. 답변이 풍부해지지만 느려질 수 있습니다."
           >
             <input
               type="checkbox"
               checked={compareMode}
               onChange={(e) => setCompareMode(e.target.checked)}
             />
-            <span className="compare-mode-toggle-label">📚 Deep Research</span>
+            <span className="compare-mode-toggle-label">✨ Google Deep Research</span>
           </label>
           {isCurrentLoading ? (
             <button className="stop-btn" onClick={handleStop} title="응답 중단">

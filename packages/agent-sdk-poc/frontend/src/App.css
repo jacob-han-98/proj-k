@@ -774,17 +774,17 @@
   color: #fbbf24;
 }
 
-/* 비교 모드 토글 (입력창 옆) */
+/* Google Deep Research 토글 (입력창 옆) */
 .compare-mode-toggle {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 10px;
+  padding: 5px 9px;
   border-radius: 10px;
   border: 1px solid color-mix(in srgb, currentColor 20%, transparent);
   cursor: pointer;
   user-select: none;
-  font-size: 0.82rem;
+  font-size: 0.74rem;
   transition: background 0.15s, border-color 0.15s;
 }
 .compare-mode-toggle:hover { border-color: #9333ea; }
@@ -806,7 +806,7 @@
   align-items: center;
   padding: 3px 10px;
   border-radius: 10px;
-  font-size: 0.74rem;
+  font-size: 0.7rem;
   font-weight: 600;
   background: color-mix(in srgb, #9333ea 18%, transparent);
   border: 1px solid color-mix(in srgb, #9333ea 45%, transparent);

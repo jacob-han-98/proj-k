@@ -42,10 +42,11 @@ def _load_kg() -> dict:
     return json.loads(KG_PATH.read_text(encoding="utf-8"))
 
 
-def _text_result(data: dict) -> dict:
+def _text_result(data: dict, max_chars: int = 32000) -> dict:
+    """JSON 직렬화 + 길이 제한. DataSheet list_game_tables 등 큰 응답을 위해 32KB 기본."""
     text = json.dumps(data, ensure_ascii=False, default=str)
-    if len(text) > 12000:
-        text = text[:12000] + "\n... (truncated)"
+    if len(text) > max_chars:
+        text = text[:max_chars] + "\n... (truncated)"
     return {"content": [{"type": "text", "text": text}]}
 
 
@@ -453,6 +454,298 @@ async def web_search(args: dict):
     })
 
 
+# ── DataSheet (게임 런타임 데이터) — game_data.py 동적 로드 ──────
+
+_GD_MODULE = None
+_GD_TABLE_SOURCE_CACHE: dict[str, str] = {}  # table_name → source_file (예: "MonsterClass" → "MonsterClass.xlsx")
+_DATASHEET_P4_PREFIX = "//main/ProjectK/Resource/design"
+
+
+def _load_game_data():
+    """packages/data-pipeline/src/game_data.py 를 importlib 로 로드 (qna-poc 동일 패턴).
+
+    네임스페이스 충돌 방지 + lazy load. 실패 시 None.
+    """
+    global _GD_MODULE
+    if _GD_MODULE is not None:
+        return _GD_MODULE
+    import importlib.util
+    gd_path = REPO_ROOT / "packages" / "data-pipeline" / "src" / "game_data.py"
+    if not gd_path.exists():
+        return None
+    spec = importlib.util.spec_from_file_location("gd_module", str(gd_path))
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    _GD_MODULE = mod
+    return mod
+
+
+def _gd_ready() -> tuple[bool, str]:
+    """DataSheet DB 사용 가능 여부. (ok, error_message)"""
+    mod = _load_game_data()
+    if mod is None:
+        return False, "data-pipeline 모듈 미발견 (packages/data-pipeline/src/game_data.py)"
+    if not mod.is_db_ready():
+        return False, f"DataSheet DB 미빌드 ({mod.get_db_path()}) — ingest_all 필요"
+    return True, ""
+
+
+def _ensure_source_cache():
+    """table_name → source_file 매핑 1회 빌드 (인용용)."""
+    if _GD_TABLE_SOURCE_CACHE:
+        return
+    ok, _ = _gd_ready()
+    if not ok:
+        return
+    mod = _load_game_data()
+    r = mod.execute_game_query({"action": "list_tables"}, mod.get_db_path())
+    # columns: ['table_name', 'source_file', 'rows', 'columns', 'cs']
+    for row in r.rows:
+        _GD_TABLE_SOURCE_CACHE[row[0]] = row[1]
+
+
+def _datasheet_citation(table_name: str) -> str:
+    """테이블명 → P4 경로 (출처 인용용). 미발견 시 빈 문자열."""
+    _ensure_source_cache()
+    src = _GD_TABLE_SOURCE_CACHE.get(table_name, "")
+    return f"{_DATASHEET_P4_PREFIX}/{src}" if src else ""
+
+
+def get_datasheet_schema_summary() -> str:
+    """system_prompt 주입용 schema 요약. 실패 시 빈 문자열."""
+    ok, _ = _gd_ready()
+    if not ok:
+        return ""
+    try:
+        mod = _load_game_data()
+        return mod.get_schema_summary(mod.get_db_path())
+    except Exception:
+        return ""
+
+
+# ── Tool 7: list_game_tables ─────────────────────────────────
+
+@tool(
+    name="list_game_tables",
+    description=(
+        "DataSheet (게임 런타임 데이터) 의 전체 테이블 목록을 반환한다. 약 187개 테이블.\n"
+        "각 테이블이 어느 xlsx 에서 왔는지(source_file), 행 수, 컬럼 수, 도메인(c=client/s=server/cs=both)을 알 수 있다.\n"
+        "수치/목록/ID 검색 류 질문(예: '레전더리 무기 목록', 'X 몬스터 HP', '아이템 ID 검색')에서\n"
+        "어떤 테이블을 query 할지 결정 전 호출. system_prompt 의 schema 요약에 이미 주요 정보가 있으면 생략 가능.\n"
+        "반환: {count, tables:[{name, source_file, rows, columns, domain}]}"
+    ),
+    input_schema={"type": "object", "properties": {}},
+)
+async def list_game_tables(args: dict):
+    ok, err = _gd_ready()
+    if not ok:
+        return _text_result({"status": "error", "error": err})
+    mod = _load_game_data()
+    r = mod.execute_game_query({"action": "list_tables"}, mod.get_db_path())
+    tables = [
+        {
+            "name": row[0],
+            "source_file": row[1],
+            "rows": row[2],
+            "columns": row[3],
+            "domain": row[4],
+        }
+        for row in r.rows
+    ]
+    return _text_result({"count": len(tables), "tables": tables})
+
+
+# ── Tool 8: describe_game_table ─────────────────────────────
+
+@tool(
+    name="describe_game_table",
+    description=(
+        "DataSheet 특정 테이블의 컬럼 정의를 조회. query_game_table 호출 전 정확한 컬럼명·타입·Enum 을 확인하라.\n"
+        "**컬럼명 추측 금지** — LLM 추측 컬럼명은 SQL 에러를 일으킨다 (예: 실측 케이스: Skill 테이블에 'TextkeyTitle' 컬럼은 없음).\n"
+        "반환: {table, source_file, column_count, columns:[{name, type, sql_type, domain, is_enum, enum_name}]}\n"
+        "is_enum=true 컬럼은 lookup_game_enum 으로 값 디코딩 가능."
+    ),
+    input_schema={
+        "type": "object",
+        "properties": {
+            "table": {"type": "string", "description": "테이블명 (예: 'MonsterClass', 'Skill', 'ItemEquipClass')"},
+        },
+        "required": ["table"],
+    },
+)
+async def describe_game_table(args: dict):
+    ok, err = _gd_ready()
+    if not ok:
+        return _text_result({"status": "error", "error": err})
+    table = (args.get("table") or "").strip()
+    if not table:
+        return _text_result({"status": "error", "error": "table required"})
+    mod = _load_game_data()
+    r = mod.execute_game_query({"action": "describe", "table": table}, mod.get_db_path())
+    if r.error:
+        return _text_result({"status": "error", "error": r.error})
+    cols = [
+        {
+            "name": row[0],
+            "type": row[1],
+            "sql_type": row[2],
+            "domain": row[3],
+            "is_enum": row[4],
+            "enum_name": row[5],
+        }
+        for row in r.rows
+    ]
+    return _text_result({
+        "table": table,
+        "source_file": _datasheet_citation(table),
+        "column_count": len(cols),
+        "columns": cols,
+    })
+
+
+# ── Tool 9: query_game_table ─────────────────────────────────
+
+@tool(
+    name="query_game_table",
+    description=(
+        "DataSheet 테이블에서 행을 조회한다. ID 직접 매칭, 부분일치(LIKE), 정렬, 페이지 크기 제한 지원.\n\n"
+        "**필수 — 컬럼 셀렉션**: 일부 테이블은 47개 이상의 wide 컬럼을 가진다. 답변에 필요한 컬럼만 columns 로 명시해 토큰을 절약하라. 생략 시 전체 컬럼 반환 (대부분의 경우 비효율).\n\n"
+        "**허용 연산자**: =, !=, <, >, <=, >=, LIKE, IN, IS NULL, IS NOT NULL (그 외는 거부됨)\n\n"
+        "**예시**:\n"
+        "  - ID 조회: table='Skill', columns=['Id','Name','Damage'], filters=[{column:'Id',op:'=',value:1001}]\n"
+        "  - 부분일치: table='MonsterClass', columns=['Id','TextkeyTitle','Keyward','Level','MaxHp'], filters=[{column:'Keyward',op:'LIKE',value:'%Boss%'}], limit=10\n"
+        "  - 정렬+상위: table='MonsterClass', columns=['Id','Level','MaxHp'], order_by=[{column:'MaxHp',direction:'DESC'}], limit=5\n\n"
+        "반환: {table, source_file, total_matched, execution_ms, columns, rows, formatted (마크다운 표 + 출처), sql}\n\n"
+        "**답변 인용 형식**: (출처: DataSheet / <테이블명> § Id=<n> 또는 행) — formatted 의 출처 줄을 그대로 사용 가능."
+    ),
+    input_schema={
+        "type": "object",
+        "properties": {
+            "table": {"type": "string", "description": "테이블명 (필수)"},
+            "columns": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "조회할 컬럼 목록. 생략 시 전체. wide 테이블은 반드시 명시.",
+            },
+            "filters": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "column": {"type": "string"},
+                        "op": {"type": "string"},
+                        "value": {},
+                    },
+                    "required": ["column", "op"],
+                },
+                "description": "필터 [{column, op, value}]. AND 결합. value 는 LIKE 연산자 사용 시 % 와일드카드 포함.",
+            },
+            "order_by": {
+                "type": "array",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "column": {"type": "string"},
+                        "direction": {"type": "string"},
+                    },
+                    "required": ["column"],
+                },
+                "description": "정렬 [{column, direction:'ASC'|'DESC'}]",
+            },
+            "limit": {
+                "type": "integer",
+                "description": "최대 반환 행 수 (기본 50, 최대 500)",
+            },
+        },
+        "required": ["table"],
+    },
+)
+async def query_game_table(args: dict):
+    ok, err = _gd_ready()
+    if not ok:
+        return _text_result({"status": "error", "error": err})
+    table = (args.get("table") or "").strip()
+    if not table:
+        return _text_result({"status": "error", "error": "table required"})
+
+    spec: dict = {"action": "query", "table": table}
+    if args.get("columns"):
+        spec["columns"] = args["columns"]
+    if args.get("filters"):
+        spec["filters"] = args["filters"]
+    if args.get("order_by"):
+        spec["order_by"] = args["order_by"]
+    if args.get("limit") is not None:
+        spec["limit"] = int(args["limit"])
+
+    mod = _load_game_data()
+    r = mod.execute_game_query(spec, mod.get_db_path())
+    if r.error:
+        return _text_result({
+            "status": "error",
+            "table": table,
+            "error": r.error,
+            "sql": r.sql[:300],
+            "hint": "describe_game_table 로 정확한 컬럼명을 먼저 확인하세요.",
+        })
+
+    formatted = mod.format_game_data_result(r, max_display=50)
+    citation = _datasheet_citation(table)
+    if citation:
+        formatted = formatted + f"\n\n**출처**: {citation} — 테이블 `{table}`"
+
+    return _text_result({
+        "table": table,
+        "source_file": citation,
+        "total_matched": r.total_matched,
+        "execution_ms": r.execution_ms,
+        "columns": r.columns,
+        "rows": r.rows[:50],
+        "row_truncated": len(r.rows) > 50,
+        "formatted": formatted,
+        "sql": r.sql[:400],
+    })
+
+
+# ── Tool 10: lookup_game_enum ────────────────────────────────
+
+@tool(
+    name="lookup_game_enum",
+    description=(
+        "DataSheet 의 Enum 값 디코딩. describe_game_table 결과에서 is_enum=true 컬럼을 본 뒤 사용.\n"
+        "반환: {enum, count, values:[{value, name, comment}]}\n"
+        "Enum 데이터가 미인제스트된 케이스가 있을 수 있음 — 0건이면 system_prompt 의 Enum 목록 참조."
+    ),
+    input_schema={
+        "type": "object",
+        "properties": {
+            "enum_name": {"type": "string", "description": "Enum 이름 (예: 'MonsterTypeEnum', 'SkillTypeEnum')"},
+        },
+        "required": ["enum_name"],
+    },
+)
+async def lookup_game_enum(args: dict):
+    ok, err = _gd_ready()
+    if not ok:
+        return _text_result({"status": "error", "error": err})
+    enum_name = (args.get("enum_name") or "").strip()
+    if not enum_name:
+        return _text_result({"status": "error", "error": "enum_name required"})
+    mod = _load_game_data()
+    r = mod.execute_game_query({"action": "lookup_enum", "enum_name": enum_name}, mod.get_db_path())
+    if r.error:
+        return _text_result({"status": "error", "error": r.error})
+    values = [
+        {
+            "value": row[0],
+            "name": row[1] if len(row) > 1 else "",
+            "comment": row[2] if len(row) > 2 else "",
+        }
+        for row in r.rows
+    ]
+    return _text_result({"enum": enum_name, "count": r.total_matched, "values": values})
+
+
 # ── MCP Server Factory ───────────────────────────────────────
 
 def create_projk_server():
@@ -466,5 +759,9 @@ def create_projk_server():
             compare_with_reference_games,
             search_external_game,
             web_search,
+            list_game_tables,
+            describe_game_table,
+            query_game_table,
+            lookup_game_enum,
         ],
     )

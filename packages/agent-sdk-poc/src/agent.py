@@ -11,7 +11,7 @@ from pathlib import Path
 
 from claude_agent_sdk import query, ClaudeAgentOptions
 
-from projk_tools import create_projk_server
+from projk_tools import create_projk_server, get_datasheet_schema_summary
 
 POC_DIR = Path(__file__).parent.parent.resolve()   # packages/agent-sdk-poc/
 
@@ -35,6 +35,11 @@ ALLOWED_TOOLS = [
     "mcp__projk__list_systems",
     "mcp__projk__find_related_systems",
     "mcp__projk__glossary_lookup",
+    # DataSheet (게임 런타임 데이터 — game_data SQLite)
+    "mcp__projk__list_game_tables",
+    "mcp__projk__describe_game_table",
+    "mcp__projk__query_game_table",
+    "mcp__projk__lookup_game_enum",
     # 비교 모드 — 호출 게이팅은 system_prompt 의 compare_mode 블록이 담당
     "mcp__projk__compare_with_reference_games",
     "mcp__projk__search_external_game",
@@ -170,6 +175,14 @@ def _make_options(
 
     resolved = _resolve_model(model)
     base_prompt = f"오늘 날짜: {date.today().isoformat()}"
+
+    # DataSheet 테이블 스키마 주입 (query_game_table 컬럼명 추측 방지)
+    # qna-poc 와 동일 패턴 — 187개 테이블 × 평균 30컬럼 + Enum 목록 = ~31KB.
+    # system_prompt 에 들어가므로 SDK 의 자동 캐싱 대상이 되어 비용 흡수됨.
+    ds_schema = get_datasheet_schema_summary()
+    if ds_schema:
+        base_prompt = base_prompt + "\n\n" + ds_schema
+
     if compare_mode:
         base_prompt = base_prompt + "\n\n" + COMPARE_MODE_PROMPT
     else:

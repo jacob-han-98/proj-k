@@ -25,6 +25,36 @@ PRESETS: list[dict] = [
     {"label": "7_System 시스템 목록", "prompt": "7_System 폴더에 어떤 시스템 기획서가 있는지 주요 카테고리(전투/성장/UI/사회/경제)별로 묶어서 알려줘.", "category": "overview"},
     {"label": "운영 공간 주요 문서", "prompt": "Confluence `운영` 공간에 어떤 정책/프로세스 문서가 있는지 목록과 한 줄 요약으로 정리해줘.", "category": "overview"},
 
+    # DataSheet — 게임 런타임 데이터 (Resource/design/*.xlsx → SQLite) 와 기획서 내 표 활용.
+    # 1) 직접 테이블 값 조회, 2) 기획서 + 데이터시트 cross-check, 3) GDD 내부 표 셀 값 인용.
+    {
+        "label": "📊 Boss 몬스터 HP 분포",
+        "prompt": (
+            "MonsterClass 데이터시트에서 Boss 류(Keyward 에 'Boss' 포함) 몬스터들의 "
+            "Id, TextkeyTitle, Keyward, Level, MaxHp 를 HP 내림차순으로 정리해줘. "
+            "이상치(예: HP 999999) 가 보이면 그것도 짚어줘."
+        ),
+        "category": "datasheet",
+    },
+    {
+        "label": "📊 스킬 분류 — 기획서 vs 데이터시트",
+        "prompt": (
+            "스킬 시스템 기획서가 평타/발동 액션/액티브 스킬을 어떻게 구분·정의하는지 정리하고, "
+            "실제 Skill 데이터시트의 SkillType 별 분포(개수)가 그 정의와 부합하는지 cross-check 해줘. "
+            "기획서에는 있는데 데이터에는 없거나, 그 반대 케이스가 있으면 명시."
+        ),
+        "category": "datasheet",
+    },
+    {
+        "label": "📋 HUD 요소 상세 표 (GDD 내부 표)",
+        "prompt": (
+            "PK_HUD 시스템 기획서의 'HUD_기본' 시트에 있는 'HUD 요소 상세 테이블' 에서 "
+            "분류가 'Button' 에 해당하는 요소들의 번호와 이름을 원문 표기 그대로 가져와줘. "
+            "출처는 시트명·표 제목까지 정확히 인용."
+        ),
+        "category": "datasheet",
+    },
+
     # Deep Research — 비교 모드 + 웹 검색 (Tavily) 활용. 클릭 시 "📚 비교" 토글 자동 ON.
     {
         "label": "🌐 검은사막 거점전 vs PK 월드 공성전",

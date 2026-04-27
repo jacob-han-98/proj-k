@@ -160,7 +160,7 @@
   border-color: var(--accent-primary);
 }
 
-/* Input Area */
+/* Input Area — 2단: textarea full width + 옵션 행 */
 .input-container {
   position: relative;
   margin: 0 auto 24px auto;
@@ -169,11 +169,22 @@
   border-radius: 16px;
   padding: 12px 16px;
   display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
+  gap: 8px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, var(--shadow-intensity));
   flex-shrink: 0;
   z-index: 10;
+}
+
+.input-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.input-controls .send-btn,
+.input-controls .stop-btn {
+  margin-left: auto;
 }
 
 .send-btn {
@@ -196,7 +207,7 @@
 
 .input-container input,
 .input-container textarea {
-  flex: 1;
+  width: 100%;
   background: transparent;
   border: none;
   color: var(--text-primary);
@@ -205,7 +216,7 @@
   font-family: inherit;
   resize: none;
   line-height: 1.5;
-  max-height: 120px;
+  max-height: 160px;
   overflow-y: auto;
 }
 

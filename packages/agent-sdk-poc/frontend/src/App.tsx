@@ -865,7 +865,7 @@ function App() {
           )}
         </div>
 
-        {/* Input Area */}
+        {/* Input Area — 2단 레이아웃: textarea full width / 옵션 행 */}
         <div className="input-container glass">
           <textarea
             ref={inputRef}
@@ -877,33 +877,35 @@ function App() {
             onInput={(e) => {
               const t = e.currentTarget;
               t.style.height = 'auto';
-              t.style.height = Math.min(t.scrollHeight, 120) + 'px';
+              t.style.height = Math.min(t.scrollHeight, 160) + 'px';
             }}
           />
-          <div className="model-selector">
-            <select value={model} onChange={(e) => setModel(e.target.value as 'opus' | 'sonnet')} title="Claude 모델 선택">
-              <option value="opus">Opus</option>
-              <option value="sonnet">Sonnet</option>
-            </select>
+          <div className="input-controls">
+            <div className="model-selector">
+              <select value={model} onChange={(e) => setModel(e.target.value as 'opus' | 'sonnet')} title="Claude 모델 선택">
+                <option value="opus">Opus</option>
+                <option value="sonnet">Sonnet</option>
+              </select>
+            </div>
+            <label
+              className={`compare-mode-toggle ${compareMode ? 'on' : ''}`}
+              title="Google Deep Research — 내부 크롤링 데이터(타게임 oracle KG·raw) + Gemini google_search grounding 으로 인터넷 웹을 함께 검색합니다. 답변이 풍부해지지만 느려질 수 있습니다."
+            >
+              <input
+                type="checkbox"
+                checked={compareMode}
+                onChange={(e) => setCompareMode(e.target.checked)}
+              />
+              <span className="compare-mode-toggle-label">✨ Google Deep Research</span>
+            </label>
+            {isCurrentLoading ? (
+              <button className="stop-btn" onClick={handleStop} title="응답 중단">
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><rect width="14" height="14" rx="2"/></svg>
+              </button>
+            ) : (
+              <button className="send-btn" onClick={() => handleSend()} disabled={!input.trim()}>↑</button>
+            )}
           </div>
-          <label
-            className={`compare-mode-toggle ${compareMode ? 'on' : ''}`}
-            title="Google Deep Research — 내부 크롤링 데이터(타게임 oracle KG·raw) + Gemini google_search grounding 으로 인터넷 웹을 함께 검색합니다. 답변이 풍부해지지만 느려질 수 있습니다."
-          >
-            <input
-              type="checkbox"
-              checked={compareMode}
-              onChange={(e) => setCompareMode(e.target.checked)}
-            />
-            <span className="compare-mode-toggle-label">✨ Google Deep Research</span>
-          </label>
-          {isCurrentLoading ? (
-            <button className="stop-btn" onClick={handleStop} title="응답 중단">
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor"><rect width="14" height="14" rx="2"/></svg>
-            </button>
-          ) : (
-            <button className="send-btn" onClick={() => handleSend()} disabled={!input.trim()}>↑</button>
-          )}
         </div>
       </main>
       {renderSourceViewPanel()}

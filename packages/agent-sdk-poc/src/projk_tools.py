@@ -511,6 +511,56 @@ def _datasheet_citation(table_name: str) -> str:
     return f"{_DATASHEET_P4_PREFIX}/{src}" if src else ""
 
 
+def _extract_gdd_section_path(content_md_path: Path, table_name: str) -> str:
+    """content.md 에서 table_name 등장 위치의 heading chain 을 추출.
+
+    예: '## ► HUD_기본\\n### ② 비 전투 시 HUD\\n#### HUD 요소 상세 테이블'
+        → "② 비 전투 시 HUD > HUD 요소 상세 테이블"
+    (level 1~2 는 시트 자체이므로 제외; level 3+ 만 chain)
+
+    실패 시 빈 문자열.
+    """
+    if not content_md_path.exists():
+        return ""
+    try:
+        text = content_md_path.read_text(encoding="utf-8", errors="replace")
+    except Exception:
+        return ""
+    lines = text.splitlines()
+    target_low = table_name.strip().lower()
+    if not target_low:
+        return ""
+    target_idx = -1
+    for i, line in enumerate(lines):
+        if target_low in line.lower():
+            target_idx = i
+            break
+    if target_idx < 0:
+        return ""
+
+    # 거슬러 올라가며 heading 누적 — 동일/상위 레벨일 때만 chain 에 포함
+    chain: list[tuple[int, str]] = []
+    cur_level = 99
+    for i in range(target_idx, -1, -1):
+        s = lines[i].rstrip()
+        if not s.startswith("#"):
+            continue
+        lvl = 0
+        for ch in s:
+            if ch == "#":
+                lvl += 1
+            else:
+                break
+        title = s[lvl:].strip()
+        if lvl < cur_level:
+            chain.append((lvl, title))
+            cur_level = lvl
+    chain.reverse()
+    # level 3 이상만 (level 1~2 는 시트명 / 시트 자체 marker — '# HUD_기본', '## ► HUD_기본')
+    filtered = [t for lv, t in chain if lv >= 3]
+    return " > ".join(filtered)
+
+
 def get_datasheet_schema_summary() -> str:
     """system_prompt 주입용 컴팩트 schema. 원본 get_schema_summary (~31KB) 의 다이어트
     버전 (~10KB). cold call 비용 절감 목적.
@@ -1049,17 +1099,27 @@ async def get_gdd_table(args: dict):
     if not target:
         return _text_result({"status": "error", "error": f"파일에 table_id={tid} 없음"})
 
-    citation = f"{wb}.xlsx / {sh} § {target.get('table_name', '')}"
+    table_name = target.get("table_name", "") or ""
+    # content.md (foundation_tables.json 와 같은 디렉토리) 에서 heading chain 추출
+    content_md_path = Path(path).parent / "content.md"
+    section_path = _extract_gdd_section_path(content_md_path, table_name)
+    if section_path:
+        # chain 의 마지막 요소가 보통 table_name 자체 — 중복 표기 자연스러움 유지
+        citation = f"{wb}.xlsx / {sh} § {section_path}"
+    else:
+        citation = f"{wb}.xlsx / {sh} § {table_name}"
+
     return _text_result({
         "workbook": wb,
         "sheet": sh,
         "table_id": tid,
-        "table_name": target.get("table_name", ""),
+        "table_name": table_name,
         "description": target.get("description", ""),
         "headers": target.get("headers", []),
         "rows": target.get("rows", []),
         "sample_queries": target.get("sample_queries", []),
         "notes": target.get("notes", ""),
+        "section_path": section_path,
         "citation": citation,
     })
 

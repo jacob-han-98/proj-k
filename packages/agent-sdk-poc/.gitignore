@@ -9,5 +9,9 @@ index/_build_summaries.log.json
 # pair comparison 실행 결과 (세션별, 커밋 금지)
 tests/compare_out/
 
+# A/B websearch 산출물 + UI 검증 스크린샷 — 실험 결과, 재생성 가능
+tests/ab_out/
+tests/shots/
+
 # KG는 심볼릭 링크로 관리 — 로컬 환경별로 생성
 # index/knowledge_graph.json 은 symlink, 리포지토리 밖에 실데이터 있으므로 건너뜀

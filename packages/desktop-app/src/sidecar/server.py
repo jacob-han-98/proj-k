@@ -715,8 +715,9 @@ async def review_stream(req: ReviewRequest):
 
 
 # ---------- /suggest_edits (Phase 4-3.5: review 결과 기반 변경안 생성) ----------
-# chrome-extension/background.js 의 SUGGEST_EDITS 액션과 동일 payload/응답.
-# stream 아님 — 단일 JSON. agent 가 LLM 한 번 돌리고 changes 배열을 그대로 반환.
+# WSL agent (agent-sdk-poc) 가 NDJSON 으로 status/token/result 이벤트 흘림 →
+# /review_stream 과 동일한 proxy 패턴. result.data.changes 에 [{id, section,
+# description, before, after}] 들어옴.
 
 class SuggestEditsRequest(BaseModel):
     title: str
@@ -729,21 +730,31 @@ class SuggestEditsRequest(BaseModel):
     model_config = {"populate_by_name": True}
 
 
+async def _proxy_suggest_edits_stream(payload: dict[str, Any]) -> AsyncIterator[str]:
+    base = _agent_url()
+    timeout = httpx.Timeout(connect=10.0, read=None, write=10.0, pool=10.0)
+    try:
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            async with client.stream("POST", f"{base}/suggest_edits", json=payload) as r:
+                if r.status_code != 200:
+                    err = await r.aread()
+                    yield json.dumps(
+                        {"type": "error", "payload": f"upstream {r.status_code}: {err.decode('utf-8', 'ignore')[:200]}"}
+                    ) + "\n"
+                    return
+                async for line in r.aiter_lines():
+                    if line.strip():
+                        yield line + "\n"
+    except httpx.HTTPError as e:
+        yield json.dumps({"type": "error", "payload": f"upstream 연결 실패: {e!s}"}) + "\n"
+
+
 @app.post("/suggest_edits")
 async def suggest_edits(req: SuggestEditsRequest):
     base = _agent_url()
     if not base:
-        raise HTTPException(status_code=503, detail="agent 백엔드 URL 미설정")
+        async def stub() -> AsyncIterator[str]:
+            yield json.dumps({"type": "error", "payload": "agent 백엔드 URL 미설정 — SettingsModal 에서 설정"}) + "\n"
+        return StreamingResponse(stub(), media_type="application/x-ndjson")
     payload = req.model_dump(exclude_none=True, by_alias=True)
-    timeout = httpx.Timeout(connect=10.0, read=120.0, write=10.0, pool=10.0)
-    try:
-        async with httpx.AsyncClient(timeout=timeout) as client:
-            r = await client.post(f"{base}/suggest_edits", json=payload)
-            if r.status_code != 200:
-                raise HTTPException(
-                    status_code=502,
-                    detail=f"upstream {r.status_code}: {r.text[:200]}",
-                )
-            return r.json()
-    except httpx.HTTPError as e:
-        raise HTTPException(status_code=502, detail=f"upstream 연결 실패: {e!s}")
+    return StreamingResponse(_proxy_suggest_edits_stream(payload), media_type="application/x-ndjson")

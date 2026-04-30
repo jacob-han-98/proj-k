@@ -30,11 +30,23 @@ interface Props {
   data: ReviewData | null;
   streaming: boolean;
   error?: string;
+  // Phase 4-3.5+: WSL agent 의 token 이벤트 누적 — streaming 중 가시화. status 는
+  // {type:"status", message:"📨 분석 중..."} 같은 짧은 진행 라벨.
+  streamBuffer?: string;
+  status?: string;
   // Phase 4-3.5: "✏️ 원본 수정" 클릭. data 가 있고 streaming/error 둘 다 false 일 때만 노출.
   onFixRequest?: () => void;
 }
 
-export function ReviewCard({ title, data, streaming, error, onFixRequest }: Props) {
+export function ReviewCard({
+  title,
+  data,
+  streaming,
+  error,
+  streamBuffer,
+  status,
+  onFixRequest,
+}: Props) {
   if (error) {
     return (
       <div className="review-card error" data-testid="review-card">
@@ -48,7 +60,7 @@ export function ReviewCard({ title, data, streaming, error, onFixRequest }: Prop
     return (
       <div className="review-card" data-testid="review-card">
         <div className="review-card-header">📋 {title}</div>
-        <div className="review-streaming">리뷰 생성 중<span className="dots" /></div>
+        <StreamingIndicator status={status} buffer={streamBuffer} />
       </div>
     );
   }
@@ -112,7 +124,7 @@ export function ReviewCard({ title, data, streaming, error, onFixRequest }: Prop
         </div>
       )}
 
-      {streaming && <div className="review-streaming">계속 생성 중<span className="dots" /></div>}
+      {streaming && <StreamingIndicator status={status} buffer={streamBuffer} />}
 
       {!streaming && !error && onFixRequest && hasActionable(data) && (
         <div className="review-cta">
@@ -128,6 +140,23 @@ function hasActionable(data: ReviewData): boolean {
     (data.issues?.length ?? 0) > 0 ||
     (data.verifications?.length ?? 0) > 0 ||
     (data.suggestions?.length ?? 0) > 0
+  );
+}
+
+// 스트리밍 가시화 — 상단에 status 라벨 + dots, 하단에 token 누적 raw 텍스트의 끝 ~280자
+// 만 monospace 로. JSON 이라 시각적으론 어수선하지만 "진짜 흘러오고 있다" 가 보여야
+// 사용자가 멈춘 게 아닌 줄 안다 (사용자 요청 — "기능이 동작하는 것을 알 수 있어").
+export function StreamingIndicator({ status, buffer }: { status?: string; buffer?: string }) {
+  const tail = buffer ? buffer.slice(-280) : '';
+  const charCount = buffer?.length ?? 0;
+  return (
+    <div className="review-stream-area">
+      <div className="review-streaming">
+        {status ?? '리뷰 생성 중'}<span className="dots" />
+        {charCount > 0 && <span className="review-tok-count"> · {charCount}자</span>}
+      </div>
+      {tail && <pre className="review-stream-tail">{tail}</pre>}
+    </div>
   );
 }
 

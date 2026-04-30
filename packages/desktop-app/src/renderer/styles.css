@@ -666,6 +666,27 @@ html, body, #root { height: 100%; margin: 0; padding: 0; background: var(--bg); 
   75% { content: '...'; }
   100% { content: ''; }
 }
+.review-tok-count { color: var(--text-dim); }
+.review-stream-area {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.review-stream-tail {
+  margin: 0;
+  padding: 6px 8px;
+  font-size: 10.5px;
+  line-height: 1.45;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-dim);
+  max-height: 160px;
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
 
 /* ReviewCard 의 "원본 수정" CTA */
 .review-cta {

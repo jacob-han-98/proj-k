@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 // (useRef 이미 import. prev threadId tracking 위해 사용.)
-import { askStream, reviewStream, searchDocs, suggestEdits, type ChangeItem } from '../api';
+import { askStream, reviewStream, searchDocs, suggestEditsStream, type ChangeItem } from '../api';
 import { annotateCitedHits } from '../citations';
 import type { SearchHit, ThreadMessage } from '../../shared/types';
 import { ReviewCard, type ReviewData } from './ReviewCard';
@@ -14,6 +14,9 @@ interface ReviewState {
   // Phase 4-3.5: "원본 수정" 시 그대로 다시 보내야 하므로 review 발동 시점의 본문을
   // 같이 들고 있는다. CenterPane 의 webview executeJavaScript 결과가 여기로.
   originalText: string;
+  // Phase 4-3.5+: WSL agent 의 token 이벤트 누적. streaming 중 가시화용.
+  streamBuffer?: string;
+  status?: string;
 }
 
 interface Message {
@@ -29,7 +32,54 @@ interface Message {
     items: ChangeItem[] | null;
     streaming: boolean;
     error?: string;
+    streamBuffer?: string;
+    status?: string;
   };
+}
+
+// WSL agent 가 NDJSON 으로 흘리는 이벤트의 필드를 defensive 하게 추출. WSL 은
+// {type, message/data}, 기존 chrome-extension/스텁은 {type, payload} — 둘 다 허용.
+function readStatus(e: { [k: string]: unknown }): string | null {
+  const v = e.message ?? e.payload;
+  return typeof v === 'string' ? v : null;
+}
+function readToken(e: { [k: string]: unknown }): string | null {
+  const v = e.token ?? e.payload ?? e.text ?? e.delta;
+  return typeof v === 'string' ? v : null;
+}
+function readError(e: { [k: string]: unknown }): string | null {
+  const v = e.error ?? e.message ?? e.payload;
+  return typeof v === 'string' ? v : null;
+}
+function parseReviewResult(e: { [k: string]: unknown }): ReviewData | null {
+  // WSL: {type:"result", data:{review: <JSON string>, model, usage}}
+  // legacy/stub: {type:"result", payload: <ReviewData object>}
+  const data = e.data as { review?: unknown } | undefined;
+  if (data && typeof data.review === 'string') {
+    try { return JSON.parse(data.review) as ReviewData; } catch { /* fall through */ }
+  }
+  if (data && typeof data === 'object' && !('review' in data) && hasReviewShape(data)) {
+    return data as ReviewData;
+  }
+  if (e.payload && typeof e.payload === 'object') {
+    return e.payload as ReviewData;
+  }
+  return null;
+}
+function parseChangesResult(e: { [k: string]: unknown }): ChangeItem[] | null {
+  // WSL: {type:"result", data:{changes:[...], ...}}
+  // legacy: {type:"result", payload:{changes:[...]}} or {type:"result", payload:[...]}
+  const data = e.data as { changes?: unknown } | undefined;
+  if (data && Array.isArray(data.changes)) return data.changes as ChangeItem[];
+  const payload = e.payload as { changes?: unknown } | unknown[] | undefined;
+  if (Array.isArray(payload)) return payload as ChangeItem[];
+  if (payload && typeof payload === 'object' && Array.isArray((payload as { changes?: unknown }).changes)) {
+    return (payload as { changes: ChangeItem[] }).changes;
+  }
+  return null;
+}
+function hasReviewShape(o: object): boolean {
+  return 'score' in o || 'issues' in o || 'suggestions' in o || 'verifications' in o;
 }
 
 // Phase 4-2: Confluence webview body 리뷰 트리거. App 이 CenterPane 의 버튼
@@ -164,15 +214,33 @@ export function ChatPanel({
           { title: reviewTrigger.title, text: reviewTrigger.text },
           (event) => {
             if (cancelled) return;
-            const e = event as { type: string; payload: unknown };
-            if (e.type === 'result' && e.payload && typeof e.payload === 'object') {
-              updateReview({ data: e.payload as ReviewData, streaming: false });
-            } else if (e.type === 'error' && typeof e.payload === 'string') {
-              updateReview({ error: e.payload, streaming: false });
+            const e = event as unknown as { type: string; [k: string]: unknown };
+            if (e.type === 'status') {
+              const s = readStatus(e);
+              if (s) updateReview({ status: s });
+            } else if (e.type === 'token') {
+              const tok = readToken(e);
+              if (tok) {
+                setMessages((m) => {
+                  const copy = [...m];
+                  const last = copy[copy.length - 1];
+                  if (last.review) {
+                    copy[copy.length - 1] = {
+                      ...last,
+                      review: { ...last.review, streamBuffer: (last.review.streamBuffer ?? '') + tok },
+                    };
+                  }
+                  return copy;
+                });
+              }
+            } else if (e.type === 'result') {
+              const data = parseReviewResult(e);
+              if (data) updateReview({ data, streaming: false });
+              else updateReview({ error: 'result 파싱 실패 — data.review 또는 payload 없음', streaming: false });
+            } else if (e.type === 'error') {
+              const msg = readError(e) ?? '알 수 없는 오류';
+              updateReview({ error: msg, streaming: false });
             }
-            // type 'status' / 'token' 은 카드의 streaming indicator 가 이미 진행 중을
-            // 표현하므로 별도 처리 안 함. token 누적해 partial JSON 파싱하는 정교한
-            // 흐름은 4-4 단계로 미룸 (불완전 JSON parser + 카드 in-place merge 필요).
           },
         );
       } catch (e) {
@@ -231,33 +299,54 @@ export function ChatPanel({
         changes: { items: null, streaming: true },
       },
     ]);
-    try {
-      const res = await suggestEdits({
-        title: review.title,
-        text: review.originalText,
-        instruction,
-        maxChanges: items.length,
-      });
+    const updateChanges = (next: Partial<NonNullable<Message['changes']>>) =>
       setMessages((m) => {
         const copy = [...m];
-        copy[copy.length - 1] = {
-          role: 'assistant',
-          content: '',
-          changes: { items: res.changes ?? [], streaming: false },
-        };
+        const last = copy[copy.length - 1];
+        if (last.changes) copy[copy.length - 1] = { ...last, changes: { ...last.changes, ...next } };
         return copy;
       });
+    try {
+      await suggestEditsStream(
+        {
+          title: review.title,
+          text: review.originalText,
+          instruction,
+          maxChanges: items.length,
+        },
+        (event) => {
+          const e = event as unknown as { type: string; [k: string]: unknown };
+          if (e.type === 'status') {
+            const s = readStatus(e);
+            if (s) updateChanges({ status: s });
+          } else if (e.type === 'token') {
+            const tok = readToken(e);
+            if (tok) {
+              setMessages((m) => {
+                const copy = [...m];
+                const last = copy[copy.length - 1];
+                if (last.changes) {
+                  copy[copy.length - 1] = {
+                    ...last,
+                    changes: { ...last.changes, streamBuffer: (last.changes.streamBuffer ?? '') + tok },
+                  };
+                }
+                return copy;
+              });
+            }
+          } else if (e.type === 'result') {
+            const items = parseChangesResult(e);
+            if (items) updateChanges({ items, streaming: false });
+            else updateChanges({ error: 'result 파싱 실패 — data.changes 또는 payload 없음', streaming: false });
+          } else if (e.type === 'error') {
+            const msg = readError(e) ?? '알 수 없는 오류';
+            updateChanges({ error: msg, streaming: false });
+          }
+        },
+      );
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      setMessages((m) => {
-        const copy = [...m];
-        copy[copy.length - 1] = {
-          role: 'assistant',
-          content: '',
-          changes: { items: null, streaming: false, error: msg },
-        };
-        return copy;
-      });
+      updateChanges({ error: msg, streaming: false });
     } finally {
       setBusy(false);
     }
@@ -484,6 +573,8 @@ export function ChatPanel({
                 data={rv.data}
                 streaming={rv.streaming}
                 error={rv.error}
+                streamBuffer={rv.streamBuffer}
+                status={rv.status}
                 onFixRequest={() => void startFix(rv)}
               />
             );
@@ -495,6 +586,8 @@ export function ChatPanel({
                 changes={m.changes.items}
                 streaming={m.changes.streaming}
                 error={m.changes.error}
+                streamBuffer={m.changes.streamBuffer}
+                status={m.changes.status}
                 // 4-4: onApply 활성화 시 Confluence REST PUT.
               />
             );

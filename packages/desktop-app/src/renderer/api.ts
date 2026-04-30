@@ -57,9 +57,9 @@ export async function reviewStream(
   await readNdjson(res, onLine);
 }
 
-// Phase 4-3.5: review 결과 + 사용자 instruction → 변경안 (changes 배열) 단일 응답.
-// chrome-extension SUGGEST_EDITS 와 동일 payload / 응답 shape — agent 가 그 핸들러를
-// 그대로 노출하면 호환.
+// Phase 4-3.5: review 결과 + 사용자 instruction → 변경안 (changes 배열).
+// WSL agent (agent-sdk-poc) 가 NDJSON 스트림으로 status/token/result 흘림 — review 와
+// 동일한 패턴. result.data.changes 에 [{id, section, description, before, after}].
 export interface ChangeItem {
   id: string;
   description?: string;
@@ -68,25 +68,24 @@ export interface ChangeItem {
   after: string;
 }
 
-export async function suggestEdits(payload: {
-  title: string;
-  text: string;
-  instruction: string;
-  maxChanges?: number;
-  html?: string;
-  model?: string;
-}): Promise<{ changes: ChangeItem[] }> {
+export async function suggestEditsStream(
+  payload: {
+    title: string;
+    text: string;
+    instruction: string;
+    maxChanges?: number;
+    html?: string;
+    model?: string;
+  },
+  onLine: (event: { type: string; payload: unknown }) => void,
+): Promise<void> {
   const port = await ensurePort();
   const res = await fetch(`http://127.0.0.1:${port}/suggest_edits`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
   });
-  if (!res.ok) {
-    const detail = await res.text().catch(() => '');
-    throw new Error(`suggest_edits HTTP ${res.status}: ${detail.slice(0, 200)}`);
-  }
-  return (await res.json()) as { changes: ChangeItem[] };
+  await readNdjson(res, onLine);
 }
 
 async function readNdjson(

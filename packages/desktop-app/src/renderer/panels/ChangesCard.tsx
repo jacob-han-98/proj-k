@@ -4,16 +4,26 @@
 // (Confluence REST PUT) 가 이 카드의 changes 를 그대로 소비하기만 하면 된다.
 
 import type { ChangeItem } from '../api';
+import { StreamingIndicator } from './ReviewCard';
 
 interface Props {
   changes: ChangeItem[] | null;
   streaming: boolean;
   error?: string;
+  streamBuffer?: string;
+  status?: string;
   // 4-4: 적용 버튼이 눌리면 호출. 지금은 stub — App 이 받아 PUT.
   onApply?: (changes: ChangeItem[]) => void;
 }
 
-export function ChangesCard({ changes, streaming, error, onApply }: Props) {
+export function ChangesCard({
+  changes,
+  streaming,
+  error,
+  streamBuffer,
+  status,
+  onApply,
+}: Props) {
   if (error) {
     return (
       <div className="changes-card error" data-testid="changes-card">
@@ -27,7 +37,7 @@ export function ChangesCard({ changes, streaming, error, onApply }: Props) {
     return (
       <div className="changes-card" data-testid="changes-card">
         <div className="changes-card-header">✏️ 변경안</div>
-        <div className="review-streaming">수정안 생성 중<span className="dots" /></div>
+        <StreamingIndicator status={status ?? '수정안 생성 중'} buffer={streamBuffer} />
       </div>
     );
   }

@@ -673,3 +673,77 @@ async def ask_stream(req: AskRequest):
     base = _agent_url()
     gen = _proxy_ask_stream(req.question) if base else _stream_stub(req.question)
     return StreamingResponse(gen, media_type="application/x-ndjson")
+
+
+# ---------- /review_stream (Phase 4-2: Confluence webview body → agent → stream) ----------
+
+class ReviewRequest(BaseModel):
+    title: str
+    text: str
+    model: str | None = None
+    review_instruction: str | None = None
+
+
+async def _proxy_review_stream(payload: dict[str, Any]) -> AsyncIterator[str]:
+    base = _agent_url()
+    timeout = httpx.Timeout(connect=10.0, read=None, write=10.0, pool=10.0)
+    try:
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            async with client.stream("POST", f"{base}/review_stream", json=payload) as r:
+                if r.status_code != 200:
+                    err = await r.aread()
+                    yield json.dumps(
+                        {"type": "error", "payload": f"upstream {r.status_code}: {err.decode('utf-8', 'ignore')[:200]}"}
+                    ) + "\n"
+                    return
+                async for line in r.aiter_lines():
+                    if line.strip():
+                        yield line + "\n"
+    except httpx.HTTPError as e:
+        yield json.dumps({"type": "error", "payload": f"upstream 연결 실패: {e!s}"}) + "\n"
+
+
+@app.post("/review_stream")
+async def review_stream(req: ReviewRequest):
+    base = _agent_url()
+    if not base:
+        async def stub() -> AsyncIterator[str]:
+            yield json.dumps({"type": "error", "payload": "agent 백엔드 URL 미설정 — SettingsModal 에서 설정"}) + "\n"
+        return StreamingResponse(stub(), media_type="application/x-ndjson")
+    payload = req.model_dump(exclude_none=True)
+    return StreamingResponse(_proxy_review_stream(payload), media_type="application/x-ndjson")
+
+
+# ---------- /suggest_edits (Phase 4-3.5: review 결과 기반 변경안 생성) ----------
+# chrome-extension/background.js 의 SUGGEST_EDITS 액션과 동일 payload/응답.
+# stream 아님 — 단일 JSON. agent 가 LLM 한 번 돌리고 changes 배열을 그대로 반환.
+
+class SuggestEditsRequest(BaseModel):
+    title: str
+    text: str
+    instruction: str
+    max_changes: int | None = Field(default=None, alias="maxChanges")
+    html: str | None = None
+    model: str | None = None
+
+    model_config = {"populate_by_name": True}
+
+
+@app.post("/suggest_edits")
+async def suggest_edits(req: SuggestEditsRequest):
+    base = _agent_url()
+    if not base:
+        raise HTTPException(status_code=503, detail="agent 백엔드 URL 미설정")
+    payload = req.model_dump(exclude_none=True, by_alias=True)
+    timeout = httpx.Timeout(connect=10.0, read=120.0, write=10.0, pool=10.0)
+    try:
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            r = await client.post(f"{base}/suggest_edits", json=payload)
+            if r.status_code != 200:
+                raise HTTPException(
+                    status_code=502,
+                    detail=f"upstream {r.status_code}: {r.text[:200]}",
+                )
+            return r.json()
+    except httpx.HTTPError as e:
+        raise HTTPException(status_code=502, detail=f"upstream 연결 실패: {e!s}")

@@ -38,6 +38,61 @@ export async function askStream(
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ question }),
   });
+  await readNdjson(res, onLine);
+}
+
+// Phase 4-2: Confluence webview body → /review_stream → NDJSON. payload shape는
+// chrome-extension/sidebar 와 동일 (title/text/model/review_instruction) 라서
+// upstream agent 의 /review_stream 가 그대로 동작한다.
+export async function reviewStream(
+  payload: { title: string; text: string; model?: string; review_instruction?: string },
+  onLine: (event: { type: string; payload: unknown }) => void,
+): Promise<void> {
+  const port = await ensurePort();
+  const res = await fetch(`http://127.0.0.1:${port}/review_stream`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  await readNdjson(res, onLine);
+}
+
+// Phase 4-3.5: review 결과 + 사용자 instruction → 변경안 (changes 배열) 단일 응답.
+// chrome-extension SUGGEST_EDITS 와 동일 payload / 응답 shape — agent 가 그 핸들러를
+// 그대로 노출하면 호환.
+export interface ChangeItem {
+  id: string;
+  description?: string;
+  section?: string;
+  before: string;
+  after: string;
+}
+
+export async function suggestEdits(payload: {
+  title: string;
+  text: string;
+  instruction: string;
+  maxChanges?: number;
+  html?: string;
+  model?: string;
+}): Promise<{ changes: ChangeItem[] }> {
+  const port = await ensurePort();
+  const res = await fetch(`http://127.0.0.1:${port}/suggest_edits`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '');
+    throw new Error(`suggest_edits HTTP ${res.status}: ${detail.slice(0, 200)}`);
+  }
+  return (await res.json()) as { changes: ChangeItem[] };
+}
+
+async function readNdjson(
+  res: Response,
+  onLine: (event: { type: string; payload: unknown }) => void,
+): Promise<void> {
   if (!res.body) throw new Error('no body');
   const reader = res.body.getReader();
   const decoder = new TextDecoder();

@@ -3,7 +3,7 @@ import type { SearchHit, SidecarStatus, ThreadBundle, TreeNode } from '../shared
 import { TreeSidebar } from './panels/TreeSidebar';
 import { ThreadList } from './panels/ThreadList';
 import { CenterPane } from './panels/CenterPane';
-import { ChatPanel } from './panels/ChatPanel';
+import { ChatPanel, type ReviewTrigger } from './panels/ChatPanel';
 import { SettingsModal } from './panels/SettingsModal';
 import { UpdateToast } from './panels/UpdateToast';
 import { UpdateIndicator } from './panels/UpdateIndicator';
@@ -19,6 +19,9 @@ export function App() {
   const [threadBundle, setThreadBundle] = useState<ThreadBundle | null>(null);
   const [threadListKey, setThreadListKey] = useState(0); // refresh trigger
   const [sheetMappings, setSheetMappings] = useState<Record<string, string>>({});
+  // Phase 4-2: CenterPane 의 "리뷰" 버튼 → ChatPanel 의 review stream 으로 dispatch.
+  // id 는 같은 페이지 재요청도 useEffect 재발동시키는 dedupe key.
+  const [reviewTrigger, setReviewTrigger] = useState<ReviewTrigger | null>(null);
 
   // 부팅 시 settings 의 sheetMappings load.
   useEffect(() => {
@@ -287,6 +290,7 @@ export function App() {
         onPromptCreds={() => setShowCreds(true)}
         sheetMappings={sheetMappings}
         onUpsertSheetMapping={onUpsertSheetMapping}
+        onRequestReview={(title, text) => setReviewTrigger({ id: Date.now(), title, text })}
       />
 
       <ChatPanel
@@ -294,6 +298,8 @@ export function App() {
         threadId={selectedThreadId}
         initialMessages={threadBundle?.messages ?? []}
         initialDocs={threadBundle?.docs ?? []}
+        reviewTrigger={reviewTrigger}
+        onReviewConsumed={() => setReviewTrigger(null)}
         onThreadCreated={(id) => {
           setSelectedThreadId(id);
           setThreadListKey((k) => k + 1);

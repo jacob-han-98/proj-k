@@ -1,12 +1,45 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 // (useRef 이미 import. prev threadId tracking 위해 사용.)
-import { askStream, searchDocs } from '../api';
+import { askStream, reviewStream, searchDocs, suggestEdits, type ChangeItem } from '../api';
 import { annotateCitedHits } from '../citations';
 import type { SearchHit, ThreadMessage } from '../../shared/types';
+import { ReviewCard, type ReviewData } from './ReviewCard';
+import { ChangesCard } from './ChangesCard';
+
+interface ReviewState {
+  title: string;
+  data: ReviewData | null;
+  streaming: boolean;
+  error?: string;
+  // Phase 4-3.5: "원본 수정" 시 그대로 다시 보내야 하므로 review 발동 시점의 본문을
+  // 같이 들고 있는다. CenterPane 의 webview executeJavaScript 결과가 여기로.
+  originalText: string;
+}
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
+  // Phase 4-3: assistant 메시지가 review 응답이면 content 대신 이 필드를 채워 카드로 렌더.
+  // 영속(thread DB) 안 함 — 리뷰는 채팅 turn 이 아니라 ad-hoc 액션 결과라 그 thread 의
+  // 검색-답변 연속성을 깨면 안 됨. 부팅 후엔 카드 사라지고 user 메시지("📋 리뷰 요청: ...")
+  // 만 history 에 남는 게 의도된 동작.
+  review?: ReviewState;
+  // Phase 4-3.5: review 의 "원본 수정" 클릭 → 새 assistant 메시지에 changes 필드.
+  changes?: {
+    items: ChangeItem[] | null;
+    streaming: boolean;
+    error?: string;
+  };
+}
+
+// Phase 4-2: Confluence webview body 리뷰 트리거. App 이 CenterPane 의 버튼
+// 클릭으로부터 받아서 ChatPanel 로 내려보내고, 한 번 처리되면 onReviewConsumed
+// 로 App 의 trigger state 를 비운다. id 는 같은 페이지를 다시 리뷰 요청해도
+// useEffect 가 다시 발동되도록 dedupe key. body 추출은 CenterPane 책임.
+export interface ReviewTrigger {
+  id: number;
+  title: string;
+  text: string;
 }
 
 interface Props {
@@ -18,6 +51,8 @@ interface Props {
   onThreadCreated: (id: string) => void;
   onMessagesChanged: () => void; // ThreadList refresh 트리거
   onOpenDoc?: (doc: { doc_id: string; doc_type: 'xlsx' | 'confluence'; doc_title: string | null }) => void;
+  reviewTrigger?: ReviewTrigger | null;
+  onReviewConsumed?: () => void;
 }
 
 function genMsgId(): string {
@@ -40,6 +75,8 @@ export function ChatPanel({
   onThreadCreated,
   onMessagesChanged,
   onOpenDoc,
+  reviewTrigger,
+  onReviewConsumed,
 }: Props) {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
@@ -86,12 +123,145 @@ export function ChatPanel({
     el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
   }, [input]);
 
+  // Phase 4-2: reviewTrigger 가 새로 들어오면 1회 리뷰 stream 실행. busy 면 무시
+  // (사용자가 다른 stream 진행 중에 리뷰 버튼 다시 누른 케이스). 처리 끝나면
+  // onReviewConsumed 로 trigger 비움 → 같은 페이지 재요청 시 새 id 로 재발동.
+  // 4-3 에서 result 의 JSON 파싱해 review-card 컴포넌트로 swap 예정.
+  useEffect(() => {
+    if (!reviewTrigger) return;
+    if (busy) {
+      onReviewConsumed?.();
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      setBusy(true);
+      setMessages((m) => [
+        ...m,
+        { role: 'user', content: `📋 리뷰 요청: ${reviewTrigger.title}` },
+        {
+          role: 'assistant',
+          content: '',
+          review: {
+            title: reviewTrigger.title,
+            data: null,
+            streaming: true,
+            originalText: reviewTrigger.text,
+          },
+        },
+      ]);
+      const updateReview = (next: Partial<NonNullable<Message['review']>>) =>
+        setMessages((m) => {
+          const copy = [...m];
+          const last = copy[copy.length - 1];
+          if (last.review) {
+            copy[copy.length - 1] = { ...last, review: { ...last.review, ...next } };
+          }
+          return copy;
+        });
+      try {
+        await reviewStream(
+          { title: reviewTrigger.title, text: reviewTrigger.text },
+          (event) => {
+            if (cancelled) return;
+            const e = event as { type: string; payload: unknown };
+            if (e.type === 'result' && e.payload && typeof e.payload === 'object') {
+              updateReview({ data: e.payload as ReviewData, streaming: false });
+            } else if (e.type === 'error' && typeof e.payload === 'string') {
+              updateReview({ error: e.payload, streaming: false });
+            }
+            // type 'status' / 'token' 은 카드의 streaming indicator 가 이미 진행 중을
+            // 표현하므로 별도 처리 안 함. token 누적해 partial JSON 파싱하는 정교한
+            // 흐름은 4-4 단계로 미룸 (불완전 JSON parser + 카드 in-place merge 필요).
+          },
+        );
+      } catch (e) {
+        if (cancelled) return;
+        const msg = e instanceof Error ? e.message : String(e);
+        updateReview({ error: msg, streaming: false });
+      } finally {
+        if (!cancelled) {
+          setBusy(false);
+          onReviewConsumed?.();
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // reviewTrigger.id 만 의존 — title/text 가 같은 instance 안에서 mutation 될 일은 없음.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reviewTrigger?.id]);
+
   // hits 와 마지막 assistant 메시지 내용으로부터 cited 상태 derive.
   const annotatedHits = useMemo(() => {
     const lastAssistant = [...messages].reverse().find((m) => m.role === 'assistant');
     if (!lastAssistant) return hits.map((h) => ({ ...h, cited: false }));
     return annotateCitedHits(lastAssistant.content, hits);
   }, [hits, messages]);
+
+  // Phase 4-3.5: review 카드의 "원본 수정" 클릭 → 변경안(changes) 생성. busy 면 무시.
+  // 항목별 deselect UI 가 아직 없어서 issues/verifications/suggestions 전부를 instruction
+  // 으로 묶어 보냄. 사용자가 일부만 반영하고 싶으면 4-X 의 per-item 토글 도입 후 가능.
+  const startFix = async (review: ReviewState) => {
+    if (busy || !review.data) return;
+    const items: string[] = [];
+    const labelMap = { issues: '⚠️ 보강', verifications: '🔍 검증', suggestions: '💡 제안' };
+    (['issues', 'verifications', 'suggestions'] as const).forEach((cat) => {
+      (review.data?.[cat] ?? []).forEach((it) => {
+        const text = typeof it === 'string' ? it : it.text;
+        if (text) items.push(`[${labelMap[cat]}] ${text}`);
+      });
+    });
+    if (items.length === 0) return;
+    const instruction = `다음 리뷰 항목을 반영하여 문서를 수정해주세요:\n${items
+      .map((t, i) => `${i + 1}. ${t}`)
+      .join('\n')}`;
+
+    setBusy(true);
+    setMessages((m) => [
+      ...m,
+      {
+        role: 'user',
+        content: `✏️ 리뷰 반영 수정 요청 (${items.length}건)`,
+      },
+      {
+        role: 'assistant',
+        content: '',
+        changes: { items: null, streaming: true },
+      },
+    ]);
+    try {
+      const res = await suggestEdits({
+        title: review.title,
+        text: review.originalText,
+        instruction,
+        maxChanges: items.length,
+      });
+      setMessages((m) => {
+        const copy = [...m];
+        copy[copy.length - 1] = {
+          role: 'assistant',
+          content: '',
+          changes: { items: res.changes ?? [], streaming: false },
+        };
+        return copy;
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setMessages((m) => {
+        const copy = [...m];
+        copy[copy.length - 1] = {
+          role: 'assistant',
+          content: '',
+          changes: { items: null, streaming: false, error: msg },
+        };
+        return copy;
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const send = async () => {
     const q = input.trim();
@@ -304,9 +474,33 @@ export function ChatPanel({
             질문을 입력하면 관련 문서가 먼저 표시되고 답변이 이어 스트림됩니다.
           </div>
         )}
-        {messages.map((m, i) => (
-          <div key={i} className={`msg ${m.role}`}>{m.content || '…'}</div>
-        ))}
+        {messages.map((m, i) => {
+          if (m.review) {
+            const rv = m.review;
+            return (
+              <ReviewCard
+                key={i}
+                title={rv.title}
+                data={rv.data}
+                streaming={rv.streaming}
+                error={rv.error}
+                onFixRequest={() => void startFix(rv)}
+              />
+            );
+          }
+          if (m.changes) {
+            return (
+              <ChangesCard
+                key={i}
+                changes={m.changes.items}
+                streaming={m.changes.streaming}
+                error={m.changes.error}
+                // 4-4: onApply 활성화 시 Confluence REST PUT.
+              />
+            );
+          }
+          return <div key={i} className={`msg ${m.role}`}>{m.content || '…'}</div>;
+        })}
       </div>
 
       <div className="input-row">

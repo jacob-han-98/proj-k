@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { TreeNode } from '../../shared/types';
 
 interface Props {
@@ -8,6 +8,8 @@ interface Props {
   // PoC 2A — relPath 기반 매핑. App 이 settings 에서 load 후 prop 으로 내려줌.
   sheetMappings: Record<string, string>;
   onUpsertSheetMapping: (relPath: string, url: string) => void;
+  // Phase 4-2: Confluence webview body 를 추출해 ChatPanel 의 review stream 으로 보낸다.
+  onRequestReview?: (title: string, text: string) => void;
 }
 
 const CONFLUENCE_BASE = 'https://bighitcorp.atlassian.net';
@@ -18,6 +20,7 @@ export function CenterPane({
   onPromptCreds,
   sheetMappings,
   onUpsertSheetMapping,
+  onRequestReview,
 }: Props) {
 
   if (!selection) {
@@ -73,17 +76,85 @@ export function CenterPane({
   // Confluence — webview 안에서 사용자가 직접 로그인.
   const url = `${CONFLUENCE_BASE}/wiki/spaces/PK/pages/${selection.node.confluencePageId}`;
   return (
+    <ConfluencePane
+      key={selection.node.id}
+      url={url}
+      node={selection.node}
+      onRequestReview={onRequestReview}
+    />
+  );
+}
+
+// Confluence webview + 리뷰 트리거. webview ref 를 잡으려면 별도 컴포넌트로
+// 분리해야 selection 변경 시 ref 가 mount/unmount 흐름에 자연스럽게 따라간다.
+function ConfluencePane({
+  url,
+  node,
+  onRequestReview,
+}: {
+  url: string;
+  node: TreeNode;
+  onRequestReview?: (title: string, text: string) => void;
+}) {
+  const webviewRef = useRef<HTMLElement | null>(null);
+  const [extracting, setExtracting] = useState(false);
+
+  const requestReview = async () => {
+    if (!onRequestReview) return;
+    const wv = webviewRef.current;
+    if (!wv) {
+      alert('webview 가 아직 mount 되지 않았어요.');
+      return;
+    }
+    setExtracting(true);
+    try {
+      // <webview>.executeJavaScript 는 페이지 컨텍스트에서 실행. Confluence 의
+      // 본문 영역만 추려서 보내는 게 LLM 토큰 절약 + 노이즈 제거에 유리.
+      // 우선순위: #main-content > [role=main] > body. innerText 는 hidden 영역
+      // 자동 제외 + 보이는 텍스트만 → CDN 도구 노이즈 최소화.
+      const code = `(() => {
+        const el = document.querySelector('#main-content')
+          || document.querySelector('[role="main"]')
+          || document.body;
+        return el ? (el.innerText || '').trim() : '';
+      })()`;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const text = (await (wv as any).executeJavaScript(code)) as string;
+      if (!text) {
+        alert('webview 본문 추출 결과가 비어있습니다 — 페이지 로딩 끝났는지 확인하세요.');
+        return;
+      }
+      onRequestReview(node.title, text);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      alert(`webview 본문 추출 실패: ${msg}`);
+    } finally {
+      setExtracting(false);
+    }
+  };
+
+  return (
     <main className="center" data-testid="center-pane">
       <div className="doc-header">
-        <span>📘 {selection.node.title}</span>
-        <span className="breadcrumb">{selection.node.relPath}</span>
+        <span>📘 {node.title}</span>
+        <span className="breadcrumb">{node.relPath}</span>
         <span className="actions">
+          {onRequestReview && (
+            <button
+              onClick={requestReview}
+              disabled={extracting}
+              data-testid="confluence-review"
+              title="현재 페이지 본문을 LLM 으로 리뷰"
+            >
+              {extracting ? '추출 중…' : '📋 리뷰'}
+            </button>
+          )}
           <button onClick={() => window.open(url, '_blank')} title="외부 브라우저">↗</button>
         </span>
       </div>
       {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
       <webview
-        key={selection.node.id}
+        ref={webviewRef as any}
         src={url}
         partition="persist:confluence"
         {...({ allowpopups: 'true' } as any)}

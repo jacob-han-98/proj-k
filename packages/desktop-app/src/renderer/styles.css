@@ -544,3 +544,214 @@ html, body, #root { height: 100%; margin: 0; padding: 0; background: var(--bg); 
   color: var(--text);
 }
 .update-toast button.primary { background: var(--accent); color: var(--accent-fg); border-color: var(--accent); }
+
+/* ---------- Phase 4-3: Review card (Confluence webview body 리뷰 결과) ---------- */
+/* chrome-extension/sidebar/sidebar.css 의 의미론적 색상을 Klaud 변수에 맞춰 단순화.
+   warning(빨강계열) / info(파랑계열) / suggestion(초록계열) 정도만 색 구분. */
+
+.review-card {
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  margin: 8px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.review-card.error { border-color: #ef4444; }
+.review-card-header {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 6px;
+}
+.review-error { color: #ef4444; font-size: 12px; }
+
+.review-score {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+}
+.review-score-label { color: var(--text-dim); min-width: 56px; }
+.review-score-bar {
+  flex: 1;
+  height: 6px;
+  background: var(--hover);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.review-score-fill {
+  height: 100%;
+  background: var(--accent);
+  transition: width 200ms ease;
+}
+.review-score-num { color: var(--text-dim); min-width: 50px; text-align: right; }
+
+.review-section {
+  border-radius: 6px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.review-section.warning { background: rgba(239, 68, 68, 0.06); border-color: rgba(239, 68, 68, 0.3); }
+.review-section.info { background: rgba(59, 130, 246, 0.06); border-color: rgba(59, 130, 246, 0.3); }
+.review-section.suggestion { background: rgba(34, 197, 94, 0.06); border-color: rgba(34, 197, 94, 0.3); }
+.review-section.flow { background: var(--bg-sidebar); }
+.review-section.checklist { background: rgba(34, 197, 94, 0.04); border-color: rgba(34, 197, 94, 0.2); }
+.review-section.readability { background: rgba(59, 130, 246, 0.04); border-color: rgba(59, 130, 246, 0.2); }
+.review-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.review-item {
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--text);
+  padding: 4px 0;
+  border-top: 1px solid var(--border);
+}
+.review-section > .review-item:first-of-type { border-top: none; padding-top: 0; }
+.review-perspective {
+  display: inline-block;
+  font-size: 10px;
+  padding: 1px 6px;
+  margin-right: 6px;
+  border-radius: 3px;
+  background: var(--hover);
+  color: var(--text-dim);
+}
+
+.review-flow-content {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text);
+  white-space: pre-wrap;
+}
+
+.review-checklist-items {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.review-checklist-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.review-checklist-item input[type='checkbox'] { margin-top: 2px; }
+
+.review-streaming {
+  font-size: 11px;
+  color: var(--text-dim);
+  font-style: italic;
+}
+.review-streaming .dots::after {
+  content: '';
+  animation: review-dots 1.2s steps(4, end) infinite;
+}
+@keyframes review-dots {
+  0% { content: ''; }
+  25% { content: '.'; }
+  50% { content: '..'; }
+  75% { content: '...'; }
+  100% { content: ''; }
+}
+
+/* ReviewCard 의 "원본 수정" CTA */
+.review-cta {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 4px;
+}
+.review-cta button {
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 5px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--accent-fg);
+  cursor: pointer;
+}
+.review-cta button:disabled { opacity: 0.5; cursor: default; }
+
+/* ---------- Phase 4-3.5: ChangesCard (변경안 diff) ---------- */
+.changes-card {
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  margin: 8px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.changes-card.error { border-color: #ef4444; }
+.changes-card-header {
+  font-size: 12px;
+  font-weight: 600;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 6px;
+}
+.change-item {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.change-header {
+  display: flex;
+  gap: 6px;
+  font-size: 12px;
+}
+.change-num { color: var(--text-dim); }
+.change-desc { font-weight: 500; }
+.change-diff {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.change-before, .change-after {
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+.change-before { background: rgba(239, 68, 68, 0.07); border: 1px solid rgba(239, 68, 68, 0.25); }
+.change-after { background: rgba(34, 197, 94, 0.07); border: 1px solid rgba(34, 197, 94, 0.25); }
+.change-label {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-dim);
+  margin-bottom: 2px;
+}
+.change-text { color: var(--text); }
+
+.changes-actions {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 4px;
+}
+.changes-actions button.primary {
+  font-size: 12px;
+  padding: 6px 12px;
+  border-radius: 5px;
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--accent-fg);
+  cursor: pointer;
+}

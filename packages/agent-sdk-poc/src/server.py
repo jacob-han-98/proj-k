@@ -1129,6 +1129,365 @@ async def list_feedback(limit: int | None = None):
     return {"feedback": _jsonl_read(DECISIONS_DIR / "feedback.jsonl", limit=limit)}
 
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# /review_stream + /suggest_edits — Klaud / chrome-extension 의 Confluence 리뷰
+# ═══════════════════════════════════════════════════════════════════════════════
+# 단일 Bedrock 호출을 token-by-token NDJSON 으로 forward.
+# (RAG 사용 안 함 — 사용자가 보고 있는 페이지 텍스트가 모든 컨텍스트)
+
+import re as _re_review
+from bedrock_stream import (
+    stream_messages as _bd_stream,
+    BedrockStreamError as _BdStreamErr,
+    normalize_model as _bd_normalize_model,
+)
+
+
+_REVIEW_SYSTEM = """You are a senior game designer and document quality expert reviewing Confluence wiki pages for Project K, a mobile MMORPG.
+Analyze the document from multiple perspectives. Respond in Korean.
+
+Return a JSON object with this exact structure:
+{
+  "score": 0-100,
+  "issues": [{"text": "...", "perspective": "기획팀장|프로그래머"}],
+  "verifications": [{"text": "...", "perspective": "기획팀장|프로그래머"}],
+  "suggestions": ["..."],
+  "flow": "전체 로직을 단계별 텍스트 순서도로 정리 (1. → 2. → 3. ...)",
+  "qa_checklist": ["테스트 항목 1", "테스트 항목 2", "..."],
+  "readability": {"score": 0-100, "issues": ["가독성 관련 지적 사항"]}
+}
+
+## 리뷰 관점 (perspective)
+
+모든 issues/verifications 항목에 관점을 명시하세요:
+- **"기획팀장"**: 기획 의도, 시스템 설계, 콘텐츠 방향성, 다른 시스템과의 정합성, 우선순위/스코프 판단
+- **"프로그래머"**: 구현 가능성, 기술적 명세 부족, 서버/클라이언트 처리 방식, 체크 빈도/타이밍, 데이터 타입/단위 오류, 예외 처리
+
+## 카테고리 규칙 — 각 항목은 정확히 하나의 카테고리에만 속함
+
+- **"issues"**: 문서에 반드시 있어야 하는데 빠진 것. 구현자가 이 문서만 보고 작업할 수 없는 수준의 누락.
+  - 수치가 기획서에 없는 경우, 실제 데이터시트(ContentSetting, 테이블 등)에 값이 존재할 수 있음. 데이터시트에서 채워야 할 값은 "[TODO: 데이터시트에서 실제 값 확인 필요]"로 표기.
+  - 예: 수치 없음, 예외 케이스 미기술, 필수 정의 누락, 데이터 타입/단위 모호
+- **"verifications"**: 적혀 있지만 맞는지 확인이 필요한 것. 오타/오류 의심, 모호한 표현, 다른 문서와 불일치 가능성.
+  - 예: 텍스트 키 중복, 수치 단위 혼동, 용어 불일치
+- **"suggestions"**: issues/verifications에 해당하지 않지만, 추가하면 문서 품질이 올라가는 것.
+  - 예: 다이어그램 추가, 관련 문서 링크, 구조 개선, 연출/피드백 명세
+
+IMPORTANT: suggestions는 issues와 겹치면 안 됨. "없어서 문제"이면 issues, "있어도 되고 없어도 되지만 있으면 좋은 것"이면 suggestions.
+
+## 로직 플로우 (flow)
+
+시스템의 전체 동작 로직을 **텍스트 기반 순서도**로 정리하세요.
+- 조건 분기: "→ [조건] → 결과A / [아니면] → 결과B" 형식
+- 구현자와 QA 모두 이해할 수 있는 수준으로 작성
+- 문서에 명시된 로직만 기반으로 작성 (추측 금지)
+
+## QA 테스트 체크리스트 (qa_checklist)
+
+이 기획서를 기반으로 **QA가 검증해야 할 테스트 케이스**를 생성하세요:
+- **기본 흐름(Happy Path)을 최우선으로 포함** — 시스템의 가장 기본적인 정상 동작을 먼저 검증 (예: "물약 보유 상태에서 HP가 설정 비율 이하로 감소 → 자동 사용 → HP 회복 확인")
+- 기본 흐름 이후 엣지 케이스 + 경계값 테스트 추가
+- 각 항목은 구체적이고 실행 가능해야 함 (예: "물약 0개 상태에서 HP 50% 이하로 감소 시 동작 확인")
+- 문서에 정의된 모든 조건 분기, 상태 전이, 예외 처리를 커버
+- 다른 시스템과의 상호작용 테스트 포함 (예: PVP 전환, 서포트 모드, 던전 입장 등)
+
+## 문서 가독성 평가 (readability)
+
+이 문서를 **프로그래머, QA, 아트 담당자가 읽고 바로 작업에 착수할 수 있는지** 평가하세요:
+- 논리적 흐름: 개념정의 → 규칙 → 데이터 → 예외처리 → UI 순서가 자연스러운가
+- 계층 구조: 한 섹션이 너무 비대하거나, 관련 없는 내용이 섞여 있지 않은가
+- 용어 일관성: 같은 개념을 다른 이름으로 부르고 있지 않은가
+- 조건문 명확성: "일정 수준", "적절히" 같은 모호한 표현이 없는가
+- 독립성: 이 문서만으로 이해 가능한가, 암묵적 전제가 없는가
+- UX 관점: UI 이미지나 와이어프레임이 포함되어 있다면, 일반적인 모바일 게임 UX 관점에서 개선점 제시
+
+Return ONLY the raw JSON object. No markdown fences."""
+
+
+_EDIT_SYSTEM = """You are an editor for Confluence wiki pages. Propose text changes as a JSON array.
+
+CRITICAL RULES:
+- "before": COPY-PASTE an exact substring from the page text. It MUST appear verbatim. Keep it short (1 sentence max, no newlines, no tabs).
+- "after": the REPLACEMENT text that will REPLACE "before". It must contain the full corrected version of "before", NOT just the addition.
+  - WRONG: before="HP 물약" after="HP 물약 (자동 사용 포함)" ← this ADDS text instead of replacing
+  - RIGHT: before="HP 물약을 사용한다" after="HP 물약을 자동으로 사용한다" ← this REPLACES the sentence
+- If you need to ADD new content, use "before" as the sentence AFTER which the content should appear, and "after" as that sentence + the new content.
+- Each change must be SMALL: 1-2 sentences only.
+- Return ONLY a raw JSON array. No markdown fences. No explanation.
+- Ensure valid JSON: escape quotes with \\", no literal newlines in strings.
+- Generate one change per instruction item. Do NOT skip items.
+- When referencing other documents: you do NOT know which documents actually exist. Never invent document names or links. Instead, write "[TODO: 관련 문서 링크 추가 필요]" so the author can fill in real links later.
+- For features planned but not yet designed, mark as "[TODO]" with a brief note.
+- TABLE CELLS: The page text shows tables in markdown format (| col1 | col2 |). CRITICAL table rules:
+  1. NEVER include pipe characters (|) in "before" or "after" — pipes are column separators, not content.
+  2. "before" must contain text from ONE CELL ONLY. Never span multiple columns.
+  3. If you need to edit a cell, copy ONLY that cell's text without any | or adjacent cell text.
+  Example: For row "| KeywordA | 텍스트A | 설명A |", to edit 텍스트A → 텍스트B:
+  ✅ CORRECT: before="텍스트A" after="텍스트B"
+  ❌ WRONG: before="KeywordA | 텍스트A" (spans 2 cells)
+  ❌ WRONG: before="KeywordA || 텍스트A" (includes pipes)"""
+
+
+class ReviewStreamRequest(BaseModel):
+    title: str
+    text: str
+    model: str | None = None
+    review_instruction: str | None = None
+
+
+class SuggestEditsRequest(BaseModel):
+    title: str
+    text: str | None = None
+    html: str | None = None
+    instruction: str
+    max_changes: int | None = 10
+    model: str | None = None
+
+
+def _ndj(obj: dict) -> str:
+    return json.dumps(obj, ensure_ascii=False) + "\n"
+
+
+def _strip_md_fences(s: str) -> str:
+    s = _re_review.sub(r"```(?:json)?\s*", "", s)
+    return _re_review.sub(r"```\s*$", "", s).strip()
+
+
+def _extract_json_object(s: str) -> dict | None:
+    s = _strip_md_fences(s)
+    m = _re_review.search(r"\{[\s\S]*\}", s)
+    if not m:
+        return None
+    raw = m.group(0)
+    # 흔한 LLM JSON 흠 보정
+    raw = _re_review.sub(r",\s*([}\]])", r"\1", raw)
+    try:
+        return json.loads(raw)
+    except Exception:
+        return None
+
+
+def _extract_json_array(s: str) -> list | None:
+    s = _strip_md_fences(s)
+    m = _re_review.search(r"\[[\s\S]*\]", s)
+    if not m:
+        return None
+    raw = m.group(0)
+    raw = _re_review.sub(r",\s*([}\]])", r"\1", raw)
+    raw = _re_review.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f]", " ", raw)
+    try:
+        return json.loads(raw)
+    except Exception:
+        return None
+
+
+@app.post("/review_stream")
+async def review_stream(req: ReviewStreamRequest):
+    """Confluence 페이지 리뷰 — Bedrock 단일 호출, NDJSON 토큰 스트리밍.
+
+    이벤트:
+        {"type":"status","message":"..."}
+        {"type":"token","text":"..."}            # text_delta 마다
+        {"type":"result","data":{"review":"<JSON 문자열>","model":"opus","usage":{...}}}
+        {"type":"error","message":"..."}
+    """
+    title = req.title
+    text = (req.text or "")[:100000]
+    instruction_block = (
+        f"\n\nReviewer's focus instruction: {req.review_instruction.strip()}"
+        if req.review_instruction
+        else ""
+    )
+    user_msg = (
+        f"Page Title: {title}\n\nPage Content:\n{text}"
+        f"{instruction_block}\n\nReview this document thoroughly and return the JSON result:"
+    )
+    model = _bd_normalize_model(req.model)
+
+    async def gen():
+        log_event("review", "review_stream", f"{title[:60]} ({len(text)}c, {model})")
+        yield _ndj({"type": "status", "message": f"🧠 문서 분석 중... ({model})"})
+        yield _ndj({"type": "status", "message": f"📄 길이: {len(text):,}자"})
+
+        acc: list[str] = []
+        usage: dict = {}
+        try:
+            async for ev in _bd_stream(
+                messages=[{"role": "user", "content": user_msg}],
+                system=_REVIEW_SYSTEM,
+                model=model,
+                max_tokens=8192,
+                temperature=0.0,
+            ):
+                t = ev.get("type")
+                if t == "content_block_delta":
+                    d = ev.get("delta", {})
+                    if d.get("type") == "text_delta":
+                        chunk = d.get("text", "")
+                        if chunk:
+                            acc.append(chunk)
+                            yield _ndj({"type": "token", "text": chunk})
+                elif t == "message_delta":
+                    u = ev.get("usage")
+                    if u:
+                        usage.update(u)
+                # message_start / content_block_start / _stop 무시
+        except _BdStreamErr as e:
+            log_event("review", "review_error", str(e)[:200])
+            yield _ndj({"type": "error", "message": f"Bedrock stream error: {e}"})
+            return
+        except Exception as e:
+            log_event("review", "review_error", str(e)[:200])
+            yield _ndj({"type": "error", "message": f"unexpected: {e}"})
+            return
+
+        full = "".join(acc)
+        log_event("review", "review_done", f"{len(full)} chars, usage={usage}")
+        yield _ndj({"type": "status", "message": "📋 리뷰 결과 정리 중..."})
+
+        # 클라이언트(chrome-extension/Klaud) 가 review 텍스트를 다시 JSON 파싱하므로
+        # 본문은 raw 그대로 전달. 단, 서버 측에서도 한 번 파싱해서 정합성만 확인.
+        parsed = _extract_json_object(full)
+        result_data: dict = {
+            "review": full,
+            "model": model,
+            "usage": usage,
+        }
+        if parsed is None:
+            yield _ndj(
+                {
+                    "type": "status",
+                    "message": "⚠️ JSON 파싱 실패 — 클라이언트 측에서 재시도 가능",
+                }
+            )
+        yield _ndj({"type": "result", "data": result_data})
+
+    return StreamingResponse(gen(), media_type="application/x-ndjson")
+
+
+@app.post("/suggest_edits")
+async def suggest_edits(req: SuggestEditsRequest):
+    """Confluence 페이지 부분 편집 제안 — Bedrock 단일 호출, NDJSON 토큰 스트리밍.
+
+    이벤트:
+        {"type":"status","message":"..."}
+        {"type":"token","text":"..."}             # text_delta 마다 (JSON array 가 점진 형성)
+        {"type":"result","data":{"changes":[{"id","section","description","before","after"}]}}
+        {"type":"error","message":"..."}
+    """
+    title = req.title
+    content = (req.text or req.html or "")[:60000]
+    if not content:
+        return StreamingResponse(
+            iter(
+                [
+                    _ndj(
+                        {
+                            "type": "error",
+                            "message": "No page content (text or html required).",
+                        }
+                    )
+                ]
+            ),
+            media_type="application/x-ndjson",
+        )
+    instr = req.instruction or "전반적인 검토와 개선 제안"
+    max_changes = req.max_changes or 10
+    model = _bd_normalize_model(req.model)
+    user_msg = (
+        f"Page Title: {title}\n\nPage Text:\n{content}\n\n"
+        f"Edit Instruction: {instr}\n\n"
+        f"Return JSON array (generate up to {max_changes} changes — one per instruction item). "
+        f'Each "before" must be a short EXACT substring from the page text above '
+        f"(1 sentence, no newlines):\n"
+        f'[{{"id":"change-1","section":"섹션명","description":"간단한 설명",'
+        f'"before":"페이지에서 복사한 정확한 짧은 텍스트","after":"대체 텍스트"}}]'
+    )
+
+    async def gen():
+        log_event(
+            "suggest", "suggest_edits", f"{title[:60]} ({len(content)}c, {model}, {instr[:40]})"
+        )
+        yield _ndj(
+            {"type": "status", "message": f"✏️ 수정안 생성 중... ({model}, max {max_changes})"}
+        )
+
+        acc: list[str] = []
+        usage: dict = {}
+        try:
+            async for ev in _bd_stream(
+                messages=[{"role": "user", "content": user_msg}],
+                system=_EDIT_SYSTEM,
+                model=model,
+                max_tokens=8192,
+                temperature=0.0,
+            ):
+                t = ev.get("type")
+                if t == "content_block_delta":
+                    d = ev.get("delta", {})
+                    if d.get("type") == "text_delta":
+                        chunk = d.get("text", "")
+                        if chunk:
+                            acc.append(chunk)
+                            yield _ndj({"type": "token", "text": chunk})
+                elif t == "message_delta":
+                    u = ev.get("usage")
+                    if u:
+                        usage.update(u)
+        except _BdStreamErr as e:
+            log_event("suggest", "suggest_error", str(e)[:200])
+            yield _ndj({"type": "error", "message": f"Bedrock stream error: {e}"})
+            return
+        except Exception as e:
+            log_event("suggest", "suggest_error", str(e)[:200])
+            yield _ndj({"type": "error", "message": f"unexpected: {e}"})
+            return
+
+        full = "".join(acc)
+        yield _ndj({"type": "status", "message": "📋 수정안 파싱 중..."})
+
+        changes = _extract_json_array(full)
+        if changes is None:
+            log_event("suggest", "suggest_parse_fail", full[:200])
+            yield _ndj(
+                {
+                    "type": "error",
+                    "message": "Failed to parse edit suggestions as JSON array",
+                    "raw_preview": full[:500],
+                }
+            )
+            return
+
+        # {id, before, after} 필수 검증 (chrome-extension background.js:307 와 동일)
+        valid: list[dict] = []
+        for ch in changes:
+            if not isinstance(ch, dict):
+                continue
+            if not (ch.get("id") and ch.get("before") and ch.get("after")):
+                continue
+            # | 포함 시 경고만 (테이블 셀 spanning) — 차단은 안 함, 클라이언트에서 처리
+            valid.append(ch)
+
+        log_event(
+            "suggest",
+            "suggest_done",
+            f"{len(valid)}/{len(changes)} valid changes, usage={usage}",
+        )
+        yield _ndj(
+            {
+                "type": "result",
+                "data": {
+                    "changes": valid,
+                    "model": model,
+                    "usage": usage,
+                    "raw_count": len(changes),
+                },
+            }
+        )
+
+    return StreamingResponse(gen(), media_type="application/x-ndjson")
+
+
 if __name__ == "__main__":
     import uvicorn
 

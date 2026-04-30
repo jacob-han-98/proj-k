@@ -803,7 +803,7 @@
 
     const response = await callBackground('SUGGEST_EDITS', {
       title: pageMeta.title,
-      text: pageContent.text,
+      text: pageContent.textForEdit || pageContent.text,
       html: pageContent.html,
       instruction,
       maxChanges,
@@ -1379,7 +1379,7 @@
         const instruction = `다음 리뷰 항목을 반영하여 문서를 수정해주세요:\n${allItems.map((it, i) => `${i+1}. ${it}`).join('\n')}`;
         const response = await callBackground('SUGGEST_EDITS', {
           title: pageMeta.title,
-          text: pageContent.text,
+          text: pageContent.textForEdit || pageContent.text,
           html: pageContent.html,
           instruction,
           maxChanges: allItems.length,

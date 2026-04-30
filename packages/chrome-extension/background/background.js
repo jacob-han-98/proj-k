@@ -39,7 +39,14 @@ CRITICAL RULES:
 - Generate one change per instruction item. Do NOT skip items.
 - When referencing other documents: you do NOT know which documents actually exist. Never invent document names or links. Instead, write "[TODO: 관련 문서 링크 추가 필요]" so the author can fill in real links later.
 - For features planned but not yet designed, mark as "[TODO]" with a brief note.
-- IMPORTANT: When editing table cells, ONLY include the text from the SINGLE CELL being changed in "before" and "after". Do NOT merge or mix content from different columns. Each table cell is independent — if column 1 has "KeywordA" and column 2 has "텍스트A", edit them as separate changes if both need changes.`,
+- TABLE CELLS: The page text shows tables in markdown format (| col1 | col2 |). CRITICAL table rules:
+  1. NEVER include pipe characters (|) in "before" or "after" — pipes are column separators, not content.
+  2. "before" must contain text from ONE CELL ONLY. Never span multiple columns.
+  3. If you need to edit a cell, copy ONLY that cell's text without any | or adjacent cell text.
+  Example: For row "| KeywordA | 텍스트A | 설명A |", to edit 텍스트A → 텍스트B:
+  ✅ CORRECT: before="텍스트A" after="텍스트B"
+  ❌ WRONG: before="KeywordA | 텍스트A" (spans 2 cells)
+  ❌ WRONG: before="KeywordA || 텍스트A" (includes pipes)`,
     user: (title, text, instruction, maxChanges) => `Page Title: ${title}
 
 Page Text:

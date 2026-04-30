@@ -57,6 +57,60 @@
 
   // --- Content Extraction ---
 
+  /**
+   * Table-aware text extraction: converts <table> to markdown format
+   * so LLM can see cell boundaries and generate cell-level edits.
+   * Non-table content is extracted as plain text.
+   */
+  function getTableAwareText(rootEl) {
+    if (!rootEl) return '';
+    const parts = [];
+
+    function walk(node) {
+      if (node.nodeType === Node.TEXT_NODE) {
+        parts.push(node.textContent);
+        return;
+      }
+      if (node.nodeType !== Node.ELEMENT_NODE) return;
+
+      const tag = node.tagName.toLowerCase();
+
+      // Tables → markdown format to preserve cell boundaries
+      if (tag === 'table') {
+        parts.push('\n\n');
+        const rows = node.querySelectorAll('tr');
+        let headerDone = false;
+        rows.forEach((row) => {
+          const cells = row.querySelectorAll('td, th');
+          if (cells.length === 0) return;
+          const cellTexts = Array.from(cells).map(c =>
+            c.innerText.replace(/[\n\r]+/g, ' ').trim()
+          );
+          parts.push('| ' + cellTexts.join(' | ') + ' |\n');
+          if (!headerDone) {
+            parts.push('| ' + cellTexts.map(() => '---').join(' | ') + ' |\n');
+            headerDone = true;
+          }
+        });
+        parts.push('\n');
+        return; // Don't recurse into table children
+      }
+
+      const blockTags = new Set(['p', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'li', 'ul', 'ol', 'blockquote', 'section', 'article', 'pre', 'hr']);
+      if (blockTags.has(tag)) parts.push('\n');
+      if (tag === 'br') { parts.push('\n'); return; }
+
+      for (const child of node.childNodes) {
+        walk(child);
+      }
+
+      if (blockTags.has(tag)) parts.push('\n');
+    }
+
+    walk(rootEl);
+    return parts.join('').replace(/\n{3,}/g, '\n\n').trim();
+  }
+
   function getPageContent() {
     const selectors = [
       '[data-testid="renderer-page"]',
@@ -73,6 +127,7 @@
         return {
           text: el.innerText,
           html: el.innerHTML,
+          textForEdit: getTableAwareText(el),
           selector: sel,
         };
       }

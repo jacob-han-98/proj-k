@@ -51,12 +51,18 @@ function readError(e: { [k: string]: unknown }): string | null {
   const v = e.error ?? e.message ?? e.payload;
   return typeof v === 'string' ? v : null;
 }
+// WSL agent 가 LLM 출력을 그대로 흘릴 때 ```json ... ``` 마크다운 코드펜스로 감싸서 옴.
+// JSON.parse 전에 펜스를 벗겨야 한다.
+function stripMarkdownFence(s: string): string {
+  return s.replace(/^```[a-z]*\s*/i, '').replace(/\s*```\s*$/, '').trim();
+}
+
 function parseReviewResult(e: { [k: string]: unknown }): ReviewData | null {
-  // WSL: {type:"result", data:{review: <JSON string>, model, usage}}
+  // WSL: {type:"result", data:{review: <JSON string or ```json ... ```>, model, usage}}
   // legacy/stub: {type:"result", payload: <ReviewData object>}
   const data = e.data as { review?: unknown } | undefined;
   if (data && typeof data.review === 'string') {
-    try { return JSON.parse(data.review) as ReviewData; } catch { /* fall through */ }
+    try { return JSON.parse(stripMarkdownFence(data.review)) as ReviewData; } catch { /* fall through */ }
   }
   if (data && typeof data === 'object' && !('review' in data) && hasReviewShape(data)) {
     return data as ReviewData;

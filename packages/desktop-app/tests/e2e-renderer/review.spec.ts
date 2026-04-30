@@ -91,6 +91,35 @@ test('리뷰 streaming → result.data.review (WSL 포맷, JSON 문자열) → R
   await expect(page.getByTestId('review-fix')).toBeVisible();
 });
 
+test('리뷰 — result.data.review 가 ```json ... ``` 마크다운 펜스로 감싸여도 파싱', async ({ page }) => {
+  // WSL agent 가 LLM raw output 을 그대로 흘릴 때 코드펜스 포함. 실제 재현 케이스.
+  const reviewData = {
+    score: 82,
+    issues: [{ text: '섹션 제목 누락', perspective: '기획팀장' }],
+    suggestions: ['용어 통일 필요'],
+  };
+  const fencedReview = '```json\n' + JSON.stringify(reviewData) + '\n```';
+  await page.route('**/127.0.0.1:**/review_stream', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/x-ndjson',
+      body: ndjson([
+        { type: 'status', message: '🧠 문서 분석 중...' },
+        { type: 'result', data: { review: fencedReview, model: 'sonnet', usage: {} } },
+      ]),
+    });
+  });
+
+  await selectConfluencePageAndStubWebview(page, '본문');
+  await page.getByTestId('confluence-review').click();
+
+  const card = page.getByTestId('review-card');
+  await expect(card).toContainText('82/100');
+  await expect(card).toContainText('섹션 제목 누락');
+  await expect(card).toContainText('[기획팀장]');
+  await expect(card).toContainText('용어 통일 필요');
+});
+
 test('리뷰 — legacy {type, payload} 포맷도 defensive 하게 파싱', async ({ page }) => {
   // 기존 chrome-extension/스텁 패턴: payload 가 ReviewData 자체 (data.review wrapper 없음)
   await page.route('**/127.0.0.1:**/review_stream', async (route) => {

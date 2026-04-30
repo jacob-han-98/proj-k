@@ -34,6 +34,13 @@ const api = {
   setConfluenceCreds: (creds: ConfluenceCreds): Promise<{ ok: boolean }> =>
     ipcRenderer.invoke(IPC.CONFLUENCE_CREDS_SET, creds),
 
+  // Phase 4-4: Confluence 변경안 적용
+  confluenceApplyEdits: (
+    pageId: string,
+    changes: Array<{ id: string; before: string; after: string; description?: string; section?: string }>,
+  ): Promise<{ ok: boolean; applied: number; skipped: number; skippedIds: string[]; pageUrl?: string; error?: string }> =>
+    ipcRenderer.invoke(IPC.CONFLUENCE_APPLY_EDITS, pageId, changes),
+
   getUpdaterState: (): Promise<{ state: UpdaterState; lastCheckedAt: number | null }> =>
     ipcRenderer.invoke(IPC.UPDATER_STATE),
   onUpdaterState: (cb: (s: UpdaterState) => void): (() => void) => {

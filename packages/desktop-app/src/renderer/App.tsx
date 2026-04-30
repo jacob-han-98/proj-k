@@ -300,6 +300,7 @@ export function App() {
         initialDocs={threadBundle?.docs ?? []}
         reviewTrigger={reviewTrigger}
         onReviewConsumed={() => setReviewTrigger(null)}
+        confluencePageId={selection?.kind === 'confluence' ? selection.node.confluencePageId ?? null : null}
         onThreadCreated={(id) => {
           setSelectedThreadId(id);
           setThreadListKey((k) => k + 1);

@@ -12,6 +12,7 @@ import type {
 import { getP4Tree, getConfluenceTree } from './tree';
 import { getSidecarStatus, onSidecarStatus, startSidecar } from './sidecar';
 import { getConfluenceCreds, setConfluenceCreds } from './auth';
+import { applyEditsToConfluencePage, type ChangeItem as ConfluenceChangeItem } from './confluence-apply';
 import { getUpdaterState, onUpdaterState, quitAndInstall, checkForUpdate, getLastCheckedAt } from './updater';
 import { getSettings, setSettings } from './settings';
 import { tryDb } from './db';
@@ -58,6 +59,11 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
   ipcMain.handle(IPC.CONFLUENCE_CREDS_SET, async (_e, creds: ConfluenceCreds) => {
     await setConfluenceCreds(creds);
     return { ok: true };
+  });
+
+  // Phase 4-4: Confluence 변경안 적용 (storage format GET → text replace → PUT)
+  ipcMain.handle(IPC.CONFLUENCE_APPLY_EDITS, async (_e, pageId: string, changes: ConfluenceChangeItem[]) => {
+    return applyEditsToConfluencePage(pageId, changes);
   });
 
   // Push sidecar status updates to the renderer

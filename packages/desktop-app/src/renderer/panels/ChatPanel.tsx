@@ -61,15 +61,30 @@ function parseReviewResult(e: { [k: string]: unknown }): ReviewData | null {
   // WSL: {type:"result", data:{review: <JSON string or ```json ... ```>, model, usage}}
   // legacy/stub: {type:"result", payload: <ReviewData object>}
   const data = e.data as { review?: unknown } | undefined;
+  console.log('[review] result event — data keys:', data ? Object.keys(data) : null,
+    '| review type:', typeof data?.review,
+    '| review start:', typeof data?.review === 'string' ? (data.review as string).slice(0, 60) : data?.review);
   if (data && typeof data.review === 'string') {
-    try { return JSON.parse(stripMarkdownFence(data.review)) as ReviewData; } catch { /* fall through */ }
+    const stripped = stripMarkdownFence(data.review);
+    console.log('[review] after stripMarkdownFence start:', stripped.slice(0, 60));
+    try {
+      const parsed = JSON.parse(stripped) as ReviewData;
+      console.log('[review] JSON.parse OK — score:', parsed.score, '| keys:', Object.keys(parsed));
+      return parsed;
+    } catch (err) {
+      console.error('[review] JSON.parse FAILED:', err, '| stripped[:100]:', stripped.slice(0, 100));
+      /* fall through */
+    }
   }
   if (data && typeof data === 'object' && !('review' in data) && hasReviewShape(data)) {
+    console.log('[review] using data directly (no review wrapper)');
     return data as ReviewData;
   }
   if (e.payload && typeof e.payload === 'object') {
+    console.log('[review] using payload directly');
     return e.payload as ReviewData;
   }
+  console.error('[review] parseReviewResult failed — no matching branch. full event:', JSON.stringify(e).slice(0, 200));
   return null;
 }
 function parseChangesResult(e: { [k: string]: unknown }): ChangeItem[] | null {
@@ -109,6 +124,8 @@ interface Props {
   onOpenDoc?: (doc: { doc_id: string; doc_type: 'xlsx' | 'confluence'; doc_title: string | null }) => void;
   reviewTrigger?: ReviewTrigger | null;
   onReviewConsumed?: () => void;
+  // Phase 4-4: 현재 열려있는 Confluence 페이지 ID. Apply 시 PUT 대상.
+  confluencePageId?: string | null;
 }
 
 function genMsgId(): string {
@@ -133,6 +150,7 @@ export function ChatPanel({
   onOpenDoc,
   reviewTrigger,
   onReviewConsumed,
+  confluencePageId,
 }: Props) {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
@@ -355,6 +373,36 @@ export function ChatPanel({
       updateChanges({ error: msg, streaming: false });
     } finally {
       setBusy(false);
+    }
+  };
+
+  // Phase 4-4: ChangesCard 의 "✓ Confluence 에 반영" → IPC → main → PUT
+  const applyToConfluence = async (items: ChangeItem[]) => {
+    if (!confluencePageId) {
+      setMessages((m) => [
+        ...m,
+        { role: 'assistant', content: '[Apply 오류] 현재 열린 Confluence 페이지 ID 없음 — 페이지를 선택한 상태에서 리뷰 후 적용하세요.' },
+      ]);
+      return;
+    }
+    setMessages((m) => [...m, { role: 'assistant', content: '⏳ Confluence 에 반영 중…' }]);
+    try {
+      const result = await window.projk.confluenceApplyEdits(confluencePageId, items);
+      const summary = result.ok
+        ? `✅ ${result.applied}건 반영 완료${result.skipped > 0 ? ` (${result.skipped}건 미매칭 — 텍스트 불일치)` : ''}${result.pageUrl ? `\n페이지: ${result.pageUrl}` : ''}`
+        : `[Apply 오류] ${result.error ?? '알 수 없는 오류'}${result.applied > 0 ? ` (${result.applied}건은 반영됨)` : ''}`;
+      setMessages((m) => {
+        const copy = [...m];
+        copy[copy.length - 1] = { role: 'assistant', content: summary };
+        return copy;
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      setMessages((m) => {
+        const copy = [...m];
+        copy[copy.length - 1] = { role: 'assistant', content: `[Apply 오류] ${msg}` };
+        return copy;
+      });
     }
   };
 
@@ -594,7 +642,7 @@ export function ChatPanel({
                 error={m.changes.error}
                 streamBuffer={m.changes.streamBuffer}
                 status={m.changes.status}
-                // 4-4: onApply 활성화 시 Confluence REST PUT.
+                onApply={m.changes.items && m.changes.items.length > 0 ? applyToConfluence : undefined}
               />
             );
           }

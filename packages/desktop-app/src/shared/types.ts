@@ -85,6 +85,7 @@ export const IPC = {
   SIDECAR_HEALTH: 'sidecar:health',
   CONFLUENCE_CREDS_GET: 'confluence:creds:get',
   CONFLUENCE_CREDS_SET: 'confluence:creds:set',
+  CONFLUENCE_APPLY_EDITS: 'confluence:apply-edits',
   EXCEL_OPEN: 'excel:open',
   P4_SYNC: 'p4:sync',
   UPDATER_STATE: 'updater:state',

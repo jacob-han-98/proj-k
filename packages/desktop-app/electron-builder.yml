@@ -1,0 +1,62 @@
+appId: im.hybe.projk.desktop
+productName: Project K
+directories:
+  output: release
+  buildResources: build
+files:
+  - out/**/*
+  - package.json
+extraResources:
+  - from: src/sidecar
+    to: sidecar
+    filter:
+      - '**/*.py'
+      - 'requirements.txt'
+asar: true
+# WSL Linux 에서 win32 native 를 cross-compile 못 하므로 ws 의 native deps
+# (bufferutil/utf-8-validate) 는 install 하지 않고 ws 의 pure-JS fallback 사용.
+# 따라서 npmRebuild 도 OFF — packaging 시 모든 native rebuild 시도 자체를 차단.
+npmRebuild: false
+# out/ 만 asar 밖으로 unpack — dev-bundle-watcher 가 hot-swap 대상으로 file 단위
+# write 가능해야 함. asar 안에 압축되면 swap 후에도 Electron 이 옛날 cache 사용.
+# 이 폴더가 사용자 PC 에서 <resources>/app.asar.unpacked/out/ 로 raw 노출.
+asarUnpack:
+  - 'out/**'
+
+# 코드 사이닝은 Phase 5b 에서 EV 인증서 + DigiCert 적용 예정.
+# 지금은 미서명 — Windows SmartScreen 1회 경고 후 "추가 정보 → 실행" 클릭 통과.
+forceCodeSigning: false
+
+win:
+  target:
+    - target: nsis
+      arch: x64
+    - target: portable
+      arch: x64
+  artifactName: ProjectK-${version}-${arch}.${ext}
+  # signtool 호출하지 않도록 명시
+  signAndEditExecutable: false
+
+nsis:
+  # oneClick=true: 첫 설치도 더블클릭 → 마법사 없이 즉시 설치. perUser 표준 위치
+  # (%LOCALAPPDATA%\Programs\Project K). 자동 업데이트 시에도 silent 동작과 합쳐
+  # "Chrome 자동 업데이트" 같은 매끄러움.
+  oneClick: true
+  perMachine: false
+  artifactName: ProjectK-Setup-${version}.${ext}
+  # blockmap 차분 업데이트 — 다음 릴리스부터 변경된 부분만 다운로드
+  differentialPackage: true
+  # 첫 설치 후 자동으로 앱 실행
+  runAfterFinish: true
+
+portable:
+  artifactName: ProjectK-Portable-${version}.${ext}
+
+# Auto-update 피드.
+# Phase 5a (지금): WSL 에서 띄우는 로컬 HTTP 서버 (npm run serve:feed)
+# Phase 5b (나중): 사내 HTTPS 게이트웨이로 교체.
+# 설치된 앱이 ${url}/latest.yml 을 폴링 → 새 버전 발견 시 .exe 다운로드 후 재시작.
+publish:
+  - provider: generic
+    url: ${env.PROJK_UPDATE_FEED_URL}
+    channel: dev

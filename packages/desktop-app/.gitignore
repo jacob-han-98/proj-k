@@ -1,0 +1,15 @@
+node_modules/
+out/
+dist/
+dist-tsc-node/
+dist-tsc-web/
+.venv/
+__pycache__/
+*.pyc
+release/
+test-runs/
+test-results/
+.pytest_cache/
+debug/
+.last-pkg-hash
+.DS_Store

@@ -1,0 +1,16 @@
+{
+  "$comment": "Project K — 양쪽 머신 공유 설정. machine-별 설정은 .claude/settings.local.json (gitignored)에. cross-claude-bridge hook 은 매 사용자 프롬프트 직전 inbox 체크 → stdout 을 다음 LLM 컨텍스트에 주입.",
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .claude/scripts/bridge-check.js",
+            "timeout": 5000
+          }
+        ]
+      }
+    ]
+  }
+}

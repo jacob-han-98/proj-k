@@ -1,0 +1,10 @@
+{
+  "_comment": "Cross-Claude Bridge 머신별 설정. 이 파일을 .bridge-config.json 으로 복사 후 값 채우기. .gitignore 에 의해 .bridge-config.json 자체는 커밋되지 않음. 누락되면 .claude/scripts/bridge-check.js 가 OS 로 자동 감지(linux→backend, win32→frontend).",
+  "role": "backend | frontend",
+  "peer": "frontend | backend",
+  "shared_dir": "/mnt/c/shared/claude-bridge   (WSL)   |   C:/shared/claude-bridge   (Windows)",
+  "context": {
+    "backend": "WSL2 — agent-sdk-poc (FastAPI on :8090), xlsx-extractor, confluence-downloader, knowledge base. /home/jacob/repos/proj-k",
+    "frontend": "Windows native — Klaud Electron desktop-app (renderer + preload + sidecar). packages/desktop-app/"
+  }
+}

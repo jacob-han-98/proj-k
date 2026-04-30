@@ -77,10 +77,16 @@ packages/qna-poc/test_*.png
 packages/agent-sdk-poc/index/_gdd_index.json
 packages/agent-sdk-poc/index/knowledge_graph.json
 
-# Claude Code 로컬 설정 — skills 는 프로젝트 공유 자산이므로 커밋
+# Claude Code 로컬 설정 — skills/scripts/settings.json 는 프로젝트 공유 자산이므로 커밋
+# settings.local.json 은 머신별 (Claude Code 가 자동 분리)
 .claude/*
 !.claude/skills/
+!.claude/scripts/
+!.claude/settings.json
 .claude/skills/_archived/
+
+# Cross-Claude Bridge — role/shared_dir 은 머신별이므로 .example 만 commit
+.bridge-config.json
 
 # Telegram 봇 상태 (토큰, access.json)
 scripts/telegram/state/

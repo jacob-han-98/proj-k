@@ -25,10 +25,25 @@ from typing import Any
 
 import httpx
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
 app = FastAPI(title="klaud-sidecar", version="0.3.0")
+
+# Renderer 가 dev 모드 (electron-vite) 에선 http://localhost:5174 origin 으로 sidecar
+# 호출. browser 는 localhost / 127.0.0.1 을 다른 origin 으로 보고 POST + JSON
+# Content-Type 가 preflight 발동 → 차단. /health 는 GET 이라 안 막혔지만 /ask_stream
+# /search_docs /review_stream /suggest_edits 모두 죽었다 (핸드오프의 "network error
+# 채팅 회귀" 의 진짜 원인). production 은 file:// origin → 동일 이슈 가능.
+# sidecar 는 항상 localhost 만 listen 하니 origin 제한은 무의미 — 모두 허용.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origin_regex=r".*",
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 # ---------- 공용: 데이터 경로 정규화 ----------

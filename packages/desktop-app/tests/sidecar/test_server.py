@@ -368,3 +368,57 @@ def test_ask_stream_proxies_upstream_lines(monkeypatch: pytest.MonkeyPatch) -> N
     types = [e["type"] for e in events]
     assert types == ["status", "token", "token", "result"]
     assert events[-1]["payload"]["answer"] == "안녕하세요"
+
+
+def test_cors_preflight_returns_allow_origin(client: TestClient) -> None:
+    """Renderer (electron-vite dev) lives at http://localhost:5174 — different
+    origin from sidecar at http://127.0.0.1:<port>. POST + JSON triggers preflight,
+    sidecar must answer or browser blocks all real requests. Past regression:
+    핸드오프의 'network error 채팅 회귀' 의 진짜 원인이었다."""
+    res = client.options(
+        "/review_stream",
+        headers={
+            "Origin": "http://localhost:5174",
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "content-type",
+        },
+    )
+    assert res.status_code == 200
+    assert res.headers.get("access-control-allow-origin") == "http://localhost:5174"
+    assert "POST" in res.headers.get("access-control-allow-methods", "")
+
+
+def test_cors_actual_response_includes_allow_origin(client: TestClient) -> None:
+    """Browser also requires Allow-Origin on the actual response, not just preflight."""
+    res = client.post(
+        "/search_docs",
+        headers={"Origin": "http://localhost:5174"},
+        json={"query": "x", "limit": 1},
+    )
+    assert res.status_code == 200
+    assert res.headers.get("access-control-allow-origin") == "http://localhost:5174"
+
+
+def test_review_stream_returns_ndjson_error_without_agent_url(client: TestClient) -> None:
+    """No PROJK_AGENT_URL → must still return 200 NDJSON with type=error so the
+    renderer's stream parser handles it like any other event (not a 503 that
+    breaks the stream contract)."""
+    with client.stream("POST", "/review_stream", json={"title": "t", "text": "x"}) as res:
+        assert res.status_code == 200
+        assert "application/x-ndjson" in res.headers.get("content-type", "")
+        events = [json.loads(line) for line in res.iter_lines() if line.strip()]
+    assert len(events) >= 1
+    assert events[0]["type"] == "error"
+
+
+def test_suggest_edits_returns_ndjson_error_without_agent_url(client: TestClient) -> None:
+    with client.stream(
+        "POST",
+        "/suggest_edits",
+        json={"title": "t", "text": "x", "instruction": "i"},
+    ) as res:
+        assert res.status_code == 200
+        assert "application/x-ndjson" in res.headers.get("content-type", "")
+        events = [json.loads(line) for line in res.iter_lines() if line.strip()]
+    assert len(events) >= 1
+    assert events[0]["type"] == "error"

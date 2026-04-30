@@ -1,0 +1,18 @@
+{
+  "chroma_dir": "~/.qna-poc-chroma",
+  "collection_name": "project_k",
+  "embedding_workers": 10,
+  "expected_chunks": {
+    "excel": "~1800-2900",
+    "confluence": "~1200-1300",
+    "total": "~3000-4200"
+  },
+  "xlsx_source_dirs": [
+    "D:/ProjectK/Design/3_Base",
+    "D:/ProjectK/Design/7_System",
+    "D:/ProjectK/Design/9_MileStone",
+    "D:/ProjectK/Design/2_Development"
+  ],
+  "confluence_source": "packages/confluence-downloader/output",
+  "notes": "xlsx_source_dirs는 Perforce sync 경로. 서버에는 존재하지 않음."
+}

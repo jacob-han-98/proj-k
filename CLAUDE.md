@@ -8,6 +8,27 @@
 
 `/telegram:access` 스킬 실행 시 반드시 위 경로의 파일을 읽고 써야 한다.
 
+## 데스크톱 앱 — 브랜드 + 사용자 제약 원칙 (절대)
+
+**데스크톱 앱의 사용자 표기 브랜드는 `Klaud` (K + Claude 합성). 프로젝트·레포·사내 게이트웨이 식별자는 `Project K` 그대로 유지** — 자동 업데이트 경로와 NSIS install dir 호환성 때문. 두 명칭의 적용 범위:
+
+- **Klaud (사용자 화면)**: BrowserWindow title / 작업표시줄 / Alt+Tab / 토바 표기 / 외부 자료
+- **Project K (코드/식별자)**: `packages/desktop-app/`, `electron-builder.yml` `productName`/`appId`, NSIS 설치 폴더(%LOCALAPPDATA%\Programs\Project K), npm `name`, README 프로젝트 식별, 메모리·스킬 식별자
+
+**Klaud 데스크톱 앱을 사용하는 윈도우즈 사용자는 인스톨러 더블클릭 외 어떠한 설정·설치 작업도 하지 않는다.**
+
+이 원칙을 어기는 어떠한 안내도 금지:
+
+1. **PowerShell 명령 일체 금지** — `setx`, `Set-ExecutionPolicy`, `winget install`, `pip install`, `python -m venv`, `robocopy` 등을 사용자에게 시키지 않는다. 이런 동작이 필요하면 모두 앱 내부에서 자동 처리한다.
+2. **환경변수 수동 설정 금지** — `PROJK_REPO_ROOT`, `PROJK_UPDATE_FEED_URL`, `PROJK_PYTHON` 등은 모두 앱 내 설정 화면(SettingsModal)에서 입력받아 `userData/settings.json`에 저장. 한 번 입력하면 영구 유지.
+3. **사전 설치물 최소화** — 사용자 PC에 Python 또는 Node가 없어도 동작하는 게 이상적. 현재는 시스템 Python에 의존하지만 sidecar venv는 앱이 자동 생성한다(`sidecar.ts:ensureSidecarPython`). 장기적으로는 PyInstaller 또는 번들 Python 으로 대체.
+4. **첫 실행 자동 진단** — 데이터 경로 미설정, Python 미발견, 사이드카 시작 실패 등은 앱 안에서 명확한 메시지로 사용자에게 알리고, 가능하면 즉시 해결할 GUI(설정 모달, "재시도" 버튼)를 제공한다.
+5. **자동 업데이트 우선** — 새 버전 푸시는 electron-updater로 사용자가 다운로드/재시작 한 번만 클릭하면 끝. 인스톨러를 다시 받게 시키지 않는다.
+
+이 원칙은 "데스크톱 앱은 일반 기획자가 받아 쓰는 도구"라는 본질에서 나온다. 기획자는 PowerShell을 모를 수 있고, 알고 싶지도 않다. 새 기능을 추가할 때 사용자가 손으로 뭘 해야 한다면 그 자체가 설계 결함이다.
+
+dev 워크플로우(Claude WSL에서 코드 수정·테스트·릴리스)는 이 제약과 별개. dev에서는 npm/pip/wine 모두 자유롭게 쓴다.
+
 ## 프로젝트 개요
 
 모바일 MMORPG "Project K"의 전체 기획 지식을 AI가 완전히 이해하고 활용할 수 있도록 구조화하여,

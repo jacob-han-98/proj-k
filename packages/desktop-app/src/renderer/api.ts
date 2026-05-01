@@ -1,7 +1,13 @@
 // Renderer-side API client. Talks to the local Python sidecar over HTTP using
 // the port discovered via IPC, and to the host process via window.projk.
 
-import type { SearchHit, SearchResponse, SidecarStatus } from '../../src/shared/types';
+import type {
+  QuickFindHit,
+  QuickFindResult,
+  SearchHit,
+  SearchResponse,
+  SidecarStatus,
+} from '../../src/shared/types';
 
 let cachedPort: number | null = null;
 
@@ -87,6 +93,40 @@ export async function suggestEditsStream(
   });
   await readNdjson(res, onLine);
 }
+
+// PR10: Quick Find — 사이드바 input → debounced 호출. NDJSON 스트림으로 hits 점진 yield.
+//   fast=true  : ~50ms L1 only  (typing-as-you-search)
+//   fast=false : auto v2.1      (Enter / 검색 클릭, 풀 quality)
+// API contract: 20260501-163017-0292b5 (backend reply). 다른 필드 (strategy 등) 는 ignored.
+//
+// onEvent 핸들러 책임:
+//   - {type:"status", message} : 진행 라벨
+//   - {type:"hit", data}        : 점진 hit (UI 에 즉시 추가)
+//   - {type:"result", data}     : 종료 + total/latency/expanded 메타
+//   - {type:"error", message}   : 실패
+//
+// AbortSignal 받음 — 사용자가 빠르게 다음 query 입력하면 이전 stream cancel.
+export async function quickFind(
+  query: string,
+  opts: { limit?: number; kinds?: ('xlsx' | 'confluence')[]; fast?: boolean; signal?: AbortSignal } = {},
+  onEvent: (event: { type: string; [k: string]: unknown }) => void,
+): Promise<void> {
+  const port = await ensurePort();
+  const body: Record<string, unknown> = { query };
+  if (opts.limit != null) body.limit = opts.limit;
+  if (opts.kinds && opts.kinds.length > 0) body.kinds = opts.kinds;
+  if (opts.fast) body.fast = true;
+  const res = await fetch(`http://127.0.0.1:${port}/quick_find`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+    signal: opts.signal,
+  });
+  if (!res.ok) throw new Error(`quick_find HTTP ${res.status}`);
+  await readNdjson(res, onEvent as (e: { type: string; payload: unknown }) => void);
+}
+
+export type { QuickFindHit, QuickFindResult };
 
 async function readNdjson(
   res: Response,

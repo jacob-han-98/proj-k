@@ -1164,6 +1164,117 @@ html, body, #root { height: 100%; margin: 0; padding: 0; background: var(--bg); 
   padding: 0 4px;
 }
 
+/* PR10: Quick Find 결과 리스트 + 배지 */
+.qf-status {
+  font-size: 11px;
+  color: var(--text-dim);
+  padding: 4px 4px 0;
+  font-style: italic;
+}
+
+.qf-error {
+  font-size: 11px;
+  color: #dc2626;
+  padding: 4px 4px 0;
+  line-height: 1.4;
+}
+
+.qf-meta {
+  font-size: 10px;
+  color: var(--text-dim);
+  padding: 4px 4px 0;
+  letter-spacing: 0.02em;
+}
+
+.qf-results {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+  min-height: 0;
+  margin-top: 4px;
+}
+
+.qf-hit {
+  all: unset;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  transition: background 0.08s ease, border-left-color 0.08s ease;
+}
+
+.qf-hit:hover {
+  background: var(--list-hoverBackground);
+}
+
+.qf-hit:focus-visible {
+  outline: 1px solid var(--focusBorder);
+  outline-offset: -1px;
+}
+
+.qf-hit.xlsx {
+  border-left-color: #16a34a;
+}
+
+.qf-hit.confluence {
+  border-left-color: #2563eb;
+}
+
+.qf-hit-icon {
+  font-size: 13px;
+  line-height: 1.2;
+  margin-top: 1px;
+  flex-shrink: 0;
+}
+
+.qf-hit-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.qf-hit-title {
+  font-size: 12px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text);
+}
+
+.qf-hit-source {
+  font-size: 10px;
+  flex-shrink: 0;
+}
+
+.qf-hit-path {
+  font-size: 10px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.qf-hit-summary {
+  font-size: 11px;
+  color: var(--text-dim);
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 /* QnA 스레드 패널 */
 .qna-threads-panel {
   flex: 1 1 auto;

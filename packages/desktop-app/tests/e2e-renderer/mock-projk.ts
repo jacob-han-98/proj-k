@@ -106,6 +106,45 @@ export const mockProjkInitScript = `
         took_ms: 42,
       }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
+    if (url.includes('/quick_find')) {
+      // PR10: Quick Find sidecar proxy 가 NDJSON 으로 hits + result yield. mock 은 단순.
+      // 주의: 이 함수는 template literal 안 — 브라우저 컨텍스트에서 JS 로 실행되니
+      // TypeScript 캐스트 (\`as string\`) 사용 X. plain JS 만.
+      const body = init && init.body ? JSON.parse(init.body) : {};
+      const fast = !!body.fast;
+      const lines = [
+        { type: 'status', message: fast ? '⚡ L1 only' : '📚 auto v2.1' },
+        { type: 'hit', data: {
+          doc_id: 'xlsx::PK_HUD::HUD_기본',
+          type: 'xlsx',
+          title: 'HUD_기본',
+          path: '7_System / PK_HUD / HUD_기본',
+          workbook: 'PK_HUD',
+          summary: 'HUD 기본 레이아웃',
+          score: 0.92,
+          matched_via: 'title_exact',
+          rank: 1,
+          content_md_path: '/mock/xlsx/PK_HUD/HUD_기본.md',
+          source: 'l1',
+        } },
+        { type: 'hit', data: {
+          doc_id: 'conf::Design/HUD-개편',
+          type: 'confluence',
+          title: 'HUD 개편안',
+          path: 'Design / 시스템 디자인 / HUD',
+          space: 'Design',
+          summary: '신규 HUD 시안 검토',
+          score: 0.74,
+          matched_via: 'vector_cosine',
+          rank: 2,
+          content_md_path: '/mock/conf/HUD-개편.md',
+          source: fast ? 'l1' : 'vector',
+        } },
+        { type: 'result', data: { total: 2, latency_ms: fast ? 48 : 312, strategy: fast ? 'l1' : 'auto_v2', expanded: false } },
+      ];
+      const ndjson = lines.map((l) => JSON.stringify(l) + '\\n').join('');
+      return new Response(ndjson, { status: 200, headers: { 'Content-Type': 'application/x-ndjson' } });
+    }
     if (url.includes('/ask_stream')) {
       // 답변 안에 (출처: ...) 패턴을 넣어 인용 매칭 동작을 검증할 수 있게 한다.
       const finalAnswer = 'HUD 의 기본 레이아웃은 ① 상단 정보바, ② 좌측 미니맵으로 구성됩니다 (출처: PK_HUD 시스템.xlsx / HUD_기본 § 레이아웃).';

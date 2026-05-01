@@ -85,6 +85,36 @@ export type UpdaterState =
   | { state: 'not-available'; current: string }
   | { state: 'error'; message: string };
 
+// PR10: Quick Find — 사이드바의 "빠른 검색" 패널이 사용. agent-sdk-poc /quick_find 가
+// NDJSON 스트림으로 yield 하는 hit 의 shape (backend 의 contract 메시지 20260501-163017
+// 에 정의된 그대로). source 필드로 UI 배지 분기:
+//   - "l1": ⚡ 키워드 매칭 (가장 정확)
+//   - "vector": 🧬 의미 검색
+//   - "expand": 🔮 동의어 확장 (Phase 3 발동 시)
+export interface QuickFindHit {
+  doc_id: string; // "xlsx::<workbook>::<sheet>" or "conf::<path>"
+  type: 'xlsx' | 'confluence';
+  title: string;
+  path: string; // 표시용 경로
+  workbook?: string | null;
+  space?: string | null;
+  summary: string; // 한 줄 설명
+  score: number;
+  matched_via: string;
+  rank: number;
+  content_md_path: string; // 본문 경로
+  source: 'l1' | 'vector' | 'expand';
+}
+
+export interface QuickFindResult {
+  total: number;
+  latency_ms: number;
+  // backend 디버그 정보 (UI 직접 의존 X — 단순 표시용).
+  strategy?: string;
+  expanded?: boolean;
+  expanded_keywords?: string[];
+}
+
 export interface SearchHit {
   type: DocType;
   doc_id: string;

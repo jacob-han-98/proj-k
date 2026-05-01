@@ -165,6 +165,41 @@ test('QnA 크로스플로우 — 문서 탭 살아있는 채로 "+ 새" 가 qna-
 
 // ---------- 리뷰 split ----------
 
+// ---------- PR10: Quick Find ----------
+
+test('Quick Find — 입력 시 debounce 후 hits 표시 + 클릭 시 editor 탭 open', async ({ page }) => {
+  // Quick Find 사이드바 활성화.
+  await page.getByTestId('activity-find').click();
+  await expect(page.getByTestId('quick-find-panel')).toBeVisible();
+
+  const input = page.getByTestId('qf-input');
+  await input.fill('HUD');
+  // 200ms debounce + mock NDJSON yield. 점진 hit 가 등장.
+  const xlsxHit = page.getByTestId('qf-hit-xlsx::PK_HUD::HUD_기본');
+  const confHit = page.getByTestId('qf-hit-conf::Design/HUD-개편');
+  await expect(xlsxHit).toBeVisible();
+  await expect(confHit).toBeVisible();
+
+  // fast=true (typing) 라 두 번째 hit 도 source=l1.
+  await expect(page.getByTestId('qf-meta')).toContainText('48ms');
+
+  // hit 클릭 → editor 탭 추가.
+  await xlsxHit.click();
+  await expect(page.getByTestId('tab-bar').getByTestId(/^tab-(?!close-).+/)).toHaveCount(1);
+});
+
+test('Quick Find — Enter 시 fast=false (auto v2.1) 로 즉시 풀 검색', async ({ page }) => {
+  await page.getByTestId('activity-find').click();
+  const input = page.getByTestId('qf-input');
+  await input.fill('변신');
+  await input.press('Enter');
+
+  // result.latency_ms 가 mock 의 fast=false 값 (312ms) 로 표시.
+  await expect(page.getByTestId('qf-meta')).toContainText('312ms');
+  // 두 번째 hit 의 source 는 vector (mock 분기).
+  await expect(page.getByTestId('qf-hit-conf::Design/HUD-개편')).toBeVisible();
+});
+
 // ---------- PR9b: P4 depot 탭 ----------
 
 test('P4 depot 탭 — 활성 시 root 자동 fetch + lazy expand + 파일 클릭 시 안내', async ({ page }) => {

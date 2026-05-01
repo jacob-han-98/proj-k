@@ -29,10 +29,12 @@
     "test": "npm run test:unit && npm run test:sidecar && npm run test:e2e"
   },
   "dependencies": {
+    "@vscode/codicons": "^0.0.45",
     "chokidar": "^4.0.1",
     "electron-updater": "^6.3.9",
     "sql.js": "^1.13.0",
-    "ws": "^8.18.0"
+    "ws": "^8.18.0",
+    "zustand": "^5.0.12"
   },
   "devDependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",

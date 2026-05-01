@@ -8,6 +8,9 @@ interface Props {
   selectedId: string | null;
   onSelect: (id: string | null) => void;
   refreshKey?: number; // App 이 increment 하면 list 다시 fetch.
+  // PR3: editor 영역에 그 스레드를 탭으로 open 할 때 호출. onSelect 와 함께 발동.
+  // 옵셔널이라 미설정 환경(테스트 등)에선 기존 동작 그대로.
+  onOpenInEditor?: (thread: ThreadSummary) => void;
 }
 
 function relativeTime(ms: number): string {
@@ -27,7 +30,7 @@ function genId(): string {
   return `t-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-export function ThreadList({ selectedId, onSelect, refreshKey }: Props) {
+export function ThreadList({ selectedId, onSelect, refreshKey, onOpenInEditor }: Props) {
   const [threads, setThreads] = useState<ThreadSummary[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -51,6 +54,9 @@ export function ThreadList({ selectedId, onSelect, refreshKey }: Props) {
       const t = await window.projk.threads.create({ id: genId(), title: '새 스레드' });
       await refresh();
       onSelect(t.id);
+      // PR5: 새 thread 만들면 자동으로 editor 탭도 open. 기존엔 우측 ChatPanel 이 즉시 활성됐지만
+      // 이제 editor 탭 안의 QnATab 이 실제 채팅 UI 라 탭을 안 열면 사용자가 어디서 입력해야 할지 모름.
+      onOpenInEditor?.(t);
     } catch (e) {
       setError((e as Error).message);
     }
@@ -84,7 +90,10 @@ export function ThreadList({ selectedId, onSelect, refreshKey }: Props) {
           <button
             key={t.id}
             className={`thread-row${selectedId === t.id ? ' active' : ''}`}
-            onClick={() => onSelect(t.id)}
+            onClick={() => {
+              onSelect(t.id);
+              onOpenInEditor?.(t);
+            }}
             data-testid={`thread-row-${t.id}`}
           >
             <div className="thread-row-title">{t.title || '(제목 없음)'}</div>

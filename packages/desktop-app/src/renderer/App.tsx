@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
-import type { SearchHit, SidecarStatus, ThreadBundle, TreeNode } from '../shared/types';
-import { TreeSidebar } from './panels/TreeSidebar';
-import { ThreadList } from './panels/ThreadList';
-import { CenterPane } from './panels/CenterPane';
-import { ChatPanel, type ReviewTrigger } from './panels/ChatPanel';
+import type { SearchHit, SidecarStatus, TreeNode } from '../shared/types';
 import { SettingsModal } from './panels/SettingsModal';
 import { UpdateToast } from './panels/UpdateToast';
 import { UpdateIndicator } from './panels/UpdateIndicator';
+import { ActivityBar } from './workbench/ActivityBar';
+import { EditorHost } from './workbench/Editor/EditorHost';
+import { SidebarHost } from './workbench/Sidebar/SidebarHost';
+import { useWorkbenchStore } from './workbench/store';
+import { tabIdOf } from './workbench/types';
 
 type Selection = { kind: 'sheet' | 'confluence'; node: TreeNode } | null;
 
@@ -16,12 +17,8 @@ export function App() {
   const [credsInfo, setCredsInfo] = useState<{ email: string; baseUrl: string; hasToken: boolean } | null>(null);
   const [showCreds, setShowCreds] = useState(false);
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
-  const [threadBundle, setThreadBundle] = useState<ThreadBundle | null>(null);
   const [threadListKey, setThreadListKey] = useState(0); // refresh trigger
   const [sheetMappings, setSheetMappings] = useState<Record<string, string>>({});
-  // Phase 4-2: CenterPane 의 "리뷰" 버튼 → ChatPanel 의 review stream 으로 dispatch.
-  // id 는 같은 페이지 재요청도 useEffect 재발동시키는 dedupe key.
-  const [reviewTrigger, setReviewTrigger] = useState<ReviewTrigger | null>(null);
 
   // 부팅 시 settings 의 sheetMappings load.
   useEffect(() => {
@@ -60,23 +57,47 @@ export function App() {
     }
   }, [selectedThreadId]);
 
-  // selectedThreadId 가 변경되면 bundle 을 main process 에서 fetch.
+  // PR5: threadBundle fetch 는 QnATab 이 자체적으로 (mount 시 자기 thread 만 get) 수행하므로
+  // App level 에서 더 이상 필요 없음.
+
+  // PR2: selection ↔ workbench tabs 양방향 sync.
+  // selection 은 진실 소스를 유지 (트리 active highlight + ChatPanel confluencePageId 추출).
+  // store.openTabs/activeTabId 는 EditorHost 가 사용. 두 useEffect 가 한 방향씩 sync.
+  const activeTabId = useWorkbenchStore((s) => s.activeTabId);
+  const openTabs = useWorkbenchStore((s) => s.openTabs);
+
+  // 트리 클릭 → setSelection → 이 effect 가 store 에 openTab 호출.
+  // 이미 activeTabId 가 같은 ID 면 store call skip (no-op).
   useEffect(() => {
-    if (!selectedThreadId) {
-      setThreadBundle(null);
+    if (!selection) return;
+    const kind = selection.kind === 'confluence' ? 'confluence' : 'excel';
+    const id = tabIdOf({ kind, node: selection.node });
+    if (id === useWorkbenchStore.getState().activeTabId) return;
+    useWorkbenchStore.getState().openTab({ kind, node: selection.node });
+  }, [selection]);
+
+  // 탭 클릭/닫기 → activeTabId 변경 → 이 effect 가 selection 을 sync (트리 highlight + ChatPanel sync).
+  // 같은 (kind, node.id) 면 setSelection skip 으로 무한루프 차단.
+  // qna-thread 탭은 트리 selection 과 무관 — selection 그대로 두고 우측 ChatPanel 만 selectedThreadId 로 sync.
+  useEffect(() => {
+    if (!activeTabId) {
+      setSelection((prev) => (prev === null ? prev : null));
       return;
     }
-    let cancelled = false;
-    window.projk.threads
-      .get(selectedThreadId)
-      .then((b) => {
-        if (!cancelled) setThreadBundle(b);
-      })
-      .catch((e) => console.warn('threads.get', e));
-    return () => {
-      cancelled = true;
-    };
-  }, [selectedThreadId]);
+    const tab = openTabs.find((t) => t.id === activeTabId);
+    if (!tab) return;
+    if (tab.kind === 'qna-thread') {
+      // qna-thread 탭이 활성이면 사이드바 ThreadList active highlight 도 그 thread 로 sync.
+      // 트리 selection 은 그대로 유지 (이전에 보던 문서 위치를 잃지 않음).
+      setSelectedThreadId((prev) => (prev === tab.threadId ? prev : tab.threadId));
+      return;
+    }
+    const kind: 'sheet' | 'confluence' = tab.kind === 'confluence' ? 'confluence' : 'sheet';
+    setSelection((prev) => {
+      if (prev && prev.node.id === tab.node.id && prev.kind === kind) return prev;
+      return { kind, node: tab.node };
+    });
+  }, [activeTabId, openTabs]);
 
   // 4개 핵심 설정 (repoRoot / updateFeedUrl / retrieverUrl / agentUrl) 중 하나라도
   // 비어있으면 ⚙ 설정 모달을 자동으로 띄움. 새 키가 추가된 직후 자동 업데이트 받은
@@ -271,49 +292,36 @@ export function App() {
         </button>
       </header>
 
+      <ActivityBar />
+
       <aside className="left-sidebar" data-testid="left-sidebar">
-        <ThreadList
-          selectedId={selectedThreadId}
-          onSelect={setSelectedThreadId}
-          refreshKey={threadListKey}
-        />
-        <TreeSidebar
-          selectedId={selection?.node.id ?? null}
+        <SidebarHost
+          selectedTreeId={selection?.node.id ?? null}
           onOpenSheet={(node) => setSelection({ kind: 'sheet', node })}
           onOpenConfluencePage={(node) => setSelection({ kind: 'confluence', node })}
+          selectedThreadId={selectedThreadId}
+          onSelectThread={setSelectedThreadId}
+          onOpenThreadInEditor={(t) =>
+            useWorkbenchStore.getState().openTab({
+              kind: 'qna-thread',
+              threadId: t.id,
+              title: t.title || '(제목 없음)',
+            })
+          }
+          threadsRefreshKey={threadListKey}
         />
       </aside>
 
-      <CenterPane
-        selection={selection}
+      <EditorHost
         confluenceConfigured={!!credsInfo?.hasToken}
         onPromptCreds={() => setShowCreds(true)}
         sheetMappings={sheetMappings}
         onUpsertSheetMapping={onUpsertSheetMapping}
-        onRequestReview={(title, text) => setReviewTrigger({ id: Date.now(), title, text })}
-      />
-
-      <ChatPanel
+        onMessagesChanged={() => setThreadListKey((k) => k + 1)}
         onOpenHit={onOpenHit}
-        threadId={selectedThreadId}
-        initialMessages={threadBundle?.messages ?? []}
-        initialDocs={threadBundle?.docs ?? []}
-        reviewTrigger={reviewTrigger}
-        onReviewConsumed={() => setReviewTrigger(null)}
-        confluencePageId={selection?.kind === 'confluence' ? selection.node.confluencePageId ?? null : null}
-        onThreadCreated={(id) => {
-          setSelectedThreadId(id);
-          setThreadListKey((k) => k + 1);
-        }}
-        onMessagesChanged={() => {
-          setThreadListKey((k) => k + 1);
-          if (selectedThreadId) {
-            window.projk.threads.get(selectedThreadId).then(setThreadBundle).catch(() => {});
-          }
-        }}
         onOpenDoc={(d) => {
-          // Phase 4-1: thread 누적 doc 클릭 → CenterPane 에 미리보기.
-          // doc_id 가 트리 id 와 다르므로 가짜 TreeNode 생성 (CenterPane 이 이해할 수 있는 shape).
+          // 누적 doc chip 클릭 → 그 문서 탭 추가/focus. selection 갱신만 하면 PR2 sync 가
+          // store.openTab 까지 알아서 수행한다 (트리 id 와 doc_id 가 다를 수 있어 가짜 TreeNode 생성).
           const node: TreeNode = {
             id: `${d.doc_type}:${d.doc_id}`,
             type: d.doc_type === 'confluence' ? 'page' : 'sheet',

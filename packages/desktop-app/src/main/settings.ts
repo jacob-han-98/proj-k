@@ -23,6 +23,11 @@ export interface Settings {
   // 첫 sheet 의 file picker 결과 path 에서 relPath 매칭으로 자동 추정 + 저장.
   // 한 번 저장된 후엔 모든 sheet 가 sidecar /xlsx_raw 로 자동 fetch.
   p4WorkspaceRoot?: string;
+  // PR9 — Perforce 서버 좌표. SettingsModal 의 "자동 발견" 으로 채워지거나 사용자 직접 입력.
+  // 모두 비어있으면 P4Panel 의 depot 탭은 안내만 표시.
+  p4Host?: string;
+  p4User?: string;
+  p4Client?: string;
 }
 
 function settingsFile(): string {

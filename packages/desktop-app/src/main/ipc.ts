@@ -10,7 +10,7 @@ import type {
   ThreadSummary,
 } from '../shared/types';
 import { getP4Tree, getConfluenceTree } from './tree';
-import { discoverP4Info } from './p4-discovery';
+import { discoverP4Info, listDepotRoots, listDepotChildren } from './p4-discovery';
 import { getSidecarStatus, onSidecarStatus, startSidecar } from './sidecar';
 import { getConfluenceCreds, setConfluenceCreds } from './auth';
 import { applyEditsToConfluencePage, type ChangeItem as ConfluenceChangeItem } from './confluence-apply';
@@ -292,6 +292,17 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
   // PR9: P4 자동 발견 — p4tickets.txt + login -s + clients 매칭으로 host/user/client 추출.
   // SettingsModal 의 "자동 발견" 버튼이 호출. 실패 시 P4DiscoveryInfo.diagnostics 로 한 줄 안내.
   ipcMain.handle(IPC.P4_DISCOVER, async () => discoverP4Info());
+
+  // PR9b: depot 트리 lazy fetch. P4DepotTree 가 mount 시 root 1회, expand 시 자식 fetch.
+  // 둘 다 settings 의 p4Host/p4User/p4Client 사용 — 미설정 시 diagnostics 로 안내.
+  ipcMain.handle(IPC.P4_DEPOT_LIST, async () => {
+    const s = getSettings();
+    return listDepotRoots(s.p4Host ?? '', s.p4User ?? '', s.p4Client ?? '');
+  });
+  ipcMain.handle(IPC.P4_DEPOT_DIRS, async (_e, parentPath: string) => {
+    const s = getSettings();
+    return listDepotChildren(s.p4Host ?? '', s.p4User ?? '', s.p4Client ?? '', parentPath);
+  });
 
   ipcMain.handle(IPC.SETTINGS_GET, async () => getSettings());
   ipcMain.handle(IPC.SETTINGS_SET, async (_e, patch: Partial<AppSettings>) => {

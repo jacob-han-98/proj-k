@@ -204,6 +204,47 @@ export const mockProjkInitScript = `
       auto: () => Promise.resolve({ ok: false, error: 'mock — Playwright 환경' }),
     },
 
+    // PR9: P4 자동 발견 + depot 트리 lazy fetch. Playwright mock 은 sample 데이터로 동작.
+    p4: {
+      discover: () => Promise.resolve({
+        ok: true,
+        source: 'tickets',
+        host: 'mockperforce:1666',
+        user: 'mockuser',
+        client: 'mockuser_JACOB-D',
+        clientRoot: 'D:\\\\ProjectK',
+        candidates: ['mockuser_JACOB-D', 'mockuser_LAPTOP'],
+      }),
+      depotRoots: () => Promise.resolve({
+        ok: true,
+        entries: [
+          { path: '//depot', name: 'depot', kind: 'depot' },
+          { path: '//archive', name: 'archive', kind: 'depot' },
+        ],
+      }),
+      depotDirs: (parentPath) => {
+        // 단순 mock: //depot 의 자식은 폴더 1개 + .xlsx 1개. 그 외 path 는 빈 폴더.
+        if (parentPath === '//depot') {
+          return Promise.resolve({
+            ok: true,
+            entries: [
+              { path: '//depot/Design', name: 'Design', kind: 'dir' },
+              { path: '//depot/HUD.xlsx', name: 'HUD.xlsx', kind: 'file' },
+            ],
+          });
+        }
+        if (parentPath === '//depot/Design') {
+          return Promise.resolve({
+            ok: true,
+            entries: [
+              { path: '//depot/Design/Combat.xlsx', name: 'Combat.xlsx', kind: 'file' },
+            ],
+          });
+        }
+        return Promise.resolve({ ok: true, entries: [] });
+      },
+    },
+
     // Threads workspace stub — in-memory.
     threads: (() => {
       const mem = { threads: [], messages: [], citations: {}, docs: [] };

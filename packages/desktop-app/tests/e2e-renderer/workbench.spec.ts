@@ -165,6 +165,39 @@ test('QnA 크로스플로우 — 문서 탭 살아있는 채로 "+ 새" 가 qna-
 
 // ---------- 리뷰 split ----------
 
+// ---------- PR9b: P4 depot 탭 ----------
+
+test('P4 depot 탭 — 활성 시 root 자동 fetch + lazy expand + 파일 클릭 시 안내', async ({ page }) => {
+  await page.getByTestId('activity-p4').click();
+  // local 이 default 라 depot 탭 클릭으로 전환.
+  await page.getByTestId('p4-source-depot').click();
+  await expect(page.getByTestId('p4-source-depot')).toHaveClass(/active/);
+
+  // root depot 2 개 (mock-projk: //depot, //archive) 가 보여야 함.
+  const tree = page.getByTestId('depot-tree');
+  await expect(tree.getByTestId('depot-row-//depot')).toBeVisible();
+  await expect(tree.getByTestId('depot-row-//archive')).toBeVisible();
+
+  // //depot expand → mock 의 자식 (폴더 Design + 파일 HUD.xlsx).
+  await tree.getByTestId('depot-row-//depot').click();
+  await expect(tree.getByTestId('depot-row-//depot/Design')).toBeVisible();
+  await expect(tree.getByTestId('depot-row-//depot/HUD.xlsx')).toBeVisible();
+
+  // Design 폴더 expand → 자식 Combat.xlsx.
+  await tree.getByTestId('depot-row-//depot/Design').click();
+  await expect(tree.getByTestId('depot-row-//depot/Design/Combat.xlsx')).toBeVisible();
+
+  // 파일 클릭 시 alert 노출 (보기 전용 안내). dialog handler 로 캡처.
+  let alertText = '';
+  page.once('dialog', async (d) => {
+    alertText = d.message();
+    await d.accept();
+  });
+  await tree.getByTestId('depot-row-//depot/HUD.xlsx').click();
+  expect(alertText).toContain('//depot/HUD.xlsx');
+  expect(alertText).toContain('보기 전용');
+});
+
 test('리뷰 split — 활성 시 좌우 분할 + 닫기 X 동작', async ({ page }) => {
   // review.spec 에서 검증한 review_stream 기본 응답을 그대로 활용 (간단 stub).
   await page.route('**/127.0.0.1:**/review_stream', async (route) => {

@@ -39,6 +39,23 @@ export interface P4DiscoveryInfo {
   diagnostics?: string; // 실패 시 한 줄 안내 (사용자 읽기 좋게)
 }
 
+// PR9b: depot 트리의 한 노드. lazy fetch — 폴더(depot/dir)는 expand 시점에 자식 fetch.
+// 보기 전용. 파일 클릭은 안내만 (편집은 별도 P4 checkout 흐름).
+export interface P4DepotEntry {
+  // 전체 depot path. 예: '//depot' (root) / '//depot/main/Design' / '//depot/main/Design/HUD.xlsx'
+  path: string;
+  // path 의 마지막 segment — 트리에 표시.
+  name: string;
+  kind: 'depot' | 'dir' | 'file';
+}
+
+export interface P4DepotResult {
+  ok: boolean;
+  entries: P4DepotEntry[];
+  // 실패 시 사용자에게 한 줄 안내 (좌표 미설정, ticket 만료 등).
+  diagnostics?: string;
+}
+
 export interface ConfluenceTreeResult {
   nodes: TreeNode[];
   rootDir: string;
@@ -103,6 +120,8 @@ export const IPC = {
   EXCEL_OPEN: 'excel:open',
   P4_SYNC: 'p4:sync',
   P4_DISCOVER: 'p4:discover',
+  P4_DEPOT_LIST: 'p4:depot-list',
+  P4_DEPOT_DIRS: 'p4:depot-dirs',
   UPDATER_STATE: 'updater:state',
   UPDATER_CHECK: 'updater:check',
   UPDATER_QUIT_AND_INSTALL: 'updater:quit-and-install',

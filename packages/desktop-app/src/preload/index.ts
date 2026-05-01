@@ -4,6 +4,7 @@ import {
   type AppSettings,
   type ConfluenceCreds,
   type ConfluenceTreeResult,
+  type P4DepotResult,
   type P4DiscoveryInfo,
   type P4TreeResult,
   type SidecarStatus,
@@ -59,8 +60,12 @@ const api = {
 
   // PR9: Perforce 좌표 자동 발견. SettingsModal 의 "자동 발견" 버튼이 호출.
   // ok=true 면 host/user/client 가 채워진다. ok=false 면 diagnostics 한 줄로 사용자에게 안내.
+  // PR9b: depot 트리 lazy fetch. P4DepotTree 가 mount 시 root, expand 시 자식.
   p4: {
     discover: (): Promise<P4DiscoveryInfo> => ipcRenderer.invoke(IPC.P4_DISCOVER),
+    depotRoots: (): Promise<P4DepotResult> => ipcRenderer.invoke(IPC.P4_DEPOT_LIST),
+    depotDirs: (parentPath: string): Promise<P4DepotResult> =>
+      ipcRenderer.invoke(IPC.P4_DEPOT_DIRS, parentPath),
   },
 
   // mcp-bridge 가 보내는 명령을 renderer 가 수신하기 위한 hook.

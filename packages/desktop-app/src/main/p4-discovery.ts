@@ -15,7 +15,7 @@ import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { homedir, hostname } from 'node:os';
 import { join } from 'node:path';
-import type { P4DiscoveryInfo } from '../shared/types';
+import type { P4DiscoveryInfo, P4DepotEntry, P4DepotResult } from '../shared/types';
 
 // `p4 info` 출력 예:
 //   User name: jacob
@@ -176,4 +176,99 @@ export function discoverP4Info(): P4DiscoveryInfo {
     clientRoot,
     candidates: candidates.length > 1 ? candidates : undefined,
   };
+}
+
+// ---------- PR9b: depot 트리 lazy fetch ----------
+// 보기 전용. 사용자가 depot 폴더를 펼치면 자식 (하위 폴더 + .xlsx 파일) 만 fetch.
+// 편집은 별도 P4 checkout 흐름 (이번 PR 범위 외). 파일 클릭 시 안내만.
+
+// `p4 depots` 출력 (한 라인 한 depot):
+//   Depot depot 2024/01/01 stream //depot/... '..'
+//   Depot another 2024/02/02 local //another/... '..'
+// 각 라인 두 번째 토큰이 depot 이름. path 는 `//<name>` 으로 prefix.
+export function listDepotRoots(host: string, user: string, client: string): P4DepotResult {
+  if (!host || !user || !client) {
+    return {
+      ok: false,
+      entries: [],
+      diagnostics: 'P4 좌표 미설정 — ⚙ 설정에서 host/user/client 를 입력하거나 자동 발견을 실행하세요.',
+    };
+  }
+  const r = runP4(['-p', host, '-u', user, '-c', client, 'depots']);
+  if (!r.ok) {
+    return { ok: false, entries: [], diagnostics: `p4 depots 실패: ${r.stderr.trim() || 'unknown'}` };
+  }
+  const entries: P4DepotEntry[] = [];
+  for (const line of r.stdout.split(/\r?\n/)) {
+    const m = line.match(/^Depot\s+(\S+)\s/);
+    if (m) entries.push({ path: `//${m[1]}`, name: m[1], kind: 'depot' });
+  }
+  return { ok: true, entries };
+}
+
+// 한 path 의 직속 자식들. 폴더는 `p4 dirs <path>/*`, 파일은 `p4 files -e <path>/*.xlsx`.
+//   - `p4 dirs //depot/main/*` → '//depot/main/Design\n//depot/main/Build\n...'
+//   - `p4 files -e //depot/main/Design/*.xlsx` → '//.../foo.xlsx#3 - edit change 1234 (binary+S2)'
+// -e 는 head 에서 deleted 된 파일 skip. 파일 출력의 # 앞부분이 depot path.
+export function listDepotChildren(
+  host: string,
+  user: string,
+  client: string,
+  parentPath: string,
+): P4DepotResult {
+  if (!host || !user || !client) {
+    return {
+      ok: false,
+      entries: [],
+      diagnostics: 'P4 좌표 미설정',
+    };
+  }
+  const entries: P4DepotEntry[] = [];
+
+  // 1) 자식 디렉토리.
+  const dirsR = runP4(['-p', host, '-u', user, '-c', client, 'dirs', `${parentPath}/*`]);
+  if (dirsR.ok) {
+    for (const line of dirsR.stdout.split(/\r?\n/)) {
+      const trimmed = line.trim();
+      if (!trimmed.startsWith('//')) continue;
+      const name = trimmed.split('/').pop() ?? trimmed;
+      entries.push({ path: trimmed, name, kind: 'dir' });
+    }
+  }
+  // dirs 가 'no such file(s).' 로 실패해도 빈 폴더일 수 있어 file 시도는 계속.
+
+  // 2) .xlsx 파일 (기획 도구 본질). 다른 확장자는 일단 노출 안 함 — depot 은 보기 전용 +
+  //    스펙 키우지 말자 원칙.
+  const filesR = runP4([
+    '-p', host, '-u', user, '-c', client,
+    'files', '-e', `${parentPath}/*.xlsx`,
+  ]);
+  if (filesR.ok) {
+    for (const line of filesR.stdout.split(/\r?\n/)) {
+      const trimmed = line.trim();
+      if (!trimmed.startsWith('//')) continue;
+      const hashIdx = trimmed.indexOf('#');
+      const filePath = hashIdx > 0 ? trimmed.slice(0, hashIdx) : trimmed.split(/\s/)[0];
+      const name = filePath.split('/').pop() ?? filePath;
+      entries.push({ path: filePath, name, kind: 'file' });
+    }
+  }
+
+  // 폴더 먼저, 파일 나중 — 사용자에게 익숙한 정렬.
+  // 같은 종류 안에서는 알파벳 (대소문자 무시).
+  entries.sort((a, b) => {
+    if (a.kind !== b.kind) return a.kind === 'dir' ? -1 : 1;
+    return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+  });
+
+  // dirs / files 둘 다 실패한 경우 (예: 권한 없음) diagnostics 표시.
+  if (!dirsR.ok && !filesR.ok) {
+    return {
+      ok: false,
+      entries: [],
+      diagnostics: `자식 fetch 실패 — ${dirsR.stderr.trim() || filesR.stderr.trim() || 'unknown'}`,
+    };
+  }
+
+  return { ok: true, entries };
 }

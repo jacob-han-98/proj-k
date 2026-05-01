@@ -36,6 +36,13 @@ export function SettingsModal({ initialEmail, initialBaseUrl, onClose, onSaved }
   const [saving, setSaving] = useState(false);
   const [savedSettings, setSavedSettings] = useState<AppSettings>({});
 
+  // PR9: P4 좌표 (depot 트리에 사용). "자동 발견" 버튼이 main 의 discoverP4Info 호출.
+  const [p4Host, setP4Host] = useState('');
+  const [p4User, setP4User] = useState('');
+  const [p4Client, setP4Client] = useState('');
+  const [p4Discovering, setP4Discovering] = useState(false);
+  const [p4DiscoveryMsg, setP4DiscoveryMsg] = useState<string | null>(null);
+
   useEffect(() => {
     window.projk.getSettings().then((s) => {
       setSavedSettings(s);
@@ -49,13 +56,45 @@ export function SettingsModal({ initialEmail, initialBaseUrl, onClose, onSaved }
       setMcpBridgeUrl(s.mcpBridgeUrl ?? DEFAULT_MCP_BRIDGE_URL_HINT);
       setLogCollectorUrl(s.logCollectorUrl ?? DEFAULT_LOG_COLLECTOR_URL_HINT);
       setDevBundleUrl(s.devBundleUrl ?? DEFAULT_DEV_BUNDLE_URL_HINT);
+      setP4Host(s.p4Host ?? '');
+      setP4User(s.p4User ?? '');
+      setP4Client(s.p4Client ?? '');
     });
   }, []);
+
+  const runP4Discover = async () => {
+    setP4Discovering(true);
+    setP4DiscoveryMsg(null);
+    try {
+      const info = await window.projk.p4.discover();
+      if (info.ok) {
+        if (info.host) setP4Host(info.host);
+        if (info.user) setP4User(info.user);
+        if (info.client) setP4Client(info.client);
+        const candidates =
+          info.candidates && info.candidates.length > 1
+            ? ` (다른 client 후보: ${info.candidates.filter((c) => c !== info.client).join(', ')})`
+            : '';
+        setP4DiscoveryMsg(
+          `✓ ticket 으로부터 발견 — ${info.client ?? '(client 없음)'}${candidates}`,
+        );
+      } else {
+        setP4DiscoveryMsg(`✗ ${info.diagnostics ?? '발견 실패'}`);
+        // 부분 발견 (host/user 까지만 있는 경우) 도 form 채워줌 — 사용자가 client 만 직접 입력.
+        if (info.host) setP4Host(info.host);
+        if (info.user) setP4User(info.user);
+      }
+    } catch (e) {
+      setP4DiscoveryMsg(`✗ 호출 실패: ${(e as Error).message}`);
+    } finally {
+      setP4Discovering(false);
+    }
+  };
 
   const save = async () => {
     setSaving(true);
     try {
-      // 1) 데이터 경로 / 피드 URL / 백엔드 URL / dev 디버그 옵션 저장 (비밀 아님)
+      // 1) 데이터 경로 / 피드 URL / 백엔드 URL / dev 디버그 옵션 / P4 좌표 저장 (비밀 아님)
       await window.projk.setSettings({
         repoRoot: repoRoot.trim() || undefined,
         updateFeedUrl: updateFeedUrl.trim() || undefined,
@@ -65,6 +104,9 @@ export function SettingsModal({ initialEmail, initialBaseUrl, onClose, onSaved }
         mcpBridgeUrl: mcpBridgeUrl.trim() || undefined,
         logCollectorUrl: logCollectorUrl.trim() || undefined,
         devBundleUrl: devBundleUrl.trim() || undefined,
+        p4Host: p4Host.trim() || undefined,
+        p4User: p4User.trim() || undefined,
+        p4Client: p4Client.trim() || undefined,
       });
 
       // 2) Confluence 자격증명 (비밀 — safeStorage 암호화)
@@ -203,6 +245,73 @@ export function SettingsModal({ initialEmail, initialBaseUrl, onClose, onSaved }
         />
         <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: -4 }}>
           예: <code>http://localhost:8773</code>. WSL <code>npm run serve:dev-bundle</code> 가 out/ 를 host. 5초 polling 으로 변경 감지 → swap → relaunch (빌드 cycle ~5초). 미설정 시 비활성.
+        </div>
+
+        <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 12, marginBottom: 4 }}>
+          Perforce (선택 — depot 트리)
+        </div>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 4 }}>
+          <button
+            type="button"
+            onClick={runP4Discover}
+            disabled={p4Discovering}
+            data-testid="settings-p4-discover"
+            style={{
+              padding: '4px 10px',
+              fontSize: 11,
+              borderRadius: 4,
+              border: '1px solid var(--border)',
+              background: 'var(--bg)',
+              color: 'var(--text)',
+              cursor: p4Discovering ? 'wait' : 'pointer',
+            }}
+          >
+            {p4Discovering ? '발견 중…' : '🔍 자동 발견'}
+          </button>
+          <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>
+            p4tickets.txt + p4 login -s + p4 clients 로 자동 채움
+          </span>
+        </div>
+        {p4DiscoveryMsg && (
+          <div
+            style={{ fontSize: 10, color: 'var(--text-dim)', lineHeight: 1.4, marginBottom: 4 }}
+            data-testid="settings-p4-discovery-msg"
+          >
+            {p4DiscoveryMsg}
+          </div>
+        )}
+        <label htmlFor="settings-p4-host">P4 Host (P4PORT)</label>
+        <input
+          id="settings-p4-host"
+          aria-label="P4 Host"
+          data-testid="settings-p4-host"
+          value={p4Host}
+          onChange={(e) => setP4Host(e.target.value)}
+          placeholder="perforce:1666"
+          spellCheck={false}
+        />
+        <label htmlFor="settings-p4-user" style={{ marginTop: 6 }}>P4 User (P4USER)</label>
+        <input
+          id="settings-p4-user"
+          aria-label="P4 User"
+          data-testid="settings-p4-user"
+          value={p4User}
+          onChange={(e) => setP4User(e.target.value)}
+          placeholder="username"
+          spellCheck={false}
+        />
+        <label htmlFor="settings-p4-client" style={{ marginTop: 6 }}>P4 Client (P4CLIENT)</label>
+        <input
+          id="settings-p4-client"
+          aria-label="P4 Client"
+          data-testid="settings-p4-client"
+          value={p4Client}
+          onChange={(e) => setP4Client(e.target.value)}
+          placeholder="workspace_name"
+          spellCheck={false}
+        />
+        <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: -4 }}>
+          비워두면 P4 사이드바의 depot 탭은 비활성. local 트리는 데이터 루트만 있으면 동작.
         </div>
 
         <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 12, marginBottom: 4 }}>

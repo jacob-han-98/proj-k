@@ -10,6 +10,7 @@ import type {
   ThreadSummary,
 } from '../shared/types';
 import { getP4Tree, getConfluenceTree } from './tree';
+import { discoverP4Info } from './p4-discovery';
 import { getSidecarStatus, onSidecarStatus, startSidecar } from './sidecar';
 import { getConfluenceCreds, setConfluenceCreds } from './auth';
 import { applyEditsToConfluencePage, type ChangeItem as ConfluenceChangeItem } from './confluence-apply';
@@ -287,6 +288,10 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     const url = `http://127.0.0.1:${sc.port}/xlsx_raw?relPath=${encodeURIComponent(p.relPath)}`;
     return await onedriveSync.syncFromSidecarAndUrl(url, p.relPath);
   });
+
+  // PR9: P4 자동 발견 — p4tickets.txt + login -s + clients 매칭으로 host/user/client 추출.
+  // SettingsModal 의 "자동 발견" 버튼이 호출. 실패 시 P4DiscoveryInfo.diagnostics 로 한 줄 안내.
+  ipcMain.handle(IPC.P4_DISCOVER, async () => discoverP4Info());
 
   ipcMain.handle(IPC.SETTINGS_GET, async () => getSettings());
   ipcMain.handle(IPC.SETTINGS_SET, async (_e, patch: Partial<AppSettings>) => {

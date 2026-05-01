@@ -25,6 +25,20 @@ export interface P4TreeResult {
   debug?: unknown;
 }
 
+// PR9: p4tickets.txt + p4 login -s + p4 clients 조합으로 main process 가 자동 발견한
+// Perforce 좌표. 사용자가 SettingsModal 에서 "자동 발견" 누르면 이 값을 주는 form 으로 채움.
+export interface P4DiscoveryInfo {
+  ok: boolean;
+  // 어디까지 발견됐는지 — UI 가 진단 메시지를 보여줄 수 있게.
+  source: 'tickets' | 'manual' | 'none';
+  host?: string; // P4PORT (예: 'perforce:1666')
+  user?: string; // P4USER
+  client?: string; // P4CLIENT — host 매칭하는 첫 client
+  clientRoot?: string; // p4 info 의 Client root
+  candidates?: string[]; // host 매칭 실패 시 사용자가 고를 수 있는 client 후보
+  diagnostics?: string; // 실패 시 한 줄 안내 (사용자 읽기 좋게)
+}
+
 export interface ConfluenceTreeResult {
   nodes: TreeNode[];
   rootDir: string;
@@ -88,6 +102,7 @@ export const IPC = {
   CONFLUENCE_APPLY_EDITS: 'confluence:apply-edits',
   EXCEL_OPEN: 'excel:open',
   P4_SYNC: 'p4:sync',
+  P4_DISCOVER: 'p4:discover',
   UPDATER_STATE: 'updater:state',
   UPDATER_CHECK: 'updater:check',
   UPDATER_QUIT_AND_INSTALL: 'updater:quit-and-install',
@@ -196,6 +211,14 @@ export interface AppSettings {
   // 사용자가 OneDrive 에 manual upload 한 file 의 share link 를 등록.
   // 다음 PoC 2B 에서 Microsoft Graph 자동 upload 가 같은 형식 채움.
   sheetMappings?: Record<string, string>;
+  // OneDrive Sync 우회 흐름에서 picker path 로부터 자동 추정 후 저장 (0.1.48+).
+  // sidecar 의 /xlsx_raw 가 P4 워크스페이스 root 로 fallback 사용.
+  p4WorkspaceRoot?: string;
+  // PR9: P4 자동 발견 또는 SettingsModal 수동 입력으로 채워지는 좌표.
+  // 모두 비어있으면 PR9b 의 depot 트리 빌드는 skip 되고 P4Panel depot 탭은 disabled 유지.
+  p4Host?: string; // P4PORT (예: 'perforce:1666')
+  p4User?: string; // P4USER
+  p4Client?: string; // P4CLIENT
 }
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC];

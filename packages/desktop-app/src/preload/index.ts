@@ -4,6 +4,7 @@ import {
   type AppSettings,
   type ConfluenceCreds,
   type ConfluenceTreeResult,
+  type P4DiscoveryInfo,
   type P4TreeResult,
   type SidecarStatus,
   type ThreadBundle,
@@ -55,6 +56,12 @@ const api = {
   getSettings: (): Promise<AppSettings> => ipcRenderer.invoke(IPC.SETTINGS_GET),
   setSettings: (patch: Partial<AppSettings>): Promise<AppSettings> =>
     ipcRenderer.invoke(IPC.SETTINGS_SET, patch),
+
+  // PR9: Perforce 좌표 자동 발견. SettingsModal 의 "자동 발견" 버튼이 호출.
+  // ok=true 면 host/user/client 가 채워진다. ok=false 면 diagnostics 한 줄로 사용자에게 안내.
+  p4: {
+    discover: (): Promise<P4DiscoveryInfo> => ipcRenderer.invoke(IPC.P4_DISCOVER),
+  },
 
   // mcp-bridge 가 보내는 명령을 renderer 가 수신하기 위한 hook.
   // payload = { cmd: McpCommand, replyChannel: string }. renderer 는 cmd 수행 후

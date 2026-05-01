@@ -5,13 +5,21 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript({ content: mockProjkInitScript });
 });
 
-test('app shell renders 3 panes with sidecar ready + 버전 표기', async ({ page }) => {
+test('app shell renders 4-pane workbench with sidecar ready + 버전 표기', async ({ page }) => {
   await page.goto('/');
   await expect(page.getByTestId('app-shell')).toBeVisible();
-  await expect(page.getByTestId('p4-tree')).toBeVisible();
+  // M1: Activity Bar (48) + Sidebar (240) + Editor (1fr). 우측 ChatPanel 은 제거됨.
+  await expect(page.getByTestId('activity-bar')).toBeVisible();
+  await expect(page.getByTestId('sidebar-host')).toBeVisible();
+  await expect(page.getByTestId('editor-host')).toBeVisible();
+  // default activeIcon='confluence' → confluence panel + 트리 visible.
+  await expect(page.getByTestId('sidebar-pane-confluence')).toBeVisible();
   await expect(page.getByTestId('confluence-tree')).toBeVisible();
-  await expect(page.getByTestId('center-pane')).toBeVisible();
-  await expect(page.getByTestId('chat-panel')).toBeVisible();
+  // P4 트리는 활동바 토글 후 보임 (사이드바 swap).
+  await page.getByTestId('activity-p4').click();
+  await expect(page.getByTestId('p4-tree')).toBeVisible();
+  // editor 처음 빈 상태 — placeholder.
+  await expect(page.getByTestId('editor-empty')).toBeVisible();
   // Sidecar status pill picks up the mock 'ready' status
   await expect(page.locator('.status-pill')).toContainText('ready');
   // 토바에 v숫자.숫자.숫자 형식 버전이 보여야 함 (자동 업데이트 후에도 항상 표기)
@@ -21,18 +29,20 @@ test('app shell renders 3 panes with sidecar ready + 버전 표기', async ({ pa
 test('P4 tree expands and selects a sheet', async ({ page }) => {
   await page.goto('/');
 
-  // Wait for tree to populate from mock
-  await expect(page.getByText('7_System')).toBeVisible();
+  // M1: P4 사이드바는 default 가 아니라 활동바 토글 필요.
+  await page.getByTestId('activity-p4').click();
+  const tree = page.getByTestId('p4-tree');
+  await expect(tree.getByText('7_System', { exact: true })).toBeVisible();
 
   // Expand category → workbook
-  await page.getByText('7_System').click();
-  await expect(page.getByText('PK_HUD 시스템')).toBeVisible();
+  await tree.getByText('7_System', { exact: true }).click();
+  await expect(tree.getByText('PK_HUD 시스템', { exact: true })).toBeVisible();
 
-  await page.getByText('PK_HUD 시스템').click();
-  await expect(page.getByText('HUD_기본')).toBeVisible();
+  await tree.getByText('PK_HUD 시스템', { exact: true }).click();
+  await expect(tree.getByText('HUD_기본', { exact: true })).toBeVisible();
 
-  // Click sheet → center pane updates
-  await page.getByText('HUD_기본').click();
+  // Click sheet → editor 에 탭 추가 + center pane (sheet mapping prompt) 렌더.
+  await tree.getByText('HUD_기본', { exact: true }).click();
   const center = page.getByTestId('center-pane');
   await expect(center).toContainText('HUD_기본');
   // 0.1.46 (PoC 2C) — Sync detect 실패 (mock 환경) 시 manual share URL 등록 fallback.
@@ -50,9 +60,19 @@ test('Confluence tree shows hierarchy', async ({ page }) => {
   await expect(page.getByText('시스템 디자인')).toBeVisible();
 });
 
+// M1: 채팅/검색은 editor 의 qna-thread 탭 안에서만 동작. 사용자가 사이드바에서 새 thread 만들면
+// editor 탭 자동 추가 + active. 그 탭 안에 chat-input/search-results 가 렌더된다.
+async function openNewQnATab(page: import('@playwright/test').Page) {
+  await page.getByTestId('activity-qna').click();
+  await page.getByTestId('thread-new').click();
+  // QnATab 이 mount 되며 chat-input 등장.
+  await expect(page.getByTestId('chat-input')).toBeVisible();
+}
+
 test('search-first flow: hits before answer + 헤더/카운트', async ({ page }) => {
   await page.goto('/');
 
+  await openNewQnATab(page);
   await page.getByTestId('chat-input').fill('HUD 관련 문서');
   await page.getByTestId('chat-send').click();
 
@@ -69,6 +89,7 @@ test('search-first flow: hits before answer + 헤더/카운트', async ({ page }
 test('cited 인용 매칭: 답변에 등장한 hit 에 인용 배지', async ({ page }) => {
   await page.goto('/');
 
+  await openNewQnATab(page);
   await page.getByTestId('chat-input').fill('HUD 레이아웃');
   await page.getByTestId('chat-send').click();
 

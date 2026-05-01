@@ -1227,14 +1227,29 @@ html, body, #root { height: 100%; margin: 0; padding: 0; background: var(--bg); 
 }
 
 .tab-split-right {
+  /* PR4 default; PR7 부터 inline style 의 flex 가 우선 적용됨 (drag handler 가 ratio 갱신). */
   flex: 0 0 40%;
-  min-width: 320px;
-  max-width: 560px;
+  min-width: 280px;
   display: flex;
   flex-direction: column;
-  border-left: 1px solid var(--border);
   background: var(--bg-elev);
   min-height: 0;
+}
+
+/* PR7: 좌:우 split 사이 드래그 핸들. 평소 4px 보더 색, hover/active 시 6px 파랑 highlight. */
+.tab-split-handle {
+  flex: 0 0 4px;
+  cursor: col-resize;
+  background: var(--border);
+  position: relative;
+  z-index: 1;
+  transition: flex-basis 0.08s ease, background 0.08s ease;
+}
+
+.tab-split-handle:hover,
+.tab-split-handle:active {
+  flex-basis: 6px;
+  background: var(--focusBorder);
 }
 
 .review-split-pane {

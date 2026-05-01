@@ -43,11 +43,31 @@ export function App() {
     void refreshCreds();
   }, []);
 
-  // Phase 3.5: 부팅 시 마지막으로 보던 thread 자동 select.
+  // Phase 3.5 + PR6: 부팅 시 마지막으로 보던 thread 자동 select + editor 탭 자동 복원.
+  // M1 까지는 selectedThreadId 만 set 해서 사이드바 highlight 만 됐는데, ChatPanel 이 사라진
+  // 후로는 그것만으로는 사용자가 그 thread 의 대화를 볼 수 없다. lastThreadId 의 thread
+  // bundle 을 fetch 해서 title 을 알아낸 뒤 editor 탭으로 자동 open.
   useEffect(() => {
-    window.projk.getSettings().then((s) => {
-      if (s.lastThreadId) setSelectedThreadId(s.lastThreadId);
-    });
+    let cancelled = false;
+    void (async () => {
+      const s = await window.projk.getSettings();
+      if (cancelled || !s.lastThreadId) return;
+      setSelectedThreadId(s.lastThreadId);
+      try {
+        const bundle = await window.projk.threads.get(s.lastThreadId);
+        if (cancelled || !bundle) return;
+        useWorkbenchStore.getState().openTab({
+          kind: 'qna-thread',
+          threadId: s.lastThreadId,
+          title: bundle.thread.title || '(제목 없음)',
+        });
+      } catch (e) {
+        console.warn('lastThreadId 탭 복원 실패', e);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // selectedThreadId 변경 시 settings 에 저장 — 다음 부팅 복원 위해.

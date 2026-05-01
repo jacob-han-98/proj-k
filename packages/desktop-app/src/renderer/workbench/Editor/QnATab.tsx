@@ -2,6 +2,11 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { askStream, searchDocs } from '../../api';
 import { annotateCitedHits } from '../../citations';
 import type { SearchHit, ThreadDocRef } from '../../../shared/types';
+import { useWorkbenchStore } from '../store';
+
+// PR6: 사이드바 "+ 새" 가 만든 default 제목. 사용자가 직접 rename 하기 전엔 이 값이라
+// QnATab 의 첫 메시지가 도착하면 자동으로 그 메시지 30자로 갈아낀다.
+const DEFAULT_THREAD_TITLE = '새 스레드';
 
 // PR5: editor 영역의 QnA 대화 탭. PR4까지 우측 360px ChatPanel 이 하던 일을 여기로 이전.
 // review/changes 는 ReviewSplitPane (PR4) 으로 이미 이전됨. 자동 thread 생성도 제거 —
@@ -35,6 +40,9 @@ export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Pr
   const [hits, setHits] = useState<SearchHit[]>([]);
   const [busy, setBusy] = useState(false);
   const [searchTookMs, setSearchTookMs] = useState<number | null>(null);
+  // PR6: 자동 rename 가능 여부 판단용. mount 시 fetch 결과의 thread.title 을 들고 있다가
+  // 첫 메시지 시 default 면 q.slice(0,30) 으로 자동 갈아낀다.
+  const [threadTitle, setThreadTitle] = useState<string>('');
   const taRef = useRef<HTMLTextAreaElement | null>(null);
 
   // mount 시 자기 thread bundle 자체 fetch — 영속된 messages/docs 복원.
@@ -51,6 +59,7 @@ export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Pr
             .map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content })),
         );
         setDocs(bundle.docs);
+        setThreadTitle(bundle.thread.title || '');
       } catch (e) {
         console.warn('threads.get', e);
       }
@@ -77,6 +86,27 @@ export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Pr
   const send = async () => {
     const q = input.trim();
     if (!q || busy) return;
+
+    // PR6: 첫 메시지 + thread title 이 default 인 경우 자동 rename. 사용자가 직접 rename 한
+    // thread (예: "이번주 회의") 는 건드리지 않는다.
+    const shouldAutoRename =
+      messages.length === 0 && (threadTitle === DEFAULT_THREAD_TITLE || threadTitle === '');
+    if (shouldAutoRename) {
+      const newTitle = q.slice(0, 30);
+      try {
+        await window.projk.threads.rename({ id: threadId, title: newTitle });
+        setThreadTitle(newTitle);
+        // 탭바에 표시되는 title 도 갱신 — store.openTab 은 같은 ID 면 title 만 바꾼다 (PR3).
+        useWorkbenchStore.getState().openTab({
+          kind: 'qna-thread',
+          threadId,
+          title: newTitle,
+        });
+      } catch (e) {
+        console.warn('thread rename 실패', e);
+      }
+    }
+
     setBusy(true);
     setInput('');
     setHits([]);

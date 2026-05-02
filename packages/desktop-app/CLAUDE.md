@@ -77,6 +77,10 @@ bug fix 마다 *그 회귀를 잡는 테스트* 를 추가해야 함. 추가 안
 - **2026-05-02**: OneDrive `UserUrl` 레지스트리 키 부재 → fallback 추가 (`detectSyncAccount`). 회귀 방지: `tests/unit/onedrive-sync.test.ts` 의 "userUrl resolve 우선순위" 3개 테스트.
 - **2026-05-02**: P4 client view sub-prefix (`Design/`) 자동 발견 — sidecar `xlsx_raw`. 회귀 방지: `tests/sidecar/test_xlsx_endpoints.py` 의 "finds_file_under_one_level_subfolder".
 - **2026-05-02**: `LocalSheetView` 의 useEffect dep 무한 루프. 회귀 방지: `tests/e2e-renderer/onedrive-sync.spec.ts` 의 시나리오 B/C (mock 환경에서 page hang 으로 즉시 드러남).
+- **2026-05-02**: P4 sheet 클릭 → 화면 하얗게 freeze. **두 root cause**:
+  1. **React Hooks rule 위반** — `LocalSheetView` 에 conditional return 분기 (`!url`, `bgSyncing && !cachedUrl`) 늘려놓고 그 *뒤에* `useEffect`(chrome stripper) 가 있어 매 render 마다 hooks 개수 변동 → React crash. 회귀 방지: 이 CLAUDE.md 의 "코드 변경 시 주의" 의 Hooks rule 항목.
+  2. **`cachedUrl` prop race** — `setUrl` 과 동시에 `onUpsertMapping(r.url)` 이 부모 sheetMappings 갱신 → cachedUrl prop 즉시 r.url 로 채워짐 → `bgSyncing && !cachedUrl` 분기 false 로 뒤집힘 → cloud 도달 전 webview mount → SharePoint 404. 회귀 방지: useState initializer 로 mount 시점 한 번만 capture (`hadCachedUrlAtMount`) — 같은 패턴 다시 쓰지 말 것.
+  - 진단 도구: `installWebContentsTracing()` (main) — webview navigation event ring buffer. 다음 freeze 시 `klaud-diag get_logs` 로 즉시 어떤 URL 에서 멈추는지 식별.
 
 ## Windows ↔ WSL split (사이드카 import 경로)
 
@@ -95,6 +99,25 @@ VS Code "Klaud dev" debug stop 시 npm/electron 자식 트리가 OS-clean 종료
 - `stopSidecar()` 가 Windows 면 `taskkill /F /T /PID` 로 자식 트리째.
 
 ## 코드 변경 시 주의
+
+- **React Hooks rule (필수)** — `useEffect` / `useState` / `useRef` 등 모든 hook 은 컴포넌트 함수 *상단* 의 unconditional 위치에서만 호출. **conditional return 뒤에 hook 두지 말 것.**
+  - 잘못된 패턴 (renderer crash):
+    ```tsx
+    if (!url) return <Placeholder />;
+    if (bgSyncing && !cached) return <Other />;
+    useEffect(() => {...}, [deps]);   // 💥 매 render 마다 hooks 개수 다름
+    ```
+  - 올바른 패턴:
+    ```tsx
+    useEffect(() => { if (!url) return; ... }, [deps]);  // hook 은 unconditional, 안에서 early-return
+    if (!url) return <Placeholder />;
+    if (bgSyncing && !cached) return <Other />;
+    ```
+  - 위반 시 React 가 "Rendered more hooks than during the previous render" throw → renderer 가 stuck/하얀 화면. 사용자 보고는 보통 "원래 안 그랬는데 갑자기 화면 freeze". 위 2026-05-02 회귀 사례 참고.
+
+- **prop 즉시 갱신 race** — 컴포넌트가 `onSomething(value)` 콜백을 호출하면 부모 state 가 즉시 갱신되어 다음 render 의 *같은 prop* 이 그 value 로 채워짐. 그 prop 을 분기 조건으로 쓰면 의도와 정반대 동작.
+  - 예: `cachedUrl` prop 을 `!cachedUrl` 분기 조건으로 쓰면서 `onUpsertMapping(url)` 을 호출하면 부모가 sheetMappings 갱신 → cachedUrl prop 다음 render 때 채워짐 → 분기 뒤집힘.
+  - 해결: mount 시점에 `useState(() => Boolean(prop))` 또는 `useRef(prop)` 으로 한 번만 capture. prop 변경 무관하게 mount 당시 값 유지.
 
 - `ELECTRON_RUN_AS_NODE` env 가 셋되어 있으면 `npm run dev` 에서 main 이 `app.isPackaged` 못 읽고 crash. Bash 기반 자동화 시작 전에 `unset ELECTRON_RUN_AS_NODE`.
 - e2e mock 의 hook 들 (`__setEnsureFreshResponse`, `__pushSyncProgress` 등) 은 spec 별로 page.evaluate 로 호출. 새 IPC 추가 시 mock-projk.ts 도 stub + hook 추가.

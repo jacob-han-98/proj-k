@@ -5,6 +5,7 @@ import {
   type ConfluenceCreds,
   type ConfluenceTreeResult,
   type P4DepotResult,
+  type P4DepotOpenResult,
   type P4DiscoveryInfo,
   type P4TreeResult,
   type SidecarStatus,
@@ -66,6 +67,26 @@ const api = {
     depotRoots: (): Promise<P4DepotResult> => ipcRenderer.invoke(IPC.P4_DEPOT_LIST),
     depotDirs: (parentPath: string): Promise<P4DepotResult> =>
       ipcRenderer.invoke(IPC.P4_DEPOT_DIRS, parentPath),
+    // PR9c: depot 파일 보기 — head revision 캐시 키. fromCache 면 OneDrive 재업로드 skip.
+    openDepotFile: (depotPath: string): Promise<P4DepotOpenResult> =>
+      ipcRenderer.invoke(IPC.P4_DEPOT_OPEN, depotPath),
+    // 트리 표시용 — 캐시되어있는 depot 파일 목록 (manifest read only, p4 호출 없음).
+    cachedPaths: (): Promise<Array<{ path: string; revision: number }>> =>
+      ipcRenderer.invoke(IPC.P4_DEPOT_CACHE_LIST),
+  },
+
+  // ---------- frameless window 컨트롤 ----------
+  // OS 기본 title bar 가 사라졌으므로 renderer 의 .topbar 우측 버튼이 호출.
+  win: {
+    minimize: (): Promise<void> => ipcRenderer.invoke(IPC.WINDOW_MINIMIZE),
+    maximizeToggle: (): Promise<boolean> => ipcRenderer.invoke(IPC.WINDOW_MAXIMIZE_TOGGLE),
+    close: (): Promise<void> => ipcRenderer.invoke(IPC.WINDOW_CLOSE),
+    isMaximized: (): Promise<boolean> => ipcRenderer.invoke(IPC.WINDOW_IS_MAXIMIZED),
+    onMaximizedChange: (cb: (maximized: boolean) => void): (() => void) => {
+      const handler = (_e: unknown, m: boolean) => cb(m);
+      ipcRenderer.on(IPC.WINDOW_MAXIMIZED, handler);
+      return () => ipcRenderer.off(IPC.WINDOW_MAXIMIZED, handler);
+    },
   },
 
   // mcp-bridge 가 보내는 명령을 renderer 가 수신하기 위한 hook.
@@ -115,6 +136,18 @@ const api = {
       | { ok: true; url: string; localPath: string; account: { userEmail: string } }
       | { ok: false; error?: string }
     > => ipcRenderer.invoke(IPC.ONEDRIVE_SYNC_AUTO, { relPath }),
+    // 0.1.50 (Step 1+2) — 매 sheet 클릭 시 호출. mtime 비교 → stale 이면 백그라운드 sync.
+    // 즉시 URL 반환 + 백그라운드 진행은 onProgress 로 push.
+    ensureFresh: (relPath: string): Promise<
+      | { ok: true; url: string; alreadyFresh: boolean; syncing: boolean }
+      | { ok: false; error: string }
+    > => ipcRenderer.invoke(IPC.ONEDRIVE_SYNC_ENSURE_FRESH, { relPath }),
+    // main → renderer push. 백그라운드 sync 의 시작/완료/실패 통지.
+    onProgress: (cb: (ev: { relPath: string; state: 'started' | 'completed' | 'failed'; error?: string }) => void): (() => void) => {
+      const handler = (_e: unknown, ev: { relPath: string; state: 'started' | 'completed' | 'failed'; error?: string }) => cb(ev);
+      ipcRenderer.on(IPC.ONEDRIVE_SYNC_PROGRESS, handler);
+      return () => ipcRenderer.removeListener(IPC.ONEDRIVE_SYNC_PROGRESS, handler);
+    },
   },
 
   // ---------- Threads workspace (Phase 3) ----------

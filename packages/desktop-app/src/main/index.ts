@@ -1,6 +1,14 @@
 import { app, BrowserWindow, session } from 'electron';
 import { join } from 'node:path';
 import { existsSync } from 'node:fs';
+
+// Background spawn (Bash → npm → electron-vite → electron) 시 OS DWM compositor 가
+// occlusion 으로 GPU paint skip → capturePage 가 빈 frame buffer 반환. software rendering
+// 강제로 background 도 paint — 진단 / autotest 가 정상 frame 받음.
+// dev/CI 환경 mark 로 PROJK_FORCE_SOFTWARE_RENDER 켜진 경우만 활성 (release 빌드 영향 X).
+if (process.env.PROJK_FORCE_SOFTWARE_RENDER === '1' || !app.isPackaged) {
+  app.disableHardwareAcceleration();
+}
 import { registerIpc } from './ipc';
 import { startSidecar, stopSidecar } from './sidecar';
 import { getConfluenceCreds } from './auth';
@@ -18,7 +26,13 @@ function createWindow(): void {
     width: 1400,
     height: 900,
     show: false,
-    autoHideMenuBar: true,
+    // show:false 또는 background spawn 으로 OS-visible 하지 않은 상태에서도 renderer 가
+    // paint 시작 — capturePage / autotest 가 정상 frame buffer 받게 한다.
+    paintWhenInitiallyHidden: true,
+    // VS Code 스타일 frameless — Windows 기본 title bar(min/max/close + "Project K" 표기)
+    // 를 제거하고 renderer 의 .topbar 가 직접 그 역할을 한다. 36px 한 줄에 브랜드 / sidecar
+    // 상태 / 설정 버튼 / 창 컨트롤을 모두 얹어서 화면 공간을 최대 활용.
+    frame: false,
     // 'Klaud' 는 데스크톱 앱의 표기 브랜드. 'Project K' 는 프로젝트(레포/메모/사내 게이트웨이) 명.
     // electron-builder 의 productName / appId 는 'Project K' / 'im.hybe.projk.desktop' 그대로 유지 →
     // NSIS install dir 과 자동 업데이트 경로 끊김 없이 유지된다.
@@ -29,6 +43,10 @@ function createWindow(): void {
       contextIsolation: true,
       nodeIntegration: false,
       webviewTag: true, // needed for <webview> Confluence embed
+      // Background spawn (Bash → npm → electron-vite → electron) 시 OS DWM 이 window 를
+      // visible 처리 안 해 GPU paint skip → capturePage 빈 frame. backgroundThrottling 끄면
+      // hidden 상태에서도 paint 계속.
+      backgroundThrottling: false,
     },
   });
 
@@ -36,6 +54,15 @@ function createWindow(): void {
   mainWindow.on('closed', () => {
     mainWindow = null;
   });
+
+  // frameless 일 때 maximize 토글 → 우측 컨트롤 아이콘 swap (max ↔ restore).
+  // renderer 가 IPC.WINDOW_MAXIMIZED 를 listen 해서 상태를 맞춘다.
+  const broadcastMaximized = () => {
+    if (!mainWindow) return;
+    mainWindow.webContents.send('window:maximized', mainWindow.isMaximized());
+  };
+  mainWindow.on('maximize', broadcastMaximized);
+  mainWindow.on('unmaximize', broadcastMaximized);
 
   // electron-vite injects the dev server URL via env in dev, and bundles the
   // renderer into out/renderer/index.html in production.

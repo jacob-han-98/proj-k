@@ -10,7 +10,18 @@ import type {
   ThreadSummary,
 } from '../shared/types';
 import { getP4Tree, getConfluenceTree } from './tree';
-import { discoverP4Info, listDepotRoots, listDepotChildren } from './p4-discovery';
+import {
+  discoverP4Info,
+  listDepotRoots,
+  listDepotChildren,
+  getDepotHeadRevision,
+  printDepotFile,
+} from './p4-discovery';
+import { lookupDepotCache, setDepotCache, listCachedPaths } from './depot-cache';
+import { tmpdir } from 'node:os';
+import { mkdirSync } from 'node:fs';
+import { join as pathJoin } from 'node:path';
+import { createHash } from 'node:crypto';
 import { getSidecarStatus, onSidecarStatus, startSidecar } from './sidecar';
 import { getConfluenceCreds, setConfluenceCreds } from './auth';
 import { applyEditsToConfluencePage, type ChangeItem as ConfluenceChangeItem } from './confluence-apply';
@@ -25,6 +36,27 @@ import { readFileSync } from 'node:fs';
 import { basename } from 'node:path';
 
 export function registerIpc(getWindow: () => BrowserWindow | null): void {
+  // ---------- frameless window 컨트롤 ----------
+  // OS 기본 title bar 를 제거(`frame:false`)했으므로 renderer 의 .topbar 우측에
+  // 직접 그린 min/max/close 버튼이 이 IPC 를 호출. invoke 가 아니라 send/on 으로 처리해도
+  // 되지만, 결과(예: isMaximized)를 같이 돌려줄 수 있게 invoke 로 통일.
+  ipcMain.handle(IPC.WINDOW_MINIMIZE, () => {
+    getWindow()?.minimize();
+  });
+  ipcMain.handle(IPC.WINDOW_MAXIMIZE_TOGGLE, () => {
+    const w = getWindow();
+    if (!w) return false;
+    if (w.isMaximized()) w.unmaximize();
+    else w.maximize();
+    return w.isMaximized();
+  });
+  ipcMain.handle(IPC.WINDOW_CLOSE, () => {
+    getWindow()?.close();
+  });
+  ipcMain.handle(IPC.WINDOW_IS_MAXIMIZED, () => {
+    return getWindow()?.isMaximized() ?? false;
+  });
+
   ipcMain.handle(IPC.TREE_P4, async () => getP4Tree());
   ipcMain.handle(IPC.TREE_CONFLUENCE, async () => getConfluenceTree());
 
@@ -289,6 +321,33 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     return await onedriveSync.syncFromSidecarAndUrl(url, p.relPath);
   });
 
+  // 0.1.50 (Step 1+2) — 매 sheet 클릭 시 호출. mtime 비교 → stale 이면 백그라운드 sync 시작 +
+  // 즉시 URL 반환. fresh 면 그냥 URL 반환. 백그라운드 진행상황은 ONEDRIVE_SYNC_PROGRESS 채널로
+  // renderer 에 push → renderer 가 자기 webview 에 reload.
+  ipcMain.handle(IPC.ONEDRIVE_SYNC_ENSURE_FRESH, async (_e, p: { relPath: string }) => {
+    const t0 = Date.now();
+    console.log(`[onedrive-sync] ensureFresh request: ${p.relPath}`);
+    const sc = getSidecarStatus();
+    if (sc.state !== 'ready' || sc.port == null) {
+      console.log(`[onedrive-sync] ensureFresh fail: sidecar not ready (state=${sc.state})`);
+      return { ok: false, error: `sidecar not ready (state=${sc.state})` };
+    }
+    const sidecarBase = `http://127.0.0.1:${sc.port}`;
+    const r = await onedriveSync.ensureFreshSync(sidecarBase, p.relPath, (ev) => {
+      console.log(`[onedrive-sync] progress ${ev.relPath} state=${ev.state}${ev.error ? ' err=' + ev.error : ''}`);
+      const win = getWindow();
+      if (win && !win.isDestroyed()) {
+        win.webContents.send(IPC.ONEDRIVE_SYNC_PROGRESS, ev);
+      }
+    });
+    if (r.ok) {
+      console.log(`[onedrive-sync] ensureFresh ok ${Date.now() - t0}ms alreadyFresh=${r.alreadyFresh} syncing=${r.syncing} url=${r.url.slice(0, 80)}...`);
+    } else {
+      console.log(`[onedrive-sync] ensureFresh fail ${Date.now() - t0}ms: ${r.error}`);
+    }
+    return r;
+  });
+
   // PR9: P4 자동 발견 — p4tickets.txt + login -s + clients 매칭으로 host/user/client 추출.
   // SettingsModal 의 "자동 발견" 버튼이 호출. 실패 시 P4DiscoveryInfo.diagnostics 로 한 줄 안내.
   ipcMain.handle(IPC.P4_DISCOVER, async () => discoverP4Info());
@@ -304,12 +363,85 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     return listDepotChildren(s.p4Host ?? '', s.p4User ?? '', s.p4Client ?? '', parentPath);
   });
 
+  // 트리 표시용 — 캐시되어있는 depot path 목록. 트리가 mount/refresh 시 1회 호출 + 파일 클릭 후
+  // 1회 (cache 갱신 반영). main 이 manifest 만 읽으므로 p4 호출 없음 → 비용 거의 0.
+  ipcMain.handle(IPC.P4_DEPOT_CACHE_LIST, async () => listCachedPaths());
+
+  // PR9c: depot 파일 보기 — `p4 print` 로 download → OneDrive depot 폴더에 upload →
+  // 읽기 전용 임베드 URL 반환. revision 캐시 hit 이면 재업로드 skip.
+  ipcMain.handle(IPC.P4_DEPOT_OPEN, async (_e, depotPath: string) => {
+    const s = getSettings();
+    const host = s.p4Host ?? '';
+    const user = s.p4User ?? '';
+    const client = s.p4Client ?? '';
+    if (!host || !user || !client) {
+      return { ok: false, error: 'P4 좌표 미설정 — 사이드바의 🔍 자동 발견 먼저 실행하세요.' };
+    }
+    if (!depotPath) {
+      return { ok: false, error: 'depot path 누락' };
+    }
+
+    // 1) head revision 조회 — 캐시 키.
+    const revision = getDepotHeadRevision(host, user, client, depotPath);
+    if (revision == null) {
+      return { ok: false, error: `head revision 조회 실패: ${depotPath}` };
+    }
+
+    // 2) cache lookup — 같은 (path, revision) 이면 OneDrive 재업로드 skip.
+    const cached = lookupDepotCache(depotPath, revision);
+    if (cached) {
+      return { ok: true, url: cached.url, revision, fromCache: true };
+    }
+
+    // 3) cache miss — `p4 print -q -o <tmp>` 로 다운로드 후 OneDrive 폴더 upload.
+    const tmpDir = pathJoin(tmpdir(), 'klaud-depot-fetch');
+    try {
+      mkdirSync(tmpDir, { recursive: true });
+    } catch {
+      /* 이미 있으면 OK */
+    }
+    // 임시 파일명: ASCII-only — Korean/공백 chars 가 -o arg 에 들어가면 Windows spawn argv
+    // 처리에서 깨져서 p4 가 "Missing/wrong number of arguments" 로 reject. md5 hash 로 deterministic
+    // ASCII 파일명 생성 (path → 동일 hash → 같은 tmp 재사용 가능).
+    const hash = createHash('md5').update(depotPath).digest('hex').slice(0, 12);
+    const tmpLocal = pathJoin(tmpDir, `dep_${hash}_r${revision}.xlsx`);
+    console.log(
+      `[p4-depot-open] cache miss path=${depotPath} rev=${revision} → printing to ${tmpLocal}`,
+    );
+    const printR = printDepotFile(host, user, client, depotPath, tmpLocal);
+    if (!printR.ok) {
+      console.error(`[p4-depot-open] p4 print 실패 path=${depotPath} dest=${tmpLocal}: ${printR.error}`);
+      return { ok: false, error: `p4 print 실패: ${printR.error ?? 'unknown'}` };
+    }
+
+    console.log(`[p4-depot-open] p4 print OK → uploading to OneDrive (Klaud-depot)…`);
+    const upR = await onedriveSync.uploadDepotFileAndUrl(depotPath, tmpLocal);
+    if (!upR.ok) {
+      console.error(`[p4-depot-open] OneDrive upload 실패 path=${depotPath}: ${upR.error}`);
+      return { ok: false, error: `OneDrive 업로드 실패: ${upR.error}` };
+    }
+    console.log(`[p4-depot-open] OK url=${upR.url}`);
+
+    setDepotCache(depotPath, {
+      revision,
+      url: upR.url,
+      localPath: upR.localPath,
+      uploadedAt: Date.now(),
+    });
+    return { ok: true, url: upR.url, revision, fromCache: false };
+  });
+
   ipcMain.handle(IPC.SETTINGS_GET, async () => getSettings());
   ipcMain.handle(IPC.SETTINGS_SET, async (_e, patch: Partial<AppSettings>) => {
+    const before = getSettings();
     const next = setSettings(patch);
-    // sidecar 가 error 상태이거나 repoRoot 가 새로 들어왔다면 재시작 시도
     const sc = getSidecarStatus();
-    if (sc.state === 'error' || sc.state === 'stopped') {
+    // sidecar 가 부팅 시 환경변수로 repoRoot / p4WorkspaceRoot 를 읽어 /xlsx_raw 가 사용한다.
+    // 정상 ready 상태라도 이 두 값이 바뀌면 재시작해야 새 값이 반영됨.
+    const rootChanged =
+      (patch.repoRoot !== undefined && before.repoRoot !== next.repoRoot) ||
+      (patch.p4WorkspaceRoot !== undefined && before.p4WorkspaceRoot !== next.p4WorkspaceRoot);
+    if (sc.state === 'error' || sc.state === 'stopped' || rootChanged) {
       startSidecar().catch((e) => console.error('[settings] restart sidecar failed', e));
     }
     return next;

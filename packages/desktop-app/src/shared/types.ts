@@ -15,6 +15,9 @@ export interface TreeNode {
   confluencePageId?: string;
   // Workbook source xlsx path under repo (for "Open in Excel")
   xlsxRepoPath?: string;
+  // PR9c: depot 파일을 webview 로 열 때 직접 사용하는 OneDrive 임베드 URL.
+  // 일반 sheet 노드는 비어있고 sheetMappings 룩업으로 처리. depot 임시 노드는 fetch 후 채워짐.
+  oneDriveUrl?: string;
 }
 
 export interface P4TreeResult {
@@ -30,7 +33,7 @@ export interface P4TreeResult {
 export interface P4DiscoveryInfo {
   ok: boolean;
   // 어디까지 발견됐는지 — UI 가 진단 메시지를 보여줄 수 있게.
-  source: 'tickets' | 'manual' | 'none';
+  source: 'registry' | 'tickets' | 'manual' | 'none';
   host?: string; // P4PORT (예: 'perforce:1666')
   user?: string; // P4USER
   client?: string; // P4CLIENT — host 매칭하는 첫 client
@@ -54,6 +57,16 @@ export interface P4DepotResult {
   entries: P4DepotEntry[];
   // 실패 시 사용자에게 한 줄 안내 (좌표 미설정, ticket 만료 등).
   diagnostics?: string;
+}
+
+// PR9c: depot 파일 한 개를 보기용으로 다운로드 + OneDrive 업로드 + 읽기 전용 URL 빌드.
+// fromCache 가 true 면 manifest 의 같은 revision 캐시 hit (재업로드 skip).
+export interface P4DepotOpenResult {
+  ok: boolean;
+  url?: string;
+  revision?: number;
+  fromCache?: boolean;
+  error?: string;
 }
 
 export interface ConfluenceTreeResult {
@@ -152,6 +165,8 @@ export const IPC = {
   P4_DISCOVER: 'p4:discover',
   P4_DEPOT_LIST: 'p4:depot-list',
   P4_DEPOT_DIRS: 'p4:depot-dirs',
+  P4_DEPOT_OPEN: 'p4:depot-open',
+  P4_DEPOT_CACHE_LIST: 'p4:depot-cache-list',
   UPDATER_STATE: 'updater:state',
   UPDATER_CHECK: 'updater:check',
   UPDATER_QUIT_AND_INSTALL: 'updater:quit-and-install',
@@ -170,6 +185,13 @@ export const IPC = {
   ONEDRIVE_SYNC_UPLOAD: 'onedrive-sync:upload',
   // 0.1.47 — 사용자 클릭 0회. sidecar /xlsx_raw 에서 P4 원본 자동 fetch.
   ONEDRIVE_SYNC_AUTO: 'onedrive-sync:auto',
+  // 0.1.50 (Step 1+2) — 매 sheet 클릭 시 호출. P4 src vs OneDrive dest 의 mtime 비교 →
+  // stale 이면 백그라운드 sync 시작 + 즉시 URL 반환. fresh 면 그냥 URL 반환. 사용자 체감
+  // "두 번째부터는 즉시 webview 열림 + 자동 최신화". 진행상황은 ONEDRIVE_SYNC_PROGRESS 로 push.
+  ONEDRIVE_SYNC_ENSURE_FRESH: 'onedrive-sync:ensure-fresh',
+  // main → renderer push. 백그라운드 sync 의 시작/완료/실패 통지. renderer 가 자기 webview
+  // 의 relPath 와 매칭되면 reload 수행.
+  ONEDRIVE_SYNC_PROGRESS: 'onedrive-sync:progress',
   // Threads workspace (Phase 3 — 0.1.30+).
   THREADS_LIST: 'threads:list',
   THREADS_CREATE: 'threads:create',
@@ -180,6 +202,13 @@ export const IPC = {
   THREADS_APPEND_MESSAGE: 'threads:append-message',
   THREADS_UPSERT_DOC: 'threads:upsert-doc',
   THREADS_PIN_DOC: 'threads:pin-doc',
+  // frameless window 컨트롤 — 우상단 min/max/close 버튼이 호출.
+  WINDOW_MINIMIZE: 'window:minimize',
+  WINDOW_MAXIMIZE_TOGGLE: 'window:maximize-toggle',
+  WINDOW_CLOSE: 'window:close',
+  // main → renderer broadcast: 창이 maximize 됐는지. 아이콘 swap 용.
+  WINDOW_MAXIMIZED: 'window:maximized',
+  WINDOW_IS_MAXIMIZED: 'window:is-maximized',
 } as const;
 
 // Phase 3 thread workspace IPC payloads.

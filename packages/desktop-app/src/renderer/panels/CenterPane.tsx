@@ -1,5 +1,71 @@
 import { useEffect, useRef, useState } from 'react';
 import type { TreeNode } from '../../shared/types';
+import { useWorkbenchStore } from '../workbench/store';
+import { docKeyOfNode } from '../workbench/types';
+
+// Excel for the Web 임베드 URL 의 ?action= 값을 스왑.
+// 기본 URL 은 main 의 onedrive-sync.ts 가 ?action=embedview 로 빌드. 다만 sheetMappings 에
+// 캐시된 옛 매핑 (`?web=1`) 도 유효한 매핑이라 이 함수는:
+//   1) URL API 로 안전 파싱
+//   2) `web` 파라미터 강제 제거 — embedview 와 충돌해서 SuiteNav 를 다시 살려놓는 케이스 회피
+//   3) `action` 을 mode 에 맞게 setSearchParam (덮어쓰기 또는 추가)
+function applyAction(url: string, mode: 'view' | 'edit'): string {
+  const target = mode === 'edit' ? 'edit' : 'embedview';
+  try {
+    const u = new URL(url);
+    u.searchParams.delete('web');
+    u.searchParams.set('action', target);
+    return u.toString();
+  } catch {
+    // 파싱 실패는 거의 없지만 fallback — 옛 정규식 path.
+    if (/[?&]action=/.test(url)) {
+      return url.replace(/([?&])action=[^&]+/, `$1action=${target}`);
+    }
+    return url + (url.includes('?') ? '&' : '?') + `action=${target}`;
+  }
+}
+
+// Excel for the Web 의 chrome (SuiteNav: 9-dot 와플 / 문서 제목 / 검색바 / 톱니 / 프로필) 을
+// CSS 로 강제 숨김. ?action=embedview 만으로는 ODB 본인 사이트의 SharePoint redirect 흐름에서
+// 일관되게 안 사라지기 때문에 안전망으로 webview 안에 style 태그를 주입한다.
+//
+// 주입 시점: dom-ready (초기 로드) + did-navigate-in-page (Excel 의 SPA 내부 네비) — 두 번 다
+// inject() 호출 가능하므로 id 로 dedupe.
+//
+// 주의: Microsoft 가 셀렉터를 자주 바꾸지는 않지만(주요 ID 인 #SuiteNavWrapper, #O365_NavHeader
+// 는 수년간 안정), 깨졌을 때를 위해 사용자가 ✏ 아이콘으로 편집 모드를 켜면 풀 chrome 으로
+// reload 되므로 fallback 경로는 자연스럽게 확보된다.
+function attachChromeStripper(wv: HTMLElement): () => void {
+  const inject = () => {
+    const code = `(function(){
+      if (document.getElementById('klaud-chrome-hider')) return;
+      var s = document.createElement('style');
+      s.id = 'klaud-chrome-hider';
+      s.textContent = [
+        '#SuiteNavWrapper','#suiteNavWrapper','#O365_NavHeader',
+        '[data-automation-id="suiteNavWrapper"]',
+        '.o365cs-nav-header16','.o365cs-base.o365cs-topnav',
+        '#sbsDom','.spo-suitenav',
+        '#SearchBox','.ms-srch-sb',
+        'header[role=banner]'
+      ].map(function(sel){return sel+'{display:none !important;}'}).join('')
+       + 'body{padding-top:0 !important;margin-top:0 !important;}';
+      document.head.appendChild(s);
+    })();`;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (wv as any).executeJavaScript?.(code).catch(() => {});
+  };
+  wv.addEventListener('dom-ready', inject);
+  wv.addEventListener('did-navigate-in-page', inject);
+  return () => {
+    try {
+      wv.removeEventListener('dom-ready', inject);
+      wv.removeEventListener('did-navigate-in-page', inject);
+    } catch {
+      /* webview 이미 detached — 무시 */
+    }
+  };
+}
 
 interface Props {
   selection: { kind: 'sheet' | 'confluence'; node: TreeNode } | null;
@@ -35,40 +101,20 @@ export function CenterPane({
 
   if (selection.kind === 'sheet') {
     const relPath = selection.node.relPath ?? selection.node.id;
-    const mappedUrl = sheetMappings[relPath];
-    if (mappedUrl) {
-      return (
-        <main className="center" data-testid="center-pane">
-          <div className="doc-header">
-            <span>📄 {selection.node.title}</span>
-            <span className="breadcrumb">{selection.node.relPath}</span>
-            <span className="actions">
-              <button
-                onClick={() => window.open(mappedUrl, '_blank')}
-                data-testid="sheet-open-onedrive"
-                title="새 창으로 열기"
-              >
-                ↗ 새 창
-              </button>
-            </span>
-          </div>
-          {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-          <webview
-            key={selection.node.id}
-            src={mappedUrl}
-            partition="persist:onedrive"
-            {...({ allowpopups: 'true' } as any)}
-            style={{ width: '100%', height: 'calc(100% - 44px)' }}
-          />
-        </main>
-      );
+    // depot 파일은 node.oneDriveUrl 에 임베드 URL 이 직접 박혀있음 — 별도 처리.
+    const directUrl = selection.node.oneDriveUrl;
+    if (directUrl) {
+      return <DepotSheetView key={selection.node.id} node={selection.node} directUrl={directUrl} />;
     }
-    // 매핑 없음 — 사용자가 OneDrive 에 upload 후 share URL 등록.
+    // 일반 P4 local 시트 — 0.1.50 (Step 1+2): ensureFresh 가 매번 mtime 비교 + 백그라운드 sync.
+    // cachedUrl 있으면 즉시 webview 표시(이전 본문). 백그라운드에서 stale 감지 시 자동 reload.
     return (
-      <SheetMappingPrompt
+      <LocalSheetView
+        key={selection.node.id}
         node={selection.node}
         relPath={relPath}
-        onSubmit={onUpsertSheetMapping}
+        cachedUrl={sheetMappings[relPath] ?? null}
+        onUpsertMapping={onUpsertSheetMapping}
       />
     );
   }
@@ -164,13 +210,224 @@ function ConfluencePane({
   );
 }
 
-// PoC 2B — sheet 매핑 미등록 시 두 path:
+// depot 파일 표시 — read-only 기반. ✏ 아이콘 토글 시 ?action=embedview ↔ edit swap.
+// directUrl 은 main 의 buildDepotEmbedUrl 이 ?action=embedview 로 빌드. 편집 모드면 edit 로
+// 바꿔 webview reload — depot 은 P4 가 진실의 원천이라 OneDrive 카피만 변경되고 P4 영향 X.
+function DepotSheetView({ node, directUrl }: { node: TreeNode; directUrl: string }) {
+  const docKey = docKeyOfNode(node);
+  const editing = useWorkbenchStore((s) => (docKey ? !!s.editingDocs[docKey] : false));
+  const url = applyAction(directUrl, editing ? 'edit' : 'view');
+  const wvRef = useRef<HTMLElement | null>(null);
+
+  // view 모드일 때만 chrome 숨김 — edit 모드는 사용자가 SuiteNav/리본 이 필요해서 켠 거니까 그대로.
+  useEffect(() => {
+    if (editing) return;
+    const wv = wvRef.current;
+    if (!wv) return;
+    return attachChromeStripper(wv);
+  }, [editing, url]);
+
+  return (
+    <main className="center" data-testid="center-pane">
+      <div className="doc-header">
+        <span>🗄️ {node.title}</span>
+        <span className="breadcrumb">
+          {node.relPath ?? node.id}
+          <span style={{ marginLeft: 8, color: 'var(--text-dim)' }}>
+            (depot · {editing ? '편집 중' : '읽기 전용'})
+          </span>
+        </span>
+        <span className="actions">
+          <button
+            onClick={() => window.open(url, '_blank')}
+            data-testid="sheet-open-onedrive"
+            title="새 창으로 열기"
+          >
+            ↗ 새 창
+          </button>
+        </span>
+      </div>
+      {/* key 에 mode 포함 → 모드 전환 시 webview 강제 remount + Excel 재초기화 + chrome stripper 재부착. */}
+      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+      <webview
+        key={`${node.id}::${editing ? 'edit' : 'view'}`}
+        ref={wvRef as any}
+        src={url}
+        partition="persist:onedrive"
+        {...({ allowpopups: 'true' } as any)}
+        style={{ width: '100%', height: 'calc(100% - 44px)' }}
+      />
+    </main>
+  );
+}
+
+// 0.1.50 (Step 1+2) — local 시트 표시 컴포넌트.
+//
+// 동작:
+//   1) cachedUrl(이전에 등록된 매핑) 있으면 webview 즉시 표시 (옛 cloud 본문이라도 보임).
+//   2) mount 시 ensureFresh 호출 — main 이 P4 src vs OneDrive dest 의 mtime 비교.
+//      - alreadyFresh: 추가 작업 없음, webview 그대로.
+//      - stale: 백그라운드 sync 시작, syncing indicator 표시.
+//   3) 백그라운드 sync 의 진행상황은 oneDriveSync.onProgress 로 push 받아 처리:
+//      - completed: webview reload 로 새 본문 받기.
+//      - failed: indicator 만 끄고 console warn (옛 본문은 그대로).
+//   4) ensureFresh 가 fail (sync 클라이언트 미설정 / sidecar 못 찾음 등) → 옛 SheetMappingPrompt
+//      로 fallback (수동 share URL 입력 + file picker 자동 매핑 옵션).
+function LocalSheetView(props: {
+  node: TreeNode;
+  relPath: string;
+  cachedUrl: string | null;
+  onUpsertMapping: (relPath: string, url: string) => void;
+}) {
+  const { node, relPath, cachedUrl, onUpsertMapping } = props;
+  const [url, setUrl] = useState<string | null>(cachedUrl);
+  const [bgSyncing, setBgSyncing] = useState(false);
+  const [fallback, setFallback] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const webviewRef = useRef<HTMLElement | null>(null);
+  // 편집 모드 — 트리뷰의 ✏ 아이콘이 store 에 토글. true 면 ?action=edit 로 swap.
+  const docKey = docKeyOfNode(node);
+  const editing = useWorkbenchStore((s) => (docKey ? !!s.editingDocs[docKey] : false));
+
+  // onUpsertMapping 은 부모 (App.tsx) 에서 매 render 마다 새 reference 가 내려올 수 있어 dep 에
+  // 넣으면 useEffect 가 무한 재실행되며 ensureFresh 가 매번 호출된다. ref 로 latest 만 잡고 dep
+  // 에서는 빼서 mount/relPath 변경 시에만 1회 실행되게 한다.
+  const onUpsertMappingRef = useRef(onUpsertMapping);
+  useEffect(() => { onUpsertMappingRef.current = onUpsertMapping; }, [onUpsertMapping]);
+
+  // mount + relPath 변경 시 ensureFresh 호출.
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const r = await window.projk.oneDriveSync.ensureFresh(relPath);
+      if (cancelled) return;
+      if (!r.ok) {
+        // sync 클라이언트 미설정 또는 sidecar 못 찾음 → manual fallback.
+        setFallback(true);
+        setError(r.error);
+        return;
+      }
+      setUrl(r.url);
+      onUpsertMappingRef.current(relPath, r.url);
+      if (r.syncing) setBgSyncing(true);
+    })();
+    return () => { cancelled = true; };
+  }, [relPath]);
+
+  // 백그라운드 sync progress 구독.
+  useEffect(() => {
+    const off = window.projk.oneDriveSync.onProgress((ev) => {
+      if (ev.relPath !== relPath) return;
+      if (ev.state === 'completed') {
+        setBgSyncing(false);
+        // webview reload — 새 cloud 본문으로 갱신.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const wv = webviewRef.current as any;
+        if (wv?.reload) wv.reload();
+      } else if (ev.state === 'failed') {
+        setBgSyncing(false);
+        console.warn('[onedrive-sync] background sync failed:', ev.error);
+      } else if (ev.state === 'started') {
+        setBgSyncing(true);
+      }
+    });
+    return off;
+  }, [relPath]);
+
+  // ensureFresh fail → 옛 흐름 (file picker / 수동 share URL).
+  if (fallback) {
+    return (
+      <SheetMappingPrompt
+        node={node}
+        relPath={relPath}
+        onSubmit={onUpsertMapping}
+        initialError={error}
+      />
+    );
+  }
+
+  // 매핑 정보 없고 첫 ensureFresh 응답 대기 중 → placeholder.
+  if (!url) {
+    return (
+      <main className="center" data-testid="center-pane">
+        <div className="doc-header">
+          <span>📄 {node.title}</span>
+          <span className="breadcrumb">{relPath}</span>
+        </div>
+        <div
+          className="placeholder"
+          data-testid="onedrive-prep-placeholder"
+          style={{ padding: 24, color: 'var(--text-dim)' }}
+        >
+          🚀 OneDrive 자동 매핑 준비 중…
+        </div>
+      </main>
+    );
+  }
+
+  // 편집 모드 토글마다 webview 강제 remount → Excel for the Web 가 깨끗하게 재초기화.
+  // 같은 src 안에서 src 만 바꾸면 Excel 가 일부 chrome 만 갱신해서 어색하게 섞이는 경우 방지.
+  const displayUrl = applyAction(url, editing ? 'edit' : 'view');
+
+  // view 모드에서만 chrome (SuiteNav/검색바/프로필) 강제 제거. edit 모드는 그대로.
+  useEffect(() => {
+    if (editing) return;
+    const wv = webviewRef.current;
+    if (!wv) return;
+    return attachChromeStripper(wv);
+  }, [editing, displayUrl]);
+  return (
+    <main className="center" data-testid="center-pane">
+      <div className="doc-header">
+        <span>📄 {node.title}</span>
+        <span className="breadcrumb">
+          {relPath}
+          {editing && (
+            <span style={{ marginLeft: 8, color: 'var(--accent)' }}>(편집 중)</span>
+          )}
+        </span>
+        <span className="actions">
+          {bgSyncing && (
+            <span
+              data-testid="onedrive-bg-syncing"
+              style={{ fontSize: 10, color: 'var(--text-dim)', marginRight: 8 }}
+              title="P4 원본이 더 새로워서 OneDrive 로 백그라운드 업로드 중. 끝나면 자동 새로고침."
+            >
+              🔄 OneDrive 동기화 중…
+            </span>
+          )}
+          <button
+            onClick={() => window.open(displayUrl, '_blank')}
+            data-testid="sheet-open-onedrive"
+            title="새 창으로 열기"
+          >
+            ↗ 새 창
+          </button>
+        </span>
+      </div>
+      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+      <webview
+        key={`${relPath}::${editing ? 'edit' : 'view'}`}
+        ref={webviewRef as any}
+        src={displayUrl}
+        partition="persist:onedrive"
+        data-testid="onedrive-webview"
+        {...({ allowpopups: 'true' } as any)}
+        style={{ width: '100%', height: 'calc(100% - 44px)' }}
+      />
+    </main>
+  );
+}
+
+// PoC 2B — sheet 매핑 미등록 + 자동 흐름 실패 시 fallback. 두 path:
 //   (1) 자동 upload — Microsoft 인증 → file picker → OneDrive 에 upload + 매핑 자동
 //   (2) 수동 — 사용자가 share URL 직접 등록
 function SheetMappingPrompt(props: {
   node: TreeNode;
   relPath: string;
   onSubmit: (relPath: string, url: string) => void;
+  // 0.1.50 — LocalSheetView 의 ensureFresh 가 fail 한 이유를 사용자에게 보여줌.
+  initialError?: string | null;
 }) {
   const [url, setUrl] = useState('');
   const [syncAccount, setSyncAccount] = useState<{
@@ -180,7 +437,9 @@ function SheetMappingPrompt(props: {
   } | null>(null);
   const [syncDetected, setSyncDetected] = useState<boolean | null>(null); // null=확인 중, false=미설정
   const [busy, setBusy] = useState(false);
-  const [info, setInfo] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(
+    props.initialError ? `자동 매핑 진입 불가: ${props.initialError}` : null,
+  );
 
   // 마운트 시 OneDrive Business sync 클라이언트 detect → 성공하면 자동 흐름 트리거.
   useEffect(() => {
@@ -246,7 +505,7 @@ function SheetMappingPrompt(props: {
         <span>📄 {props.node.title}</span>
         <span className="breadcrumb">{props.relPath}</span>
       </div>
-      <div className="preview-body" style={{ maxWidth: 720 }}>
+      <div className="preview-body" data-testid="sheet-mapping-prompt" style={{ maxWidth: 720 }}>
         <p style={{ fontSize: 13, marginTop: 4 }}>
           이 시트는 OneDrive 매핑이 등록되지 않았습니다.
         </p>

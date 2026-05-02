@@ -24,9 +24,11 @@
     "renderer:test-server": "vite --config vite.renderer.config.ts",
     "test:unit": "vitest run",
     "test:unit:watch": "vitest",
-    "test:e2e": "playwright test",
+    "test:e2e": "playwright test --config=playwright.config.ts",
+    "test:electron": "playwright test --config=playwright.electron.config.ts",
     "test:sidecar": ".venv/bin/python -m pytest tests/sidecar -v",
-    "test": "npm run test:unit && npm run test:sidecar && npm run test:e2e"
+    "test": "npm run test:unit && npm run test:sidecar && npm run test:e2e",
+    "test:all": "npm run test && npm run test:electron"
   },
   "dependencies": {
     "@vscode/codicons": "^0.0.45",

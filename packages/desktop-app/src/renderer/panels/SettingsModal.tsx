@@ -40,6 +40,8 @@ export function SettingsModal({ initialEmail, initialBaseUrl, onClose, onSaved }
   const [p4Host, setP4Host] = useState('');
   const [p4User, setP4User] = useState('');
   const [p4Client, setP4Client] = useState('');
+  // PoC 2C — p4 info 의 Client root. 채워두면 OneDrive 자동 매핑이 첫 file picker 없이 동작.
+  const [p4WorkspaceRoot, setP4WorkspaceRoot] = useState('');
   const [p4Discovering, setP4Discovering] = useState(false);
   const [p4DiscoveryMsg, setP4DiscoveryMsg] = useState<string | null>(null);
 
@@ -59,6 +61,7 @@ export function SettingsModal({ initialEmail, initialBaseUrl, onClose, onSaved }
       setP4Host(s.p4Host ?? '');
       setP4User(s.p4User ?? '');
       setP4Client(s.p4Client ?? '');
+      setP4WorkspaceRoot(s.p4WorkspaceRoot ?? '');
     });
   }, []);
 
@@ -71,12 +74,14 @@ export function SettingsModal({ initialEmail, initialBaseUrl, onClose, onSaved }
         if (info.host) setP4Host(info.host);
         if (info.user) setP4User(info.user);
         if (info.client) setP4Client(info.client);
+        if (info.clientRoot) setP4WorkspaceRoot(info.clientRoot);
         const candidates =
           info.candidates && info.candidates.length > 1
             ? ` (다른 client 후보: ${info.candidates.filter((c) => c !== info.client).join(', ')})`
             : '';
+        const rootHint = info.clientRoot ? ` / root ${info.clientRoot}` : '';
         setP4DiscoveryMsg(
-          `✓ ticket 으로부터 발견 — ${info.client ?? '(client 없음)'}${candidates}`,
+          `✓ ticket 으로부터 발견 — ${info.client ?? '(client 없음)'}${rootHint}${candidates}`,
         );
       } else {
         setP4DiscoveryMsg(`✗ ${info.diagnostics ?? '발견 실패'}`);
@@ -107,6 +112,7 @@ export function SettingsModal({ initialEmail, initialBaseUrl, onClose, onSaved }
         p4Host: p4Host.trim() || undefined,
         p4User: p4User.trim() || undefined,
         p4Client: p4Client.trim() || undefined,
+        p4WorkspaceRoot: p4WorkspaceRoot.trim() || undefined,
       });
 
       // 2) Confluence 자격증명 (비밀 — safeStorage 암호화)
@@ -310,8 +316,21 @@ export function SettingsModal({ initialEmail, initialBaseUrl, onClose, onSaved }
           placeholder="workspace_name"
           spellCheck={false}
         />
+        <label htmlFor="settings-p4-workspace-root" style={{ marginTop: 6 }}>
+          P4 Workspace Root (Client root)
+        </label>
+        <input
+          id="settings-p4-workspace-root"
+          aria-label="P4 Workspace Root"
+          data-testid="settings-p4-workspace-root"
+          value={p4WorkspaceRoot}
+          onChange={(e) => setP4WorkspaceRoot(e.target.value)}
+          placeholder="D:\\ProjectK\\Design"
+          spellCheck={false}
+        />
         <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: -4 }}>
-          비워두면 P4 사이드바의 depot 탭은 비활성. local 트리는 데이터 루트만 있으면 동작.
+          OneDrive 자동 매핑이 .xlsx 원본을 fetch 할 폴더. 자동 발견이 <code>p4 info</code> 의 Client root 로 채움.
+          비어있으면 첫 sheet 클릭 시 file picker 가 한 번 뜸. 비워두면 P4 사이드바의 depot 탭은 비활성. local 트리는 데이터 루트만 있으면 동작.
         </div>
 
         <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 12, marginBottom: 4 }}>

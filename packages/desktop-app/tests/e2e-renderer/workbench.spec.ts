@@ -202,7 +202,7 @@ test('Quick Find — Enter 시 fast=false (auto v2.1) 로 즉시 풀 검색', as
 
 // ---------- PR9b: P4 depot 탭 ----------
 
-test('P4 depot 탭 — 활성 시 root 자동 fetch + lazy expand + 파일 클릭 시 안내', async ({ page }) => {
+test('P4 depot 탭 — 활성 시 root 자동 fetch + 2단계 auto-expand + 파일 클릭 시 read-only 탭 오픈', async ({ page }) => {
   await page.getByTestId('activity-p4').click();
   // local 이 default 라 depot 탭 클릭으로 전환.
   await page.getByTestId('p4-source-depot').click();
@@ -213,24 +213,19 @@ test('P4 depot 탭 — 활성 시 root 자동 fetch + lazy expand + 파일 클�
   await expect(tree.getByTestId('depot-row-//depot')).toBeVisible();
   await expect(tree.getByTestId('depot-row-//archive')).toBeVisible();
 
-  // //depot expand → mock 의 자식 (폴더 Design + 파일 HUD.xlsx).
-  await tree.getByTestId('depot-row-//depot').click();
+  // 2단계 auto-expand — //depot 의 자식이 클릭 없이 즉시 보여야 함.
   await expect(tree.getByTestId('depot-row-//depot/Design')).toBeVisible();
   await expect(tree.getByTestId('depot-row-//depot/HUD.xlsx')).toBeVisible();
 
-  // Design 폴더 expand → 자식 Combat.xlsx.
+  // 3단계 (//depot/Design/Combat.xlsx) 는 manual click 필요.
   await tree.getByTestId('depot-row-//depot/Design').click();
   await expect(tree.getByTestId('depot-row-//depot/Design/Combat.xlsx')).toBeVisible();
 
-  // 파일 클릭 시 alert 노출 (보기 전용 안내). dialog handler 로 캡처.
-  let alertText = '';
-  page.once('dialog', async (d) => {
-    alertText = d.message();
-    await d.accept();
-  });
+  // PR9c: 파일 클릭 → openDepotFile IPC → 새 excel 탭 (mock revision 42).
+  // tabIdOf 가 oneDriveUrl 있을 때 node.id 기반 → 'excel:depot://depot/HUD.xlsx#rev42'.
   await tree.getByTestId('depot-row-//depot/HUD.xlsx').click();
-  expect(alertText).toContain('//depot/HUD.xlsx');
-  expect(alertText).toContain('보기 전용');
+  await expect(page.getByTestId('tab-slot-excel:depot://depot/HUD.xlsx#rev42')).toBeVisible();
+  await expect(page.getByTestId('center-pane')).toContainText('읽기 전용');
 });
 
 test('리뷰 split — 활성 시 좌우 분할 + 닫기 X 동작', async ({ page }) => {

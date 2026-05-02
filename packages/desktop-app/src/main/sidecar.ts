@@ -166,10 +166,37 @@ async function ensureSidecarPython(): Promise<string | null> {
   return venvPython();
 }
 
+// VS Code debug stop / dev 콘솔 ctrl+c / 비정상 종료 시 main 의 자식 프로세스인 sidecar
+// 가 OS-clean 하게 정리되지 않고 좀비로 남는 케이스가 Windows 에서 흔하다 (SIGTERM 무시 +
+// kill-tree 미보장). 다음 부팅 시 startSidecar 가 새 free port 로 또 spawn 하므로 좀비가
+// 누적된다. main 부팅마다 이전 stale `server:app` python 프로세스를 한 번 청소해서 이 누적
+// 을 끊는다. PC 마다 다른 uvicorn server:app 프로세스가 있을 가능성은 무시할만함.
+function killStaleSidecars(): void {
+  if (process.platform !== 'win32') return;
+  try {
+    const r = spawnSync(
+      'powershell',
+      [
+        '-NoProfile',
+        '-NonInteractive',
+        '-Command',
+        "Get-CimInstance Win32_Process -Filter \"Name='python.exe'\" | Where-Object { $_.CommandLine -like '*server:app*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue; Write-Output $_.ProcessId }",
+      ],
+      { stdio: ['ignore', 'pipe', 'pipe'], timeout: 5000, windowsHide: true, encoding: 'utf-8' },
+    );
+    const killed = (r.stdout ?? '').split(/\r?\n/).filter((s) => s.trim()).join(', ');
+    if (killed) console.log(`[sidecar] killed stale server:app pids: ${killed}`);
+  } catch (e) {
+    console.warn('[sidecar] stale cleanup failed (non-fatal)', (e as Error).message);
+  }
+}
+
 export async function startSidecar(): Promise<void> {
   if (proc && !proc.killed) return;
 
   setStatus({ state: 'starting', port: null, pid: null, message: 'sidecar 부트스트래핑' });
+  // 이전 세션의 좀비 sidecar 를 한 번 정리. 매 부팅 시 1회 실행 — 비용 ~수백ms.
+  killStaleSidecars();
   const python = await ensureSidecarPython();
   if (!python) return; // status 는 ensureSidecarPython 안에서 이미 error 로 세팅됨
 
@@ -246,12 +273,34 @@ export async function startSidecar(): Promise<void> {
 export function stopSidecar(): void {
   if (!proc) return;
   setStatus({ state: 'stopped', port, pid: null });
+  const pid = proc.pid;
   try {
-    proc.kill('SIGTERM');
+    if (process.platform === 'win32' && pid) {
+      // Windows uvicorn 은 SIGTERM 무시. taskkill /F /T 로 자식 트리까지 강제 종료해야
+      // venv python (parent) + uvicorn worker (child) 모두 깨끗하게 정리된다.
+      spawnSync('taskkill', ['/F', '/T', '/PID', String(pid)], {
+        stdio: 'ignore',
+        windowsHide: true,
+        timeout: 3000,
+      });
+    } else {
+      proc.kill('SIGTERM');
+    }
   } catch (e) {
     console.error('[sidecar] kill failed', e);
   }
   proc = null;
 }
 
+// 모든 종료 경로 cover. before-quit 가 정상 path; will-quit 는 fallback.
+// SIGINT/SIGTERM 은 외부 시그널 (npm run dev 의 ctrl+c 가 main 에 SIGINT 전파).
 app.on('before-quit', stopSidecar);
+app.on('will-quit', stopSidecar);
+process.on('SIGINT', () => {
+  stopSidecar();
+  process.exit(0);
+});
+process.on('SIGTERM', () => {
+  stopSidecar();
+  process.exit(0);
+});

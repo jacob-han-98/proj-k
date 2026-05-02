@@ -24,6 +24,7 @@
     "tests/unit/**/*.ts"
   ],
   "exclude": [
-    "tests/unit/threads-db.test.ts"
+    "tests/unit/threads-db.test.ts",
+    "tests/unit/onedrive-sync.test.ts"
   ]
 }

@@ -179,6 +179,16 @@ export const mockProjkInitScript = `
   window.__getStoredSettings = () => storedSettings;
   window.__resetSettings = () => { storedSettings = {}; };
 
+  // 0.1.50 (Step 1+2) — onedrive-sync 테스트 helper.
+  // window.__setEnsureFreshResponse({ ok:true, url:'...', alreadyFresh:false, syncing:true }) 로
+  // 다음 ensureFresh 호출 응답을 갈아끼움. window.__pushSyncProgress({relPath, state, error}) 로
+  // main → renderer 의 progress 이벤트를 흉내냄 (LocalSheetView 가 webview reload 또는 indicator 갱신).
+  window.__setEnsureFreshResponse = (r) => { window.__ensureFreshResponse = r; };
+  window.__pushSyncProgress = (ev) => {
+    (window.__syncProgressListeners ?? []).forEach((cb) => cb(ev));
+  };
+  window.__getLastEnsureFreshRelPath = () => window.__lastEnsureFreshRelPath ?? null;
+
   window.projk = {
     getP4Tree: () => Promise.resolve(fakeP4Tree),
     getConfluenceTree: () => Promise.resolve(fakeConfluenceTree),
@@ -227,6 +237,15 @@ export const mockProjkInitScript = `
     onMcpCommand: () => () => {},
     mcpReply: () => {},
 
+    // Frameless window controls (TitleBar 가 호출). Playwright 환경에선 no-op.
+    win: {
+      minimize: () => Promise.resolve(),
+      maximizeToggle: () => Promise.resolve(false),
+      close: () => Promise.resolve(),
+      isMaximized: () => Promise.resolve(false),
+      onMaximizedChange: () => () => {},
+    },
+
     // OneDrive PoC 2B stubs (0.1.45 PKCE) — admin consent 막혀 미사용. legacy stub 만 유지.
     oneDrive: {
       status: () => Promise.resolve({ authenticated: false, pollState: 'idle', pollError: null, challenge: null }),
@@ -237,10 +256,26 @@ export const mockProjkInitScript = `
 
     // OneDrive Sync 우회 (PoC 2C — 0.1.46+) — Playwright 에서는 detect false (Linux 환경).
     // 0.1.49 — userUrl 추가 (URL 빌드용 personal site URL).
+    // 0.1.50 — 테스트가 ensureFresh 응답과 progress 이벤트를 동적으로 제어할 수 있도록 hook 추가.
     oneDriveSync: {
       detect: () => Promise.resolve({ ok: false }),
       upload: () => Promise.resolve({ ok: false, canceled: true }),
       auto: () => Promise.resolve({ ok: false, error: 'mock — Playwright 환경' }),
+      // 기본은 ok:false (fallback flow 검증). window.__setEnsureFreshResponse(r) 로 테스트별 override.
+      ensureFresh: (relPath) => {
+        const r = window.__ensureFreshResponse ?? { ok: false, error: 'mock — Playwright 환경' };
+        window.__lastEnsureFreshRelPath = relPath;
+        return Promise.resolve(r);
+      },
+      onProgress: (cb) => {
+        window.__syncProgressListeners = window.__syncProgressListeners ?? [];
+        window.__syncProgressListeners.push(cb);
+        return () => {
+          const arr = window.__syncProgressListeners ?? [];
+          const i = arr.indexOf(cb);
+          if (i >= 0) arr.splice(i, 1);
+        };
+      },
     },
 
     // PR9: P4 자동 발견 + depot 트리 lazy fetch. Playwright mock 은 sample 데이터로 동작.
@@ -261,6 +296,19 @@ export const mockProjkInitScript = `
           { path: '//archive', name: 'archive', kind: 'depot' },
         ],
       }),
+      // 트리 표시용 — mock 은 빈 캐시.
+      cachedPaths: () => Promise.resolve([]),
+      // PR9c: depot 파일 보기 (p4 print → OneDrive read-only). mock 은 즉시 fake URL.
+      openDepotFile: (depotPath) =>
+        Promise.resolve({
+          ok: true,
+          url:
+            'https://example.sharepoint.com/personal/mock_user/Documents/Klaud-depot/' +
+            encodeURIComponent(depotPath.replace(/^\\/\\//, '')) +
+            '.xlsx?web=1&action=view',
+          revision: 42,
+          fromCache: false,
+        }),
       depotDirs: (parentPath) => {
         // 단순 mock: //depot 의 자식은 폴더 1개 + .xlsx 1개. 그 외 path 는 빈 폴더.
         if (parentPath === '//depot') {

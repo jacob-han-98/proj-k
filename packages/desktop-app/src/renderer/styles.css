@@ -73,12 +73,14 @@
 
 html, body, #root { height: 100%; margin: 0; padding: 0; background: var(--bg); color: var(--text); }
 
-/* PR5: 최종 3-column grid — Activity Bar (48) + Sidebar (240) + Editor (1fr).
+/* PR5: 최종 3-column grid — Activity Bar (48) + Sidebar (var) + Editor (1fr).
    우측 360px ChatPanel 컬럼은 PR5 에서 제거됨 — 채팅은 editor 의 qna-thread 탭으로,
-   리뷰는 confluence/excel 탭의 split 으로 이동. */
+   리뷰는 confluence/excel 탭의 split 으로 이동.
+   사이드바 너비는 --sidebar-width (default 312px, 기존 240 의 +30%) — App.tsx 가 inline
+   style 로 갱신, .sidebar-resize-handle 이 drag 로 조절. localStorage 영속. */
 .shell {
   display: grid;
-  grid-template-columns: 48px 240px 1fr;
+  grid-template-columns: 48px var(--sidebar-width, 312px) 1fr;
   grid-template-rows: 36px 1fr;
   grid-template-areas:
     'topbar topbar topbar'
@@ -87,19 +89,48 @@ html, body, #root { height: 100%; margin: 0; padding: 0; background: var(--bg); 
   width: 100vw;
 }
 
+/* VS Code 스타일 frameless title bar.
+   main 에서 BrowserWindow({frame:false}) 로 OS 기본 title bar 를 제거 → 이 .topbar 가 직접
+   그 36px 영역을 차지하고 OS 의 드래그/창 컨트롤 역할을 떠안는다.
+
+   - background 전체에 -webkit-app-region: drag 를 부여 → 빈 영역을 끌면 창 이동.
+   - 안쪽 interactive 자식(.no-drag, button, input, 등)은 -webkit-app-region: no-drag 로
+     drag 영역에서 빠지게 해서 클릭 가능. */
 .topbar {
   grid-area: topbar;
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
-  padding: 0 12px;
+  padding: 0 0 0 12px;
   gap: 12px;
   background: var(--bg-elev);
   font-size: 12px;
+  -webkit-app-region: drag;
+  user-select: none;
+}
+.topbar .no-drag,
+.topbar button,
+.topbar input,
+.topbar select,
+.topbar a {
+  -webkit-app-region: no-drag;
 }
 .topbar .title { font-weight: 600; }
-.topbar .status-pill {
+.topbar .breadcrumb {
+  flex: 1 1 auto;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.topbar .topbar-actions {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 0 0 auto;
+}
+.topbar .status-pill {
   font-size: 11px;
   padding: 2px 8px;
   border-radius: 999px;
@@ -108,6 +139,40 @@ html, body, #root { height: 100%; margin: 0; padding: 0; background: var(--bg); 
 }
 .topbar .status-pill.ready { color: #16a34a; border-color: #16a34a55; }
 .topbar .status-pill.error { color: #dc2626; border-color: #dc262655; }
+.topbar .topbar-settings {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.topbar .topbar-settings:hover { background: var(--hover); }
+
+/* 우측 끝 min/max/close — Windows 11 기본 title bar 와 동일한 폭/높이 (46×36).
+   close 만 hover 시 #c42b1c (Windows 빨강) 로 강조, 나머지는 var(--hover). */
+.topbar .window-controls {
+  display: flex;
+  align-items: stretch;
+  margin-left: 4px;
+  flex: 0 0 auto;
+  height: 36px;
+}
+.topbar .window-control {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 36px;
+  cursor: pointer;
+  color: var(--text);
+  transition: background 0.08s ease, color 0.08s ease;
+}
+.topbar .window-control:hover { background: var(--hover); }
+.topbar .window-control:focus-visible { outline: 1px solid var(--focusBorder); outline-offset: -2px; }
+.topbar .window-control.close:hover { background: #c42b1c; color: #ffffff; }
 
 /* --- 업데이트 indicator (토바 상시 표기) --- */
 .update-indicator {
@@ -160,6 +225,29 @@ html, body, #root { height: 100%; margin: 0; padding: 0; background: var(--bg); 
   flex-direction: column;
   overflow: hidden;
   min-height: 0;
+  /* resize handle 의 absolute positioning 기준점. */
+  position: relative;
+  min-width: 0;
+}
+
+/* 사이드바 우측 가장자리에 얹히는 4px 너비 drag handle.
+   hover/active 시 6px + accent 색으로 highlight (review split handle 과 동일 패턴). */
+.sidebar-resize-handle {
+  position: absolute;
+  top: 0;
+  right: -2px;
+  width: 4px;
+  height: 100%;
+  cursor: col-resize;
+  z-index: 10;
+  background: transparent;
+  transition: background 0.08s ease, width 0.08s ease;
+}
+.sidebar-resize-handle:hover,
+.sidebar-resize-handle.dragging {
+  background: var(--focusBorder);
+  width: 6px;
+  right: -3px;
 }
 
 /* 스레드 리스트 — 위쪽 고정 영역. 너무 길어지면 자체 스크롤. */
@@ -258,8 +346,39 @@ html, body, #root { height: 100%; margin: 0; padding: 0; background: var(--bg); 
 .sidebar .tree-row.active { background: var(--accent); color: var(--accent-fg); }
 .sidebar .tree-row .caret { width: 12px; display: inline-block; text-align: center; color: var(--text-dim); }
 .sidebar .tree-row .icon { width: 16px; display: inline-block; }
-.sidebar .tree-row .label { overflow: hidden; text-overflow: ellipsis; }
+.sidebar .tree-row .label { overflow: hidden; text-overflow: ellipsis; flex: 1 1 auto; min-width: 0; }
 .sidebar .tree-children { margin-left: 12px; }
+
+/* tree-row 우측에 얹히는 편집 토글. 평소엔 hover 시에만 등장 (VS Code 의 inline action 동작),
+   편집 중이면 항상 표기 (사용자가 어떤 파일이 수정 중인지 한눈에). */
+.tree-row .tree-edit-toggle {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 11px;
+  line-height: 1;
+  margin-left: 6px;
+  flex: 0 0 18px;
+  opacity: 0;
+  transition: opacity 0.08s ease, background 0.08s ease;
+}
+.tree-row:hover .tree-edit-toggle { opacity: 0.7; }
+.tree-row .tree-edit-toggle:hover { opacity: 1; background: var(--list-hoverBackground); }
+/* 편집 중: 강조 표기 + 항상 visible + 살짝 pulse 로 "활성" 느낌. */
+.tree-row .tree-edit-toggle.editing {
+  opacity: 1;
+  color: var(--accent);
+  animation: tree-edit-pulse 1.6s ease-in-out infinite;
+}
+@keyframes tree-edit-pulse {
+  0%, 100% { filter: brightness(1); }
+  50% { filter: brightness(1.4); }
+}
 
 /* PR2: .center 는 더 이상 grid 자식이 아니라 .editor-host > .tab-slot 안의 flex item.
    부모 .tab-slot 이 absolute inset:0 으로 영역을 채워주고, .center 는 100%/100%
@@ -1115,6 +1234,17 @@ html, body, #root { height: 100%; margin: 0; padding: 0; background: var(--bg); 
 
 .p4-source-tab .codicon {
   font-size: 13px;
+}
+
+/* P4Panel: local + depot pane 둘 다 mount 유지 + display:none 토글로 state 보존. */
+.p4-source-pane {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.p4-source-pane.hidden {
+  display: none;
 }
 
 /* Quick Find 패널 */

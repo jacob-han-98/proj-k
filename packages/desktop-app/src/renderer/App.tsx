@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { SearchHit, SidecarStatus, TreeNode } from '../shared/types';
 import { SettingsModal } from './panels/SettingsModal';
 import { UpdateToast } from './panels/UpdateToast';
-import { UpdateIndicator } from './panels/UpdateIndicator';
 import { ActivityBar } from './workbench/ActivityBar';
+import { TitleBar } from './panels/TitleBar';
 import { EditorHost } from './workbench/Editor/EditorHost';
 import { SidebarHost } from './workbench/Sidebar/SidebarHost';
 import { useWorkbenchStore } from './workbench/store';
@@ -19,6 +19,52 @@ export function App() {
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
   const [threadListKey, setThreadListKey] = useState(0); // refresh trigger
   const [sheetMappings, setSheetMappings] = useState<Record<string, string>>({});
+  // 사이드바 너비 — VS Code 처럼 사용자 drag 로 가로폭 조절. 기본 312px (기존 240 의 +30%).
+  // localStorage 에 영속 — 다음 부팅에 같은 너비로 복원.
+  const [sidebarWidth, setSidebarWidth] = useState<number>(() => {
+    try {
+      const stored = localStorage.getItem('klaud_sidebar_width');
+      if (stored) {
+        const n = parseInt(stored, 10);
+        if (Number.isFinite(n)) return Math.max(200, Math.min(600, n));
+      }
+    } catch {
+      /* localStorage 접근 실패 — 기본값 유지 */
+    }
+    return 312;
+  });
+  const [sidebarDragging, setSidebarDragging] = useState(false);
+  const sidebarWidthRef = useRef(sidebarWidth);
+  useEffect(() => {
+    sidebarWidthRef.current = sidebarWidth;
+    try {
+      localStorage.setItem('klaud_sidebar_width', String(sidebarWidth));
+    } catch {
+      /* persistence 실패는 무시 */
+    }
+  }, [sidebarWidth]);
+
+  const startSidebarResize = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startW = sidebarWidthRef.current;
+    setSidebarDragging(true);
+    const onMove = (ev: MouseEvent) => {
+      const next = Math.max(200, Math.min(600, startW + (ev.clientX - startX)));
+      setSidebarWidth(next);
+    };
+    const onUp = () => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+      setSidebarDragging(false);
+    };
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+  };
 
   // 부팅 시 settings 의 sheetMappings load.
   useEffect(() => {
@@ -286,31 +332,16 @@ export function App() {
   };
 
   return (
-    <div className="shell" data-testid="app-shell">
-      <header className="topbar">
-        <span className="title" data-testid="app-version">
-          Klaud <span style={{ color: 'var(--text-dim)', fontWeight: 400, fontSize: 11 }}>v{__APP_VERSION__}</span>
-        </span>
-        <span className="breadcrumb" style={{ color: 'var(--text-dim)' }}>
-          {selection ? selection.node.title : '시작하려면 좌측 트리에서 문서를 선택하세요'}
-        </span>
-        <UpdateIndicator />
-        <span
-          className={`status-pill ${sidecar.state === 'ready' ? 'ready' : sidecar.state === 'error' ? 'error' : ''}`}
-          title={sidecar.message ?? ''}
-          data-testid="sidecar-pill"
-        >
-          sidecar {sidecar.state}
-          {sidecar.port ? ` :${sidecar.port}` : ''}
-          {sidecar.message && sidecar.state !== 'ready' ? ` — ${sidecar.message}` : ''}
-        </span>
-        <button
-          onClick={() => setShowCreds(true)}
-          style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--text)', borderRadius: 4, padding: '2px 8px', fontSize: 11, cursor: 'pointer' }}
-        >
-          ⚙ 설정
-        </button>
-      </header>
+    <div
+      className="shell"
+      data-testid="app-shell"
+      style={{ ['--sidebar-width' as string]: `${sidebarWidth}px` } as React.CSSProperties}
+    >
+      <TitleBar
+        sidecar={sidecar}
+        breadcrumb={selection ? selection.node.title : '시작하려면 좌측 트리에서 문서를 선택하세요'}
+        onOpenSettings={() => setShowCreds(true)}
+      />
 
       <ActivityBar />
 
@@ -329,6 +360,14 @@ export function App() {
             })
           }
           threadsRefreshKey={threadListKey}
+        />
+        <div
+          className={`sidebar-resize-handle${sidebarDragging ? ' dragging' : ''}`}
+          data-testid="sidebar-resize-handle"
+          onMouseDown={startSidebarResize}
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="사이드바 크기 조절"
         />
       </aside>
 

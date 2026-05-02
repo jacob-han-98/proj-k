@@ -1,6 +1,8 @@
 import { useEffect, useState, type ReactElement } from 'react';
 import type { TreeNode, P4TreeResult } from '../../../shared/types';
 import { P4DepotTree } from './P4DepotTree';
+import { useWorkbenchStore } from '../store';
+import { docKeyOfLocal } from '../types';
 
 // PR3: P4 (Perforce 기획서) 사이드바 패널.
 // PR9b: depot 탭 활성화. local 탭은 데이터 루트 기반 트리, depot 탭은 P4 좌표 기반 lazy 트리.
@@ -17,6 +19,8 @@ export function P4Panel({ selectedId, onOpenSheet }: Props) {
   const [source, setSource] = useState<P4Source>('local');
   const [p4, setP4] = useState<P4TreeResult | null>(null);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const editingDocs = useWorkbenchStore((s) => s.editingDocs);
+  const setDocEditing = useWorkbenchStore((s) => s.setDocEditing);
 
   useEffect(() => {
     const fetchTree = () => {
@@ -43,10 +47,23 @@ export function P4Panel({ selectedId, onOpenSheet }: Props) {
     const hasChildren = !!node.children && node.children.length > 0;
     const isOpen = expanded.has(node.id);
     const isActive = selectedId === node.id;
+    const isSheet = node.type === 'sheet' && !!node.relPath;
+    const docKey = isSheet ? docKeyOfLocal(node.relPath!) : null;
+    const isEditing = !!docKey && !!editingDocs[docKey];
 
     const onClick = () => {
       if (hasChildren) toggle(node.id);
       else if (node.type === 'sheet') onOpenSheet(node);
+    };
+
+    // 편집 토글 버튼 — 탭 열기 + editing on/off.
+    // 처음 클릭 (view 상태): 탭 열고 edit 모드로. 다시 클릭: edit 끄고 view 로.
+    // tree-row onClick 으로 버블링되면 행 자체 select 가 또 일어나므로 stopPropagation.
+    const onToggleEdit = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (!docKey) return;
+      onOpenSheet(node); // 탭이 없으면 열기 + 있으면 focus
+      setDocEditing(docKey, !isEditing);
     };
 
     return (
@@ -56,10 +73,24 @@ export function P4Panel({ selectedId, onOpenSheet }: Props) {
           style={{ paddingLeft: 8 + depth * 12 }}
           onClick={onClick}
           title={node.title}
+          data-testid={`p4-row-${node.id}`}
         >
           <span className="caret">{hasChildren ? (isOpen ? '▾' : '▸') : ''}</span>
           <span className="icon">{iconFor(node)}</span>
           <span className="label">{node.title}</span>
+          {isSheet && (
+            <button
+              type="button"
+              className={`tree-edit-toggle${isEditing ? ' editing' : ''}`}
+              onClick={onToggleEdit}
+              data-testid={`sheet-edit-toggle-${node.relPath}`}
+              title={isEditing ? '편집 모드 끄기 (보기 전용으로 reload)' : '편집 모드 켜기 (Excel 풀 chrome)'}
+              aria-label={isEditing ? '편집 중' : '편집 시작'}
+              aria-pressed={isEditing}
+            >
+              {isEditing ? '📝' : '✏'}
+            </button>
+          )}
         </div>
         {hasChildren && isOpen && (
           <div className="tree-children">
@@ -95,7 +126,14 @@ export function P4Panel({ selectedId, onOpenSheet }: Props) {
           <i className="codicon codicon-cloud" aria-hidden="true" /> depot
         </button>
       </div>
-      {source === 'local' ? (
+      {/* local + depot 둘 다 mount 유지 + display:none 토글. unmount 시 트리 expanded
+          state / depot 캐시된 children 등이 사라져 사용자가 탭 갔다오면 처음 상태로 돌아가는
+          regression 방지. SidebarHost / EditorHost 와 동일 패턴. */}
+      <div
+        className={`p4-source-pane${source === 'local' ? '' : ' hidden'}`}
+        data-testid="p4-source-pane-local"
+        aria-hidden={source !== 'local'}
+      >
         <div className="sidebar" data-testid="p4-tree-container">
           <div className="tree" data-testid="p4-tree">
             {!p4 && (
@@ -119,11 +157,14 @@ export function P4Panel({ selectedId, onOpenSheet }: Props) {
             {p4 && p4.nodes.length > 0 && p4.nodes.map((n) => renderNode(n, 0))}
           </div>
         </div>
-      ) : (
-        // depot 탭은 P4DepotTree 가 mount 될 때마다 root fetch — 사용자가 source 탭 토글 =
-        // unmount/mount 라 자동 갱신. PR9b 단순화 정책 (cache 영속 안 함).
+      </div>
+      <div
+        className={`p4-source-pane${source === 'depot' ? '' : ' hidden'}`}
+        data-testid="p4-source-pane-depot"
+        aria-hidden={source !== 'depot'}
+      >
         <P4DepotTree />
-      )}
+      </div>
     </div>
   );
 }

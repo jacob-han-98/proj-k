@@ -15,10 +15,17 @@
 //   - sock.send 실패도 catch + log.
 //   - heartbeat: server 가 5초 간격 ping. 그 응답을 통해 stuck 감지.
 
-import { BrowserWindow, ipcMain } from 'electron';
+import { BrowserWindow, ipcMain, app } from 'electron';
 import WebSocket from 'ws';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+import { promises as fsp } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { getSettings } from './settings';
 import { getSidecarStatus } from './sidecar';
+
+const execFileAsync = promisify(execFile);
 
 const RECONNECT_BACKOFF_MS = [1_000, 2_000, 5_000, 10_000, 30_000];
 const STEP_TIMEOUT_MS = 15_000;
@@ -68,8 +75,56 @@ function rendererCommand(win: BrowserWindow, cmd: unknown): Promise<unknown> {
 }
 
 async function captureScreenshotBase64(win: BrowserWindow): Promise<string> {
-  const img = await win.webContents.capturePage();
+  // 1차: Electron capturePage. background spawn 한 Klaud 의 OS-level DWM occlusion 으로
+  // 빈 frame 만 받는 케이스가 흔해 — Win32 PrintWindow fallback 으로 대체.
+  // Windows 환경에선 곧바로 PrintWindow 로 가서 진짜 frame 받음.
+  if (process.platform === 'win32') {
+    try {
+      return await captureViaPrintWindow(win);
+    } catch (e) {
+      console.warn(`[screenshot] PrintWindow fallback 실패: ${(e as Error).message} — capturePage 로 대체`);
+    }
+  }
+  const img = await win.webContents.capturePage(undefined, { stayHidden: true });
   return img.toPNG().toString('base64');
+}
+
+// Win32 PrintWindow(PW_RENDERFULLCONTENT) 통해 hidden/occluded BrowserWindow 도 진짜 frame
+// 캡처. PowerShell helper (`scripts/capture-window.ps1`) 를 spawn 해서 PNG 파일에 저장 후
+// base64 로 읽어 반환. 일부 Windows 환경/콘솔 인코딩 한계로 inline -Command 보다 -File 안전.
+async function captureViaPrintWindow(win: BrowserWindow): Promise<string> {
+  const hwndBuf = win.getNativeWindowHandle();
+  // x64 build 면 8 byte HWND, x86 면 4. Klaud 는 x64.
+  const hwnd = hwndBuf.length === 8
+    ? Number(hwndBuf.readBigUInt64LE())
+    : hwndBuf.readUInt32LE();
+
+  // helper script 위치 — dev 모드는 src 의 형제 scripts/, packaged 는 process.resourcesPath/scripts/.
+  const scriptPath = app.isPackaged
+    ? join(process.resourcesPath, 'scripts', 'capture-window.ps1')
+    : join(__dirname, '..', '..', 'scripts', 'capture-window.ps1');
+
+  const tmpPng = join(tmpdir(), `klaud-cap-${Date.now()}-${process.pid}.png`);
+
+  try {
+    const { stdout } = await execFileAsync(
+      'powershell',
+      [
+        '-NoProfile',
+        '-NonInteractive',
+        '-ExecutionPolicy', 'Bypass',
+        '-File', scriptPath,
+        '-Hwnd', String(hwnd),
+        '-Out', tmpPng,
+      ],
+      { timeout: 10_000, windowsHide: true },
+    );
+    console.log(`[screenshot] PrintWindow ok hwnd=${hwnd} ${stdout.trim()}`);
+    const buf = await fsp.readFile(tmpPng);
+    return buf.toString('base64');
+  } finally {
+    await fsp.unlink(tmpPng).catch(() => {});
+  }
 }
 
 async function dispatch(method: string, params: unknown, getWindow: () => BrowserWindow | null): Promise<unknown> {
@@ -88,8 +143,20 @@ async function dispatch(method: string, params: unknown, getWindow: () => Browse
       };
     }
     case 'screenshot': {
+      // captureScreenshotBase64 가 Win32 PrintWindow helper 통해 진짜 frame 캡처.
+      // background spawn / OS occluded window 에서도 동작. 사용자 화면을 forefront 로
+      // 튀어 올리는 부수효과 없음 (PrintWindow 가 in-place capture).
+      const t0 = Date.now();
       const png_base64 = await captureScreenshotBase64(win);
-      return { png_base64 };
+      const pngBytes = Buffer.byteLength(png_base64, 'base64');
+      console.log(`[screenshot] captured ${pngBytes}B in ${Date.now() - t0}ms`);
+      return { png_base64, pngBytes };
+    }
+    case 'show': {
+      try { if (!win.isVisible()) win.show(); } catch { /* ignore */ }
+      try { if (win.isMinimized()) win.restore(); } catch { /* ignore */ }
+      try { win.focus(); } catch { /* ignore */ }
+      return { ok: true, visible: win.isVisible(), focused: win.isFocused() };
     }
     case 'state': {
       // renderer 가 자기 DOM 상태를 종합해서 응답.

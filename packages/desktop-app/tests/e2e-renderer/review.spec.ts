@@ -10,12 +10,17 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript({ content: mockProjkInitScript });
 });
 
-// 공통 헬퍼: Confluence 트리에서 페이지 선택 → webview mount → executeJavaScript 스텁
+// 공통 헬퍼: Confluence 트리에서 페이지 선택 → webview mount → executeJavaScript 스텁.
+// confluence-tree scope 로 selector 한정 — 다른 사이드바 (P4 depot 등) 에 동일 텍스트가
+// 있어도 ambiguity 회피. activeIcon 기본이 'confluence' 라 별도 토글 클릭 불필요.
 async function selectConfluencePageAndStubWebview(page: import('@playwright/test').Page, mockBody: string) {
   await page.goto('/');
-  await page.getByText('Design').click();
-  await page.getByText('시스템 디자인').click();
-  await page.getByText('전투').click();
+  // 명시적으로 activity-confluence 클릭 — confluence 사이드바가 active 상태인지 확정 + 첫 렌더 완료 대기.
+  await page.getByTestId('activity-confluence').click();
+  const tree = page.getByTestId('confluence-tree');
+  await tree.getByText('Design', { exact: true }).click();
+  await tree.getByText('시스템 디자인', { exact: true }).click();
+  await tree.getByText('전투', { exact: true }).click();
 
   // webview 가 attach 될 때까지 기다린 후 executeJavaScript 메서드를 mockBody 반환하도록 stub.
   await expect(page.getByTestId('center-pane').locator('webview')).toBeAttached();
@@ -36,10 +41,12 @@ test('리뷰 버튼은 Confluence 페이지 선택 시 doc-header 에 노출, sh
   // 시작 (selection 없음) — 버튼 없음
   await expect(page.getByTestId('confluence-review')).toHaveCount(0);
 
-  // Confluence 페이지 선택 → 버튼 등장
-  await page.getByText('Design').click();
-  await page.getByText('시스템 디자인').click();
-  await page.getByText('전투').click();
+  // Confluence 페이지 선택 → 버튼 등장. confluence-tree scope 로 다른 사이드바와 ambiguity 회피.
+  await page.getByTestId('activity-confluence').click();
+  const tree = page.getByTestId('confluence-tree');
+  await tree.getByText('Design', { exact: true }).click();
+  await tree.getByText('시스템 디자인', { exact: true }).click();
+  await tree.getByText('전투', { exact: true }).click();
   await expect(page.getByTestId('confluence-review')).toBeVisible();
 });
 

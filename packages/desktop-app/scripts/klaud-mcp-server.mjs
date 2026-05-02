@@ -36,7 +36,20 @@ const pendingRpcs = new Map(); // id → { resolve, reject, timer }
 
 const wss = new WebSocketServer({ host: '0.0.0.0', port: WS_PORT });
 
-wss.on('connection', (ws) => {
+wss.on('connection', (ws, req) => {
+  // 진단 client 분기 — header `x-klaud-role: diag` 또는 query `?role=diag`.
+  // 이 모드에선 server 가 klaudWs 를 hijack 하지 않고, 진단 client 가 보낸 RPC 메시지
+  // (`{ id, method, params }`) 를 그대로 klaudWs (사용자 Klaud) 로 forward 후 결과를 다시
+  // 진단 client 에 반환. Claude Code 가 stdio MCP 거치지 않고 직접 WS 로 진단 가능.
+  const role =
+    req.headers['x-klaud-role'] ||
+    new URL(req.url ?? '/', 'ws://x').searchParams.get('role');
+  if (role === 'diag') {
+    log(`diag client connected from ${ws._socket.remoteAddress}`);
+    handleDiagClient(ws);
+    return;
+  }
+
   // 한 번에 하나의 Klaud 만 가정 (multi 는 추후).
   if (klaudWs && klaudWs.readyState === klaudWs.OPEN) {
     log('Klaud 가 이미 연결되어 있음 — 기존 연결을 끊고 새 연결로 교체');
@@ -90,6 +103,30 @@ wss.on('connection', (ws) => {
 
   ws.on('error', (e) => log(`WS error: ${e.message}`));
 });
+
+// 진단 client (Claude Code 등) 가 직접 WS 로 connect 했을 때 — 그가 보낸 RPC 메시지를
+// klaudWs 로 forward 후 응답을 그에게 회신. 진단 client 끊겨도 klaudWs 영향 X.
+function handleDiagClient(ws) {
+  ws.on('message', async (raw) => {
+    let msg;
+    try {
+      msg = JSON.parse(raw.toString('utf-8'));
+    } catch (e) {
+      log(`diag: 메시지 파싱 실패: ${e.message}`);
+      return;
+    }
+    const { id, method, params } = msg;
+    if (typeof id !== 'number' || typeof method !== 'string') return;
+    try {
+      const result = await callKlaud(method, params ?? {});
+      try { ws.send(JSON.stringify({ id, result })); } catch {}
+    } catch (e) {
+      try { ws.send(JSON.stringify({ id, error: e.message })); } catch {}
+    }
+  });
+  ws.on('close', () => log('diag client disconnected'));
+  ws.on('error', (e) => log(`diag WS error: ${e.message}`));
+}
 
 // 특정 ws 에 대해 직접 RPC (heartbeat 용 — klaudWs 가 바뀌어도 검증 중인 sock 으로만 호출).
 function callKlaudRaw(sock, method, params = {}) {

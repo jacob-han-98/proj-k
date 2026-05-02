@@ -54,10 +54,13 @@ test('P4 tree expands and selects a sheet', async ({ page }) => {
 test('Confluence tree shows hierarchy', async ({ page }) => {
   await page.goto('/');
 
-  // 'Design' is the root manifest node
-  await expect(page.getByText('Design')).toBeVisible();
-  await page.getByText('Design').click();
-  await expect(page.getByText('시스템 디자인')).toBeVisible();
+  // P4Panel 이 local + depot 둘 다 mount 라 depot 트리에 'Design' 같은 텍스트가 있을 수 있음.
+  // confluence-tree scope 로 강제.
+  await page.getByTestId('activity-confluence').click();
+  const tree = page.getByTestId('confluence-tree');
+  await expect(tree.getByText('Design', { exact: true })).toBeVisible();
+  await tree.getByText('Design', { exact: true }).click();
+  await expect(tree.getByText('시스템 디자인', { exact: true })).toBeVisible();
 });
 
 // M1: 채팅/검색은 editor 의 qna-thread 탭 안에서만 동작. 사용자가 사이드바에서 새 thread 만들면
@@ -111,9 +114,11 @@ test('confluence page 선택 시 webview 가 즉시 띄워짐 (creds 없어도 �
   // chrome-extension 식 동선 — 첫 진입이면 atlassian.net 로그인 페이지가 webview 안에서.
   await page.goto('/');
 
-  await page.getByText('Design').click();
-  await page.getByText('시스템 디자인').click();
-  await page.getByText('전투').click();
+  await page.getByTestId('activity-confluence').click();
+  const tree = page.getByTestId('confluence-tree');
+  await tree.getByText('Design', { exact: true }).click();
+  await tree.getByText('시스템 디자인', { exact: true }).click();
+  await tree.getByText('전투', { exact: true }).click();
 
   // CenterPane 이 webview 를 즉시 렌더 (자격증명 게이트 없이).
   const center = page.getByTestId('center-pane');

@@ -26,7 +26,28 @@ export function tabIdOf(spec: OpenTabSpec): string {
     return `confluence:${spec.node.confluencePageId ?? spec.node.id}`;
   }
   if (spec.kind === 'excel') {
+    // PR9c: depot 파일은 oneDriveUrl 직접 매칭 + node.id 가 revision 포함 (예: 'depot:<path>#rev42').
+    // 같은 file 의 다른 revision 은 별도 탭으로 유지 (사용자가 비교할 수 있게). local 시트는 기존처럼 relPath 기반.
+    if (spec.node.oneDriveUrl) return `excel:${spec.node.id}`;
     return `excel:${spec.node.relPath ?? spec.node.id}`;
   }
   return `qna:${spec.threadId}`;
+}
+
+// 편집 모드 추적용 안정 키. 같은 depot 파일의 여러 revision (각각 독립 탭) 도 같은 docKey 를
+// 공유하도록 revision 부분 제거. 트리뷰의 ✏ 아이콘이 이 키로 store 에 토글한다.
+export function docKeyOfLocal(relPath: string): string {
+  return `local:${relPath}`;
+}
+export function docKeyOfDepot(depotPath: string): string {
+  return `depot:${depotPath}`;
+}
+// TreeNode 가 어떤 종류인지에 따라 docKey 도출. depot 노드는 id 가 'depot:<path>#rev<n>'.
+export function docKeyOfNode(node: { id: string; relPath?: string; oneDriveUrl?: string }): string | null {
+  if (node.oneDriveUrl && node.id.startsWith('depot:')) {
+    const m = node.id.match(/^depot:(.+?)(?:#rev\d+)?$/);
+    return m ? `depot:${m[1]}` : null;
+  }
+  if (node.relPath) return `local:${node.relPath}`;
+  return null;
 }

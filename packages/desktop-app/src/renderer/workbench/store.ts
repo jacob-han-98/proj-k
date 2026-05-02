@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { DocTab, OpenTabSpec, SidebarKind } from './types';
-import { tabIdOf } from './types';
+import { tabIdOf, docKeyOfNode } from './types';
 
 // PR1: activeIcon (Activity Bar 토글).
 // PR2: openTabs / activeTabId / openTab / focusTab / closeTab.
@@ -31,6 +31,15 @@ type WorkbenchState = {
   tabSplits: Record<string, SplitPayload | undefined>;
   openSplit: (tabId: string, title: string, text: string) => void;
   closeSplit: (tabId: string) => void;
+
+  // Excel 시트의 편집 모드 추적. docKey (`local:<relPath>` / `depot:<path>`) → editing.
+  // 기본은 view (action=embedview, SuiteNav/리본 사라진 미니 뷰). 트리뷰의 ✏ 아이콘 클릭으로
+  // editing=true 토글 → CenterPane 의 webview src 가 ?action=edit 으로 swap + reload.
+  // 같은 depot 파일의 여러 revision 탭은 한 docKey 를 공유 — 사용자 멘탈모델("이 파일 편집중")
+  // 에 맞춤.
+  editingDocs: Record<string, boolean>;
+  setDocEditing: (docKey: string, editing: boolean) => void;
+  toggleDocEditing: (docKey: string) => void;
 };
 
 export const useWorkbenchStore = create<WorkbenchState>((set) => ({
@@ -75,6 +84,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set) => ({
   closeTab: (id) => set((state) => {
     const idx = state.openTabs.findIndex((t) => t.id === id);
     if (idx < 0) return state;
+    const closing = state.openTabs[idx];
     const next = state.openTabs.filter((t) => t.id !== id);
     let nextActive = state.activeTabId;
     if (state.activeTabId === id) {
@@ -85,7 +95,24 @@ export const useWorkbenchStore = create<WorkbenchState>((set) => ({
     // 탭 닫히면 그 탭의 split payload 도 정리.
     const splits = { ...state.tabSplits };
     delete splits[id];
-    return { ...state, openTabs: next, activeTabId: nextActive, tabSplits: splits };
+    // 같은 docKey 의 다른 탭이 남아있지 않으면 editing 상태도 함께 정리.
+    // depot 파일은 revision 별로 별도 탭이지만 docKey 는 공유 → 마지막 revision 탭이 닫혀야 정리.
+    let editingDocs = state.editingDocs;
+    if (closing && (closing.kind === 'excel' || closing.kind === 'confluence')) {
+      const closingKey = docKeyOfNode(closing.node);
+      if (closingKey) {
+        const stillOpen = next.some((t) => {
+          if (t.kind !== 'excel' && t.kind !== 'confluence') return false;
+          return docKeyOfNode(t.node) === closingKey;
+        });
+        if (!stillOpen && editingDocs[closingKey]) {
+          const e = { ...editingDocs };
+          delete e[closingKey];
+          editingDocs = e;
+        }
+      }
+    }
+    return { ...state, openTabs: next, activeTabId: nextActive, tabSplits: splits, editingDocs };
   }),
 
   tabSplits: {},
@@ -100,5 +127,21 @@ export const useWorkbenchStore = create<WorkbenchState>((set) => ({
     const splits = { ...state.tabSplits };
     delete splits[tabId];
     return { ...state, tabSplits: splits };
+  }),
+
+  editingDocs: {},
+  setDocEditing: (docKey, editing) => set((state) => {
+    const cur = !!state.editingDocs[docKey];
+    if (cur === editing) return state;
+    const next = { ...state.editingDocs };
+    if (editing) next[docKey] = true;
+    else delete next[docKey];
+    return { ...state, editingDocs: next };
+  }),
+  toggleDocEditing: (docKey) => set((state) => {
+    const next = { ...state.editingDocs };
+    if (next[docKey]) delete next[docKey];
+    else next[docKey] = true;
+    return { ...state, editingDocs: next };
   }),
 }));

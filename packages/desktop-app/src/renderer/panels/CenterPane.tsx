@@ -284,6 +284,10 @@ function LocalSheetView(props: {
   const [bgSyncing, setBgSyncing] = useState(false);
   const [fallback, setFallback] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // mount 시점의 cachedUrl 만 capture — onUpsertMapping 호출이 부모 sheetMappings 갱신해
+  // cachedUrl prop 이 즉시 채워지면 `bgSyncing && !cachedUrl` 분기 가 의도와 반대 동작.
+  // 첫 mount 시 진짜로 cached 였는지 (= 옛 본문이라도 즉시 보여줄지) 만 의미가 있음.
+  const [hadCachedUrlAtMount] = useState(() => Boolean(cachedUrl));
   // Cache-bust nonce — completed event 마다 1↑. webview key 에 넣어 unmount/mount 강제,
   // 같은 src 라도 SharePoint 304 cache 우회. wv.reload() 가 cache hit 받는 케이스 회피.
   const [reloadNonce, setReloadNonce] = useState(0);
@@ -336,6 +340,17 @@ function LocalSheetView(props: {
     return off;
   }, [relPath]);
 
+  // view 모드에서만 chrome (SuiteNav/검색바/프로필) 강제 제거. edit 모드는 그대로.
+  // 🔥 Hooks 규칙: useEffect 는 반드시 unconditional 위치 — 아래 conditional return 들이
+  // mount 마다 다른 분기로 가면 hooks 개수 달라져 React crash. 분기 *위에* 둠.
+  useEffect(() => {
+    if (editing) return;
+    if (!url) return;
+    const wv = webviewRef.current;
+    if (!wv) return;
+    return attachChromeStripper(wv);
+  }, [editing, url]);
+
   // ensureFresh fail → 옛 흐름 (file picker / 수동 share URL).
   if (fallback) {
     return (
@@ -367,12 +382,12 @@ function LocalSheetView(props: {
     );
   }
 
-  // bgSyncing 진행 중 + cachedUrl 없는 경우 → webview mount 미루기. 사용자 화면 하얀
-  // freeze 의 진짜 원인: webview 가 cloud 도달 전 SharePoint URL 로 navigate 시작하면
-  // SharePoint 가 빈 페이지 / SSO redirect chain 으로 hang → main renderer 가 webview
-  // navigation 으로 stuck. progress completed (= cloud 도달) 후만 mount 하면 안전.
-  // cachedUrl 있으면 옛 본문이라도 즉시 표시 (이미 사용자가 본 sheet 라 cloud 에 있을 거).
-  if (bgSyncing && !cachedUrl) {
+  // bgSyncing 진행 중 + mount 시점에 cachedUrl 없는 경우 → webview mount 미루기. 사용자
+  // 화면 빈 페이지 (SharePoint 404 — cloud 도달 전) 차단. progress completed 후만 mount.
+  // hadCachedUrlAtMount 사용 이유: ensureFresh response 의 onUpsertMapping 이 부모 sheetMappings
+  // 즉시 갱신 → cachedUrl prop 이 r.url 로 채워져 `!cachedUrl` 가 false 로 뒤집힘. mount 시점의
+  // 값만 의미 있음.
+  if (bgSyncing && !hadCachedUrlAtMount) {
     return (
       <main className="center" data-testid="center-pane">
         <div className="doc-header">
@@ -398,13 +413,6 @@ function LocalSheetView(props: {
   // 같은 src 안에서 src 만 바꾸면 Excel 가 일부 chrome 만 갱신해서 어색하게 섞이는 경우 방지.
   const displayUrl = applyAction(url, editing ? 'edit' : 'view');
 
-  // view 모드에서만 chrome (SuiteNav/검색바/프로필) 강제 제거. edit 모드는 그대로.
-  useEffect(() => {
-    if (editing) return;
-    const wv = webviewRef.current;
-    if (!wv) return;
-    return attachChromeStripper(wv);
-  }, [editing, displayUrl]);
   return (
     <main className="center" data-testid="center-pane">
       <div className="doc-header">

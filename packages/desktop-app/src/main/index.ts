@@ -2,11 +2,11 @@ import { app, BrowserWindow, session } from 'electron';
 import { join } from 'node:path';
 import { existsSync } from 'node:fs';
 
-// Background spawn (Bash → npm → electron-vite → electron) 시 OS DWM compositor 가
-// occlusion 으로 GPU paint skip → capturePage 가 빈 frame buffer 반환. software rendering
-// 강제로 background 도 paint — 진단 / autotest 가 정상 frame 받음.
-// dev/CI 환경 mark 로 PROJK_FORCE_SOFTWARE_RENDER 켜진 경우만 활성 (release 빌드 영향 X).
-if (process.env.PROJK_FORCE_SOFTWARE_RENDER === '1' || !app.isPackaged) {
+// 진단 환경에서 background spawn 한 BrowserWindow 가 GPU paint 안 일어나는 케이스 대비
+// SW rendering 강제 옵션. 단, *명시 env 일 때만* 활성 — dev 자동 활성화 제거.
+// 이전 시도에서 dev 자동 SW rendering 이 webview 의 SharePoint SSO chain JS 실행을 막아
+// "퍼포스 sheet 클릭 시 화면 하얗게" 회귀 발생. 사용자 직접 트리거 시에만 활성.
+if (process.env.PROJK_FORCE_SOFTWARE_RENDER === '1') {
   app.disableHardwareAcceleration();
 }
 import { registerIpc } from './ipc';
@@ -26,9 +26,6 @@ function createWindow(): void {
     width: 1400,
     height: 900,
     show: false,
-    // show:false 또는 background spawn 으로 OS-visible 하지 않은 상태에서도 renderer 가
-    // paint 시작 — capturePage / autotest 가 정상 frame buffer 받게 한다.
-    paintWhenInitiallyHidden: true,
     // VS Code 스타일 frameless — Windows 기본 title bar(min/max/close + "Project K" 표기)
     // 를 제거하고 renderer 의 .topbar 가 직접 그 역할을 한다. 36px 한 줄에 브랜드 / sidecar
     // 상태 / 설정 버튼 / 창 컨트롤을 모두 얹어서 화면 공간을 최대 활용.
@@ -43,10 +40,6 @@ function createWindow(): void {
       contextIsolation: true,
       nodeIntegration: false,
       webviewTag: true, // needed for <webview> Confluence embed
-      // Background spawn (Bash → npm → electron-vite → electron) 시 OS DWM 이 window 를
-      // visible 처리 안 해 GPU paint skip → capturePage 빈 frame. backgroundThrottling 끄면
-      // hidden 상태에서도 paint 계속.
-      backgroundThrottling: false,
     },
   });
 
@@ -85,6 +78,54 @@ function installPartitions(): void {
   session.fromPartition('persist:onedrive');   // OneDrive / SharePoint / Office for the Web
 }
 
+// 진단용 — 모든 webContents (main + webview + 자식 frame) 의 navigation/load/error
+// 이벤트를 main 콘솔에 기록. webview 가 어떤 URL 로 redirect 되어 어디서 멈추는지
+// (SSO chain / X-Frame deny / crashed 등) 추적. mcp 의 klaud_get_logs 로 받음.
+function installWebContentsTracing(): void {
+  app.on('web-contents-created', (_event, contents) => {
+    const type = contents.getType(); // 'window' | 'browserView' | 'webview' | 'remote' | 'backgroundPage' | 'offscreen'
+    console.log(`[wc-created] type=${type} id=${contents.id} initial-url=${contents.getURL().slice(0, 80)}`);
+    if (type !== 'webview') return; // main window / sub-frame 는 너무 noise — webview 만.
+
+    const tag = `[wv ${contents.id}]`;
+    contents.on('did-start-loading', () => {
+      console.log(`${tag} did-start-loading url=${contents.getURL().slice(0, 120)}`);
+    });
+    contents.on('did-navigate', (_e, url, httpResponseCode) => {
+      console.log(`${tag} did-navigate http=${httpResponseCode} url=${url.slice(0, 120)}`);
+    });
+    contents.on('did-navigate-in-page', (_e, url) => {
+      console.log(`${tag} did-navigate-in-page url=${url.slice(0, 120)}`);
+    });
+    contents.on('did-redirect-navigation', (_e, url, isInPlace, isMainFrame, frameProcessId, frameRoutingId) => {
+      console.log(`${tag} did-redirect mainFrame=${isMainFrame} url=${url.slice(0, 120)}`);
+    });
+    contents.on('did-finish-load', () => {
+      console.log(`${tag} did-finish-load url=${contents.getURL().slice(0, 120)}`);
+    });
+    contents.on('did-fail-load', (_e, errorCode, errorDescription, validatedURL, isMainFrame) => {
+      console.warn(`${tag} did-fail-load mainFrame=${isMainFrame} code=${errorCode} desc=${errorDescription} url=${validatedURL.slice(0, 120)}`);
+    });
+    contents.on('did-stop-loading', () => {
+      console.log(`${tag} did-stop-loading url=${contents.getURL().slice(0, 120)}`);
+    });
+    contents.on('render-process-gone', (_e, details) => {
+      console.warn(`${tag} render-process-gone reason=${details.reason} exitCode=${details.exitCode}`);
+    });
+    contents.on('unresponsive', () => {
+      console.warn(`${tag} unresponsive — renderer event loop blocked`);
+    });
+    contents.on('responsive', () => {
+      console.log(`${tag} responsive — renderer recovered`);
+    });
+    contents.on('console-message', (_e, level, message, line, sourceId) => {
+      // level: 0=verbose, 1=info, 2=warn, 3=error
+      const lvlTag = ['verbose', 'info', 'warn', 'error'][level] ?? 'log';
+      console.log(`${tag} console.${lvlTag} ${message.slice(0, 200)} (${sourceId.slice(-40)}:${line})`);
+    });
+  });
+}
+
 function logEnvironment(): void {
   console.log('[main] platform:', process.platform);
   console.log('[main] REPO_ROOT:', REPO_ROOT);
@@ -105,6 +146,7 @@ app.whenReady().then(async () => {
   await initThreadsDb().catch((e) => console.error('[main] initThreadsDb', e));
   logEnvironment();
   installPartitions();
+  installWebContentsTracing();
   registerIpc(() => mainWindow);
   createWindow();
   startSidecar().catch((e) => console.error('[main] startSidecar failed', e));

@@ -123,6 +123,17 @@ function installWebContentsTracing(): void {
       const lvlTag = ['verbose', 'info', 'warn', 'error'][level] ?? 'log';
       console.log(`${tag} console.${lvlTag} ${message.slice(0, 200)} (${sourceId.slice(-40)}:${line})`);
     });
+    contents.on('will-navigate', (_e, url) => {
+      console.log(`${tag} will-navigate url=${url.slice(0, 160)}`);
+    });
+    // popup / new-window 추적 — SharePoint 가 webview 안 embedview 거부 시 새 창 띄우는 케이스.
+    contents.setWindowOpenHandler(({ url, frameName, disposition }) => {
+      console.log(`${tag} setWindowOpenHandler url=${url.slice(0, 160)} frame=${frameName} disp=${disposition}`);
+      return { action: 'allow' };
+    });
+    contents.on('did-create-window', (_w, details) => {
+      console.log(`${tag} did-create-window url=${details.url.slice(0, 160)}`);
+    });
   });
 }
 

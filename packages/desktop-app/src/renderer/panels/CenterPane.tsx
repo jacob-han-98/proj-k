@@ -367,6 +367,33 @@ function LocalSheetView(props: {
     );
   }
 
+  // bgSyncing 진행 중 + cachedUrl 없는 경우 → webview mount 미루기. 사용자 화면 하얀
+  // freeze 의 진짜 원인: webview 가 cloud 도달 전 SharePoint URL 로 navigate 시작하면
+  // SharePoint 가 빈 페이지 / SSO redirect chain 으로 hang → main renderer 가 webview
+  // navigation 으로 stuck. progress completed (= cloud 도달) 후만 mount 하면 안전.
+  // cachedUrl 있으면 옛 본문이라도 즉시 표시 (이미 사용자가 본 sheet 라 cloud 에 있을 거).
+  if (bgSyncing && !cachedUrl) {
+    return (
+      <main className="center" data-testid="center-pane">
+        <div className="doc-header">
+          <span>📄 {node.title}</span>
+          <span className="breadcrumb">{relPath}</span>
+        </div>
+        <div
+          className="placeholder"
+          data-testid="onedrive-syncing-placeholder"
+          style={{ padding: 24, color: 'var(--text-dim)', lineHeight: 1.6 }}
+        >
+          🔄 OneDrive 로 업로드 중… (~25초)
+          <br />
+          <span style={{ fontSize: 11 }}>
+            클라우드 도달 후 Excel 본문이 자동으로 열립니다.
+          </span>
+        </div>
+      </main>
+    );
+  }
+
   // 편집 모드 토글마다 webview 강제 remount → Excel for the Web 가 깨끗하게 재초기화.
   // 같은 src 안에서 src 만 바꾸면 Excel 가 일부 chrome 만 갱신해서 어색하게 섞이는 경우 방지.
   const displayUrl = applyAction(url, editing ? 'edit' : 'view');

@@ -35,7 +35,9 @@ let reconnectAttempts = 0;
 let manualStopped = false;
 
 // 콘솔 로그 ring buffer — klaud_get_logs 가 반환.
-const LOG_BUFFER_LIMIT = 500;
+// dev 진단 시 updater/ping 등 background spam 으로 사용자 click 흔적 overflow 되어 4000 으로
+// 늘림. release 빌드도 실용적 (메모리 ~수백KB 수준).
+const LOG_BUFFER_LIMIT = 4000;
 const logBuffer: string[] = [];
 
 function pushLog(line: string) {

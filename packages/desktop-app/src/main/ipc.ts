@@ -284,6 +284,7 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
   });
 
   ipcMain.handle(IPC.ONEDRIVE_SYNC_UPLOAD, async (_e, p: { relPath: string }) => {
+    console.log(`[onedrive-sync] UPLOAD invoked (file picker open) relPath=${p.relPath}`);
     const win = getWindow();
     if (!win) return { ok: false, error: 'no window' };
     const result = await dialog.showOpenDialog(win, {
@@ -313,6 +314,7 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
 
   // 0.1.47 — 사용자 클릭 0회. sidecar 가 P4 원본 .xlsx 보유한다는 가정 하에 자동 fetch.
   ipcMain.handle(IPC.ONEDRIVE_SYNC_AUTO, async (_e, p: { relPath: string }) => {
+    console.log(`[onedrive-sync] AUTO invoked relPath=${p.relPath}`);
     const sc = getSidecarStatus();
     if (sc.state !== 'ready' || sc.port == null) {
       return { ok: false, error: `sidecar not ready (state=${sc.state})` };

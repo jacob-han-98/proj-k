@@ -176,6 +176,73 @@ async function dispatch(method: string, params: unknown, getWindow: () => Browse
       }
       return { ok: true, reloaded };
     }
+    case 'webview-eval': {
+      // webview (Confluence / OneDrive 등 OOPIF guest WebContents) 안에서 임의 JS 실행 후
+      // 결과 회수. host renderer 의 page.evaluate 로는 OOPIF + cross-origin 때문에 못 들어가는
+      // SharePoint / Atlassian DOM 에 직접 접근.
+      //
+      // 주의: Excel for the Web 의 grid 는 canvas 라 DOM 에 셀 값 없음. 가능한 검증 범위:
+      //   - document.title / document.readyState / location.href / location.origin
+      //   - SuiteNav, ribbon, 시트 탭 같은 chrome DOM 요소 textContent / count
+      //   - Confluence 의 본문 storage format 등 진짜 DOM 인 페이지
+      //
+      // 여러 webview 가 떠있을 때 (Confluence + OneDrive) urlPattern 또는 partition 으로 필터.
+      // 둘 다 비면 첫 번째 webview 에 실행 (단순 케이스 편의).
+      const p = (params ?? {}) as {
+        expression?: string;
+        urlPattern?: string;
+        partition?: string;
+        nth?: number;
+        userGesture?: boolean;
+      };
+      if (typeof p.expression !== 'string' || !p.expression.trim()) {
+        throw new Error('webview-eval requires "expression" string');
+      }
+      const { webContents } = await import('electron');
+      const all = webContents.getAllWebContents();
+      const candidates = all.filter((wc) => wc.getType() === 'webview' && !wc.isDestroyed());
+      let filtered = candidates;
+      if (p.urlPattern) {
+        const re = new RegExp(p.urlPattern);
+        filtered = filtered.filter((wc) => re.test(wc.getURL()));
+      }
+      if (p.partition) {
+        // Electron 의 webContents.session.storagePath 또는 internal partition 식별이 직접
+        // 노출 안 됨 → session 객체 동일성으로 매칭. Klaud 에선 partition string 이 한정적이라
+        // session.fromPartition() 으로 만든 객체와 같으면 매칭.
+        const { session } = await import('electron');
+        const target = session.fromPartition(p.partition);
+        filtered = filtered.filter((wc) => wc.session === target);
+      }
+      if (filtered.length === 0) {
+        throw new Error(
+          `webview-eval: no webview matched (total=${all.length}, candidates=${candidates.length}, urlPattern=${p.urlPattern ?? ''}, partition=${p.partition ?? ''})`,
+        );
+      }
+      const idx = Math.max(0, Math.min(filtered.length - 1, p.nth ?? 0));
+      const wc = filtered[idx]!;
+      const url = wc.getURL();
+      console.log(`[webview-eval] wc id=${wc.id} url=${url.slice(0, 100)} expr=${p.expression.slice(0, 80)}`);
+      try {
+        const result = await wc.executeJavaScript(p.expression, p.userGesture === true);
+        // executeJavaScript 결과가 함수/순환참조 등 JSON 직렬화 안 되는 경우 toString fallback.
+        let serialized: unknown = result;
+        try {
+          JSON.stringify(result);
+        } catch {
+          serialized = String(result);
+        }
+        return {
+          ok: true,
+          result: serialized,
+          webview: { id: wc.id, url, matched: filtered.length, candidates: candidates.length },
+        };
+      } catch (e) {
+        const msg = (e as Error).message;
+        console.warn(`[webview-eval] eval failed: ${msg}`);
+        throw new Error(`webview eval error: ${msg}`);
+      }
+    }
     case 'state': {
       // renderer 가 자기 DOM 상태를 종합해서 응답.
       return await rendererCommand(win, { kind: 'mcp-state' });

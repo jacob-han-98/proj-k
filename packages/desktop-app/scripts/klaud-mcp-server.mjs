@@ -260,6 +260,38 @@ const TOOLS = [
       additionalProperties: false,
     },
   },
+  {
+    name: 'klaud_webview_eval',
+    description:
+      'Klaud 의 <webview> (Confluence / OneDrive SharePoint 등 OOPIF guest) 안에서 임의 JS 실행 후 결과 회수. host renderer 의 query-testid 로는 cross-origin / OOPIF 때문에 못 들어가는 외부 사이트 DOM 검증용. 주의: Excel for the Web grid 는 canvas 라 셀 값 DOM 에 없음 — chrome (SuiteNav / ribbon / sheet tab) / document.title / location.href / readyState 정도만 가능. 여러 webview 떠있으면 urlPattern (정규식 string) 또는 partition (예: "persist:onedrive") 으로 필터.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        expression: {
+          type: 'string',
+          description: 'webview 안에서 실행할 JS expression. 마지막 표현식 결과가 반환됨 (await 가능).',
+        },
+        urlPattern: {
+          type: 'string',
+          description: '여러 webview 중 매칭할 URL 정규식 (예: "sharepoint\\\\.com").',
+        },
+        partition: {
+          type: 'string',
+          description: 'Electron session partition (예: "persist:onedrive", "persist:confluence").',
+        },
+        nth: {
+          type: 'number',
+          description: '필터 후 여러 매치 시 N번째 (0-based). default 0',
+        },
+        userGesture: {
+          type: 'boolean',
+          description: 'executeJavaScript 의 userGesture 플래그. 일부 권한 필요 동작에만 true.',
+        },
+      },
+      required: ['expression'],
+      additionalProperties: false,
+    },
+  },
 ];
 
 // ---- MCP Server 셋업 ----
@@ -328,6 +360,9 @@ server.setRequestHandler(CallToolRequestSchema, async (req) => {
         return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
       case 'klaud_query_testid':
         result = await callKlaud('send_cmd', { kind: 'query-testid', ...args });
+        return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+      case 'klaud_webview_eval':
+        result = await callKlaud('webview-eval', args);
         return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
       default:
         throw new Error(`unknown tool: ${name}`);

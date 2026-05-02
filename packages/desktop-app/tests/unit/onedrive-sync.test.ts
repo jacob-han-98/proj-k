@@ -160,7 +160,8 @@ describe('ensureFreshSync — mtime 비교 분기', () => {
       expect(r.alreadyFresh).toBe(false);
       expect(r.syncing).toBe(true);
       expect(r.url).toContain('Klaud-temp');
-      expect(r.url).toContain('action=embedview');
+      // 0.1.50 회귀 원복 — ?action=embedview 가 SharePoint download 응답 트리거 → ?web=1 로 복귀.
+      expect(r.url).toContain('web=1');
     }
     // 백그라운드 sync 가 micro-task 안에서 fetch + write 진행 후 8초 sleep + completed.
     await vi.runOnlyPendingTimersAsync();  // micro-task drain

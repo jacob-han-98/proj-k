@@ -422,3 +422,24 @@ def test_suggest_edits_returns_ndjson_error_without_agent_url(client: TestClient
         events = [json.loads(line) for line in res.iter_lines() if line.strip()]
     assert len(events) >= 1
     assert events[0]["type"] == "error"
+
+
+def test_quick_find_returns_ndjson_error_without_agent_url(client: TestClient) -> None:
+    """No PROJK_AGENT_URL → 200 NDJSON with type=error (stream contract 유지)."""
+    with client.stream("POST", "/quick_find", json={"query": "변신", "limit": 3}) as res:
+        assert res.status_code == 200
+        assert "application/x-ndjson" in res.headers.get("content-type", "")
+        events = [json.loads(line) for line in res.iter_lines() if line.strip()]
+    assert len(events) >= 1
+    assert events[0]["type"] == "error"
+
+
+def test_quick_find_fast_flag_accepted(client: TestClient) -> None:
+    """fast: true 가 body 에 들어가도 sidecar 가 거부하지 않음 (그대로 forward)."""
+    with client.stream(
+        "POST", "/quick_find",
+        json={"query": "변신", "limit": 3, "fast": True, "kinds": ["xlsx"]},
+    ) as res:
+        assert res.status_code == 200
+        events = [json.loads(line) for line in res.iter_lines() if line.strip()]
+    assert events  # at least one event (error 또는 forwarded)

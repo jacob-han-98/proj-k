@@ -488,15 +488,32 @@ def _p4_root() -> str:
     return _normalize_repo_root(os.environ.get("PROJK_P4_ROOT") or "")
 
 
-@app.get("/xlsx_raw")
-def xlsx_raw(relPath: str) -> FileResponse:
+def _resolve_xlsx_candidates(relPath: str) -> list[Path]:
+    """xlsx_raw / xlsx_stat 가 공유하는 후보 경로 리스트 생성.
+
+    P4 client view 가 한 단계 sub-prefix 로 매핑된 경우 (흔함): client root =
+    D:\\ProjectK 인데 실제 .xlsx 는 D:\\ProjectK\\Design\\7_System\\... 에 sync.
+    `p4 info` 의 Client root 만으론 sub-prefix 알 수 없어 자식 폴더를 한 번 살핀다.
+    """
     candidates: list[Path] = []
     p4 = _p4_root()
     if p4:
         candidates.append(Path(p4) / f"{relPath}.xlsx")
+        try:
+            for child in sorted(Path(p4).iterdir()):
+                if child.is_dir():
+                    candidates.append(child / f"{relPath}.xlsx")
+        except OSError:
+            pass
     repo = _repo_root()
     if repo:
         candidates.append(Path(repo) / f"{relPath}.xlsx")
+    return candidates
+
+
+@app.get("/xlsx_raw")
+def xlsx_raw(relPath: str) -> FileResponse:
+    candidates = _resolve_xlsx_candidates(relPath)
     if not candidates:
         raise HTTPException(status_code=503, detail="PROJK_P4_ROOT/PROJK_REPO_ROOT 모두 미설정")
     for c in candidates:
@@ -506,6 +523,27 @@ def xlsx_raw(relPath: str) -> FileResponse:
                 media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 filename=f"{Path(relPath).name}.xlsx",
             )
+    raise HTTPException(
+        status_code=404,
+        detail=f"파일 없음 (시도: {', '.join(str(c) for c in candidates)})",
+    )
+
+
+# 0.1.50 (Step 1+2) — main 이 OneDrive sync 폴더의 사본과 mtime 비교해 stale 인지 확인
+# 후 필요할 때만 xlsx_raw 로 다운로드. raw 의 byte 스트림 없이 light HEAD-ish 응답.
+@app.get("/xlsx_stat")
+def xlsx_stat(relPath: str) -> dict:
+    candidates = _resolve_xlsx_candidates(relPath)
+    if not candidates:
+        raise HTTPException(status_code=503, detail="PROJK_P4_ROOT/PROJK_REPO_ROOT 모두 미설정")
+    for c in candidates:
+        if c.is_file():
+            st = c.stat()
+            return {
+                "mtime_ms": int(st.st_mtime * 1000),
+                "size": st.st_size,
+                "path": str(c),
+            }
     raise HTTPException(
         status_code=404,
         detail=f"파일 없음 (시도: {', '.join(str(c) for c in candidates)})",
@@ -773,3 +811,48 @@ async def suggest_edits(req: SuggestEditsRequest):
         return StreamingResponse(stub(), media_type="application/x-ndjson")
     payload = req.model_dump(exclude_none=True, by_alias=True)
     return StreamingResponse(_proxy_suggest_edits_stream(payload), media_type="application/x-ndjson")
+
+
+# ---------- /quick_find (Quick Find sidebar — Confluence/Excel 메타 검색) ----------
+# WSL agent (agent-sdk-poc) 의 /quick_find 로 NDJSON forward.
+# Public API:
+#   - fast=false (default): auto v2.1 (L1+Vector 병렬 + 자연어 expand). p50 ~324ms / 85% quality.
+#   - fast=true: L1 only. ~50ms, 76% quality. typing-as-you-search 용.
+# strategy 등 implementation detail 은 backend internal — frontend 노출 X.
+
+class QuickFindRequest(BaseModel):
+    query: str
+    limit: int | None = None
+    kinds: list[str] | None = None
+    fast: bool | None = None
+
+
+async def _proxy_quick_find_stream(payload: dict[str, Any]) -> AsyncIterator[str]:
+    base = _agent_url()
+    # quick_find 도 streaming — read timeout 무한 (auto 의 expand 발동 시 ≤ 3s)
+    timeout = httpx.Timeout(connect=10.0, read=None, write=10.0, pool=10.0)
+    try:
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            async with client.stream("POST", f"{base}/quick_find", json=payload) as r:
+                if r.status_code != 200:
+                    err = await r.aread()
+                    yield json.dumps(
+                        {"type": "error", "payload": f"upstream {r.status_code}: {err.decode('utf-8', 'ignore')[:200]}"}
+                    ) + "\n"
+                    return
+                async for line in r.aiter_lines():
+                    if line.strip():
+                        yield line + "\n"
+    except httpx.HTTPError as e:
+        yield json.dumps({"type": "error", "payload": f"upstream 연결 실패: {e!s}"}) + "\n"
+
+
+@app.post("/quick_find")
+async def quick_find(req: QuickFindRequest):
+    base = _agent_url()
+    if not base:
+        async def stub() -> AsyncIterator[str]:
+            yield json.dumps({"type": "error", "payload": "agent 백엔드 URL 미설정 — SettingsModal 에서 설정"}) + "\n"
+        return StreamingResponse(stub(), media_type="application/x-ndjson")
+    payload = req.model_dump(exclude_none=True)
+    return StreamingResponse(_proxy_quick_find_stream(payload), media_type="application/x-ndjson")

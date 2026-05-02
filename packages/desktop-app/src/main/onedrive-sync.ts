@@ -235,10 +235,11 @@ async function backgroundSync(
     const buf = Buffer.from(await res.arrayBuffer());
     await mkdir(dirname(dest), { recursive: true });
     await writeFile(dest, buf);
-    // OneDrive Sync 가 클라우드로 push 까지 ~수초. 사용자가 즉시 reload 하면 옛 cloud 본문을
-    // 받을 수 있어 짧게 대기 후 completed 통지. 8초는 syncFromSidecarAndUrl 의 15초보다 짧음 —
-    // 이미 webview 가 열려있는 상태라 reload 가 늦게 와도 사용자 체감 영향 적음.
-    await new Promise((r) => setTimeout(r, 8000));
+    // OneDrive Sync 가 클라우드로 push 까지 file 크기에 따라 ~수~수십 초. 25MB xlsx 의 경우
+    // 8 초 안에 cloud 도달 안 함 → webview reload 가 SharePoint 404 받음 → 사용자가 빈 페이지.
+    // 25초 로 늘려 안정적 cloud 도달 보장. 너무 길면 사용자 체감 답답 — 25초 가 99% file 크기 대응.
+    // (TODO: SharePoint HEAD-poll 로 file 200 받을 때까지 polling 이 robust — 다음 PR.)
+    await new Promise((r) => setTimeout(r, 25_000));
     onProgress({ relPath, state: 'completed' });
   } catch (e) {
     onProgress({ relPath, state: 'failed', error: (e as Error).message });

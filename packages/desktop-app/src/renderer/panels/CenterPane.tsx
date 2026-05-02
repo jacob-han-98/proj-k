@@ -284,6 +284,9 @@ function LocalSheetView(props: {
   const [bgSyncing, setBgSyncing] = useState(false);
   const [fallback, setFallback] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Cache-bust nonce — completed event 마다 1↑. webview key 에 넣어 unmount/mount 강제,
+  // 같은 src 라도 SharePoint 304 cache 우회. wv.reload() 가 cache hit 받는 케이스 회피.
+  const [reloadNonce, setReloadNonce] = useState(0);
   const webviewRef = useRef<HTMLElement | null>(null);
   // 편집 모드 — 트리뷰의 ✏ 아이콘이 store 에 토글. true 면 ?action=edit 로 swap.
   const docKey = docKeyOfNode(node);
@@ -320,10 +323,9 @@ function LocalSheetView(props: {
       if (ev.relPath !== relPath) return;
       if (ev.state === 'completed') {
         setBgSyncing(false);
-        // webview reload — 새 cloud 본문으로 갱신.
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const wv = webviewRef.current as any;
-        if (wv?.reload) wv.reload();
+        // webview key 변경 → unmount/mount 로 강제 reload. wv.reload() 만으로는 SharePoint 가
+        // 304 캐시 응답을 줘서 옛 본문 그대로인 케이스가 있어 nonce 로 cache-bust.
+        setReloadNonce((n) => n + 1);
       } else if (ev.state === 'failed') {
         setBgSyncing(false);
         console.warn('[onedrive-sync] background sync failed:', ev.error);
@@ -407,7 +409,7 @@ function LocalSheetView(props: {
       </div>
       {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
       <webview
-        key={`${relPath}::${editing ? 'edit' : 'view'}`}
+        key={`${relPath}::${editing ? 'edit' : 'view'}::${reloadNonce}`}
         ref={webviewRef as any}
         src={displayUrl}
         partition="persist:onedrive"

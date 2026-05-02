@@ -101,6 +101,114 @@ async function waitForSync(_dest: string, maxMs: number): Promise<void> {
   await new Promise((r) => setTimeout(r, maxMs));
 }
 
+// SharePoint HEAD-poll — file 이 클라우드 도달했는지 능동 확인. backgroundSync 의
+// hardcoded 25s sleep 을 대체. 작은 파일은 1~3초 만에 통과, 큰 파일도 정확히 도달
+// 시점에 progress 'completed' fire → 사용자 체감 빠름.
+//
+// 동작:
+//   1) 초기 1초 대기 (OneDrive Sync 클라이언트가 새 파일 인지하고 upload 시작할 시간).
+//   2) persist:onedrive partition session 의 fetch 로 HEAD `${userUrl}/Documents/Klaud-temp/<rel>.xlsx`.
+//      cookies 는 webview 와 공유 → SSO 자동 통과 (사용자가 한 번이라도 webview 띄웠다면).
+//   3) 1s/1.5s/2s/2.5s/3s 백오프 polling, 3s cap.
+//   4) 성공 조건:
+//      - status 200: raw file 직접 서빙 (드물지만 가능)
+//      - status 3xx + Location 이 *.sharepoint.com (Doc.aspx) — file 존재해서 view URL 로 redirect
+//      - 단 login.microsoftonline.com 로의 redirect 는 unauth — file 존재 여부 못 판단, 폴링 계속
+//   5) 실패 (404 / 네트워크 에러) — 폴링 계속.
+//   6) maxMs 초과 → ready:false 반환. 호출자는 그냥 진행 (사용자 webview 가 어차피 SP 응답 받음).
+export interface PollSpReadyResult {
+  ready: boolean;
+  elapsedMs: number;
+  attempts: number;
+  lastStatus: number | null;
+  reason: 'http-200' | 'sp-redirect' | 'timeout' | 'no-attempts';
+}
+
+export interface PollSpReadyOptions {
+  // 초기 대기 — OneDrive Sync 가 새 파일 인지하고 upload 시작할 시간. default 1000.
+  initialDelayMs?: number;
+  // backoff 시작값 (delay = base + (attempts-1)*0.5*base, cap 적용). default 1000.
+  baseBackoffMs?: number;
+  // backoff 상한. default 3000.
+  maxBackoffMs?: number;
+  // 전체 최대 대기 시간. default 30000.
+  maxMs?: number;
+}
+
+// 테스트가 주입하는 timing override. production 에서는 절대 set 안 함.
+let pollOptionsOverride: PollSpReadyOptions | null = null;
+export function __setPollOptionsForTests(opts: PollSpReadyOptions | null): void {
+  pollOptionsOverride = opts;
+}
+
+async function pollSharePointReady(
+  account: OneDriveSyncAccount,
+  relPath: string,
+  options: PollSpReadyOptions = {},
+): Promise<PollSpReadyResult> {
+  const merged = { ...options, ...(pollOptionsOverride ?? {}) };
+  const initialDelayMs = merged.initialDelayMs ?? 1000;
+  const baseBackoffMs = merged.baseBackoffMs ?? 1000;
+  const maxBackoffMs = merged.maxBackoffMs ?? 3000;
+  const maxMs = merged.maxMs ?? 30_000;
+
+  const { session } = await import('electron');
+  const onedriveSession = session.fromPartition('persist:onedrive');
+  const encodedRelPath = relPath.split('/').map(encodeURIComponent).join('/');
+  const checkUrl = `${account.userUrl}/Documents/${KLAUD_TEMP_DIR}/${encodedRelPath}.xlsx`;
+
+  const t0 = Date.now();
+  let attempts = 0;
+  let lastStatus: number | null = null;
+
+  // 초기 대기 — OneDrive Sync 가 새 파일 감지하고 upload 시작할 시간. 이거 없으면 첫 폴링이
+  // 무조건 404 받고 backoff 시작 → 오히려 느려질 수 있음.
+  if (initialDelayMs > 0) {
+    await new Promise((r) => setTimeout(r, initialDelayMs));
+  }
+
+  while (Date.now() - t0 < maxMs) {
+    attempts++;
+    let location: string | null = null;
+    try {
+      const res = await onedriveSession.fetch(checkUrl, {
+        method: 'HEAD',
+        redirect: 'manual',
+      });
+      lastStatus = res.status;
+      location = res.headers.get('location');
+
+      const isAuthRedirect = !!location && (
+        location.includes('login.microsoftonline.com') ||
+        location.includes('login.live.com') ||
+        location.includes('/_layouts/15/Authenticate')
+      );
+
+      if (res.status === 200) {
+        return { ready: true, elapsedMs: Date.now() - t0, attempts, lastStatus, reason: 'http-200' };
+      }
+      if (res.status >= 300 && res.status < 400 && !isAuthRedirect) {
+        return { ready: true, elapsedMs: Date.now() - t0, attempts, lastStatus, reason: 'sp-redirect' };
+      }
+      // 404 / auth-redirect / 기타 — 폴링 계속.
+    } catch {
+      lastStatus = -1;
+    }
+
+    const delay = Math.min(baseBackoffMs + (attempts - 1) * (baseBackoffMs / 2), maxBackoffMs);
+    if (Date.now() - t0 + delay > maxMs) break;
+    await new Promise((r) => setTimeout(r, delay));
+  }
+
+  return {
+    ready: false,
+    elapsedMs: Date.now() - t0,
+    attempts,
+    lastStatus,
+    reason: attempts === 0 ? 'no-attempts' : 'timeout',
+  };
+}
+
 // PoC 2B 흐름 — 사용자가 file picker 로 직접 .xlsx 선택한 경로.
 export async function syncUploadAndUrl(
   localXlsxPath: string,
@@ -223,6 +331,7 @@ async function readDestMtimeMs(destPath: string): Promise<number | null> {
 
 async function backgroundSync(
   sidecarBaseUrl: string,
+  account: OneDriveSyncAccount,
   relPath: string,
   dest: string,
   onProgress: (e: SyncProgressEvent) => void,
@@ -235,11 +344,14 @@ async function backgroundSync(
     const buf = Buffer.from(await res.arrayBuffer());
     await mkdir(dirname(dest), { recursive: true });
     await writeFile(dest, buf);
-    // OneDrive Sync 가 클라우드로 push 까지 file 크기에 따라 ~수~수십 초. 25MB xlsx 의 경우
-    // 8 초 안에 cloud 도달 안 함 → webview reload 가 SharePoint 404 받음 → 사용자가 빈 페이지.
-    // 25초 로 늘려 안정적 cloud 도달 보장. 너무 길면 사용자 체감 답답 — 25초 가 99% file 크기 대응.
-    // (TODO: SharePoint HEAD-poll 로 file 200 받을 때까지 polling 이 robust — 다음 PR.)
-    await new Promise((r) => setTimeout(r, 25_000));
+    // SharePoint 능동 polling — 작은 파일은 수초 만에 ready, 큰 파일은 정확히 도달 시점.
+    // 옛 hardcoded 25s sleep 대체. timeout (30s) 시점엔 그냥 진행 — webview 는 어차피
+    // 사용자 SSO chain 이 끝나면 SharePoint 응답 받음.
+    const poll = await pollSharePointReady(account, relPath);
+    console.log(
+      `[onedrive-sync] sp-poll ${relPath} ready=${poll.ready} ${poll.elapsedMs}ms ` +
+      `attempts=${poll.attempts} status=${poll.lastStatus} reason=${poll.reason}`,
+    );
     onProgress({ relPath, state: 'completed' });
   } catch (e) {
     onProgress({ relPath, state: 'failed', error: (e as Error).message });
@@ -292,7 +404,7 @@ export async function ensureFreshSync(
 
     // 백그라운드 sync 시작 — backgroundSync 가 finally 에서 inflight.delete.
     releaseInflight = false;
-    void backgroundSync(sidecarBaseUrl, relPath, dest, onProgress).finally(() => {
+    void backgroundSync(sidecarBaseUrl, account, relPath, dest, onProgress).finally(() => {
       inflight.delete(relPath);
     });
     return { ok: true, url, alreadyFresh: false, syncing: true };

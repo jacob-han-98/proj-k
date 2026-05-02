@@ -22,10 +22,19 @@ vi.mock('node:fs/promises', async () => {
     mkdir: vi.fn(),
   };
 });
+// pollSharePointReady 가 session.fromPartition('persist:onedrive').fetch 호출 — main process
+// 전용 API 라 unit 환경에선 모킹 필요. 각 테스트가 sessionFetchMock 으로 응답 시퀀스 셋업.
+const sessionFetchMock = vi.fn();
+vi.mock('electron', () => ({
+  session: {
+    fromPartition: vi.fn(() => ({ fetch: sessionFetchMock })),
+  },
+}));
 
 import { execSync } from 'node:child_process';
 import { stat, writeFile, mkdir } from 'node:fs/promises';
 import {
+  __setPollOptionsForTests,
   detectSyncAccount,
   ensureFreshSync,
   type SyncProgressEvent,
@@ -36,6 +45,15 @@ const statMock = stat as unknown as ReturnType<typeof vi.fn>;
 const writeMock = writeFile as unknown as ReturnType<typeof vi.fn>;
 const mkdirMock = mkdir as unknown as ReturnType<typeof vi.fn>;
 
+function makeHeadResponse(status: number, location: string | null = null): Response {
+  // node Response constructor — 200 / 3xx 만 직접 만들 수 있고 4xx/5xx 도 가능.
+  // headers 는 Map-like — Location 만 셋.
+  return new Response(null, {
+    status,
+    headers: location ? { Location: location } : {},
+  });
+}
+
 beforeEach(() => {
   // process.platform = 'win32' 강제 (CI 가 linux 일 수도 있으므로).
   Object.defineProperty(process, 'platform', { value: 'win32', writable: true });
@@ -43,9 +61,18 @@ beforeEach(() => {
   statMock.mockReset();
   writeMock.mockReset().mockResolvedValue(undefined);
   mkdirMock.mockReset().mockResolvedValue(undefined);
+  // 폴링 default — 첫 attempt 에 SharePoint redirect 로 즉시 ready (Doc.aspx). 개별 테스트가 override 가능.
+  sessionFetchMock.mockReset().mockResolvedValue(
+    makeHeadResponse(302, 'https://t-my.sharepoint.com/personal/u/_layouts/15/Doc.aspx?sourcedoc=...'),
+  );
+  // 폴링 timing — 테스트 환경은 1ms / 1ms / 2ms / 100ms 같은 짧은 interval 로 실제 시간 거의
+  // 안 걸림. fake-timer + microtask 충돌 회피 위해 real timer 사용 (advanceTimersByTimeAsync 가
+  // pollSharePointReady 의 await chain 을 매끄럽게 못 따라가는 vitest 한계).
+  __setPollOptionsForTests({ initialDelayMs: 1, baseBackoffMs: 1, maxBackoffMs: 2, maxMs: 100 });
 });
 
 afterEach(() => {
+  __setPollOptionsForTests(null);
   vi.restoreAllMocks();
 });
 
@@ -142,6 +169,16 @@ describe('ensureFreshSync — mtime 비교 분기', () => {
     fetchSpy.mockRestore();
   });
 
+  // 백그라운드 sync 가 짧은 polling 후 'completed' 까지 끝나기를 기다리는 helper.
+  // __setPollOptionsForTests 로 maxMs=100 잡아두니 최대 ~150ms 면 끝남.
+  async function waitForCompleted(events: SyncProgressEvent[], timeoutMs = 500): Promise<void> {
+    const t0 = Date.now();
+    while (Date.now() - t0 < timeoutMs) {
+      if (events.some((e) => e.state === 'completed' || e.state === 'failed')) return;
+      await new Promise((r) => setTimeout(r, 10));
+    }
+  }
+
   it('stale — dest 가 없으면 백그라운드 sync 시작 + syncing:true', async () => {
     setupAccount();
     const fetchSpy = vi.spyOn(globalThis, 'fetch')
@@ -152,7 +189,6 @@ describe('ensureFreshSync — mtime 비교 분기', () => {
     statMock.mockRejectedValue(new Error('ENOENT')); // dest 없음.
 
     const events: SyncProgressEvent[] = [];
-    vi.useFakeTimers();
     const r = await ensureFreshSync('http://127.0.0.1:9999', '7_System/PK_HUD', (e) => events.push(e));
 
     expect(r.ok).toBe(true);
@@ -163,13 +199,11 @@ describe('ensureFreshSync — mtime 비교 분기', () => {
       // 0.1.50 회귀 원복 — ?action=embedview 가 SharePoint download 응답 트리거 → ?web=1 로 복귀.
       expect(r.url).toContain('web=1');
     }
-    // 백그라운드 sync 가 micro-task 안에서 fetch + write 진행 후 8초 sleep + completed.
-    await vi.runOnlyPendingTimersAsync();  // micro-task drain
-    await vi.advanceTimersByTimeAsync(8500);
+    await waitForCompleted(events);
     expect(writeMock).toHaveBeenCalled();
+    expect(sessionFetchMock).toHaveBeenCalled();
     expect(events.map((e) => e.state)).toEqual(['started', 'completed']);
 
-    vi.useRealTimers();
     fetchSpy.mockRestore();
   });
 
@@ -181,15 +215,12 @@ describe('ensureFreshSync — mtime 비교 분기', () => {
     statMock.mockResolvedValue({ mtimeMs: 1_000_000 } as never);
 
     const events: SyncProgressEvent[] = [];
-    vi.useFakeTimers();
     const r = await ensureFreshSync('http://127.0.0.1:9999', '7_System/PK_HUD', (e) => events.push(e));
 
     if (r.ok) expect(r.syncing).toBe(true);
-    await vi.runOnlyPendingTimersAsync();
-    await vi.advanceTimersByTimeAsync(8500);
+    await waitForCompleted(events);
     expect(events.map((e) => e.state)).toContain('completed');
 
-    vi.useRealTimers();
     fetchSpy.mockRestore();
   });
 
@@ -217,5 +248,105 @@ describe('ensureFreshSync — mtime 비교 분기', () => {
     execMock.mockImplementation(() => regMissing());
     const r = await ensureFreshSync('http://127.0.0.1:9999', 'x', () => {});
     expect(r.ok).toBe(false);
+  });
+});
+
+describe('SharePoint HEAD-poll — 25s sleep 대체', () => {
+  function setupAccount(): void {
+    execMock.mockImplementation((cmd: string) => {
+      if (cmd.includes('UserFolder')) return regOutput('UserFolder', 'C:\\Users\\u\\OneDrive');
+      if (cmd.includes('UserEmail')) return regOutput('UserEmail', 'u@hybe.im');
+      if (cmd.includes('UserUrl')) return regOutput('UserUrl', 'https://t-my.sharepoint.com/personal/u_hybe_im');
+      if (cmd.includes('SPOResourceId')) return regOutput('SPOResourceId', '');
+      regMissing();
+    });
+  }
+
+  async function waitForCompleted(events: SyncProgressEvent[], timeoutMs = 500): Promise<void> {
+    const t0 = Date.now();
+    while (Date.now() - t0 < timeoutMs) {
+      if (events.some((e) => e.state === 'completed' || e.state === 'failed')) return;
+      await new Promise((r) => setTimeout(r, 10));
+    }
+  }
+
+  it('첫 폴링에 SharePoint redirect (302 → Doc.aspx) 받으면 즉시 ready → completed', async () => {
+    setupAccount();
+    const fetchSpy = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ mtime_ms: 1_000_000 }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(new Uint8Array([1]), { status: 200 }));
+    statMock.mockRejectedValue(new Error('ENOENT'));
+    sessionFetchMock.mockReset().mockResolvedValue(
+      makeHeadResponse(302, 'https://t-my.sharepoint.com/personal/u_hybe_im/_layouts/15/Doc.aspx?sourcedoc=...'),
+    );
+
+    const events: SyncProgressEvent[] = [];
+    await ensureFreshSync('http://127.0.0.1:9999', 'x', (e) => events.push(e));
+    await waitForCompleted(events);
+
+    expect(events.map((e) => e.state)).toEqual(['started', 'completed']);
+    // 첫 폴링에 ready → sessionFetch 1회만 호출.
+    expect(sessionFetchMock).toHaveBeenCalledTimes(1);
+    fetchSpy.mockRestore();
+  });
+
+  it('404 → 404 → 302 시퀀스 — backoff 후 ready 도달', async () => {
+    setupAccount();
+    const fetchSpy = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ mtime_ms: 1_000_000 }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(new Uint8Array([1]), { status: 200 }));
+    statMock.mockRejectedValue(new Error('ENOENT'));
+    sessionFetchMock.mockReset()
+      .mockResolvedValueOnce(makeHeadResponse(404))
+      .mockResolvedValueOnce(makeHeadResponse(404))
+      .mockResolvedValueOnce(makeHeadResponse(302, 'https://t-my.sharepoint.com/personal/u/_layouts/15/Doc.aspx?sourcedoc=g'));
+
+    const events: SyncProgressEvent[] = [];
+    await ensureFreshSync('http://127.0.0.1:9999', 'x', (e) => events.push(e));
+    await waitForCompleted(events);
+
+    expect(events.map((e) => e.state)).toEqual(['started', 'completed']);
+    expect(sessionFetchMock).toHaveBeenCalledTimes(3);
+    fetchSpy.mockRestore();
+  });
+
+  it('login.microsoftonline.com redirect 는 ready 아님 — 폴링 계속', async () => {
+    setupAccount();
+    const fetchSpy = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ mtime_ms: 1_000_000 }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(new Uint8Array([1]), { status: 200 }));
+    statMock.mockRejectedValue(new Error('ENOENT'));
+    sessionFetchMock.mockReset()
+      // 첫 시도: SSO 안 된 상태 — login 으로 redirect.
+      .mockResolvedValueOnce(makeHeadResponse(302, 'https://login.microsoftonline.com/abc/oauth2/authorize?...'))
+      // 두번째: 사용자 webview 가 SSO 끝내서 cookies 셋 → SharePoint redirect.
+      .mockResolvedValueOnce(makeHeadResponse(302, 'https://t-my.sharepoint.com/personal/u/_layouts/15/Doc.aspx'));
+
+    const events: SyncProgressEvent[] = [];
+    await ensureFreshSync('http://127.0.0.1:9999', 'x', (e) => events.push(e));
+    await waitForCompleted(events);
+
+    expect(events.map((e) => e.state)).toEqual(['started', 'completed']);
+    // login redirect 한 번 무시 + SharePoint redirect 한 번 = 총 2회.
+    expect(sessionFetchMock).toHaveBeenCalledTimes(2);
+    fetchSpy.mockRestore();
+  });
+
+  it('계속 404 받아도 maxMs 지나면 fallback 으로 completed (사용자 webview 가 어차피 SP 응답 받음)', async () => {
+    setupAccount();
+    const fetchSpy = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ mtime_ms: 1_000_000 }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(new Uint8Array([1]), { status: 200 }));
+    statMock.mockRejectedValue(new Error('ENOENT'));
+    sessionFetchMock.mockReset().mockResolvedValue(makeHeadResponse(404));
+
+    const events: SyncProgressEvent[] = [];
+    await ensureFreshSync('http://127.0.0.1:9999', 'x', (e) => events.push(e));
+    await waitForCompleted(events, 1000);
+
+    expect(events.map((e) => e.state)).toEqual(['started', 'completed']);
+    // maxMs=100ms 안에 1ms + 1ms + 1.5ms + 2ms ... 폴링 → 최소 몇 회 이상.
+    expect(sessionFetchMock.mock.calls.length).toBeGreaterThanOrEqual(2);
+    fetchSpy.mockRestore();
   });
 });

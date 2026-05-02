@@ -160,6 +160,22 @@ async function dispatch(method: string, params: unknown, getWindow: () => Browse
       try { win.focus(); } catch { /* ignore */ }
       return { ok: true, visible: win.isVisible(), focused: win.isFocused() };
     }
+    case 'reload-webview': {
+      // background spawn 중 src 가 set 됐어도 GPU paint deferred 라 navigate 시작 안 한 webview
+      // 들이 있을 수 있음. forefront 상태에서 명시 reload 호출 → did-navigate 정상 fire +
+      // SharePoint 콘텐츠 진짜 받기. 진단 / 자동화용.
+      const { webContents } = await import('electron');
+      const all = webContents.getAllWebContents();
+      let reloaded = 0;
+      for (const wc of all) {
+        if (wc.getType() === 'webview' && !wc.isDestroyed()) {
+          const url = wc.getURL();
+          console.log(`[reload-webview] wc id=${wc.id} url=${url.slice(0, 100)}`);
+          try { wc.reload(); reloaded++; } catch (e) { console.warn(`[reload-webview] err: ${(e as Error).message}`); }
+        }
+      }
+      return { ok: true, reloaded };
+    }
     case 'state': {
       // renderer 가 자기 DOM 상태를 종합해서 응답.
       return await rendererCommand(win, { kind: 'mcp-state' });

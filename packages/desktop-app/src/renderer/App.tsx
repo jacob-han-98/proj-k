@@ -241,6 +241,36 @@ export function App() {
             items,
           });
           return;
+        } else if (c.kind === 'webview-reload-src') {
+          // webview 가 mount 됐지만 background spawn paint deferral 로 navigate 시작 못 한 케이스.
+          // src attribute 의 URL 로 명시 loadURL 또는 attribute 토글 → 진짜 navigate 트리거.
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const wv = document.querySelector<any>('webview[data-testid="onedrive-webview"]');
+          if (!wv) {
+            window.projk.mcpReply(replyChannel, { ok: false, kind: c.kind, error: 'no webview mounted' });
+            return;
+          }
+          const src = wv.getAttribute('src');
+          if (!src) {
+            window.projk.mcpReply(replyChannel, { ok: false, kind: c.kind, error: 'webview has no src attribute' });
+            return;
+          }
+          let method = 'unknown';
+          if (typeof wv.loadURL === 'function') {
+            try { await wv.loadURL(src); method = 'loadURL'; }
+            catch (e) {
+              // loadURL fail → attribute 토글로 fallback.
+              wv.removeAttribute('src');
+              setTimeout(() => wv.setAttribute('src', src), 50);
+              method = `attr-toggle-after-loadURL-fail:${(e as Error).message.slice(0, 60)}`;
+            }
+          } else {
+            wv.removeAttribute('src');
+            setTimeout(() => wv.setAttribute('src', src), 50);
+            method = 'attr-toggle';
+          }
+          window.projk.mcpReply(replyChannel, { ok: true, kind: c.kind, src: src.slice(0, 100), method });
+          return;
         } else if (c.kind === 'open-settings') {
           setShowCreds(true);
         } else if (c.kind === 'close-modal') {

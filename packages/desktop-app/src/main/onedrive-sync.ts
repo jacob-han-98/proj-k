@@ -86,13 +86,12 @@ function buildEmbedUrl(account: OneDriveSyncAccount, relPath: string): string {
     .map(encodeURIComponent)
     .join('/');
   // userUrl = https://bhunion-my.sharepoint.com/personal/jacob_hybecorp_com
-  // 결과: <userUrl>/Documents/Klaud-temp/<relPath>.xlsx?action=embedview
+  // 결과: <userUrl>/Documents/Klaud-temp/<relPath>.xlsx?web=1
   //
-  // ?action=embedview — Excel for the Web 의 미니 임베드 뷰. SuiteNav (9-dot 와플 / 문서
-  // 제목 / 톱니 / 프로필) 와 리본이 모두 사라져 화면 공간 절약. 사용자가 트리뷰에서 ✏
-  // 아이콘으로 편집 모드 토글하면 renderer 가 이 URL 의 action 을 'edit' 로 swap → 풀 chrome
-  // 으로 reload. SharePoint 가 Doc.aspx + sourcedoc GUID 로 자동 redirect (사용자 본인 자격 SSO).
-  return `${account.userUrl}/Documents/${KLAUD_TEMP_DIR}/${encodedRelPath}.xlsx?action=embedview`;
+  // ?web=1 — SharePoint 가 사용자 본인 자격 SSO 로 Doc.aspx + sourcedoc GUID redirect.
+  // 0.1.49 까지 정상 동작했던 흐름. ?action=embedview 미니 임베드 시도가 사용자 환경에서
+  // file download 응답 받는 회귀 발생해 보류.
+  return `${account.userUrl}/Documents/${KLAUD_TEMP_DIR}/${encodedRelPath}.xlsx?web=1`;
 }
 
 // dest path 의 NTFS attribute polling — OneDrive Sync 가 file 을 클라우드로 upload
@@ -170,7 +169,8 @@ export async function syncFromSidecarAndUrl(
 // OneDrive 카피만 변경, P4 영향 없음 → 향후 P4 checkout 흐름 별도).
 function buildDepotEmbedUrl(account: OneDriveSyncAccount, depotRelPath: string): string {
   const encoded = depotRelPath.split('/').map(encodeURIComponent).join('/');
-  return `${account.userUrl}/Documents/${KLAUD_DEPOT_DIR}/${encoded}.xlsx?action=embedview`;
+  // ?web=1 — local sheet 와 동일. embedview 회귀 보류.
+  return `${account.userUrl}/Documents/${KLAUD_DEPOT_DIR}/${encoded}.xlsx?web=1`;
 }
 
 // depot path (예: '//main/ProjectK/Design/7_System/PK_HUD.xlsx') → OneDrive 폴더 안의 상대 경로.

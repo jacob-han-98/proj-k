@@ -4,25 +4,12 @@ import { useWorkbenchStore } from '../workbench/store';
 import { docKeyOfNode } from '../workbench/types';
 
 // Excel for the Web 임베드 URL 의 ?action= 값을 스왑.
-// 기본 URL 은 main 의 onedrive-sync.ts 가 ?action=embedview 로 빌드. 다만 sheetMappings 에
-// 캐시된 옛 매핑 (`?web=1`) 도 유효한 매핑이라 이 함수는:
-//   1) URL API 로 안전 파싱
-//   2) `web` 파라미터 강제 제거 — embedview 와 충돌해서 SuiteNav 를 다시 살려놓는 케이스 회피
-//   3) `action` 을 mode 에 맞게 setSearchParam (덮어쓰기 또는 추가)
-function applyAction(url: string, mode: 'view' | 'edit'): string {
-  const target = mode === 'edit' ? 'edit' : 'embedview';
-  try {
-    const u = new URL(url);
-    u.searchParams.delete('web');
-    u.searchParams.set('action', target);
-    return u.toString();
-  } catch {
-    // 파싱 실패는 거의 없지만 fallback — 옛 정규식 path.
-    if (/[?&]action=/.test(url)) {
-      return url.replace(/([?&])action=[^&]+/, `$1action=${target}`);
-    }
-    return url + (url.includes('?') ? '&' : '?') + `action=${target}`;
-  }
+// **0.1.50 회귀 보류**: ?action=embedview 시도 후 사용자 환경에서 SharePoint 가 file
+// download 응답 주는 회귀 발생 (사용자 화면에 "저장 위치 물어봄" save dialog). 옛 ?web=1
+// 으로 원복하면서 view/edit 토글 흐름은 일시 비활성. mode 무시하고 url 그대로 반환.
+// 향후 SharePoint 응답 분석 (will-download blocked log) 후 안전한 임베드 형식 재도입 예정.
+function applyAction(url: string, _mode: 'view' | 'edit'): string {
+  return url;
 }
 
 // Excel for the Web 의 chrome (SuiteNav: 9-dot 와플 / 문서 제목 / 검색바 / 톱니 / 프로필) 을

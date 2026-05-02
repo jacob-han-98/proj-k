@@ -1141,6 +1141,14 @@ from bedrock_stream import (
     BedrockStreamError as _BdStreamErr,
     normalize_model as _bd_normalize_model,
 )
+from quick_find import quick_find_stream as _qf_stream, build_index as _qf_build_index
+
+# Quick Find 인덱스 pre-warm (서버 import 시 한 번만, ~4초 소요)
+try:
+    _qf_docs_count = len(_qf_build_index())
+    log.info(f"[quick_find] index pre-warmed: {_qf_docs_count} docs")
+except Exception as _e:
+    log.warning(f"[quick_find] index pre-warm failed: {_e}")
 
 
 _REVIEW_SYSTEM = """You are a senior game designer and document quality expert reviewing Confluence wiki pages for Project K, a mobile MMORPG.
@@ -1484,6 +1492,81 @@ async def suggest_edits(req: SuggestEditsRequest):
                 },
             }
         )
+
+    return StreamingResponse(gen(), media_type="application/x-ndjson")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# /quick_find — 빠른 메타 검색 (Klaud workbench Quick Find sidebar)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class QuickFindRequest(BaseModel):
+    """공개 contract — implementation detail (strategy/threshold) 는 내부 결정.
+
+    fast=True 면 typing UX 용 빠른 모드 (L1 only, ~50ms, ~76% quality).
+    fast=False 면 풀 quality 모드 (auto v2.1, p50 ~324ms, ~85% quality).
+    """
+    query: str
+    limit: int | None = 10
+    kinds: list[str] | None = None      # ["xlsx", "confluence"] 또는 단일
+    fast: bool | None = False           # typing UX 면 True
+
+
+# 내부 dispatch (admin/debug 용 — query param `?_strategy=...` 로만 노출)
+_INTERNAL_STRATEGIES = {"auto", "l1", "vector"}
+
+
+@app.post("/quick_find")
+async def quick_find(req: QuickFindRequest, _strategy: str | None = None):
+    """Confluence/엑셀 문서를 키워드/자연어 query 로 빠르게 검색.
+
+    NDJSON stream:
+        {"type":"status","message":"..."}
+        {"type":"hit","data":{doc_id,type,title,path,score,matched_via,source,rank,...}}
+        {"type":"result","data":{total,latency_ms,...}}
+        {"type":"error","message":"..."}
+
+    Public params:
+        query : 검색어
+        limit : top N (default 10)
+        kinds : ["xlsx", "confluence"] 필터 (선택)
+        fast  : true 면 typing UX 모드 (L1 only, ~50ms, ~76% quality)
+                false (default) → auto v2.1 (~324ms p50, ~85% quality)
+
+    Admin/debug:
+        ?_strategy=auto|l1|vector  query param 으로 강제 override (선택)
+    """
+    q = (req.query or "").strip()
+    if not q:
+        return StreamingResponse(
+            iter([_ndj({"type": "error", "message": "query is empty"})]),
+            media_type="application/x-ndjson",
+        )
+
+    # 내부 strategy 결정 — public API 는 fast 만 노출
+    if _strategy and _strategy.lower() in _INTERNAL_STRATEGIES:
+        strategy = _strategy.lower()
+    elif req.fast:
+        strategy = "l1"
+    else:
+        strategy = "auto"
+
+    log_event("quick_find", "quick_find",
+              f"{q!r} fast={bool(req.fast)} strategy={strategy} limit={req.limit} kinds={req.kinds}")
+
+    async def gen():
+        try:
+            async for ev in _qf_stream(
+                query=q,
+                limit=req.limit or 10,
+                kinds=req.kinds,
+                model="haiku",
+                strategy=strategy,
+            ):
+                yield _ndj(ev)
+        except Exception as e:
+            log_event("quick_find", "quick_find_error", str(e)[:200])
+            yield _ndj({"type": "error", "message": f"unexpected: {e}"})
 
     return StreamingResponse(gen(), media_type="application/x-ndjson")
 

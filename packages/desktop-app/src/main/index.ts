@@ -75,7 +75,24 @@ function createWindow(): void {
 // chrome-extension 처럼 "이미 로그인 되어있으면 그대로, 막히면 로그인 화면" 동선.
 function installPartitions(): void {
   session.fromPartition('persist:confluence'); // Atlassian / Confluence
-  session.fromPartition('persist:onedrive');   // OneDrive / SharePoint / Office for the Web
+  const onedriveSession = session.fromPartition('persist:onedrive'); // OneDrive / SharePoint / Office for the Web
+
+  // SharePoint 가 webview embed 거부 또는 redirect 끝에 file download 응답 (Content-Disposition:
+  // attachment) 주는 케이스가 사용자 환경 시나리오. Electron default 가 OS native save dialog
+  // 띄움 → 사용자가 "저장 위치 물어봄" 보고. 우리는 webview 안에서 .xlsx 본문이 *view* 되어야
+  // 하므로 download 자체를 차단. 사용자가 정말 download 원하면 새 창 / 외부 브라우저로.
+  onedriveSession.on('will-download', (event, item) => {
+    const u = item.getURL();
+    const fname = item.getFilename();
+    const mime = item.getMimeType();
+    console.warn(
+      `[onedrive-session] will-download blocked — url=${u.slice(0, 120)} ` +
+      `file=${fname} mime=${mime}. SharePoint 가 webview 안 view 대신 download 응답 줌 ` +
+      `(인증 만료 / X-Frame deny / ?action= 매개변수 거부 등 의심).`,
+    );
+    event.preventDefault();
+    item.cancel();
+  });
 }
 
 // 진단용 — 모든 webContents (main + webview + 자식 frame) 의 navigation/load/error

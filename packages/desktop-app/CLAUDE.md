@@ -119,6 +119,11 @@ VS Code "Klaud dev" debug stop 시 npm/electron 자식 트리가 OS-clean 종료
   - 예: `cachedUrl` prop 을 `!cachedUrl` 분기 조건으로 쓰면서 `onUpsertMapping(url)` 을 호출하면 부모가 sheetMappings 갱신 → cachedUrl prop 다음 render 때 채워짐 → 분기 뒤집힘.
   - 해결: mount 시점에 `useState(() => Boolean(prop))` 또는 `useRef(prop)` 으로 한 번만 capture. prop 변경 무관하게 mount 당시 값 유지.
 
+- **SharePoint URL 파라미터 변경 시 (필수)** — `?web=1` / `?action=embedview` / `?action=edit` 등 변경 *반드시 진짜 사용자 환경 + 진짜 OneDrive Sync* 에서 webview 안 렌더링까지 확인. URL redirect (Doc.aspx + sourcedoc GUID) 만으로는 부족. SharePoint 가 같은 파일에 대해 *호스트/계정/MIME 조합* 따라 file download 응답 (`Content-Disposition: attachment`) 으로 분기 — Electron default 가 OS native save dialog 띄움 → 사용자가 "저장 위치 물어봄" 보고. 2026-05-03 회귀: `?action=embedview` 시도 → bhunion 테넌트에서 download 응답 → save dialog 뜸 → `?web=1` 원복. **회귀 방지**:
+  1. webview session 은 **항상** `will-download` listener 등록해서 `event.preventDefault() + item.cancel()` 차단. `src/main/index.ts` 의 `installPartitions()` 의 onedriveSession 참고.
+  2. URL 파라미터 변경 PR 은 real Electron e2e 또는 사용자 manual smoke 까지 통과해야 merge.
+  3. file download 차단 발생 시 `[onedrive-session] will-download blocked` 로그가 남음 — 다음 회귀 진단 시 mcp 의 `klaud_get_logs` 로 즉시 확인.
+
 - `ELECTRON_RUN_AS_NODE` env 가 셋되어 있으면 `npm run dev` 에서 main 이 `app.isPackaged` 못 읽고 crash. Bash 기반 자동화 시작 전에 `unset ELECTRON_RUN_AS_NODE`.
 - e2e mock 의 hook 들 (`__setEnsureFreshResponse`, `__pushSyncProgress` 등) 은 spec 별로 page.evaluate 로 호출. 새 IPC 추가 시 mock-projk.ts 도 stub + hook 추가.
 - 신규 testid 부여 — 사용자 시나리오 테스트가 잡을 수 있게. testid 없으면 Playwright 가 텍스트로 잡는데 한국어 + 깨질 수 있음.

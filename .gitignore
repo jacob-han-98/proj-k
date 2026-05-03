@@ -91,3 +91,6 @@ packages/agent-sdk-poc/index/knowledge_graph.json
 # Telegram 봇 상태 (토큰, access.json)
 scripts/telegram/state/
 .venv/
+
+# agent-sdk-poc 벤치 측정 결과 (재생성 가능, 사이즈 큼)
+packages/agent-sdk-poc/scripts/bench_out/

@@ -1,0 +1,190 @@
+# DataSheet / ContentSetting (요약)
+
+> 출처: DataSheet / ContentSetting
+> 원본: //main/ProjectK/Resource/design/ContentSetting.xlsx
+> 목적: 글로벌 게임 상수 (쿨타임/제한/배율/비용/임계값)
+
+## 한 줄 설명
+글로벌 게임 상수 (쿨타임/제한/배율/비용/임계값). 총 176 항목.
+
+## 항목 (176)
+
+- `PlayerStartLand` = `13` — 플레이 최초 시작 랜드
+- `HPRecoveryPercentOnPlayerkill` = `0` — 플레이어 처치 시 HP 회복 퍼센트
+- `PlayerCollisionRadius` = `50` — 플레이어 충돌 반경 사이즈
+- `BaseMoveSpeed` = `400` — 모든 PC들 기본 이동속도
+- `StatRedistributionLevel` = `2` — 스탯 조정 가능 레벨
+- `BaseStatBonusStartLevel` = `2` — 기본 스탯 보너스 주는 시작 레벨
+- `BaseStatBonusPerLevel` = `1` — 몇 레벨당 기본 스탯 보너스를 주는지
+- `PotentialStatBonusStartLevel` = `5` — 잠재력 스탯 보너스 주는 시작 레벨
+- `PotentialStatBonusPerLevel` = `5` — 몇 레벨당 잠재력 스탯 보너스를 주는지
+- `InventoryBaseSlot` = `100` — 캐릭터(character·PC·플레이어) 생성시 기본 인벤토리(가방) 칸 수
+- `InventoryMaxSlot` = `200` — 인벤토리(가방) 확장 시 최대로 늘릴 수 있는 칸 수
+- `InventoryExtendOnce` = `1` — 인벤토리(가방) 확장 시 1회당 늘어나는 칸 수
+- `InventoryExtendGold` = `10000` — 인벤토리(가방) 확장 시 1회당 소모되는 골드(gold) 비용
+- `MonsterDeathActionBuffId` = `20001` — 몬스터(monster·몹) 데스 액션 상황에서 적용될 버프 ID
+- `MonsterSpawnEffectBuffId` = `20002` — 몬스터(monster·몹) 스폰 연출에 사용할 버프 ID
+- `DailyResetTime` = `0 0 0 * * *` — 매일 자정
+- `WeeklyResetTime` = `0 0 0 * * 1` — 매주 월요일 자정
+- `HudHpPotion01` = `1000001` — 소형 체력 포션
+- `HudHpPotion02` = `1000002` — 중형 체력 포션
+- `HudHpPotion03` = `1000003` — 대형 체력 포션
+- `HudHpPotionDefaultCondition` = `85` — 기본 포션 사용 체력%
+- `HpPotionGlobalCoolTime` = `1000` — 자동으로 물약을 사용하는 쿨타임(쿨다운·cooldown·재사용 대기)
+- `StatMultiplier` = `100` — 스탯 배율, 스탯1이 실제 스탯 몇에 해당할지
+- `MonsterDeathRetentionSecond` = `0` — 몬스터(monster·몹) 사망(죽음) 유지시간. (사망(죽음)후 바로 서버상에서 제거, 클라에서는 별도 연출함)
+- `CommonCriticalDebuff` = `20006` — 스킬 치명타(크리티컬·크리) 발생 시 출력되는 디버프 ID
+- `CommonCriticalDebuffNormalAttack` = `20006` — 평타 치명타(크리티컬·크리) 발생 시 출력되는 디버프 ID
+- `MetamorphSwitchCoolTime` = `3000` — 메타모프(변신) 변경 쿨타임(쿨다운·cooldown·재사용 대기)(ms)
+- `BossRaidWeeklyEntranceMaxCount` = `99` — 보스(boss) 레이드 주간 통합 입장 횟수
+- `CharacterDeleteMinLevel` = `10` — 캐릭터(character·PC·플레이어) 삭제 최소 레벨
+- `MonsterDefaultTargetRefreshTime` = `5` — 몬스터(monster·몹) 타깃팅 갱신 시간
+- `PartyRewardShareDistance` = `2000` — 파티(팟) 보상 공유 거리 (cm 단위). 사망(죽음) 몬스터(monster·몹)로부터 보상이 공유되는 거리
+- `PartyExtraExpRate` = `500` — 파티(팟) 추가 경험치(exp·EXP) 비율. 만분율 (10000=100%). 보상을 공유하는 추가 1인당 적용 (2인 = 5% / 3인 =10% / 4인 = 15%)
+- `PartyExtraGoldRate` = `1000` — 파티(팟) 추가 골드(gold) 비율. 만분율 (10000=100%). 보상 공유 파티(팟)원이 풀파티(팟)일 때만 적용
+- `PartyExtraItemDropRate` = `500` — 파티(팟) 추가 아이템 드랍율. 만분율 (10000=100%). 보상 공유 파티(팟)원이 풀파티(팟)일 때만 적용
+- `StorageBaseSlot` = `30` — 창고 기본 인벤토리(가방) 칸 수
+- `StorageMaxSlot` = `100` — 창고 확장 시 최대로 늘릴 수 있는 칸 수
+- `StorageExtendOnce` = `5` — 창고 확장 시 1회당 늘어나는 칸 수
+- `StorageExtendGold` = `100000` — 창고 확장 시 1회당 소모되는 골드(gold) 비용
+- `DeathPenaltyApplyMinLv` = `10` — 사망(죽음) 패널티 적용 최소 레벨값 입력
+- `DeathPenaltyExpRatio` = `5` — 사망(죽음) 시 경험치(exp·EXP) 손실률(%)
+- `ReviveMaxHpHeal` = `20` — 부활(리스폰) 시 채워질 MaxHp 비율(%)
+- `DeathPenaltyExpRestorePriceGold` = `10000` — 경험치(exp·EXP) 골드(gold) 복구 기본 비용
+- `DeathPenaltyExpRestorePriceGoldAdd` = `5000` — 경험치(exp·EXP) 골드(gold) 복구 추가 비용 (골드(gold) 복구 2회차부터 추가될 누적 비용)
+- `DeathPenaltyExpRestorePriceGoldMax` = `30000` — 경험치(exp·EXP) 골드(gold) 복구 최대 비용 (골드(gold) 복구 반복 시 상승할 수 있는 최대 비용)
+- `DeathPenaltyExpRestorePriceDiamond` = `50` — 경험치(exp·EXP) 다이아몬드(다이아) 복구 기본 비용
+- `DeathPenaltyExpMaxStoreCount` = `10` — 경험치(exp·EXP) 사망(죽음) 패널티 최대 보관 수
+- `DeathPenaltyEquipRestorePriceGold` = `15000` — 장비 골드(gold) 복구 비용 공식_기본 비용
+- `DeathPenaltyEquipRestoreGradeRatio01` = `110` — 장비 골드(gold) 복구 비용 공식_등급 계수값(%)_일반
+- `DeathPenaltyEquipRestoreGradeRatio02` = `130` — 장비 골드(gold) 복구 비용 공식_등급 계수값(%)_고급
+- `DeathPenaltyEquipRestoreGradeRatio03` = `150` — 장비 골드(gold) 복구 비용 공식_등급 계수값(%)_희귀
+- `DeathPenaltyEquipRestoreGradeRatio04` = `170` — 장비 골드(gold) 복구 비용 공식_등급 계수값(%)_영웅
+- `DeathPenaltyEquipRestoreGradeRatio05` = `190` — 장비 골드(gold) 복구 비용 공식_등급 계수값(%)_전설
+- `DeathPenaltyEquipRestoreGradeRatio06` = `210` — 장비 골드(gold) 복구 비용 공식_등급 계수값(%)_신화
+- `DeathPenaltyEquipRestoreTypeRatio01` = `150` — 장비 골드(gold) 복구 비용 공식_기본 장비 타입 계수값(%)_무기
+- `DeathPenaltyEquipRestoreTypeRatio02` = `120` — 장비 골드(gold) 복구 비용 공식_기본 장비 타입 계수값(%)_방어구
+- `DeathPenaltyEquipRestoreTypeRatio03` = `135` — 장비 골드(gold) 복구 비용 공식_기본 장비 타입 계수값(%)_액세서리
+- `DeathPenaltyEquipRestorePriceDiamond` = `100000` — 장비 다이아몬드(다이아) 복구 비용 산정 시 적용할 1 다이아몬드(다이아)당 골드(gold) 가치
+- `DeathPenaltyEquipMaxStoreCount` = `20` — 장비 사망(죽음) 패널티 최대 보관 수
+- `AggressiveDuration` = `15000` — 피격시 어그레시브 상태 유지 시간(ms)
+- `TeleportBaseFee` = `1000` — 기본 텔레포트 비용
+- `TeleportFeePerDistance` = `500` — 500m 거리당 텔레포트 비용
+- `TeleportFeeMax` = `10000` — 최대 텔레포트 비용
+- `HpRegenInterval` = `15000` — Hp 자연 회복 주기(ms 로 설정하나 실제 초단위로 작동)
+- `MpRegenInterval` = `15000` — Mp 자연 회복 주기(ms 로 설정하나 실제 초단위로 작동)
+- `PlayerInvicibleBuffId` = `20011` — 플레이어용 무제한 무적 버프 ID. (특정 컨텐츠에서 일시적으로 무적으로 처리하기위한 버프) 각 컨텐츠에서 On/Off 하게해야함
+- `ReactionRemain` = `10000` — NpcReaction 시, 말풍선 유지 기간 (ms)
+- `ReactionInterval` = `20000` — NpcReaction 출력 "종료" 후 재출력까지 인터벌 (ms)
+- `WeaponModifierPercent` = `10000` — 랜덤으로 선택된 무기의 Min, Max 사이의 값을 변조
+- `MaxDamageCheckRangePercent` = `10` — 최대 무기 피해량 허용 오차 (만분율)
+- `DefaultGuardMin` = `1000` — 기본 최소 막기(방어·블록) 피해 감소율 (만분율)
+- `DefaultGuardMax` = `2000` — 기본 최대 막기(방어·블록) 피해 감소율 (만분율)
+- `DefenceModifier` = `200` — 방어력 보정값
+- `CriticalMinPercent` = `0` — 전투 시 발생할 최소 치명타(크리티컬·크리)율(%), 해당 값 미만일 경우 해당 값으로 보정
+- `CriticalMaxPercent` = `85` — 전투 시 발생할 최대 치명타(크리티컬·크리)율(%), 해당 값 초과일 경우 해당 값으로 보정
+- `CCTimeReductionMinPercentage` = `10000` — CC 감소 최소 시간 비율 (만분율)
+- `CCTimeReductionMaxPercentage` = `2000` — CC 감소 최대 시간 비율 (만분율)
+- `HitBasePercent` = `80` — 공격 명중(적중) 기본값(%)
+- `HitMinPercent` = `5` — 명중(적중) 최소(%)
+- `HitMaxPercent` = `100` — 명중(적중) 최대(%)
+- `HitSigmoidSlope` = `0.02` — 명중(적중)/회피(닷지) 기울기값 (시그모이드 함수 기반)
+- `HitStatWeightPercent` = `300` — 명중(적중) 스탯 가중치
+- `HitLevelWeightPercent` = `1000` — 명중(적중) 레벨 가중치
+- `UltimateOpenLevel` = `30` — 궁극기 시스템 개방 레벨
+- `UltimateCharacterCriticalHitMin` = `500` — PvP 치명 공격 시 획득할 궁극기 게이지 최솟값
+- `UltimateCharacterCriticalHitMax` = `1000` — PvP 치명 공격 시 획득할 궁극기 게이지 최댓값
+- `UltimateCharacterNormalHitMin` = `100` — PvP 일반 공격 시 획득할 궁극기 게이지 최솟값
+- `UltimateCharacterNormalHitMax` = `500` — PvP 일반 공격 시 획득할 궁극기 게이지 최댓값
+- `UltimateMonsterCriticalHitMin` = `500` — PvE 치명 공격 시 획득할 궁극기 게이지 최솟값
+- `UltimateMonsterCriticalHitMax` = `1000` — PvE 치명 공격 시 획득할 궁극기 게이지 최댓값
+- `UltimateMonsterNormalHitMin` = `100` — PvE 일반 공격 시 획득할 궁극기 게이지 최솟값
+- `UltimateMonsterNormalHitMax` = `500` — PvE 일반 공격 시 획득할 궁극기 게이지 최댓값
+- `UltimateDecreaseTimeAtFirst` = `10000` — 궁극기 게이지 최초 차감이 시작되는 비전투 시간 (1000=1초)
+- `UltimateDecreaseTimeRepeat` = `1000` — 궁극기 게이지 최초 차감 시작 이후 반복할 시간 (1000=1초)
+- `UltimateDecreaseValue` = `2000` — 궁극기 게이지 차감 시간마다 차감될 게이지양
+- `UltimateMaxValue` = `10000` — 궁극기 게이지 최댓값
+- `UltimateCharacterCriticalDamageMin` = `1000` — PvP 치명 피격 시 획득할 궁극기 게이지 최솟값
+- `UltimateCharacterCriticalDamageMax` = `1500` — PvP 치명 피격 시 획득할 궁극기 게이지 최댓값
+- `UltimateCharacterNormalDamageMin` = `500` — PvP 일반 피격 시 획득할 궁극기 게이지 최솟값
+- `UltimateCharacterNormalDamageMax` = `1000` — PvP 일반 피격 시 획득할 궁극기 게이지 최댓값
+- `UltimateMonsterCriticalDamageMin` = `500` — PvE 치명 피격 시 획득할 궁극기 게이지 최솟값
+- `UltimateMonsterCriticalDamageMax` = `1000` — PvE 치명 피격 시 획득할 궁극기 게이지 최댓값
+- `UltimateMonsterNormalDamageMin` = `500` — PvE 일반 피격 시 획득할 궁극기 게이지 최솟값
+- `UltimateMonsterNormalDamageMax` = `1000` — PvE 일반 피격 시 획득할 궁극기 게이지 최댓값
+- `CursedEnchantGoldPrice` = `0` — 저주받은 주문서 강화 비용
+- `GuildOpenLevel` = `15` — 길드(클랜) 시스템 개방 레벨
+- `GuildFoundationPrice` = `100` — 길드(클랜) 창설 비용(골드(gold))
+- `GuildRecommandListMax` = `30` — 추천 길드(클랜) 표시 최대 개수
+- `GuildRankingListMax` = `100` — 길드(클랜) 랭킹 표시 최대 개수
+- `GuildRankingListRefreshCoolTime` = `5` — 길드(클랜) 랭킹 갱신 주기(분)
+- `GuildInvitaionMax` = `20` — 길드(클랜) 초대 최대 개수
+- `GuildJoinRegisterMax` = `20` — 길드(클랜) 가입 신청 최대 개수
+- `GuildNameEditPrice` = `200` — 길드(클랜)명 변경 비용(다이아)
+- `GuildHistoryLogMax` = `100` — 길드(클랜) 연혁 최대 로그 수
+- `GuildNameWordMin` = `2` — 길드(클랜)명 최소 글자수
+- `GuildWithdrawWaitTime` = `24` — 길드(클랜) 탈퇴 후 대기 시간
+- `GuildOfflineDayMax` = `14` — 길드(클랜) 미접속 최대 일 수
+- `GuildAttendanceRateMin` = `0.3` — 추천 길드(클랜) 최소 출석율(백분율)
+- `GuildHostileGuildMax` = `20` — 적대 길드(클랜) 최대 등록 수
+- `GuildAllyGuildMax` = `20` — 우호 길드(클랜) 최대 등록 수
+- `KarmaIncreaseExpValue` = `1` — 몬스터(monster·몹) 처치 시마다 획득할 성향치, 획득하는 Exp 에 곱해질 값 입력(%)
+- `KarmaDecreaseBaseValue` = `100` — 성향치 감소 공식_기본 감소량
+- `KarmaDecreaseLevelgapRatio01` = `200` — 성향치 감소 공식_레벨차(공격자 Lv - 피해자 Lv) 계수값(%)_+10 이상인 경우 (양민 학살)
+- `KarmaDecreaseLevelgapRatio02` = `150` — 성향치 감소 공식_레벨차(공격자 Lv - 피해자 Lv) 계수값(%)_+5 ~ +9 인 경우
+- `KarmaDecreaseLevelgapRatio03` = `100` — 성향치 감소 공식_레벨차(공격자 Lv - 피해자 Lv) 계수값(%)_-4 ~ +4 인 경우 (동레벨대)
+- `KarmaDecreaseLevelgapRatio04` = `80` — 성향치 감소 공식_레벨차(공격자 Lv - 피해자 Lv) 계수값(%)_-5 ~ -9 인 경우
+- `KarmaDecreaseLevelgapRatio05` = `60` — 성향치 감소 공식_레벨차(공격자 Lv - 피해자 Lv) 계수값(%)_-10 이상인 경우 (고레벨 처치)
+- `KarmaDailyKillPenaltyRatio01` = `110` — 성향치 감소 공식_일일 연속킬 계수값(%)_1회
+- `KarmaDailyKillPenaltyRatio02` = `120` — 성향치 감소 공식_일일 연속킬 계수값(%)_2회
+- `KarmaDailyKillPenaltyRatio03` = `140` — 성향치 감소 공식_일일 연속킬 계수값(%)_3회
+- `KarmaDailyKillPenaltyRatio04` = `160` — 성향치 감소 공식_일일 연속킬 계수값(%)_4회
+- `KarmaDailyKillPenaltyRatio05` = `180` — 성향치 감소 공식_일일 연속킬 계수값(%)_5회
+- `KarmaDailyKillPenaltyRatio06` = `200` — 성향치 감소 공식_일일 연속킬 계수값(%)_6회 이상
+- `KarmaNewCharacterBaseValue` = `1000` — 캐릭터(character·PC·플레이어) 최초 월드 입장 시 적용할 기본 성향치
+- `TextBookRemainTime` = `5000` — TextBook 출력 후, 유지기간(ms) 해당 기간 경과 후 자동 Close
+- `GuildShopMerchant` = `2001` — 길드(클랜) 상인 Merchant Id
+- `GuildShopNPC` = `21` — 길드(클랜) 상인 NPC Id
+- `ReconnectTimeout` = `5000` — 재접속 유지 가능한 시간
+- `MonthlyResetTime` = `0 0 0 1 * *` — 매월 1일 자정 초기화
+- `InfiniteTowerWeeklyEntranceMaxCount` = `30` — 무한의 탑 주간 무료 입장 횟수 (캐릭터(character·PC·플레이어) 단위)
+- `AttackServerPortalNpc` = `10052` — 서버 침공용 포탈 NPC Id 연결
+- `AttackServerPortalAreaRadius` = `500` — 포탈을 랜덤 스폰 시키기 위한 범위(cm)
+- `AttackServerStrangerBuffId` = `20030` — 서버 침공으로 서버 이동 직후 캐릭터(character·PC·플레이어)가 일시적으로 적용받을 버프
+- `AttackServerAreaOutTime` = `5000` — 타 서버 캐릭터(character·PC·플레이어)가 결계 범위 밖에 있을 경우, 강제 귀환까지의 대기 시간 설정 (입력값 1000 = 1초)
+- `MarketTaxBase` = `500` — 마켓 기본 세율
+- `MarketTaxContent1` = `100` — 마켓 서버 누적 세율
+- `MarketTaxContent2` = `200` — 마켓 그룹 누적 세율
+- `MarketHistoryDay` = `100` — 마켓 기록 보관일
+- `MarketHistoryCount` = `100` — 마켓 기록수
+- `MarketFeeGoldPerDia` = `10` — 마켓 등록 수수료(1다이아 당 부과되는 골드(gold)량)
+- `ExploreServerTicketId` = `2000` — 서버 탐험 티켓 class_id
+- `ExploreServerStrangerBuffId` = `20030` — 서버 탐험으로 서버 이동 직후 캐릭터(character·PC·플레이어)가 일시적으로 적용받을 버프
+- `ExploreServerDailyTime` = `3600` — 서버 탐험 일일 이용시간(초)
+- `ReturnDurationTime` = `3000` — 서버 이동 컨텐츠 중 수동 귀환 시, 동작할 프로그레스 시간(ms)
+- `InfiniteTowerAutoSelectBuffCardTime` = `5` — 무한의 탑 버프 자동선택 연출 시간(s)
+- `InfiniteTowerAutoEntryTime` = `5` — 무한의 탑 자동 층 이동 시간(s)
+- `InfiniteTowerExitDelayTime` = `30` — 무한의 탑 퇴장 시간(s)
+- `PlayerResawnDelayTime` = `30` — 플레이어 사망(죽음) 후 자동 부활(리스폰) 대기 시간(s)
+- `InfiniteTowerStageStartWaitTime` = `10` — 무한의 탑 시작 대기 시간 (s)
+- `InfiniteTowerSeasonRewardDelayTime` = `600` — 무한의 탑 시즌 종료 후 보상 지급 지연 시간 (s)
+- `InventoryItemSortCoolTime` = `3000` — 인벤토리(가방) 정렬 쿨타임(쿨다운·cooldown·재사용 대기)(s)
+- `MonsterMaxRoamStepDistance` = `200` — 몬스터(monster·몹)가 로밍 1회에 최대 이동 거리
+- `ChronologyMeasureRankMax` = `100` — 연대기에 반영할 랭크의 순위
+- `GuildInventoryHistoryDay` = `30` — 길드(클랜) 금고 기록 보관일
+- `GuildInventoryBaseSlot` = `100` — 길드(클랜) 금고 기본 슬롯(칸) 수
+- `GuildInventoryDiamondDailyLimit` = `100000` — 일일 분배 다이아 제한
+- `GuildCraftingDiamondPerAccel` = `50` — 길드(클랜) 제작 1회 가속에 필요한 다이아, ex) 50,=> 1회당 50 다이아
+- `GuildCraftingMinutesPerAccel` = `60` — 길드(클랜) 제작 1회 가속 당 시간(분), ex) 60 → 1회 당 60분
+- `GuildCraftingSecondPerMileage` = `300` — 설정된 시간을 가속 당 마일리지 점수 1점 부여, ex) 300 설정 -> 5분당 1점, 가속권 5분을 10개 사용-> 10점 획득
+- `CharacterDeleteWaitDays` = `1` — 캐릭터(character·PC·플레이어) 삭제 대기 시간(일)
+- `CharacterDeleteWaitDaysPlusPerCount` = `1` — 캐릭터(character·PC·플레이어) 삭제 횟수 1회당 대기 시간 증가(일)
+- `GuildRaidCountMax` = `3` — 길드(클랜) 레이드 입장 횟수(주간 초기화)
+- `MaxComposeFailLegendary` = `32` — 전설 등급의 합성 실패 게이지 최대 값
+- `MaxComposeFailUnique` = `128` — 영웅 등급의 합성 실패 게이지 최대 값
+- `MaxComposeFailRare` = `512` — 희귀 등급의 합성 실패 게이지 최대 값
+- `DeathPenaltyEquipRestoreGradeRatio07` = `211` — 장비 골드(gold) 복구 비용 공식_등급 계수값(%)_에픽
+- `DeathPenaltyEquipRestoreTypeRatio04` = `212` — 장비 골드(gold) 복구 비용 공식_기본 장비 타입 계수값(%)_성물
+
+## 인용 형식
+`(출처: DataSheet / ContentSetting § <KEY>)`

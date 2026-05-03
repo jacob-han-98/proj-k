@@ -6,15 +6,25 @@ import { useEffect, useState } from 'react';
 // 가 4000+ 줄 규모로 이미 완성되어 있음. Klaud 안 reimplement 대신 webview 로 임베드해
 // UI 일관성 자동 + 백엔드 update 시 즉시 반영.
 //
-// URL 도출: settings.agentUrl 이 API base (.../proj-k/agentsdk/api). web frontend 는 동일
-// origin 의 /proj-k/agentsdk/. /api 접미사만 strip.
-//   prod: https://cp.tech2.hybe.im/proj-k/agentsdk/api  →  https://cp.tech2.hybe.im/proj-k/agentsdk/
-//   dev:  http://127.0.0.1:8090                          →  (dev 는 web 가 별도 포트, 사용자 override 필요)
-//
-// 현재는 agentUrl 만 보고 derive. 사용자가 dev frontend (Vite) 를 쓰려면 agentWebUrl
-// 별도 설정 필요 — 후속 PR 에서 추가.
+// URL 결정 우선순위:
+//   1) settings.agentWebUrl 명시 — 그대로 사용 (prod web 띄우고 dev API 쓰는 등 자유 조합)
+//   2) settings.agentUrl 에서 /api 접미사 strip 해 도출
+//      prod: https://cp.tech2.hybe.im/proj-k/agentsdk/api  →  https://cp.tech2.hybe.im/proj-k/agentsdk/
+//      dev:  http://127.0.0.1:8090                          →  http://127.0.0.1:8090/  (이건 API 만, 사용자가 #1 로 override)
 //
 // 세션: persist:agent partition (main/index.ts 에서 등록). 회사 SSO 쿠키 영속.
+
+export function resolveAgentWebUrl(
+  agentWebUrl: string | undefined | null,
+  agentUrl: string | undefined | null,
+): string | null {
+  // 명시 override 가 먼저. 빈 문자열/공백은 무시.
+  if (agentWebUrl && typeof agentWebUrl === 'string') {
+    const trimmed = agentWebUrl.trim();
+    if (trimmed) return trimmed.endsWith('/') ? trimmed : trimmed + '/';
+  }
+  return deriveAgentWebUrl(agentUrl);
+}
 
 export function deriveAgentWebUrl(agentUrl: string | undefined | null): string | null {
   if (!agentUrl || typeof agentUrl !== 'string') return null;
@@ -36,7 +46,7 @@ export function AgentWebView() {
       try {
         const s = await window.projk.getSettings();
         if (cancelled) return;
-        setAgentUrl(deriveAgentWebUrl(s.agentUrl));
+        setAgentUrl(resolveAgentWebUrl(s.agentWebUrl, s.agentUrl));
       } finally {
         if (!cancelled) setLoaded(true);
       }
@@ -57,10 +67,10 @@ export function AgentWebView() {
       <main className="center agent-web-pane" data-testid="agent-web-pane">
         <div className="placeholder agent-web-empty" data-testid="agent-web-empty">
           <div style={{ fontSize: 28, marginBottom: 8 }}>🤖</div>
-          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Agent 백엔드 URL 미설정</div>
+          <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 8 }}>Agent 웹 UI URL 미설정</div>
           <div style={{ fontSize: 12, color: 'var(--text-dim)', maxWidth: 480, lineHeight: 1.5 }}>
-            설정에서 <code>agentUrl</code> 을 입력하면 그 백엔드의 웹 UI 가 여기 임베드됩니다.
-            <br />예: <code>https://cp.tech2.hybe.im/proj-k/agentsdk/api</code>
+            설정에서 <code>에이전트 웹 UI URL</code> (또는 <code>에이전트 백엔드 URL</code>) 을 입력하면 그 웹 UI 가 여기 임베드됩니다.
+            <br />예: <code>https://cp.tech2.hybe.im/proj-k/agentsdk/</code>
           </div>
         </div>
       </main>

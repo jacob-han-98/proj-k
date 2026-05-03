@@ -271,6 +271,9 @@ export interface AppSettings {
   // agent-sdk-poc 백엔드 URL — sidecar /ask_stream 이 이리로 SSE forward.
   // 미설정 시 echo stub.
   agentUrl?: string;
+  // agent-sdk-poc 의 web frontend URL — 🤖 임베드 탭이 사용. agentUrl 과 분리.
+  // 비어있으면 agentUrl 에서 /api 접미사 strip 해 도출.
+  agentWebUrl?: string;
   // MCP bridge 활성화 (default true in dev). selfTestEnabled 와 분리됨 (0.1.22).
   // ON 이면 부팅 시 mcpBridgeUrl 로 WS connect → klaud-mcp-server (WSL) 와 RPC.
   // Claude Code 가 tool 로 직접 조작 (klaud_health, klaud_state, ...).

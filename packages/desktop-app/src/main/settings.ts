@@ -13,6 +13,10 @@ export interface Settings {
   updateFeedUrl?: string;
   retrieverUrl?: string;
   agentUrl?: string;
+  // agent-sdk-poc 의 web frontend URL — 🤖 임베드 탭이 사용. agentUrl (API base) 과
+  // 분리되어 있어 prod web 을 띄워두고 dev API 를 쓰는 등 자유 조합 가능. 비어있으면
+  // agentUrl 에서 /api 접미사 strip 해 도출. prod 예: https://cp.tech2.hybe.im/proj-k/agentsdk/
+  agentWebUrl?: string;
   mcpBridgeEnabled?: boolean;
   mcpBridgeUrl?: string;
   logCollectorUrl?: string;

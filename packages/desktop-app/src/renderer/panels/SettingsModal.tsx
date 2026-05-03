@@ -26,6 +26,7 @@ export function SettingsModal({ initialEmail, initialBaseUrl, onClose, onSaved }
   const [updateFeedUrl, setUpdateFeedUrl] = useState('');
   const [retrieverUrl, setRetrieverUrl] = useState('');
   const [agentUrl, setAgentUrl] = useState('');
+  const [agentWebUrl, setAgentWebUrl] = useState('');
   const [mcpBridgeEnabled, setMcpBridgeEnabled] = useState(true);
   const [mcpBridgeUrl, setMcpBridgeUrl] = useState('');
   const [logCollectorUrl, setLogCollectorUrl] = useState('');
@@ -59,6 +60,7 @@ export function SettingsModal({ initialEmail, initialBaseUrl, onClose, onSaved }
       setUpdateFeedUrl(s.updateFeedUrl ?? DEFAULT_FEED_URL_HINT);
       setRetrieverUrl(s.retrieverUrl ?? DEFAULT_RETRIEVER_URL_HINT);
       setAgentUrl(s.agentUrl ?? DEFAULT_AGENT_URL_HINT);
+      setAgentWebUrl(s.agentWebUrl ?? '');
       setMcpBridgeEnabled(s.mcpBridgeEnabled !== false); // default true
       setMcpBridgeUrl(s.mcpBridgeUrl ?? DEFAULT_MCP_BRIDGE_URL_HINT);
       setLogCollectorUrl(s.logCollectorUrl ?? DEFAULT_LOG_COLLECTOR_URL_HINT);
@@ -112,6 +114,7 @@ export function SettingsModal({ initialEmail, initialBaseUrl, onClose, onSaved }
         updateFeedUrl: updateFeedUrl.trim() || undefined,
         retrieverUrl: retrieverUrl.trim() || undefined,
         agentUrl: agentUrl.trim() || undefined,
+        agentWebUrl: agentWebUrl.trim() || undefined,
         mcpBridgeEnabled,
         mcpBridgeUrl: mcpBridgeUrl.trim() || undefined,
         logCollectorUrl: logCollectorUrl.trim() || undefined,
@@ -202,6 +205,20 @@ export function SettingsModal({ initialEmail, initialBaseUrl, onClose, onSaved }
         />
         <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: -4 }}>
           답변 스트리밍에 사용. 미설정 시 stub 응답.
+        </div>
+
+        <label htmlFor="settings-agent-web-url" style={{ marginTop: 6 }}>에이전트 웹 UI URL (🤖 임베드)</label>
+        <input
+          id="settings-agent-web-url"
+          aria-label="에이전트 웹 UI URL"
+          data-testid="settings-agent-web-url"
+          value={agentWebUrl}
+          onChange={(e) => setAgentWebUrl(e.target.value)}
+          placeholder="https://cp.tech2.hybe.im/proj-k/agentsdk/"
+          spellCheck={false}
+        />
+        <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: -4 }}>
+          🤖 버튼이 임베드할 웹 UI. 비우면 위 백엔드 URL 에서 /api 떼서 도출.
         </div>
 
         <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 12, marginBottom: 4 }}>

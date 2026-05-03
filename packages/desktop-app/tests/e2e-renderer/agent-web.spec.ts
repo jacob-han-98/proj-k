@@ -37,16 +37,14 @@ test('🤖 버튼 클릭 → agent-web 탭 열림 + webview src 가 derive 된 U
   await expect(wv).toHaveAttribute('partition', 'persist:agent');
 });
 
-test('agentUrl 미설정 — 안내 메시지', async ({ page }) => {
-  // settings 에서 agentUrl 제거.
+test('agentUrl + agentWebUrl 둘 다 미설정 — 안내 메시지', async ({ page }) => {
   await page.evaluate(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (window as any).projk.setSettings({ agentUrl: '' });
+    (window as any).projk.setSettings({ agentUrl: '', agentWebUrl: '' });
   });
   await page.getByTestId('topbar-agent-web').click();
   await expect(page.getByTestId('agent-web-empty')).toBeVisible();
-  await expect(page.getByTestId('agent-web-empty')).toContainText('agentUrl');
-  // webview 는 mount 안 됨.
+  await expect(page.getByTestId('agent-web-empty')).toContainText('웹 UI URL');
   await expect(page.getByTestId('agent-webview')).toHaveCount(0);
 });
 
@@ -64,4 +62,18 @@ test('새 창 버튼 — 외부 브라우저로 open', async ({ page }) => {
   // 단순히 버튼이 존재하는지 + onClick 호출 시 throw 없는지만 확인 (실제 popup 검증은
   // real Electron 에서만 의미).
   await expect(page.getByTestId('agent-web-open-external')).toBeVisible();
+});
+
+test('agentWebUrl 명시 — agentUrl 무시하고 그쪽으로 임베드', async ({ page }) => {
+  // 사용자 시나리오: agentUrl 은 dev (localhost), 임베드는 prod 띄우고 싶음.
+  await page.evaluate(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).projk.setSettings({
+      agentUrl: 'http://localhost:8090',
+      agentWebUrl: 'https://cp.tech2.hybe.im/proj-k/agentsdk/',
+    });
+  });
+  await page.getByTestId('topbar-agent-web').click();
+  const wv = page.getByTestId('agent-webview');
+  await expect(wv).toHaveAttribute('src', 'https://cp.tech2.hybe.im/proj-k/agentsdk/');
 });

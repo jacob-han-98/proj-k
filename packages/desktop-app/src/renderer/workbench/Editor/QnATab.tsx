@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { askStream, searchDocs } from '../../api';
+import { askStream, getPresetPrompts, searchDocs, type PresetPrompt } from '../../api';
 import { annotateCitedHits } from '../../citations';
 import type { SearchHit, ThreadDocRef } from '../../../shared/types';
 import { useWorkbenchStore } from '../store';
@@ -33,6 +33,69 @@ function genMsgId(): string {
   return `m-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
+// A3-a: agent 의 큐레이션된 추천 prompt — 카테고리별로 grouping 후 chips. 사용자가 빈
+// 화면에서 "뭐부터 물어볼지" 가 어려운 진입 장벽을 제거. 클릭 → input 채움 (자동 send X
+// — 사용자가 추가 편집 가능).
+function PresetChips({
+  presets,
+  onPick,
+}: {
+  presets: PresetPrompt[];
+  onPick: (p: PresetPrompt) => void;
+}) {
+  // category 별 grouping. 정의된 순서 보존 (agent 의 PRESETS 정렬 의도 유지).
+  const grouped = useMemo(() => {
+    const order: string[] = [];
+    const map: Record<string, PresetPrompt[]> = {};
+    for (const p of presets) {
+      const cat = p.category ?? '기타';
+      if (!(cat in map)) {
+        order.push(cat);
+        map[cat] = [];
+      }
+      map[cat]!.push(p);
+    }
+    return order.map((cat) => ({ cat, items: map[cat]! }));
+  }, [presets]);
+
+  return (
+    <div className="preset-chips" data-testid="preset-chips">
+      <div className="preset-chips-hint">💡 추천 질문 — 클릭해서 시작하세요</div>
+      {grouped.map(({ cat, items }) => (
+        <div key={cat} className="preset-chips-group">
+          <div className="preset-chips-cat" data-testid={`preset-cat-${cat}`}>{categoryLabel(cat)}</div>
+          <div className="preset-chips-row">
+            {items.map((p, i) => (
+              <button
+                key={`${cat}-${i}`}
+                type="button"
+                className="preset-chip"
+                onClick={() => onPick(p)}
+                title={p.prompt}
+                data-testid={`preset-chip-${cat}-${i}`}
+              >{p.label}</button>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function categoryLabel(cat: string): string {
+  // agent PRESETS 가 쓰는 category 키 → 한글 라벨. 모르는 키는 그대로.
+  const map: Record<string, string> = {
+    system: '시스템',
+    spec: '수치·공식',
+    cross: '크로스 시스템',
+    content: '컨텐츠',
+    overview: '개요',
+    datasheet: '데이터시트',
+    other: '기타',
+  };
+  return map[cat] ?? cat;
+}
+
 export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Props) {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
@@ -43,6 +106,9 @@ export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Pr
   // PR6: 자동 rename 가능 여부 판단용. mount 시 fetch 결과의 thread.title 을 들고 있다가
   // 첫 메시지 시 default 면 q.slice(0,30) 으로 자동 갈아낀다.
   const [threadTitle, setThreadTitle] = useState<string>('');
+  // A3-a: agent 의 큐레이션된 추천 prompt — empty 화면의 진입 장벽 제거. messages.length===0
+  // 일 때만 노출. 클릭 시 input 자동 채움 (사용자가 추가 편집 후 보낼 수 있게 send 자동 X).
+  const [presets, setPresets] = useState<PresetPrompt[]>([]);
   const taRef = useRef<HTMLTextAreaElement | null>(null);
 
   // mount 시 자기 thread bundle 자체 fetch — 영속된 messages/docs 복원.
@@ -76,6 +142,19 @@ export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Pr
     el.style.height = 'auto';
     el.style.height = `${Math.min(el.scrollHeight, 120)}px`;
   }, [input]);
+
+  // A3-a: 첫 mount 시 1회 fetch — 옛 messages 가 없는 thread 에서만 chips 노출되니
+  // mount 시 한 번 받아두고 messages 비어있는 동안 노출.
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const list = await getPresetPrompts();
+        if (!cancelled) setPresets(list);
+      } catch { /* 무시 */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const annotatedHits = useMemo(() => {
     const lastAssistant = [...messages].reverse().find((m) => m.role === 'assistant');
@@ -308,6 +387,17 @@ export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Pr
           </div>
         ))}
       </div>
+
+      {messages.length === 0 && presets.length > 0 && (
+        <PresetChips
+          presets={presets}
+          onPick={(p) => {
+            setInput(p.prompt);
+            // textarea focus — 사용자가 즉시 편집 또는 Enter 가능.
+            setTimeout(() => taRef.current?.focus(), 0);
+          }}
+        />
+      )}
 
       <div className="input-row">
         <textarea

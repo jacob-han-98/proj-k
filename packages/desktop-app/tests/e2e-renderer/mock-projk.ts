@@ -145,6 +145,17 @@ export const mockProjkInitScript = `
       const ndjson = lines.map((l) => JSON.stringify(l) + '\\n').join('');
       return new Response(ndjson, { status: 200, headers: { 'Content-Type': 'application/x-ndjson' } });
     }
+    if (url.includes('/preset_prompts')) {
+      // A3-a: agent-sdk-poc 의 PRESETS 형식 동등. 카테고리 별 mock — chips UI 검증.
+      return new Response(JSON.stringify({
+        presets: [
+          { label: '변신 시스템 정리', prompt: '변신 시스템의 목적을 정리해줘.', category: 'system' },
+          { label: '스킬 시스템 설명', prompt: '스킬 시스템을 설명해줘.', category: 'system' },
+          { label: 'HUD 경험치/골드 최대값', prompt: 'HUD 의 최대값은?', category: 'spec' },
+          { label: '7_System 시스템 목록', prompt: '7_System 폴더에 어떤 기획서가 있나?', category: 'overview' },
+        ],
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    }
     if (url.includes('/ask_stream')) {
       // 답변 안에 (출처: ...) 패턴을 넣어 인용 매칭 동작을 검증할 수 있게 한다.
       const finalAnswer = 'HUD 의 기본 레이아웃은 ① 상단 정보바, ② 좌측 미니맵으로 구성됩니다 (출처: PK_HUD 시스템.xlsx / HUD_기본 § 레이아웃).';

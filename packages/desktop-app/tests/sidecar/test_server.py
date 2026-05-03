@@ -415,6 +415,77 @@ def test_ask_stream_proxies_upstream_lines(monkeypatch: pytest.MonkeyPatch) -> N
     assert events[-1]["payload"]["answer"] == "안녕하세요"
 
 
+def test_preset_prompts_empty_when_agent_unset(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A3-a: PROJK_AGENT_URL 미설정 시 — 빈 list 반환 (UI 가 chips hide)."""
+    monkeypatch.delenv("PROJK_AGENT_URL", raising=False)
+    import importlib
+    import server as server_module
+    importlib.reload(server_module)
+    client = TestClient(server_module.app)
+    res = client.get("/preset_prompts")
+    assert res.status_code == 200
+    assert res.json() == {"presets": []}
+
+
+def test_preset_prompts_proxies_upstream(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A3-a: PROJK_AGENT_URL 설정 시 upstream /preset_prompts 그대로 forward."""
+    monkeypatch.setenv("PROJK_AGENT_URL", "http://agent.test")
+
+    import importlib
+    import server as server_module
+    importlib.reload(server_module)
+
+    fake_presets = [
+        {"label": "변신", "prompt": "변신 시스템 정리해줘", "category": "system"},
+        {"label": "스킬", "prompt": "스킬 시스템 설명", "category": "system"},
+    ]
+
+    class _MockResponse:
+        status_code = 200
+        def json(self):
+            return {"presets": fake_presets}
+
+    class _MockClient:
+        def __init__(self, *_a, **_kw): pass
+        async def __aenter__(self): return self
+        async def __aexit__(self, *_a): return False
+        async def get(self, _url):
+            return _MockResponse()
+
+    monkeypatch.setattr(server_module.httpx, "AsyncClient", _MockClient)
+    client = TestClient(server_module.app)
+    res = client.get("/preset_prompts")
+    assert res.status_code == 200
+    assert res.json() == {"presets": fake_presets}
+
+
+def test_preset_prompts_handles_upstream_failure(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A3-a: upstream HTTP 에러 — 빈 list 로 graceful (UI 무동작)."""
+    monkeypatch.setenv("PROJK_AGENT_URL", "http://agent.test")
+
+    import importlib
+    import server as server_module
+    importlib.reload(server_module)
+
+    class _MockResponse:
+        status_code = 500
+        def json(self):
+            return {}
+
+    class _MockClient:
+        def __init__(self, *_a, **_kw): pass
+        async def __aenter__(self): return self
+        async def __aexit__(self, *_a): return False
+        async def get(self, _url):
+            return _MockResponse()
+
+    monkeypatch.setattr(server_module.httpx, "AsyncClient", _MockClient)
+    client = TestClient(server_module.app)
+    res = client.get("/preset_prompts")
+    assert res.status_code == 200
+    assert res.json() == {"presets": []}
+
+
 def test_cors_preflight_returns_allow_origin(client: TestClient) -> None:
     """Renderer (electron-vite dev) lives at http://localhost:5174 — different
     origin from sidecar at http://127.0.0.1:<port>. POST + JSON triggers preflight,

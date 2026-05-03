@@ -478,6 +478,49 @@ html, body, #root { height: 100%; margin: 0; padding: 0; background: var(--bg); 
 .chat .msg { max-width: 100%; padding: 8px 10px; border-radius: 6px; font-size: 12px; line-height: 1.5; white-space: pre-wrap; }
 .chat .msg.user { background: var(--accent); color: var(--accent-fg); align-self: flex-end; }
 .chat .msg.assistant { background: var(--bg-sidebar); color: var(--text); align-self: flex-start; }
+/* A3-a: 빈 chat 화면의 추천 prompt chips — input-row 바로 위. category 별 grouping. */
+.preset-chips {
+  border-top: 1px solid var(--border);
+  padding: 10px 12px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 40vh;
+  overflow-y: auto;
+}
+.preset-chips-hint {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.preset-chips-group { display: flex; flex-direction: column; gap: 4px; }
+.preset-chips-cat {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.preset-chips-row { display: flex; flex-wrap: wrap; gap: 4px; }
+.preset-chip {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.preset-chip:hover { background: var(--hover); border-color: var(--accent); color: var(--accent); }
+.preset-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
 .chat .input-row {
   border-top: 1px solid var(--border);
   padding: 8px;

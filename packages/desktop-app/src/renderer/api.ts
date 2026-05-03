@@ -23,6 +23,26 @@ window.projk?.onSidecarStatus?.((s: SidecarStatus) => {
   if (s.port != null) cachedPort = s.port;
 });
 
+// A3-a: agent-sdk-poc 의 큐레이션된 추천 prompt — sidecar /preset_prompts proxy 통해.
+// QnATab 의 입력란 위에 카테고리별 chips 로 노출. agent 미설정 또는 fail 시 빈 list →
+// UI 가 chips 자체를 hide.
+export interface PresetPrompt {
+  label: string;
+  prompt: string;
+  category?: string;
+}
+export async function getPresetPrompts(): Promise<PresetPrompt[]> {
+  try {
+    const port = await ensurePort();
+    const res = await fetch(`http://127.0.0.1:${port}/preset_prompts`);
+    if (!res.ok) return [];
+    const data = (await res.json()) as { presets?: PresetPrompt[] };
+    return Array.isArray(data?.presets) ? data.presets : [];
+  } catch {
+    return [];
+  }
+}
+
 export async function searchDocs(query: string, limit = 20): Promise<SearchResponse> {
   const port = await ensurePort();
   const res = await fetch(`http://127.0.0.1:${port}/search_docs`, {

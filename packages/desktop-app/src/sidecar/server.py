@@ -759,6 +759,38 @@ async def ask_stream(req: AskRequest):
     return StreamingResponse(gen, media_type="application/x-ndjson")
 
 
+# ---------- /preset_prompts (A3-a: agent 의 큐레이션된 추천 prompt 노출) ----------
+#
+# agent-sdk-poc 의 PRESETS — Project K 시스템·데이터시트·운영 영역에 특화된 자주 묻는
+# 질문들. Klaud QnATab 의 입력란 위에 카테고리별 chips 로 노출 → 사용자 한 번 클릭으로
+# 검증된 prompt 자동 채움. 빈 chat 화면 ("뭐부터 물어볼까") 의 진입 장벽 제거.
+#
+# 응답: { "presets": [{ "label": "...", "prompt": "...", "category": "..." }, ...] }
+# upstream 미설정 또는 fail 시 빈 list — UI 가 chips 자체를 hide.
+
+
+@app.get("/preset_prompts")
+async def preset_prompts() -> dict:
+    base = _agent_url()
+    if not base:
+        return {"presets": []}
+    timeout = httpx.Timeout(connect=5.0, read=10.0, write=5.0, pool=5.0)
+    try:
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            r = await client.get(f"{base}/preset_prompts")
+            if r.status_code != 200:
+                return {"presets": []}
+            data = r.json()
+            # agent 가 {"presets": [...]} 형식 반환. defensive — list 직접 반환도 허용.
+            if isinstance(data, dict) and isinstance(data.get("presets"), list):
+                return {"presets": data["presets"]}
+            if isinstance(data, list):
+                return {"presets": data}
+            return {"presets": []}
+    except httpx.HTTPError:
+        return {"presets": []}
+
+
 # ---------- /review_stream (Phase 4-2: Confluence webview body → agent → stream) ----------
 
 class ReviewRequest(BaseModel):

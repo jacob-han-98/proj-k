@@ -40,6 +40,13 @@ type WorkbenchState = {
   editingDocs: Record<string, boolean>;
   setDocEditing: (docKey: string, editing: boolean) => void;
   toggleDocEditing: (docKey: string) => void;
+
+  // A2: Command Palette (VS Code Ctrl+P 등가물). open=true 면 modal overlay 표시.
+  // P4 local + P4 depot + Confluence 트리 데이터 통합 fuzzy 매칭.
+  paletteOpen: boolean;
+  openPalette: () => void;
+  closePalette: () => void;
+  togglePalette: () => void;
 };
 
 export const useWorkbenchStore = create<WorkbenchState>((set) => ({
@@ -144,4 +151,9 @@ export const useWorkbenchStore = create<WorkbenchState>((set) => ({
     else next[docKey] = true;
     return { ...state, editingDocs: next };
   }),
+
+  paletteOpen: false,
+  openPalette: () => set({ paletteOpen: true }),
+  closePalette: () => set({ paletteOpen: false }),
+  togglePalette: () => set((s) => ({ paletteOpen: !s.paletteOpen })),
 }));

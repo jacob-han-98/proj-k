@@ -1570,3 +1570,103 @@ html, body, #root { height: 100%; margin: 0; padding: 0; background: var(--bg); 
   white-space: pre-wrap;
   line-height: 1.5;
 }
+
+/* A2: Command Palette — VS Code Ctrl+P 등가물. modal overlay 형태. */
+.cmd-palette-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  z-index: 100;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 80px;
+}
+.cmd-palette {
+  width: min(640px, calc(100vw - 64px));
+  max-height: calc(100vh - 160px);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.cmd-palette-input {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  font-size: 14px;
+  padding: 14px 16px;
+  outline: none;
+}
+.cmd-palette-input::placeholder { color: var(--text-dim); }
+.cmd-palette-results {
+  overflow-y: auto;
+  max-height: 420px;
+  padding: 4px 0;
+}
+.cmd-palette-empty {
+  padding: 16px;
+  color: var(--text-dim);
+  font-size: 12px;
+  line-height: 1.6;
+}
+.cmd-palette-empty code {
+  background: var(--hover);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 11px;
+}
+.cmd-palette-row {
+  all: unset;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 14px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text);
+}
+.cmd-palette-row.active { background: var(--accent); color: var(--accent-fg); }
+.cmd-palette-row.active .cmd-palette-path,
+.cmd-palette-row.active .cmd-palette-source { color: var(--accent-fg); opacity: 0.85; }
+.cmd-palette-icon { width: 18px; flex-shrink: 0; text-align: center; }
+.cmd-palette-body {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.cmd-palette-title {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cmd-palette-path {
+  font-size: 11px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cmd-palette-source {
+  flex-shrink: 0;
+  font-size: 10px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.cmd-palette-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 14px;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--text-dim);
+}

@@ -6,6 +6,7 @@ import { ActivityBar } from './workbench/ActivityBar';
 import { TitleBar } from './panels/TitleBar';
 import { EditorHost } from './workbench/Editor/EditorHost';
 import { SidebarHost } from './workbench/Sidebar/SidebarHost';
+import { CommandPalette } from './workbench/CommandPalette';
 import { useWorkbenchStore } from './workbench/store';
 import { tabIdOf } from './workbench/types';
 
@@ -125,6 +126,21 @@ export function App() {
 
   // PR5: threadBundle fetch 는 QnATab 이 자체적으로 (mount 시 자기 thread 만 get) 수행하므로
   // App level 에서 더 이상 필요 없음.
+
+  // A2: Ctrl/Cmd+P → Command Palette toggle. 전역 단축키 — input/contenteditable 에서도
+  // 동작 (palette 자체가 input 을 capture). 단 Ctrl+Shift+P (다른 의도) 는 무시.
+  useEffect(() => {
+    const togglePalette = useWorkbenchStore.getState().togglePalette;
+    const handler = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey)) return;
+      if (e.shiftKey || e.altKey) return;
+      if (e.key.toLowerCase() !== 'p') return;
+      e.preventDefault();
+      togglePalette();
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
 
   // PR2: selection ↔ workbench tabs 양방향 sync.
   // selection 은 진실 소스를 유지 (트리 active highlight + ChatPanel confluencePageId 추출).
@@ -445,6 +461,7 @@ export function App() {
       )}
 
       <UpdateToast />
+      <CommandPalette />
     </div>
   );
 }

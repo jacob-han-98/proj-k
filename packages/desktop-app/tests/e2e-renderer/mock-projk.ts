@@ -278,6 +278,17 @@ export const mockProjkInitScript = `
       },
     },
 
+    // B2-3a: ChangesCard Apply 흐름 — 테스트에서 어떤 items 가 들어왔는지 검증할 수 있게
+    // window.__lastApplyArgs 에 capture. 실제 PUT 안 하고 ok response.
+    confluenceApplyEdits: (pageId, items) => {
+      window.__lastApplyArgs = { pageId, items };
+      return Promise.resolve({ ok: true, applied: items.length, skipped: 0, skippedIds: [], pageUrl: '' });
+    },
+
+    // B2-1: 사본 mock — 새 page id 즉시 반환.
+    confluenceCopyToTest: (sourcePageId) =>
+      Promise.resolve({ ok: true, newPageId: 'mock-copy-' + sourcePageId, newPageUrl: 'https://mock/copy', newTitle: 'mock copy', spaceKey: 'PKTEST' }),
+
     // PR9: P4 자동 발견 + depot 트리 lazy fetch. Playwright mock 은 sample 데이터로 동작.
     p4: {
       discover: () => Promise.resolve({

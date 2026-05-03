@@ -205,12 +205,14 @@ test('리뷰 → "원본 수정" → ChangesCard streaming → before/after 렌�
   await expect(changes).toContainText('변경안 (1건)');
   // ChangesCard 는 description 우선 fallback section. 둘 다 있는 케이스라 description 가 보임.
   await expect(changes).toContainText('용어 통일');
-  await expect(changes).toContainText('플레이어가 캐릭터를'); // before
-  await expect(changes).toContainText('유저가 PC를'); // after
-
+  // B2-3a: ChangesCard 가 inline word diff 로 변경됨. before/after 단어들이
+  // .diff-removed / .diff-added span 안에 들어가지만 textContent 로 보면 통합돼서 보임.
   const change = page.getByTestId('change-c1');
-  await expect(change.locator('.change-before')).toContainText('플레이어');
-  await expect(change.locator('.change-after')).toContainText('유저');
+  await expect(change).toContainText('플레이어가'); // before 단어 (.diff-removed 안)
+  await expect(change).toContainText('유저가');     // after 단어 (.diff-added 안)
+  // diff span 자체는 적어도 1개씩 노출
+  await expect(change.locator('.diff-removed').first()).toBeVisible();
+  await expect(change.locator('.diff-added').first()).toBeVisible();
 });
 
 test('리뷰 — error 이벤트 시 review-error 메시지 표시', async ({ page }) => {

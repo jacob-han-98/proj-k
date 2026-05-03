@@ -996,33 +996,114 @@ html, body, #root { height: 100%; margin: 0; padding: 0; background: var(--bg); 
 }
 .change-num { color: var(--text-dim); }
 .change-desc { font-weight: 500; }
+/* B2-3a: word-level inline diff (DiffEngine.computeWordDiff). same/added/removed 가
+   같은 줄 안에서 연속 → reading flow 가 자연스러움. */
 .change-diff {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-.change-before, .change-after {
+  font-size: 12px;
+  line-height: 1.6;
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
   border-radius: 4px;
   padding: 6px 8px;
-  font-size: 12px;
-  line-height: 1.5;
   white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text);
 }
-.change-before { background: rgba(239, 68, 68, 0.07); border: 1px solid rgba(239, 68, 68, 0.25); }
-.change-after { background: rgba(34, 197, 94, 0.07); border: 1px solid rgba(34, 197, 94, 0.25); }
-.change-label {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--text-dim);
-  margin-bottom: 2px;
+.diff-added {
+  background: rgba(34, 197, 94, 0.18);
+  color: #15803d;
+  border-radius: 2px;
+  padding: 0 1px;
 }
-.change-text { color: var(--text); }
+.diff-removed {
+  background: rgba(239, 68, 68, 0.18);
+  color: #b91c1c;
+  text-decoration: line-through;
+  border-radius: 2px;
+  padding: 0 1px;
+}
+@media (prefers-color-scheme: dark) {
+  .diff-added { color: #86efac; background: rgba(34, 197, 94, 0.22); }
+  .diff-removed { color: #fca5a5; background: rgba(239, 68, 68, 0.22); }
+}
 
+/* B2-3a: per-change decision 시각 — pending/accepted/rejected 의 좌측 마커 + 배경. */
+.change-item.accepted {
+  border-color: rgba(34, 197, 94, 0.5);
+  background: rgba(34, 197, 94, 0.05);
+}
+.change-item.rejected {
+  border-color: rgba(156, 163, 175, 0.4);
+  background: rgba(156, 163, 175, 0.06);
+  opacity: 0.7;
+}
+.change-item.rejected .change-diff { opacity: 0.6; }
+.change-badge {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  margin-left: auto;
+  background: var(--hover);
+  color: var(--text-dim);
+  letter-spacing: 0.3px;
+}
+.change-badge.accepted { background: rgba(34, 197, 94, 0.2); color: #15803d; }
+.change-badge.rejected { background: rgba(156, 163, 175, 0.2); color: var(--text-dim); }
+@media (prefers-color-scheme: dark) {
+  .change-badge.accepted { color: #86efac; }
+}
+
+/* B2-3a: per-row 버튼 row + bottom (summary + bulk + apply). */
+.change-actions {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+}
+.change-actions .btn-sm,
+.changes-bulk .btn-sm {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  font-size: 11px;
+  padding: 3px 9px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  cursor: pointer;
+  user-select: none;
+}
+.change-actions .btn-sm:hover,
+.changes-bulk .btn-sm:hover { background: var(--hover); border-color: var(--accent); }
+.change-actions .btn-accept { color: #15803d; border-color: rgba(34, 197, 94, 0.4); }
+.change-actions .btn-reject { color: #b91c1c; border-color: rgba(239, 68, 68, 0.4); }
+.change-actions .btn-undo { color: var(--text-dim); }
+
+.changes-bottom {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+.changes-summary {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.changes-summary .cs-acc { color: #15803d; font-weight: 500; }
+.changes-summary .cs-rej { color: #b91c1c; }
+.changes-summary .cs-pend { color: var(--text-dim); }
+@media (prefers-color-scheme: dark) {
+  .changes-summary .cs-acc { color: #86efac; }
+  .changes-summary .cs-rej { color: #fca5a5; }
+}
+.changes-bulk {
+  display: flex;
+  gap: 6px;
+}
 .changes-actions {
   display: flex;
   justify-content: flex-end;
-  padding-top: 4px;
 }
 .changes-actions button.primary {
   font-size: 12px;
@@ -1032,6 +1113,10 @@ html, body, #root { height: 100%; margin: 0; padding: 0; background: var(--bg); 
   background: var(--accent);
   color: var(--accent-fg);
   cursor: pointer;
+}
+.changes-actions button.primary:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 /* ---------- PR1: VS Code Activity Bar ---------- */

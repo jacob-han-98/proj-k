@@ -1753,3 +1753,32 @@ html, body, #root { height: 100%; margin: 0; padding: 0; background: var(--bg); 
   font-size: 11px;
   color: var(--text-dim);
 }
+
+/* B2-2: ReviewCard 의 캐시 fixture badge — 카드 상단에 작은 회색 row. */
+.review-cache-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  margin-bottom: 8px;
+  background: var(--hover);
+  border: 1px dashed var(--border);
+  border-radius: 4px;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.review-cache-icon { font-size: 12px; }
+.review-cache-text { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.review-cache-rerun {
+  all: unset;
+  flex-shrink: 0;
+  font-size: 10.5px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  color: var(--text);
+}
+.review-cache-rerun:hover { background: var(--hover); border-color: var(--accent); }
+.review-cache-rerun:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }

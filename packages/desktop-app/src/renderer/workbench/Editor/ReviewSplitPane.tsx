@@ -1,7 +1,13 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { reviewStream, suggestEditsStream, type ChangeItem } from '../../api';
 import { ReviewCard, type ReviewData } from '../../panels/ReviewCard';
 import { ChangesCard } from '../../panels/ChangesCard';
+import {
+  hashContent,
+  invalidateFixture,
+  loadFixture,
+  saveFixture,
+} from '../../panels/review-fixture-cache';
 
 // PR4: ChatPanel 에 있던 리뷰/변경안 파이프라인을 editor 탭의 우측 split 으로 이전.
 // 탭별 isolated — props 로 받은 (tabId, trigger, title, text) 가 바뀌면 (= 새 리뷰 요청)
@@ -17,6 +23,10 @@ interface ReviewState {
   error?: string;
   streamBuffer?: string;
   status?: string;
+  // B2-2: localStorage 에서 불러온 캐시 fixture 의 메타. UI 에서 "💾 X분 전 · model" 표시.
+  // null = fresh stream 결과. 새 stream 시작하면 다시 null.
+  cachedAt?: number | null;
+  cachedModel?: string | null;
 }
 
 interface ChangesState {
@@ -88,14 +98,42 @@ export function ReviewSplitPane({ tabId: _tabId, title, text, trigger, confluenc
   const [changes, setChanges] = useState<ChangesState | null>(null);
   const [busy, setBusy] = useState(false);
   const [applyMessage, setApplyMessage] = useState<string | null>(null);
+  // B2-2: "🔁 새 리뷰" 클릭 시 +1 — 같은 trigger 라도 effect 재발동시키기 위함.
+  const [refreshNonce, setRefreshNonce] = useState(0);
 
-  // 새 trigger 가 들어오면 review 재시작. text/title 도 같이 바뀐다고 가정 (store.openSplit 이 함께 갱신).
+  // contentHash 는 본문 변경 detect 용. confluencePageId + hash 로 fixture key 잡음.
+  // Excel 탭 (confluencePageId=null) 은 캐시 안 함 — Excel 리뷰는 향후 별도 흐름.
+  const contentHash = useMemo(() => hashContent(text), [text]);
+
+  // 새 trigger 또는 refreshNonce 변경 시 review 재시작 — 단, refreshNonce 가 0 이 아닐
+  // 때만 cache 무시 (forceFresh).
   useEffect(() => {
     let cancelled = false;
+    const forceFresh = refreshNonce > 0;
     setReview({ data: null, streaming: true });
     setChanges(null);
     setApplyMessage(null);
     setBusy(true);
+
+    // 1) 캐시 hit 시도 (forceFresh 면 skip)
+    if (!forceFresh && confluencePageId) {
+      const fixture = loadFixture(confluencePageId, contentHash);
+      if (fixture) {
+        setReview({
+          data: fixture.data,
+          streaming: false,
+          cachedAt: fixture.savedAt,
+          cachedModel: fixture.model ?? null,
+        });
+        setBusy(false);
+        return; // 백엔드 호출 안 함
+      }
+    }
+    // refreshNonce > 0 인 경우 — 기존 fixture 무효화 + 새 stream
+    if (forceFresh && confluencePageId) {
+      invalidateFixture(confluencePageId, contentHash);
+    }
+
     void (async () => {
       try {
         await reviewStream({ title, text }, (event) => {
@@ -109,8 +147,15 @@ export function ReviewSplitPane({ tabId: _tabId, title, text, trigger, confluenc
             if (tok) setReview((r) => ({ ...r, streamBuffer: (r.streamBuffer ?? '') + tok }));
           } else if (e.type === 'result') {
             const data = parseReviewResult(e);
-            if (data) setReview((r) => ({ ...r, data, streaming: false }));
-            else setReview((r) => ({ ...r, error: 'result 파싱 실패 — data.review 또는 payload 없음', streaming: false }));
+            if (data) {
+              setReview((r) => ({ ...r, data, streaming: false }));
+              // 결과 도착 → 캐시 저장. model 은 result.data.model 에서 추출 (있으면).
+              if (confluencePageId) {
+                const resultData = e.data as { model?: unknown } | undefined;
+                const model = typeof resultData?.model === 'string' ? resultData.model : undefined;
+                saveFixture(confluencePageId, contentHash, data, model);
+              }
+            } else setReview((r) => ({ ...r, error: 'result 파싱 실패 — data.review 또는 payload 없음', streaming: false }));
           } else if (e.type === 'error') {
             const msg = readError(e) ?? '알 수 없는 오류';
             setReview((r) => ({ ...r, error: msg, streaming: false }));
@@ -127,9 +172,9 @@ export function ReviewSplitPane({ tabId: _tabId, title, text, trigger, confluenc
     return () => {
       cancelled = true;
     };
-    // title/text 는 trigger 와 함께 갱신되므로 trigger 만 의존성으로.
+    // title/text 는 trigger 와 함께 갱신되므로 trigger / refreshNonce 만 의존성으로.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [trigger]);
+  }, [trigger, refreshNonce]);
 
   // A5: filtered 는 ReviewCard 의 per-item feedback 적용 결과 — dislike 제외,
   // edited 는 사용자 instruction 추가된 채. 이게 prompt 로 들어감 → 사용자가 정밀 통제.
@@ -230,6 +275,9 @@ export function ReviewSplitPane({ tabId: _tabId, title, text, trigger, confluenc
           error={review.error}
           streamBuffer={review.streamBuffer}
           status={review.status}
+          cachedAt={review.cachedAt ?? null}
+          cachedModel={review.cachedModel ?? null}
+          onReRunRequest={() => setRefreshNonce((n) => n + 1)}
           onFixRequest={(filtered) => void startFix(filtered)}
         />
         {changes && (

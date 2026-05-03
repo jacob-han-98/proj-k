@@ -9,6 +9,7 @@
 
 import { useMemo, useState, type CSSProperties } from 'react';
 import { parsePartialReviewJSON } from './partial-review-parser';
+import { relativeTime } from './review-fixture-cache';
 
 export interface ReviewItem {
   text: string;
@@ -47,6 +48,13 @@ interface Props {
   // Phase 4-3.5: "✏️ 원본 수정" 클릭 — A5 부터 feedback-filter 된 데이터를 받음.
   // dislike 한 item 은 제외, edited 는 사용자 instruction 추가.
   onFixRequest?: (filtered: ReviewData) => void;
+  // B2-2: localStorage 캐시 fixture 로 로드된 결과면 ms timestamp + (선택) 모델명.
+  // 이 값들이 있으면 카드 상단에 "💾 캐시된 리뷰 · 5분 전 · sonnet" badge + "🔁 새 리뷰" 버튼.
+  // 새 stream 결과면 둘 다 null/undefined.
+  cachedAt?: number | null;
+  cachedModel?: string | null;
+  // B2-2: "🔁 새 리뷰" 클릭 시 호출 — 부모 (ReviewSplitPane) 가 cache invalidate + 재 stream.
+  onReRunRequest?: () => void;
 }
 
 export function ReviewCard({
@@ -57,6 +65,9 @@ export function ReviewCard({
   streamBuffer,
   status,
   onFixRequest,
+  cachedAt,
+  cachedModel,
+  onReRunRequest,
 }: Props) {
   // streamBuffer 에서 partial parse — final data 가 도착하기 전에도 sections 등장.
   const partialData = useMemo<ReviewData | null>(() => {
@@ -106,6 +117,10 @@ export function ReviewCard({
   return (
     <div className="review-card" data-testid="review-card">
       <div className="review-card-header">📋 {title}</div>
+
+      {cachedAt != null && (
+        <CachedBadge savedAt={cachedAt} model={cachedModel ?? null} onReRun={onReRunRequest} />
+      )}
 
       {effectiveData.score != null && <ScoreBar score={effectiveData.score} label="전체 평가" />}
 
@@ -212,6 +227,39 @@ export function StreamingIndicator({ status, buffer }: { status?: string; buffer
         {charCount > 0 && <span className="review-tok-count"> · {charCount}자</span>}
       </div>
       {tail && <pre className="review-stream-tail">{tail}</pre>}
+    </div>
+  );
+}
+
+// B2-2: 캐시된 fixture 로 카드를 채웠을 때 상단에 표시. "💾 캐시된 리뷰 · 5분 전 · sonnet"
+// + "🔁 새 리뷰" 버튼. 클릭 → 부모가 cache invalidate 후 re-stream.
+function CachedBadge({
+  savedAt,
+  model,
+  onReRun,
+}: {
+  savedAt: number;
+  model: string | null;
+  onReRun?: () => void;
+}) {
+  return (
+    <div className="review-cache-badge" data-testid="review-cache-badge">
+      <span className="review-cache-icon" aria-hidden="true">💾</span>
+      <span className="review-cache-text">
+        캐시된 리뷰 · {relativeTime(savedAt)}
+        {model ? ` · ${model}` : ''}
+      </span>
+      {onReRun && (
+        <button
+          type="button"
+          className="review-cache-rerun"
+          onClick={onReRun}
+          data-testid="review-cache-rerun"
+          title="캐시 무시하고 새로 리뷰"
+        >
+          🔁 새 리뷰
+        </button>
+      )}
     </div>
   );
 }

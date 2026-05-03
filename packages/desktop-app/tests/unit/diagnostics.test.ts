@@ -11,6 +11,9 @@ interface StubApiOpts {
   creds?: { email?: string; baseUrl?: string } | null;
   oneDrive?: { ok: boolean; account?: { email?: string } };
   p4?: { ok: boolean; source?: string; user?: string; client?: string };
+  // C2: updater state — getUpdaterState mock 응답.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  updater?: { state: any; lastCheckedAt: number | null } | null;
   // /sheet_content probe — fetch 가 호출됨. status code 반환.
   sheetContentStatus?: number;
   sheetContentThrow?: boolean;
@@ -22,6 +25,7 @@ function stubApi(opts: StubApiOpts = {}) {
     getSidecarStatus: () => Promise.resolve(opts.sidecarStatus ?? { state: 'ready', port: 4530, pid: 1 }) as Promise<{ state: 'starting' | 'ready' | 'error'; port: number | null; pid: number | null; message?: string }>,
     getSidecarHealth: () => Promise.resolve(opts.sidecarHealth ?? { ok: true, body: { repo_root_exists: true, repo_root_listable: true, repo_root_resolved: '/mock/repo', repo_root_sample: ['a', 'b'], version: 'test' } }),
     getConfluenceCreds: () => Promise.resolve(opts.creds ?? null),
+    getUpdaterState: () => Promise.resolve(opts.updater !== undefined ? opts.updater : { state: { state: 'idle' }, lastCheckedAt: Date.now() - 60_000 }),
     oneDriveSync: { detect: () => Promise.resolve(opts.oneDrive ?? { ok: false }) },
     p4: { discover: () => Promise.resolve(opts.p4 ?? { ok: false }) },
   };
@@ -56,7 +60,7 @@ describe('runAllDiagnostics — happy path', () => {
       const ids = r.map((d) => d.id);
       expect(ids).toEqual([
         'sidecar', 'repo-root', 'p4-root', 'p4-cli',
-        'xlsx-extractor', 'confluence', 'agent', 'update-feed', 'onedrive',
+        'xlsx-extractor', 'confluence', 'agent', 'updater', 'onedrive',
       ]);
       // 모두 ok
       expect(r.filter((d) => d.status === 'ok')).toHaveLength(9);
@@ -175,6 +179,82 @@ describe('runAllDiagnostics — error/warn 분기', () => {
       const s = r.find((d) => d.id === 'sidecar')!;
       expect(s.status).toBe('error');
       expect(s.message).toContain('spawn 실패');
+    } finally { restore(); }
+  });
+});
+
+describe('runAllDiagnostics — updater (C2)', () => {
+  it('피드 URL 미설정 — warn + 설정 열기', async () => {
+    const restore = withFetchMock(404);
+    try {
+      const r = await runAllDiagnostics(stubApi({ settings: {} }));
+      const u = r.find((d) => d.id === 'updater')!;
+      expect(u.status).toBe('warn');
+      expect(u.action?.kind).toBe('open-settings');
+    } finally { restore(); }
+  });
+
+  it('피드 설정됐고 idle + lastCheckedAt 있음 — ok + 지금 확인 action', async () => {
+    const restore = withFetchMock(404);
+    try {
+      const r = await runAllDiagnostics(stubApi({
+        settings: { updateFeedUrl: 'http://feed/' },
+        updater: { state: { state: 'idle' }, lastCheckedAt: Date.now() - 30_000 },
+      }));
+      const u = r.find((d) => d.id === 'updater')!;
+      expect(u.status).toBe('ok');
+      expect(u.action?.kind).toBe('check-update');
+    } finally { restore(); }
+  });
+
+  it('피드 설정됐는데 한 번도 확인 안 됨 — warn', async () => {
+    const restore = withFetchMock(404);
+    try {
+      const r = await runAllDiagnostics(stubApi({
+        settings: { updateFeedUrl: 'http://feed/' },
+        updater: { state: { state: 'idle' }, lastCheckedAt: null },
+      }));
+      const u = r.find((d) => d.id === 'updater')!;
+      expect(u.status).toBe('warn');
+    } finally { restore(); }
+  });
+
+  it('updater error — error 상태', async () => {
+    const restore = withFetchMock(404);
+    try {
+      const r = await runAllDiagnostics(stubApi({
+        settings: { updateFeedUrl: 'http://feed/' },
+        updater: { state: { state: 'error', message: '404 latest.yml' }, lastCheckedAt: Date.now() },
+      }));
+      const u = r.find((d) => d.id === 'updater')!;
+      expect(u.status).toBe('error');
+      expect(u.message).toContain('404 latest.yml');
+    } finally { restore(); }
+  });
+
+  it('updater ready — warn (사용자 액션 대기)', async () => {
+    const restore = withFetchMock(404);
+    try {
+      const r = await runAllDiagnostics(stubApi({
+        settings: { updateFeedUrl: 'http://feed/' },
+        updater: { state: { state: 'ready', version: '1.2.3' }, lastCheckedAt: Date.now() },
+      }));
+      const u = r.find((d) => d.id === 'updater')!;
+      expect(u.status).toBe('warn');
+      expect(u.message).toContain('v1.2.3');
+    } finally { restore(); }
+  });
+
+  it('updater downloading — pending', async () => {
+    const restore = withFetchMock(404);
+    try {
+      const r = await runAllDiagnostics(stubApi({
+        settings: { updateFeedUrl: 'http://feed/' },
+        updater: { state: { state: 'downloading', percent: 47, bytesPerSecond: 100 }, lastCheckedAt: Date.now() },
+      }));
+      const u = r.find((d) => d.id === 'updater')!;
+      expect(u.status).toBe('pending');
+      expect(u.message).toContain('47%');
     } finally { restore(); }
   });
 });

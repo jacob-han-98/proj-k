@@ -12,7 +12,7 @@ test('🩺 버튼 클릭 → 진단 모달 열림 + 9 항목 표시', async ({ p
   await page.getByTestId('topbar-diagnostics').click();
   await expect(page.getByTestId('diag-modal')).toBeVisible();
   // 9 개 row 모두 노출.
-  for (const id of ['sidecar', 'repo-root', 'p4-root', 'p4-cli', 'xlsx-extractor', 'confluence', 'agent', 'update-feed', 'onedrive']) {
+  for (const id of ['sidecar', 'repo-root', 'p4-root', 'p4-cli', 'xlsx-extractor', 'confluence', 'agent', 'updater', 'onedrive']) {
     await expect(page.getByTestId(`diag-row-${id}`)).toBeVisible();
   }
   // summary — 검사 끝나면 ✅ X · ⚠ Y 표기

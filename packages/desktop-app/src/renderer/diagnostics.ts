@@ -1,7 +1,7 @@
 // C1: 사용자 환경 진단 — 설치 후 무엇이 안 되는지 한 화면에 모아 보여준다.
 // 각 check 는 독립 promise — 병렬 실행 + 개별 실패가 다른 검사 막지 않음.
 
-import type { SidecarStatus } from '../shared/types';
+import type { SidecarStatus, UpdaterState } from '../shared/types';
 
 // sidecar /health 응답 — preload 가 unknown 으로만 노출하므로 진단 모듈 안에서 narrow.
 export interface SidecarHealth {
@@ -29,7 +29,7 @@ export interface DiagResult {
   // 한 줄 요약. ok 면 ✅ 본문, warn/error 면 어떻게 고치면 되는지.
   message: string;
   // 사용자가 즉시 행동 가능한 단축키 (있으면 노출).
-  action?: { label: string; kind: 'open-settings' | 'reload-trees' | 'detect-onedrive' | 'discover-p4' };
+  action?: { label: string; kind: 'open-settings' | 'reload-trees' | 'detect-onedrive' | 'discover-p4' | 'check-update' };
   // 추가 detail (debug — 펼치기). multiline 가능.
   detail?: string;
 }
@@ -39,6 +39,7 @@ interface ProjkApi {
   getSidecarStatus: () => Promise<SidecarStatus>;
   getSidecarHealth: () => Promise<{ ok: boolean; body?: unknown; error?: string }>;
   getConfluenceCreds: () => Promise<{ email?: string; baseUrl?: string } | null>;
+  getUpdaterState?: () => Promise<{ state: UpdaterState; lastCheckedAt: number | null } | null>;
   oneDriveSync?: { detect: () => Promise<{ ok: boolean; account?: { email?: string } }> };
   p4?: { discover: () => Promise<{ ok: boolean; source?: string; user?: string; client?: string }> };
 }
@@ -54,9 +55,10 @@ export async function runAllDiagnostics(api: ProjkApi): Promise<DiagResult[]> {
   const credsP = api.getConfluenceCreds().catch(() => null);
   const oneDriveP = api.oneDriveSync?.detect().catch(() => ({ ok: false })) ?? Promise.resolve({ ok: false });
   const p4DiscoverP = api.p4?.discover().catch(() => ({ ok: false })) ?? Promise.resolve({ ok: false });
+  const updaterP = api.getUpdaterState?.().catch(() => null) ?? Promise.resolve(null);
 
-  const [settings, sidecarStatus, sidecarHealthRaw, creds, oneDrive, p4d] = await Promise.all([
-    settingsP, sidecarStatusP, sidecarHealthP, credsP, oneDriveP, p4DiscoverP,
+  const [settings, sidecarStatus, sidecarHealthRaw, creds, oneDrive, p4d, updater] = await Promise.all([
+    settingsP, sidecarStatusP, sidecarHealthP, credsP, oneDriveP, p4DiscoverP, updaterP,
   ]);
   const sidecarHealth: { ok: boolean; body?: SidecarHealth; error?: string } = {
     ok: sidecarHealthRaw.ok,
@@ -87,8 +89,8 @@ export async function runAllDiagnostics(api: ProjkApi): Promise<DiagResult[]> {
   // 7. agent backend 응답
   out.push(diagAgentBackend(settings, sidecarStatus));
 
-  // 8. Update feed URL
-  out.push(diagUpdateFeed(settings));
+  // 8. Auto-update — feed URL + 현재 updater state.
+  out.push(diagUpdater(settings, updater));
 
   // 9. OneDrive Sync 클라이언트
   out.push(diagOneDriveSync(oneDrive));
@@ -315,23 +317,97 @@ function diagAgentBackend(settings: Record<string, unknown>, status: SidecarStat
   };
 }
 
-function diagUpdateFeed(settings: Record<string, unknown>): DiagResult {
+function diagUpdater(
+  settings: Record<string, unknown>,
+  updater: { state: UpdaterState; lastCheckedAt: number | null } | null,
+): DiagResult {
   const url = settings.updateFeedUrl;
   if (!url || typeof url !== 'string' || !url.trim()) {
     return {
-      id: 'update-feed',
-      label: '자동 업데이트 피드',
+      id: 'updater',
+      label: '자동 업데이트',
       status: 'warn',
-      message: '미설정 — 새 버전 알림 안 옴',
+      message: '피드 URL 미설정 — 새 버전 알림 안 옴',
       action: { label: '설정 열기', kind: 'open-settings' },
     };
   }
-  return {
-    id: 'update-feed',
-    label: '자동 업데이트 피드',
-    status: 'ok',
-    message: url,
-  };
+  if (!updater) {
+    return {
+      id: 'updater',
+      label: '자동 업데이트',
+      status: 'pending',
+      message: `피드 ${url} — 상태 조회 중`,
+    };
+  }
+  const last = formatLastChecked(updater.lastCheckedAt);
+  switch (updater.state.state) {
+    case 'idle':
+      return {
+        id: 'updater',
+        label: '자동 업데이트',
+        status: updater.lastCheckedAt ? 'ok' : 'warn',
+        message: updater.lastCheckedAt
+          ? `최신 (${last}) · 피드 ${url}`
+          : `피드 ${url} — 아직 확인 전`,
+        action: { label: '지금 확인', kind: 'check-update' },
+      };
+    case 'checking':
+      return {
+        id: 'updater',
+        label: '자동 업데이트',
+        status: 'pending',
+        message: `확인 중… · 피드 ${url}`,
+      };
+    case 'not-available':
+      return {
+        id: 'updater',
+        label: '자동 업데이트',
+        status: 'ok',
+        message: `최신 v${updater.state.current} (${last})`,
+        action: { label: '지금 확인', kind: 'check-update' },
+      };
+    case 'available':
+      return {
+        id: 'updater',
+        label: '자동 업데이트',
+        status: 'pending',
+        message: `v${updater.state.version} 발견 — 다운로드 중`,
+      };
+    case 'downloading':
+      return {
+        id: 'updater',
+        label: '자동 업데이트',
+        status: 'pending',
+        message: `다운로드 ${Math.round(updater.state.percent)}%`,
+      };
+    case 'ready':
+      return {
+        id: 'updater',
+        label: '자동 업데이트',
+        status: 'warn',
+        message: `v${updater.state.version} 준비됨 — 토바의 indicator 클릭 시 재시작`,
+      };
+    case 'error':
+      return {
+        id: 'updater',
+        label: '자동 업데이트',
+        status: 'error',
+        message: `오류: ${updater.state.message}`,
+        detail: updater.state.message,
+        action: { label: '지금 확인', kind: 'check-update' },
+      };
+  }
+}
+
+function formatLastChecked(ts: number | null): string {
+  if (!ts) return '미실행';
+  const diff = Date.now() - ts;
+  if (diff < 60_000) return '방금';
+  const m = Math.round(diff / 60_000);
+  if (m < 60) return `${m}분 전`;
+  const h = Math.round(m / 60);
+  if (h < 24) return `${h}시간 전`;
+  return `${Math.round(h / 24)}일 전`;
 }
 
 function diagOneDriveSync(d: { ok: boolean; account?: { email?: string } }): DiagResult {

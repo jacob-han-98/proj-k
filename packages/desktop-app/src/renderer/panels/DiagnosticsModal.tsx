@@ -48,6 +48,13 @@ export function DiagnosticsModal({ onClose, onOpenSettings }: Props) {
         try { await window.projk.p4.discover(); } catch { /* ignore */ }
         await refresh();
         return;
+      case 'check-update':
+        try { await window.projk.checkForUpdate(); } catch { /* ignore */ }
+        // electron-updater 가 비동기로 state 갱신 — 즉시 refresh 시 옛 state 보일 수 있음.
+        // checking → result 까지 기다리는 식보단 한 번 짧은 delay 후 다시 검사.
+        await new Promise((r) => setTimeout(r, 500));
+        await refresh();
+        return;
     }
   };
 

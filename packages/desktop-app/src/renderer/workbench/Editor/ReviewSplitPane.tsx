@@ -131,12 +131,15 @@ export function ReviewSplitPane({ tabId: _tabId, title, text, trigger, confluenc
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trigger]);
 
-  const startFix = async () => {
+  // A5: filtered 는 ReviewCard 의 per-item feedback 적용 결과 — dislike 제외,
+  // edited 는 사용자 instruction 추가된 채. 이게 prompt 로 들어감 → 사용자가 정밀 통제.
+  const startFix = async (filtered?: ReviewData) => {
     if (busy || !review.data) return;
+    const source = filtered ?? review.data;
     const items: string[] = [];
     const labelMap = { issues: '⚠️ 보강', verifications: '🔍 검증', suggestions: '💡 제안' };
     (['issues', 'verifications', 'suggestions'] as const).forEach((cat) => {
-      (review.data?.[cat] ?? []).forEach((it) => {
+      (source[cat] ?? []).forEach((it) => {
         const t = typeof it === 'string' ? it : it.text;
         if (t) items.push(`[${labelMap[cat]}] ${t}`);
       });
@@ -227,7 +230,7 @@ export function ReviewSplitPane({ tabId: _tabId, title, text, trigger, confluenc
           error={review.error}
           streamBuffer={review.streamBuffer}
           status={review.status}
-          onFixRequest={() => void startFix()}
+          onFixRequest={(filtered) => void startFix(filtered)}
         />
         {changes && (
           <ChangesCard

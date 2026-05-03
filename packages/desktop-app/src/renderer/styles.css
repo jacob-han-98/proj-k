@@ -793,15 +793,95 @@ html, body, #root { height: 100%; margin: 0; padding: 0; background: var(--bg); 
   border-top: 1px solid var(--border);
 }
 .review-section > .review-item:first-of-type { border-top: none; padding-top: 0; }
+/* A5: perspective chip — 프로그래머/리더 색상 구분. chrome ext 의 .ri-perspective 와 같은 톤. */
 .review-perspective {
   display: inline-block;
   font-size: 10px;
-  padding: 1px 6px;
+  font-weight: 600;
+  padding: 1px 7px;
   margin-right: 6px;
-  border-radius: 3px;
+  border-radius: 999px;
   background: var(--hover);
   color: var(--text-dim);
+  letter-spacing: 0.2px;
 }
+.review-perspective.dev { background: #1d4ed833; color: #1d4ed8; }
+.review-perspective.lead { background: #9333ea33; color: #9333ea; }
+@media (prefers-color-scheme: dark) {
+  .review-perspective.dev { background: #3b82f633; color: #93c5fd; }
+  .review-perspective.lead { background: #a855f733; color: #d8b4fe; }
+}
+
+/* A5: per-item feedback row — 본문 + 👍👎✏ 버튼이 한 줄. dislike 시 회색/취소선. */
+.review-item-outer {
+  border-top: 1px solid var(--border);
+  padding: 4px 0;
+}
+.review-section > .review-item-outer:first-of-type { border-top: none; padding-top: 0; }
+.review-item-wrap {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+}
+.review-item-content {
+  flex: 1 1 auto;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--text);
+  min-width: 0;
+}
+.review-item-feedback {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 2px;
+  align-items: center;
+  /* hover 시 더 진하게 보이게 — 평소엔 약간 dim. */
+  opacity: 0.55;
+  transition: opacity 0.1s ease;
+}
+.review-item-outer:hover .review-item-feedback { opacity: 1; }
+.review-item-outer.disliked .review-item-content {
+  color: var(--text-dim);
+  text-decoration: line-through;
+  text-decoration-color: var(--text-dim);
+}
+.review-item-outer.disliked { opacity: 0.55; }
+.review-item-outer.edited .review-item-content { color: var(--text); }
+
+.ri-btn {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  user-select: none;
+  transition: background 0.08s ease;
+}
+.ri-btn:hover { background: var(--hover); }
+.ri-btn.active { background: var(--accent); color: var(--accent-fg); }
+.ri-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+
+.ri-edit-area {
+  margin-top: 6px;
+  padding-left: 4px;
+}
+.ri-edit-input {
+  width: 100%;
+  box-sizing: border-box;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-size: 11.5px;
+  font-family: inherit;
+  color: var(--text);
+  resize: vertical;
+}
+.ri-edit-input:focus { outline: 2px solid var(--accent); outline-offset: -2px; border-color: transparent; }
 
 .review-flow-content {
   font-size: 12px;
@@ -862,11 +942,13 @@ html, body, #root { height: 100%; margin: 0; padding: 0; background: var(--bg); 
   word-break: break-all;
 }
 
-/* ReviewCard 의 "원본 수정" CTA */
+/* ReviewCard 의 "원본 수정" CTA — A5 부터 hint 메시지 같이. */
 .review-cta {
   display: flex;
-  justify-content: flex-end;
+  flex-direction: column;
+  gap: 4px;
   padding-top: 4px;
+  align-items: flex-end;
 }
 .review-cta button {
   font-size: 12px;
@@ -878,6 +960,7 @@ html, body, #root { height: 100%; margin: 0; padding: 0; background: var(--bg); 
   cursor: pointer;
 }
 .review-cta button:disabled { opacity: 0.5; cursor: default; }
+.review-cta-hint { font-size: 10.5px; color: var(--text-dim); }
 
 /* ---------- Phase 4-3.5: ChangesCard (변경안 diff) ---------- */
 .changes-card {

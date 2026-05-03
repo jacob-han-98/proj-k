@@ -272,20 +272,33 @@ def test_health_includes_repo_root_exists_and_platform(
 
 
 def test_tree_endpoints_with_real_fs(monkeypatch: pytest.MonkeyPatch, tmp_path) -> None:
-    """진짜 파일시스템 (tmp_path) 으로 트리 빌더 검증."""
+    """진짜 파일시스템 (tmp_path) 으로 트리 빌더 검증.
+
+    0.1.51 부터: /tree/p4 는 사용자 P4 워크스페이스 (PROJK_P4_ROOT) 자체를 walk —
+    옛 xlsx-extractor/output 스냅샷 source 회귀 차단. confluence 는 그대로.
+    """
     import importlib
     import server as server_module
     importlib.reload(server_module)
     from fastapi.testclient import TestClient
 
-    # tmp 에 fixture 디렉터리 만들기
-    repo = tmp_path / "fake-repo"
-    xlsx_root = repo / "packages" / "xlsx-extractor" / "output"
-    (xlsx_root / "7_System" / "PK_HUD" / "기본" / "_final").mkdir(parents=True)
-    (xlsx_root / "7_System" / "PK_HUD" / "기본" / "_final" / "content.md").write_text("# 더미")
-    (xlsx_root / "7_System" / "PK_HUD" / "전투" / "_final").mkdir(parents=True)
-    (xlsx_root / "7_System" / "PK_HUD" / "전투" / "_final" / "content.md").write_text("# 더미")
+    # P4 워크스페이스 fixture
+    p4_ws = tmp_path / "fake-p4-ws"
+    sys_dir = p4_ws / "7_System"
+    sys_dir.mkdir(parents=True)
+    (sys_dir / "PK_HUD 시스템.xlsx").write_bytes(b"PK")
+    (sys_dir / "PK_NPC.xlsx").write_bytes(b"PK")
+    # 서브폴더 안 .xlsx — 옛 구현이 평면 구조만 처리해서 누락되던 케이스
+    sub = sys_dir / "경제밸런스"
+    sub.mkdir()
+    (sub / "PK_골드 밸런스.xlsx").write_bytes(b"PK")
+    # Excel 잠금 파일 — 트리에 노출되면 안 됨
+    (sys_dir / "~$PK_HUD 시스템.xlsx").write_bytes(b"lock")
+    # 비-xlsx 파일 — 트리 무시
+    (sys_dir / "README.md").write_text("ignore me")
 
+    # confluence 트리는 PROJK_REPO_ROOT 기반 별도 source — 같이 fixture
+    repo = tmp_path / "fake-repo"
     conf_out = repo / "packages" / "confluence-downloader" / "output"
     conf_out.mkdir(parents=True)
     (conf_out / "_manifest.json").write_text(json.dumps({
@@ -298,6 +311,7 @@ def test_tree_endpoints_with_real_fs(monkeypatch: pytest.MonkeyPatch, tmp_path) 
         ],
     }))
 
+    monkeypatch.setenv("PROJK_P4_ROOT", str(p4_ws))
     monkeypatch.setenv("PROJK_REPO_ROOT", str(repo))
     importlib.reload(server_module)
     client = TestClient(server_module.app)
@@ -309,12 +323,27 @@ def test_tree_endpoints_with_real_fs(monkeypatch: pytest.MonkeyPatch, tmp_path) 
     sys_cat = body["nodes"][0]
     assert sys_cat["title"] == "7_System"
     assert sys_cat["type"] == "category"
-    assert len(sys_cat["children"]) == 1
-    hud = sys_cat["children"][0]
-    assert hud["title"] == "PK_HUD"
-    # 0.1.43: workbook 자체가 leaf (sheet 노드 안 만듦). children 없음.
-    assert hud["type"] == "sheet"
-    assert hud.get("children") is None
+    # children 정렬: folder 가 위, sheet 가 아래
+    titles = [c["title"] for c in sys_cat["children"]]
+    assert titles == ["경제밸런스", "PK_HUD 시스템", "PK_NPC"]
+    # ~$lock 파일 / README.md 노출 안 됨
+    assert "~$PK_HUD 시스템" not in titles
+    assert "README" not in titles
+
+    # 서브폴더 — folder 노드, .xlsx 자식 한 개
+    folder = sys_cat["children"][0]
+    assert folder["type"] == "folder"
+    assert folder["relPath"] == "7_System/경제밸런스"
+    assert len(folder["children"]) == 1
+    gold = folder["children"][0]
+    assert gold["type"] == "sheet"
+    assert gold["title"] == "PK_골드 밸런스"
+    assert gold["relPath"] == "7_System/경제밸런스/PK_골드 밸런스"
+
+    # root level sheet — relPath 는 카테고리 + 파일명 (확장자 없음)
+    sheet = sys_cat["children"][1]
+    assert sheet["type"] == "sheet"
+    assert sheet["relPath"] == "7_System/PK_HUD 시스템"
 
     r = client.get("/tree/confluence")
     assert r.status_code == 200
@@ -322,6 +351,22 @@ def test_tree_endpoints_with_real_fs(monkeypatch: pytest.MonkeyPatch, tmp_path) 
     assert len(body["nodes"]) == 1
     assert body["nodes"][0]["title"] == "Design"
     assert body["nodes"][0]["children"][0]["title"] == "시스템"
+
+
+def test_tree_p4_empty_when_PROJK_P4_ROOT_unset(monkeypatch: pytest.MonkeyPatch) -> None:
+    """PROJK_P4_ROOT 미설정 시 트리 비어있음 (옛 xlsx-extractor fallback 제거)."""
+    import importlib
+    import server as server_module
+    monkeypatch.delenv("PROJK_P4_ROOT", raising=False)
+    importlib.reload(server_module)
+    from fastapi.testclient import TestClient
+    client = TestClient(server_module.app)
+
+    r = client.get("/tree/p4")
+    assert r.status_code == 200
+    body = r.json()
+    assert body["nodes"] == []
+    assert body["rootDir"] == ""
 
 
 def test_ask_stream_proxies_upstream_lines(monkeypatch: pytest.MonkeyPatch) -> None:

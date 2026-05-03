@@ -346,9 +346,23 @@ def _is_existing_file(p: Path) -> bool:
 
 
 def _build_p4_tree(root: Path) -> list[TreeNode]:
-    """xlsx-extractor/output/<category>/<workbook>/<sheet>/_final/content.md 구조를
-    Category → Workbook → Sheet 트리로. 9P/UNC + Linux symlink 위에서도 동작하도록
-    root 진입 시 한 번 _resolve_for_listing 거침.
+    """사용자 P4 워크스페이스(PROJK_P4_ROOT) 자체를 트리 source 로.
+
+    옛 구현은 xlsx-extractor/output 디렉토리 (AI 처리 결과의 스냅샷) 를 트리로 썼는데,
+    그게 사용자 워크스페이스의 실재 파일과 어긋나는 경우 트리엔 있지만 클릭하면 404
+    회귀가 나왔다. 이제 살아있는 워크스페이스 fs 를 그대로 트리로 → mismatch 원천 차단.
+
+    구조:
+      <P4 workspace root>/             ← D:\\ProjectK\\Design 같은 곳
+        7_System/                       ← category (top-level dir)
+          PK_HUD 시스템.xlsx              ← workbook leaf (relPath = '7_System/PK_HUD 시스템')
+          경제밸런스/                     ← folder (nested)
+            PK_골드 밸런스.xlsx           ← workbook leaf
+
+    relPath 규칙: P4 root 기준 상대경로에서 `.xlsx` 확장자만 떼냄. 기존 sheetMappings
+    및 xlsx_raw API 컨벤션과 호환. 서브 폴더 안 파일도 그대로 (예: '7_System/경제밸런스/PK_골드 밸런스').
+
+    9P/UNC + Linux symlink 위에서도 동작하도록 root 진입 시 한 번 _resolve_for_listing 거침.
     """
     root = _resolve_for_listing(root)
     top_entries = _scandir_dirs(root)
@@ -356,65 +370,73 @@ def _build_p4_tree(root: Path) -> list[TreeNode]:
         return []
 
     categories: list[TreeNode] = []
-    loose_workbooks: list[TreeNode] = []
-
     for name, entry_path in top_entries:
-        # workbook 으로 보이는지 (자식 안에 _final/content.md 있는 시트가 있음)
-        looks_like_workbook = False
-        for _sub_name, sub_path in _scandir_dirs(entry_path):
-            if _is_existing_file(sub_path / "_final" / "content.md"):
-                looks_like_workbook = True
-                break
-
-        if looks_like_workbook:
-            wb = _build_workbook(entry_path, root)
-            if wb:
-                loose_workbooks.append(wb)
-        else:
-            workbooks: list[TreeNode] = []
-            for _sub_name, sub_path in _scandir_dirs(entry_path):
-                wb = _build_workbook(sub_path, root)
-                if wb:
-                    workbooks.append(wb)
-            if workbooks:
-                workbooks.sort(key=lambda n: n.title)
-                categories.append(TreeNode(
-                    id=f"cat:{name}",
-                    type="category",
-                    title=name,
-                    children=workbooks,
-                ))
-
-    categories.sort(key=lambda n: n.title)
-    if loose_workbooks:
-        loose_workbooks.sort(key=lambda n: n.title)
+        children = _walk_xlsx_dir(entry_path, root)
+        if not children:
+            continue
+        children.sort(key=_node_sort_key)
         categories.append(TreeNode(
-            id="cat:_misc",
+            id=f"cat:{name}",
             type="category",
-            title="(기타)",
-            children=loose_workbooks,
+            title=name,
+            children=children,
         ))
+
+    categories.sort(key=_node_sort_key)
     return categories
 
 
-def _build_workbook(workbook_dir: Path, root: Path) -> TreeNode | None:
-    # workbook 안에 _final/content.md 있는 sheet 가 하나라도 있으면 — workbook 자체를
-    # leaf 로 (sheet 단위 노드는 만들지 않음). OneDrive 매핑이 파일 단위이므로 트리도
-    # 파일 단위 leaf 가 자연스러움. 시트 탭 navigation 은 webview 안에서.
-    has_any_sheet = False
-    for _, sub_path in _scandir_dirs(workbook_dir):
-        if _is_existing_file(sub_path / "_final" / "content.md"):
-            has_any_sheet = True
-            break
-    if not has_any_sheet:
-        return None
-    rel_wb = workbook_dir.relative_to(root).as_posix()
-    return TreeNode(
-        id=f"sheet:{rel_wb}",
-        type="sheet",
-        title=workbook_dir.name,
-        relPath=rel_wb,
-    )
+def _node_sort_key(n: TreeNode) -> tuple[int, str]:
+    # folder 가 위, sheet 가 아래로 정렬 (VS Code 익숙한 순서). 같은 type 내에선 title.
+    type_rank = 0 if n.type == "folder" else (1 if n.type == "category" else 2)
+    return (type_rank, n.title.casefold())
+
+
+def _walk_xlsx_dir(dir_path: Path, root: Path) -> list[TreeNode]:
+    """디렉토리 안 .xlsx 파일들을 leaf 로, 서브디렉토리는 folder 노드로 (재귀).
+    .xlsx 가 없는 서브트리는 결과에 포함 안 됨 (빈 카테고리·폴더 안 보임).
+    """
+    nodes: list[TreeNode] = []
+    # files (workbook leaves)
+    try:
+        with os.scandir(dir_path) as it:
+            entries = list(it)
+    except OSError as e:
+        print(f"[tree_p4] scandir 실패 {dir_path}: {e}", flush=True)
+        return []
+    for entry in entries:
+        if not entry.is_file():
+            continue
+        name = entry.name
+        # Excel 잠금 파일 (`~$파일명.xlsx`) 은 트리에 노출 X
+        if name.startswith("~$"):
+            continue
+        if not name.lower().endswith(".xlsx"):
+            continue
+        rel_xlsx = Path(entry.path).relative_to(root).as_posix()
+        rel_no_ext = rel_xlsx[: -len(".xlsx")]
+        title = name[: -len(".xlsx")]
+        nodes.append(TreeNode(
+            id=f"sheet:{rel_no_ext}",
+            type="sheet",
+            title=title,
+            relPath=rel_no_ext,
+        ))
+    # subdirectories (folder nodes, recursive)
+    for sub_name, sub_path in _scandir_dirs(dir_path):
+        sub_children = _walk_xlsx_dir(sub_path, root)
+        if not sub_children:
+            continue
+        sub_children.sort(key=_node_sort_key)
+        rel_dir = sub_path.relative_to(root).as_posix()
+        nodes.append(TreeNode(
+            id=f"folder:{rel_dir}",
+            type="folder",
+            title=sub_name,
+            relPath=rel_dir,
+            children=sub_children,
+        ))
+    return nodes
 
 
 def _build_confluence_tree(manifest_path: Path) -> list[TreeNode]:
@@ -460,16 +482,17 @@ def _build_confluence_tree(manifest_path: Path) -> list[TreeNode]:
 
 @app.get("/tree/p4", response_model=TreeResult)
 def tree_p4() -> TreeResult:
-    repo = _repo_root()
-    if not repo:
+    # 트리 source = 사용자 P4 워크스페이스 (PROJK_P4_ROOT). 없으면 빈 트리.
+    # 0.1.51 이전: xlsx-extractor/output 을 source 로 썼는데 옛 스냅샷이라 사용자 실재 파일과
+    # 어긋나서 트리엔 보이는데 클릭하면 404 회귀 발생. 이제 살아있는 워크스페이스를 직접 walk.
+    p4 = _normalize_repo_root(os.environ.get("PROJK_P4_ROOT") or "")
+    if not p4:
         return TreeResult(nodes=[], rootDir="", loadedAt=int(time.time() * 1000))
-    root = Path(repo) / "packages" / "xlsx-extractor" / "output"
+    root = Path(p4)
     nodes = _build_p4_tree(root)
     debug: dict[str, Any] | None = None
     if not nodes:
-        # 빈 결과 시 path-by-path drill 결과를 응답에 포함 → assert-tree 에 박혀
-        # events.log 로 즉시 보임. log 보다 빠른 진단.
-        debug = _drill_diag(Path(repo))
+        debug = _drill_diag(root)
         print(f"[tree_p4] empty → drill={debug}", flush=True)
     return TreeResult(
         nodes=nodes, rootDir=str(root), loadedAt=int(time.time() * 1000), debug=debug
@@ -523,9 +546,17 @@ def xlsx_raw(relPath: str) -> FileResponse:
                 media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 filename=f"{Path(relPath).name}.xlsx",
             )
+    # 사용자 P4 워크스페이스에 sync 안 받은 파일 — xlsx-extractor output 의 옛 스냅샷에는 있어
+    # 트리에 노출됐지만 실재는 없음. /tree/p4 의 available=false 마킹과 같은 케이스. 트리 회색
+    # 아이콘으로 사전에 차단했으면 여기 도달 X — Klaud 의 다른 진입점 (검색·QuickFind 등) 이
+    # 매핑 없이 호출했을 때만 도달. 진단 가능한 메시지 포함.
     raise HTTPException(
         status_code=404,
-        detail=f"파일 없음 (시도: {', '.join(str(c) for c in candidates)})",
+        detail=(
+            f"'{relPath}' 가 사용자 P4 워크스페이스에 sync 되어 있지 않음. "
+            f"P4 sync 받거나 depot 트리에서 보세요. "
+            f"(시도한 후보: {', '.join(str(c) for c in candidates)})"
+        ),
     )
 
 

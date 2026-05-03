@@ -8,6 +8,7 @@ import {
   loadFixture,
   saveFixture,
 } from '../../panels/review-fixture-cache';
+import { readErrorMessage, readToken } from '../../stream-events';
 
 // PR4: ChatPanel 에 있던 리뷰/변경안 파이프라인을 editor 탭의 우측 split 으로 이전.
 // 탭별 isolated — props 로 받은 (tabId, trigger, title, text) 가 바뀌면 (= 새 리뷰 요청)
@@ -52,14 +53,7 @@ function readStatus(e: { [k: string]: unknown }): string | null {
   const v = e.message ?? e.payload;
   return typeof v === 'string' ? v : null;
 }
-function readToken(e: { [k: string]: unknown }): string | null {
-  const v = e.token ?? e.payload ?? e.text ?? e.delta;
-  return typeof v === 'string' ? v : null;
-}
-function readError(e: { [k: string]: unknown }): string | null {
-  const v = e.error ?? e.message ?? e.payload;
-  return typeof v === 'string' ? v : null;
-}
+const readError = readErrorMessage;
 function stripMarkdownFence(s: string): string {
   return s.replace(/^```[a-z]*\s*/i, '').replace(/\s*```\s*$/, '').trim();
 }

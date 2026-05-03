@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { askStream, getPresetPrompts, searchDocs, type PresetPrompt } from '../../api';
 import { annotateCitedHits, splitAnswerWithCitations } from '../../citations';
 import { SourceModal } from '../../panels/SourceModal';
+import { readResultData, readToken, type StreamEvent } from '../../stream-events';
 import type { SearchHit, ThreadDocRef } from '../../../shared/types';
 import { useWorkbenchStore } from '../store';
 
@@ -246,27 +247,31 @@ export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Pr
     setMessages((m) => [...m, { role: 'assistant', content: '' }]);
     try {
       await askStream(q, (event) => {
-        const e = event as { type: string; payload: unknown };
-        if (e.type === 'token' && typeof e.payload === 'string') {
-          assembled += e.payload;
-          setMessages((m) => {
-            const copy = [...m];
-            copy[copy.length - 1] = { role: 'assistant', content: assembled };
-            return copy;
-          });
-        } else if (
-          e.type === 'result' &&
-          typeof e.payload === 'object' &&
-          e.payload &&
-          'answer' in (e.payload as Record<string, unknown>)
-        ) {
-          const ans = String((e.payload as Record<string, unknown>).answer ?? '');
-          assembled = ans;
-          setMessages((m) => {
-            const copy = [...m];
-            copy[copy.length - 1] = { role: 'assistant', content: assembled };
-            return copy;
-          });
+        const e = event as unknown as StreamEvent;
+        if (e.type === 'token') {
+          // agent (2026-05): {type:"token", text:"..."}. 옛 mock 은 {payload:"..."}.
+          // readToken 이 양쪽 다 받음.
+          const tok = readToken(e);
+          if (tok) {
+            assembled += tok;
+            setMessages((m) => {
+              const copy = [...m];
+              copy[copy.length - 1] = { role: 'assistant', content: assembled };
+              return copy;
+            });
+          }
+        } else if (e.type === 'result') {
+          // agent: {type:"result", data:{answer, sources, follow_ups, ...}}. 옛 mock: {payload:{answer:...}}.
+          const data = readResultData(e);
+          const ans = data && typeof data.answer === 'string' ? data.answer : null;
+          if (ans) {
+            assembled = ans;
+            setMessages((m) => {
+              const copy = [...m];
+              copy[copy.length - 1] = { role: 'assistant', content: assembled };
+              return copy;
+            });
+          }
         }
       });
     } catch (e) {

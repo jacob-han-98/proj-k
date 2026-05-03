@@ -175,14 +175,17 @@ export const mockProjkInitScript = `
       }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
     if (url.includes('/ask_stream')) {
-      // 답변 안에 (출처: ...) 패턴을 넣어 인용 매칭 동작을 검증할 수 있게 한다.
+      // agent-sdk-poc (2026-05) 신규 schema: token={text}, result={data:{answer}}.
+      // Klaud 의 readToken/readResultData 가 양쪽 받지만 mock 은 신규 schema 따라가
+      // 실제 backend 와 동일한 contract 검증.
       const finalAnswer = 'HUD 의 기본 레이아웃은 ① 상단 정보바, ② 좌측 미니맵으로 구성됩니다 (출처: PK_HUD 시스템.xlsx / HUD_기본 § 레이아웃).';
       const body = [
-        { type: 'status', payload: 'mock 시작' },
-        { type: 'token', payload: 'HUD 의 ' },
-        { type: 'token', payload: '기본 레이아웃은 ' },
-        { type: 'token', payload: '... ' },
-        { type: 'result', payload: { answer: finalAnswer } },
+        { type: 'status', message: 'mock 시작' },
+        { type: 'stage', stage: 'writing', label: '답변 작성' },
+        { type: 'token', text: 'HUD 의 ' },
+        { type: 'token', text: '기본 레이아웃은 ' },
+        { type: 'token', text: '... ' },
+        { type: 'result', data: { answer: finalAnswer } },
       ].map((e) => JSON.stringify(e) + '\\n').join('');
       return new Response(body, { status: 200, headers: { 'Content-Type': 'application/x-ndjson' } });
     }

@@ -229,7 +229,7 @@ export function App() {
             // 0.1.50 — webview 의 실제 src 가 set 됐는지 확인 (key/src race 디버깅).
             attrs: Object.fromEntries(
               Array.from(el.attributes)
-                .filter((a) => ['src', 'href', 'partition', 'key', 'data-testid'].includes(a.name) || a.name.startsWith('data-'))
+                .filter((a) => ['src', 'href', 'partition', 'key', 'title', 'data-testid'].includes(a.name) || a.name.startsWith('data-') || a.name.startsWith('aria-'))
                 .map((a) => [a.name, a.value.slice(0, 200)]),
             ),
           }));

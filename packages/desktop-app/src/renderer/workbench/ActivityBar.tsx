@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { useEffect, type ReactNode } from 'react';
 import type { SidebarKind } from './types';
 import { useWorkbenchStore } from './store';
 
@@ -63,31 +63,61 @@ interface ActivityItem {
   kind: SidebarKind;
   icon: ActivityIconSpec;
   title: string;
+  // Ctrl/Cmd + 이 키로 패널 활성화. order = ITEMS 인덱스+1.
+  shortcutDigit: '1' | '2' | '3' | '4';
 }
 
 const ITEMS: ActivityItem[] = [
-  { kind: 'p4', icon: { type: 'svg', render: () => <PerforceIcon /> }, title: 'Perforce' },
-  { kind: 'confluence', icon: { type: 'svg', render: () => <ConfluenceIcon /> }, title: 'Confluence' },
-  { kind: 'find', icon: { type: 'codicon', name: 'search' }, title: '빠른 검색' },
-  { kind: 'qna', icon: { type: 'codicon', name: 'comment-discussion' }, title: 'QnA' },
+  { kind: 'p4', icon: { type: 'svg', render: () => <PerforceIcon /> }, title: 'Perforce', shortcutDigit: '1' },
+  { kind: 'confluence', icon: { type: 'svg', render: () => <ConfluenceIcon /> }, title: 'Confluence', shortcutDigit: '2' },
+  { kind: 'find', icon: { type: 'codicon', name: 'search' }, title: '빠른 검색', shortcutDigit: '3' },
+  { kind: 'qna', icon: { type: 'codicon', name: 'comment-discussion' }, title: 'QnA', shortcutDigit: '4' },
 ];
+
+// Ctrl/Cmd+숫자 → 해당 activity 패널로 전환. VS Code 의 Ctrl+Shift+E/F 등가물 — 4 개라
+// 그냥 숫자 키. input/textarea/contenteditable 에 focus 있을 땐 단축키 무시 — 사용자가
+// 텍스트 입력 중 충돌 회피.
+function shouldIgnoreShortcut(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return true;
+  if (target.isContentEditable) return true;
+  return false;
+}
 
 export function ActivityBar() {
   const activeIcon = useWorkbenchStore((s) => s.activeIcon);
   const setActiveIcon = useWorkbenchStore((s) => s.setActiveIcon);
 
+  // Ctrl/Cmd+1~4 단축키 — window 레벨 keydown listener.
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      // ctrl 또는 cmd 만 — shift/alt 함께면 충돌 가능 (VS Code 의 Ctrl+Shift+P 등) → 무시.
+      if (!(e.ctrlKey || e.metaKey)) return;
+      if (e.shiftKey || e.altKey) return;
+      if (shouldIgnoreShortcut(e.target)) return;
+      const item = ITEMS.find((it) => it.shortcutDigit === e.key);
+      if (!item) return;
+      e.preventDefault();
+      setActiveIcon(item.kind);
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [setActiveIcon]);
+
   return (
     <nav className="activity-bar" data-testid="activity-bar" aria-label="Activity Bar">
       {ITEMS.map((item) => {
         const isActive = activeIcon === item.kind;
+        const shortcutLabel = `Ctrl+${item.shortcutDigit}`;
         return (
           <button
             key={item.kind}
             type="button"
             className={`activity-bar-item${isActive ? ' active' : ''}`}
             data-testid={`activity-${item.kind}`}
-            title={item.title}
-            aria-label={item.title}
+            title={`${item.title} (${shortcutLabel})`}
+            aria-label={`${item.title} (${shortcutLabel})`}
+            aria-keyshortcuts={`Control+${item.shortcutDigit}`}
             aria-pressed={isActive}
             onClick={() => setActiveIcon(item.kind)}
           >

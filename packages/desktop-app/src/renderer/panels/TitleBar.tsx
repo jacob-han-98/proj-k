@@ -17,9 +17,11 @@ interface Props {
   sidecar: SidecarStatus;
   breadcrumb: string;
   onOpenSettings: () => void;
+  // C1: 환경 진단 모달 트리거.
+  onOpenDiagnostics: () => void;
 }
 
-export function TitleBar({ sidecar, breadcrumb, onOpenSettings }: Props) {
+export function TitleBar({ sidecar, breadcrumb, onOpenSettings, onOpenDiagnostics }: Props) {
   const [maximized, setMaximized] = useState(false);
 
   useEffect(() => {
@@ -53,6 +55,15 @@ export function TitleBar({ sidecar, breadcrumb, onOpenSettings }: Props) {
           {sidecar.port ? ` :${sidecar.port}` : ''}
           {sidecar.message && sidecar.state !== 'ready' ? ` — ${sidecar.message}` : ''}
         </span>
+        <button
+          type="button"
+          className="topbar-settings"
+          onClick={onOpenDiagnostics}
+          data-testid="topbar-diagnostics"
+          title="환경 진단 — 설정 누락 / 사이드카 / 백엔드 연결 상태 확인"
+        >
+          🩺
+        </button>
         <button
           type="button"
           className="topbar-settings"

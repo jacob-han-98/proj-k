@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { SearchHit, SidecarStatus, TreeNode } from '../shared/types';
 import { SettingsModal } from './panels/SettingsModal';
+import { DiagnosticsModal } from './panels/DiagnosticsModal';
 import { UpdateToast } from './panels/UpdateToast';
 import { ActivityBar } from './workbench/ActivityBar';
 import { TitleBar } from './panels/TitleBar';
@@ -17,6 +18,7 @@ export function App() {
   const [sidecar, setSidecar] = useState<SidecarStatus>({ state: 'starting', port: null, pid: null });
   const [credsInfo, setCredsInfo] = useState<{ email: string; baseUrl: string; hasToken: boolean } | null>(null);
   const [showCreds, setShowCreds] = useState(false);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
   const [threadListKey, setThreadListKey] = useState(0); // refresh trigger
   const [sheetMappings, setSheetMappings] = useState<Record<string, string>>({});
@@ -394,6 +396,7 @@ export function App() {
         sidecar={sidecar}
         breadcrumb={selection ? selection.node.title : '시작하려면 좌측 트리에서 문서를 선택하세요'}
         onOpenSettings={() => setShowCreds(true)}
+        onOpenDiagnostics={() => setShowDiagnostics(true)}
       />
 
       <ActivityBar />
@@ -456,6 +459,16 @@ export function App() {
           onSaved={async () => {
             await refreshCreds();
             setShowCreds(false);
+          }}
+        />
+      )}
+
+      {showDiagnostics && (
+        <DiagnosticsModal
+          onClose={() => setShowDiagnostics(false)}
+          onOpenSettings={() => {
+            setShowDiagnostics(false);
+            setShowCreds(true);
           }}
         />
       )}

@@ -20,6 +20,7 @@ vi.mock('node:fs/promises', async () => {
     stat: vi.fn(),
     writeFile: vi.fn(),
     mkdir: vi.fn(),
+    copyFile: vi.fn(),
   };
 });
 // pollSharePointReady 가 session.fromPartition('persist:onedrive').fetch 호출 — main process
@@ -31,12 +32,23 @@ vi.mock('electron', () => ({
   },
 }));
 
+// copyFile 도 모킹 — uploadDepotFileAndUrl + syncUploadAndUrl 가 호출 (실제 fs IO 회피).
+vi.mock('node:fs', async () => {
+  const actual = await vi.importActual<typeof import('node:fs')>('node:fs');
+  return {
+    ...actual,
+    existsSync: vi.fn(() => true),
+  };
+});
+
 import { execSync } from 'node:child_process';
-import { stat, writeFile, mkdir } from 'node:fs/promises';
+import { stat, writeFile, mkdir, copyFile } from 'node:fs/promises';
 import {
   __setPollOptionsForTests,
   detectSyncAccount,
   ensureFreshSync,
+  syncUploadAndUrl,
+  uploadDepotFileAndUrl,
   type SyncProgressEvent,
 } from '../../src/main/onedrive-sync';
 
@@ -44,6 +56,7 @@ const execMock = execSync as unknown as ReturnType<typeof vi.fn>;
 const statMock = stat as unknown as ReturnType<typeof vi.fn>;
 const writeMock = writeFile as unknown as ReturnType<typeof vi.fn>;
 const mkdirMock = mkdir as unknown as ReturnType<typeof vi.fn>;
+const copyFileMock = copyFile as unknown as ReturnType<typeof vi.fn>;
 
 function makeHeadResponse(status: number, location: string | null = null): Response {
   // node Response constructor — 200 / 3xx 만 직접 만들 수 있고 4xx/5xx 도 가능.
@@ -61,6 +74,7 @@ beforeEach(() => {
   statMock.mockReset();
   writeMock.mockReset().mockResolvedValue(undefined);
   mkdirMock.mockReset().mockResolvedValue(undefined);
+  copyFileMock.mockReset().mockResolvedValue(undefined);
   // 폴링 default — 첫 attempt 에 SharePoint redirect 로 즉시 ready (Doc.aspx). 개별 테스트가 override 가능.
   sessionFetchMock.mockReset().mockResolvedValue(
     makeHeadResponse(302, 'https://t-my.sharepoint.com/personal/u/_layouts/15/Doc.aspx?sourcedoc=...'),
@@ -348,5 +362,50 @@ describe('SharePoint HEAD-poll — 25s sleep 대체', () => {
     // maxMs=100ms 안에 1ms + 1ms + 1.5ms + 2ms ... 폴링 → 최소 몇 회 이상.
     expect(sessionFetchMock.mock.calls.length).toBeGreaterThanOrEqual(2);
     fetchSpy.mockRestore();
+  });
+
+  it('uploadDepotFileAndUrl 도 폴링 사용 — Klaud-depot 폴더 URL 검증', async () => {
+    setupAccount();
+    sessionFetchMock.mockReset().mockResolvedValue(
+      makeHeadResponse(302, 'https://t-my.sharepoint.com/personal/u/_layouts/15/Doc.aspx?sourcedoc=z'),
+    );
+
+    const t0 = Date.now();
+    const r = await uploadDepotFileAndUrl(
+      '//main/ProjectK/Design/7_System/PK_HUD.xlsx',
+      'C:/tmp/dep_xxx.xlsx',
+    );
+    const elapsed = Date.now() - t0;
+
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      // depot URL 은 Klaud-depot 폴더 + // prefix 제거 + 확장자 떼고 다시 붙임 패턴.
+      expect(r.url).toContain('Klaud-depot');
+      expect(r.url).toContain('main/ProjectK/Design/7_System/PK_HUD.xlsx');
+      expect(r.url).toContain('web=1');
+    }
+    // 폴링이 첫 시도에 ready → 100ms 안. 옛 15s sleep 이면 15000ms 걸렸을 것.
+    expect(elapsed).toBeLessThan(200);
+    expect(sessionFetchMock).toHaveBeenCalledTimes(1);
+    expect(copyFileMock).toHaveBeenCalled();
+  });
+
+  it('syncUploadAndUrl (legacy file picker) 도 폴링 사용', async () => {
+    setupAccount();
+    sessionFetchMock.mockReset().mockResolvedValue(
+      makeHeadResponse(302, 'https://t-my.sharepoint.com/personal/u/_layouts/15/Doc.aspx'),
+    );
+
+    const t0 = Date.now();
+    const r = await syncUploadAndUrl('C:/local/PK_HUD.xlsx', '7_System/PK_HUD');
+    const elapsed = Date.now() - t0;
+
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.url).toContain('Klaud-temp');
+      expect(r.url).toContain('web=1');
+    }
+    expect(elapsed).toBeLessThan(200);
+    expect(sessionFetchMock).toHaveBeenCalledTimes(1);
   });
 });

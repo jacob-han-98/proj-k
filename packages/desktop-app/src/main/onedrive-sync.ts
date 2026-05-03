@@ -94,16 +94,9 @@ function buildEmbedUrl(account: OneDriveSyncAccount, relPath: string): string {
   return `${account.userUrl}/Documents/${KLAUD_TEMP_DIR}/${encodedRelPath}.xlsx?web=1`;
 }
 
-// dest path 의 NTFS attribute polling — OneDrive Sync 가 file 을 클라우드로 upload
-// 한 후에는 `cloud-only` 또는 `available locally` 마크가 attrib 에 노출됨.
-// 정확한 비트는 OneDrive 버전마다 달라서 PoC 는 단순 sleep 으로 처리.
-async function waitForSync(_dest: string, maxMs: number): Promise<void> {
-  await new Promise((r) => setTimeout(r, maxMs));
-}
-
-// SharePoint HEAD-poll — file 이 클라우드 도달했는지 능동 확인. backgroundSync 의
-// hardcoded 25s sleep 을 대체. 작은 파일은 1~3초 만에 통과, 큰 파일도 정확히 도달
-// 시점에 progress 'completed' fire → 사용자 체감 빠름.
+// SharePoint HEAD-poll — file 이 클라우드 도달했는지 능동 확인. 옛 hardcoded
+// sleep (15~25s) 모두 이걸로 대체. 작은 파일은 1~3초 만에 통과, 큰 파일도 정확히 도달
+// 시점에 ready → 호출자가 곧바로 webview 띄움. 사용자 체감 빠름.
 //
 // 동작:
 //   1) 초기 1초 대기 (OneDrive Sync 클라이언트가 새 파일 인지하고 upload 시작할 시간).
@@ -143,6 +136,7 @@ export function __setPollOptionsForTests(opts: PollSpReadyOptions | null): void 
 
 async function pollSharePointReady(
   account: OneDriveSyncAccount,
+  folder: string,
   relPath: string,
   options: PollSpReadyOptions = {},
 ): Promise<PollSpReadyResult> {
@@ -155,7 +149,7 @@ async function pollSharePointReady(
   const { session } = await import('electron');
   const onedriveSession = session.fromPartition('persist:onedrive');
   const encodedRelPath = relPath.split('/').map(encodeURIComponent).join('/');
-  const checkUrl = `${account.userUrl}/Documents/${KLAUD_TEMP_DIR}/${encodedRelPath}.xlsx`;
+  const checkUrl = `${account.userUrl}/Documents/${folder}/${encodedRelPath}.xlsx`;
 
   const t0 = Date.now();
   let attempts = 0;
@@ -231,8 +225,8 @@ export async function syncUploadAndUrl(
   } catch (e) {
     return { ok: false, error: `sync 폴더 복사 실패: ${(e as Error).message}` };
   }
-  // 15초 대기 — 7초는 짧아서 webview 가 404 받음.
-  await waitForSync(dest, 15000);
+  const poll = await pollSharePointReady(account, KLAUD_TEMP_DIR, relPath);
+  console.log(`[onedrive-sync] sp-poll(upload) ${relPath} ready=${poll.ready} ${poll.elapsedMs}ms attempts=${poll.attempts} status=${poll.lastStatus} reason=${poll.reason}`);
   return { ok: true, url: buildEmbedUrl(account, relPath), localPath: dest, account };
 }
 
@@ -266,7 +260,8 @@ export async function syncFromSidecarAndUrl(
   } catch (e) {
     return { ok: false, error: `sync 폴더 write 실패: ${(e as Error).message}` };
   }
-  await waitForSync(dest, 15000);
+  const poll = await pollSharePointReady(account, KLAUD_TEMP_DIR, relPath);
+  console.log(`[onedrive-sync] sp-poll(auto) ${relPath} ready=${poll.ready} ${poll.elapsedMs}ms attempts=${poll.attempts} status=${poll.lastStatus} reason=${poll.reason}`);
   return { ok: true, url: buildEmbedUrl(account, relPath), localPath: dest, account };
 }
 
@@ -347,7 +342,7 @@ async function backgroundSync(
     // SharePoint 능동 polling — 작은 파일은 수초 만에 ready, 큰 파일은 정확히 도달 시점.
     // 옛 hardcoded 25s sleep 대체. timeout (30s) 시점엔 그냥 진행 — webview 는 어차피
     // 사용자 SSO chain 이 끝나면 SharePoint 응답 받음.
-    const poll = await pollSharePointReady(account, relPath);
+    const poll = await pollSharePointReady(account, KLAUD_TEMP_DIR, relPath);
     console.log(
       `[onedrive-sync] sp-poll ${relPath} ready=${poll.ready} ${poll.elapsedMs}ms ` +
       `attempts=${poll.attempts} status=${poll.lastStatus} reason=${poll.reason}`,
@@ -437,6 +432,7 @@ export async function uploadDepotFileAndUrl(
   } catch (e) {
     return { ok: false, error: `OneDrive depot 폴더 복사 실패: ${(e as Error).message}` };
   }
-  await waitForSync(dest, 15000);
+  const poll = await pollSharePointReady(account, KLAUD_DEPOT_DIR, rel);
+  console.log(`[onedrive-sync] sp-poll(depot) ${rel} ready=${poll.ready} ${poll.elapsedMs}ms attempts=${poll.attempts} status=${poll.lastStatus} reason=${poll.reason}`);
   return { ok: true, url: buildDepotEmbedUrl(account, rel), localPath: dest, account };
 }

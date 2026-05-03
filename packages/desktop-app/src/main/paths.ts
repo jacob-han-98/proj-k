@@ -21,16 +21,27 @@ export function getRepoRoot(): string {
   return detectRepoRoot();
 }
 
-export function getDesktopAppDir(): string {
+// 0.1.51: desktop-app 의 *코드* (sidecar python source / venv / requirements.txt 등)
+// 위치는 사용자 데이터 repoRoot 와 분리. 옛 구현은 둘 다 repoRoot 기반이라 사용자가
+// settings.repoRoot 에 WSL UNC (`\\wsl.localhost\...\proj-k`) 를 잡으면 sidecar 코드도
+// WSL 측 server.py 가 import 됨 → e:\ 측 변경이 반영 안 되는 회귀 발생.
+//
+// 새 동작:
+// - dev: app.getAppPath() = packages/desktop-app 본 패키지 디렉토리 (electron-vite 가 실행되는
+//   곳. package.json 위치). 사용자가 Klaud 를 어느 OS 측에서 실행했든 그 본체 코드를 따라감.
+// - packaged: process.resourcesPath (electron-builder 가 sidecar/ 를 거기 복사).
+function detectDesktopAppDir(): string {
   if (app.isPackaged) return process.resourcesPath;
-  const root = detectRepoRoot();
-  return root ? resolve(root, 'packages/desktop-app') : '';
+  return app.getAppPath();
+}
+
+export function getDesktopAppDir(): string {
+  return detectDesktopAppDir();
 }
 
 export function getSidecarDir(): string {
   if (app.isPackaged) return join(process.resourcesPath, 'sidecar');
-  const root = detectRepoRoot();
-  return root ? resolve(root, 'packages/desktop-app/src/sidecar') : '';
+  return resolve(detectDesktopAppDir(), 'src/sidecar');
 }
 
 export function getXlsxOutputDir(): string {

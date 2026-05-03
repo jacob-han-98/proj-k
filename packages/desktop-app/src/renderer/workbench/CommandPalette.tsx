@@ -198,7 +198,7 @@ export function CommandPalette() {
           data-testid="cmd-palette-input"
           type="text"
           spellCheck={false}
-          placeholder="파일 / 페이지 빠르게 찾기 (P4 local · depot · Confluence 통합)"
+          placeholder="파일 / 페이지 검색  (Ctrl+P) — P4 local · depot · Confluence 통합"
           value={query}
           onChange={(e) => {
             setQuery(e.target.value);

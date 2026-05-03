@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { SidecarStatus } from '../../shared/types';
 import { UpdateIndicator } from './UpdateIndicator';
+import { useWorkbenchStore } from '../workbench/store';
 
 // VS Code 스타일 frameless title bar.
 // main process 에서 BrowserWindow({frame:false}) 로 OS 기본 title bar 가 사라졌고,
@@ -25,6 +26,7 @@ interface Props {
 
 export function TitleBar({ sidecar, breadcrumb, onOpenSettings, onOpenDiagnostics, onOpenAgentWeb }: Props) {
   const [maximized, setMaximized] = useState(false);
+  const openPalette = useWorkbenchStore((s) => s.openPalette);
 
   useEffect(() => {
     void window.projk.win.isMaximized().then(setMaximized);
@@ -46,6 +48,24 @@ export function TitleBar({ sidecar, breadcrumb, onOpenSettings, onOpenDiagnostic
       <span className="breadcrumb" style={{ color: 'var(--text-dim)' }}>
         {breadcrumb}
       </span>
+
+      <span className="topbar-spacer" aria-hidden="true" />
+
+      {/* VSCode 스타일 — 타이틀바 가운데 검색 trigger. 클릭/포커스 → CommandPalette open. */}
+      <button
+        type="button"
+        className="topbar-search-trigger no-drag"
+        onClick={openPalette}
+        data-testid="topbar-search-trigger"
+        title="파일 / 페이지 빠르게 찾기"
+      >
+        <i className="codicon codicon-search" aria-hidden="true" />
+        <span className="topbar-search-label">파일 / 페이지 검색</span>
+        <kbd className="topbar-search-kbd">Ctrl+P</kbd>
+      </button>
+
+      <span className="topbar-spacer" aria-hidden="true" />
+
       <div className="topbar-actions no-drag">
         <UpdateIndicator />
         <span

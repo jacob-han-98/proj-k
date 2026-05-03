@@ -108,6 +108,55 @@ html, body, #root { height: 100%; margin: 0; padding: 0; background: var(--bg); 
   -webkit-app-region: drag;
   user-select: none;
 }
+/* 검색 trigger 좌우의 균형 spacer — 두 spacer 가 같은 flex 라 검색이 시각 중앙. */
+.topbar-spacer {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* VSCode 스타일 — 타이틀바 가운데 검색 trigger. 클릭 → CommandPalette open. */
+.topbar-search-trigger {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-size: 11px;
+  color: var(--text-dim);
+  cursor: pointer;
+  width: min(420px, 36vw);
+  height: 22px;
+  white-space: nowrap;
+  /* drag 영역 안 — 단축키 hint 받으려 명시적으로 제외. */
+  -webkit-app-region: no-drag;
+}
+.topbar-search-trigger:hover {
+  border-color: var(--accent);
+  color: var(--text);
+  background: var(--hover);
+}
+.topbar-search-trigger:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+.topbar-search-trigger .codicon { font-size: 12px; }
+.topbar-search-label {
+  flex: 1;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.topbar-search-kbd {
+  font-family: inherit;
+  font-size: 10px;
+  background: var(--hover);
+  padding: 1px 5px;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+}
 .topbar .no-drag,
 .topbar button,
 .topbar input,
@@ -117,14 +166,15 @@ html, body, #root { height: 100%; margin: 0; padding: 0; background: var(--bg); 
 }
 .topbar .title { font-weight: 600; }
 .topbar .breadcrumb {
-  flex: 1 1 auto;
+  /* 검색 trigger 가 가운데로 가도록 max-width 제한 — 길어지면 ellipsis. */
+  flex: 0 1 auto;
   min-width: 0;
+  max-width: 30%;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .topbar .topbar-actions {
-  margin-left: auto;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1904,23 +1954,25 @@ html, body, #root { height: 100%; margin: 0; padding: 0; background: var(--bg); 
 }
 
 /* A2: Command Palette — VS Code Ctrl+P 등가물. modal overlay 형태. */
+/* VSCode 의 Ctrl+P palette 와 동등 — 타이틀바 (36px) 바로 아래 + 가로 중앙. backdrop 은
+   거의 투명에 가깝게 — palette 만 떠있는 느낌 (다른 영역 dim 안 함). */
 .cmd-palette-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.4);
+  background: rgba(0, 0, 0, 0.18);
   z-index: 100;
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  padding-top: 80px;
+  padding-top: 40px;
 }
 .cmd-palette {
-  width: min(640px, calc(100vw - 64px));
-  max-height: calc(100vh - 160px);
+  width: min(600px, calc(100vw - 64px));
+  max-height: calc(100vh - 120px);
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  border-radius: 6px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.55);
   display: flex;
   flex-direction: column;
   overflow: hidden;

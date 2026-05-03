@@ -20,6 +20,15 @@ test('Ctrl+P 누르면 Command Palette 열림 + 다시 누르면 닫힘 (toggle)
   await expect(page.getByTestId('cmd-palette')).toHaveCount(0);
 });
 
+test('타이틀바 검색 trigger 클릭 → palette open + Ctrl+P 단축키 hint 노출', async ({ page }) => {
+  const trigger = page.getByTestId('topbar-search-trigger');
+  await expect(trigger).toBeVisible();
+  await expect(trigger).toContainText('Ctrl+P');
+  await trigger.click();
+  await expect(page.getByTestId('cmd-palette')).toBeVisible();
+  await expect(page.getByTestId('cmd-palette-input')).toBeFocused();
+});
+
 test('ESC 로 닫기', async ({ page }) => {
   await page.keyboard.press('Control+p');
   await expect(page.getByTestId('cmd-palette')).toBeVisible();

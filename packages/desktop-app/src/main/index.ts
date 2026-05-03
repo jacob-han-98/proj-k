@@ -75,6 +75,7 @@ function createWindow(): void {
 // chrome-extension 처럼 "이미 로그인 되어있으면 그대로, 막히면 로그인 화면" 동선.
 function installPartitions(): void {
   session.fromPartition('persist:confluence'); // Atlassian / Confluence
+  session.fromPartition('persist:agent');      // agent-sdk-poc 웹 임베드 (회사 SSO 쿠키 영속)
   const onedriveSession = session.fromPartition('persist:onedrive'); // OneDrive / SharePoint / Office for the Web
 
   // SharePoint 가 webview embed 거부 또는 redirect 끝에 file download 응답 (Content-Disposition:

@@ -6,6 +6,7 @@ import type { SplitPayload } from '../store';
 import { QnATab } from './QnATab';
 import { ReviewSplitPane } from './ReviewSplitPane';
 import { TabBar } from './TabBar';
+import { AgentWebView } from './AgentWebView';
 
 interface Props {
   // CenterPane 이 받던 prop 그대로 forward — App.tsx 에서 한 단계 깊어진 것 외에 동작 차이 0.
@@ -56,6 +57,8 @@ export function EditorHost(props: Props) {
                     onOpenHit={props.onOpenHit}
                     onOpenDoc={props.onOpenDoc}
                   />
+                ) : tab.kind === 'agent-web' ? (
+                  <AgentWebView />
                 ) : (
                   <DocTabContent
                     tabId={tab.id}

@@ -5,14 +5,17 @@ import { useWorkbenchStore } from '../store';
 // 활성 탭은 editor 배경과 같은 색 + 상단 2px accent. 닫기 X 는 hover 시 등장.
 
 function iconFor(kind: DocTabKind): string {
-  // codicons. confluence = book, excel = table, qna-thread = comment-discussion.
+  // codicons. confluence = book, excel = table, qna-thread = comment-discussion, agent-web = sparkle.
   if (kind === 'confluence') return 'book';
   if (kind === 'excel') return 'table';
+  if (kind === 'agent-web') return 'sparkle';
   return 'comment-discussion';
 }
 
 function titleOf(tab: DocTab): string {
-  return tab.kind === 'qna-thread' ? tab.title : tab.node.title;
+  if (tab.kind === 'qna-thread') return tab.title;
+  if (tab.kind === 'agent-web') return 'Agent';
+  return tab.node.title;
 }
 
 export function TabBar() {

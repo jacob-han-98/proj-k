@@ -19,9 +19,11 @@ interface Props {
   onOpenSettings: () => void;
   // C1: 환경 진단 모달 트리거.
   onOpenDiagnostics: () => void;
+  // agent-sdk-poc 웹 임베드 탭 트리거.
+  onOpenAgentWeb: () => void;
 }
 
-export function TitleBar({ sidecar, breadcrumb, onOpenSettings, onOpenDiagnostics }: Props) {
+export function TitleBar({ sidecar, breadcrumb, onOpenSettings, onOpenDiagnostics, onOpenAgentWeb }: Props) {
   const [maximized, setMaximized] = useState(false);
 
   useEffect(() => {
@@ -55,6 +57,15 @@ export function TitleBar({ sidecar, breadcrumb, onOpenSettings, onOpenDiagnostic
           {sidecar.port ? ` :${sidecar.port}` : ''}
           {sidecar.message && sidecar.state !== 'ready' ? ` — ${sidecar.message}` : ''}
         </span>
+        <button
+          type="button"
+          className="topbar-settings"
+          onClick={onOpenAgentWeb}
+          data-testid="topbar-agent-web"
+          title="Agent 웹 UI 임베드 — 대화 / 관리 / 공유 / 출처 분할 등 모든 web 기능"
+        >
+          🤖
+        </button>
         <button
           type="button"
           className="topbar-settings"

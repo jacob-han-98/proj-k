@@ -176,6 +176,10 @@ export function App() {
       setSelectedThreadId((prev) => (prev === tab.threadId ? prev : tab.threadId));
       return;
     }
+    if (tab.kind === 'agent-web') {
+      // agent-web 탭은 트리 selection 과 무관 — 이전 selection 유지.
+      return;
+    }
     const kind: 'sheet' | 'confluence' = tab.kind === 'confluence' ? 'confluence' : 'sheet';
     setSelection((prev) => {
       if (prev && prev.node.id === tab.node.id && prev.kind === kind) return prev;
@@ -397,6 +401,7 @@ export function App() {
         breadcrumb={selection ? selection.node.title : '시작하려면 좌측 트리에서 문서를 선택하세요'}
         onOpenSettings={() => setShowCreds(true)}
         onOpenDiagnostics={() => setShowDiagnostics(true)}
+        onOpenAgentWeb={() => useWorkbenchStore.getState().openTab({ kind: 'agent-web' })}
       />
 
       <ActivityBar />

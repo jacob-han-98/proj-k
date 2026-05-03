@@ -7,19 +7,21 @@ import type { TreeNode } from '../../shared/types';
 
 export type SidebarKind = 'p4' | 'confluence' | 'find' | 'qna' | 'recent';
 
-export type DocTabKind = 'confluence' | 'excel' | 'qna-thread';
+export type DocTabKind = 'confluence' | 'excel' | 'qna-thread' | 'agent-web';
 
 // Editor 탭. union 으로 종류별 필요한 페이로드만 들고 있게.
 export type DocTab =
   | { id: string; kind: 'confluence'; node: TreeNode }
   | { id: string; kind: 'excel'; node: TreeNode }
-  | { id: string; kind: 'qna-thread'; threadId: string; title: string };
+  | { id: string; kind: 'qna-thread'; threadId: string; title: string }
+  | { id: string; kind: 'agent-web' };
 
 // openTab 액션 인풋. id 는 store 가 tabIdOf 로 자동 생성.
 export type OpenTabSpec =
   | { kind: 'confluence'; node: TreeNode }
   | { kind: 'excel'; node: TreeNode }
-  | { kind: 'qna-thread'; threadId: string; title: string };
+  | { kind: 'qna-thread'; threadId: string; title: string }
+  | { kind: 'agent-web' };
 
 export function tabIdOf(spec: OpenTabSpec): string {
   if (spec.kind === 'confluence') {
@@ -31,7 +33,9 @@ export function tabIdOf(spec: OpenTabSpec): string {
     if (spec.node.oneDriveUrl) return `excel:${spec.node.id}`;
     return `excel:${spec.node.relPath ?? spec.node.id}`;
   }
-  return `qna:${spec.threadId}`;
+  if (spec.kind === 'qna-thread') return `qna:${spec.threadId}`;
+  // agent-web: 단일 인스턴스. 같은 ID 로 항상 매칭 → 두 번째 클릭은 focus 만.
+  return 'agent-web:singleton';
 }
 
 // 편집 모드 추적용 안정 키. 같은 depot 파일의 여러 revision (각각 독립 탭) 도 같은 docKey 를

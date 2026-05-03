@@ -77,6 +77,8 @@ export const useWorkbenchStore = create<WorkbenchState>((set) => ({
     let tab: DocTab;
     if (spec.kind === 'qna-thread') {
       tab = { id, kind: 'qna-thread', threadId: spec.threadId, title: spec.title };
+    } else if (spec.kind === 'agent-web') {
+      tab = { id, kind: 'agent-web' };
     } else {
       tab = { id, kind: spec.kind, node: spec.node };
     }
@@ -164,6 +166,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set) => ({
 
 // A4: OpenTabSpec → RecentDocEntry 변환. payload 는 RecentDocsPanel 이 reopen 시 그대로
 // onOpenSheet/onOpenConfluencePage/onOpenThreadInEditor 에 넘기는 데 쓴다.
+// agent-web 은 기록 안 함 — 단일 글로벌 탭이라 history 가치 없음.
 function touchRecentDocFromSpec(spec: OpenTabSpec, id: string): void {
   if (spec.kind === 'excel' || spec.kind === 'confluence') {
     const node = spec.node;
@@ -176,11 +179,12 @@ function touchRecentDocFromSpec(spec: OpenTabSpec, id: string): void {
     });
     return;
   }
-  // qna-thread
-  touchRecentDoc({
-    kind: 'qna-thread',
-    id,
-    title: spec.title,
-    payload: { threadId: spec.threadId, title: spec.title },
-  });
+  if (spec.kind === 'qna-thread') {
+    touchRecentDoc({
+      kind: 'qna-thread',
+      id,
+      title: spec.title,
+      payload: { threadId: spec.threadId, title: spec.title },
+    });
+  }
 }

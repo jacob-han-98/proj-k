@@ -2235,3 +2235,23 @@ html, body, #root { height: 100%; margin: 0; padding: 0; background: var(--bg); 
   max-height: 200px;
   overflow-y: auto;
 }
+
+/* agent-sdk-poc 웹 임베드 — 풀화면 webview. */
+.agent-web-pane { display: flex; flex-direction: column; height: 100%; }
+.agent-web-pane webview { flex: 1; }
+.agent-web-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  text-align: center;
+  padding: 32px;
+}
+.agent-web-empty code {
+  font-family: ui-monospace, monospace;
+  background: var(--hover);
+  padding: 1px 6px;
+  border-radius: 3px;
+  font-size: 11px;
+}

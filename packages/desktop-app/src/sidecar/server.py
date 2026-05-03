@@ -560,6 +560,104 @@ def xlsx_raw(relPath: str) -> FileResponse:
     )
 
 
+# B3: P4 시트 리뷰용 — xlsx-extractor 가 변환한 sheet 별 content.md 들을 워크북 단위로
+# concat 해 반환. ConfluencePane 의 webview innerText 추출에 대응되는 LocalSheetView 의
+# 본문 추출 채널.
+#
+# 출력 layout (xlsx-extractor 컨벤션):
+#   <repo_root>/packages/xlsx-extractor/output/
+#     <workbook_basename>/
+#       <sheet_a>/_final/content.md
+#       <sheet_b>/_final/content.md
+#
+# relPath: P4 트리의 sheet 노드가 들고 있는 경로 (예: "7_System/PK_HUD 시스템"). basename
+# 만 추려 output 안 워크북 디렉토리를 찾는다 — xlsx-extractor 가 카테고리 경로를 보존하지
+# 않고 워크북 이름만으로 디렉토리를 만들기 때문.
+#
+# 응답:
+#   { workbook, source_dir, sheets: [{name, content, char_count}], total_chars }
+# 못 찾으면 404.
+
+
+def _sheet_content_root() -> Path | None:
+    repo = _repo_root()
+    if not repo:
+        return None
+    p = Path(repo) / "packages" / "xlsx-extractor" / "output"
+    return p if p.is_dir() else None
+
+
+@app.get("/sheet_content")
+def sheet_content(relPath: str, max_chars: int = 60_000) -> dict:
+    root = _sheet_content_root()
+    if root is None:
+        raise HTTPException(
+            status_code=503,
+            detail="xlsx-extractor/output 디렉토리 미발견 (PROJK_REPO_ROOT 확인)",
+        )
+    workbook = Path(relPath).name
+    if not workbook:
+        raise HTTPException(status_code=400, detail="relPath 가 비어있음")
+    wb_dir = root / workbook
+    if not wb_dir.is_dir():
+        raise HTTPException(
+            status_code=404,
+            detail=f"워크북 디렉토리 없음: {workbook} (xlsx-extractor 미실행 가능성)",
+        )
+    sheets: list[dict] = []
+    total = 0
+    try:
+        sheet_dirs = sorted(p for p in wb_dir.iterdir() if p.is_dir() and not p.name.startswith("_"))
+    except OSError as e:
+        raise HTTPException(status_code=500, detail=f"sheet 디렉토리 스캔 실패: {e!s}")
+    for sheet_dir in sheet_dirs:
+        content_path = sheet_dir / "_final" / "content.md"
+        if not content_path.is_file():
+            continue
+        try:
+            text = content_path.read_text(encoding="utf-8")
+        except OSError as e:
+            print(f"[sheet_content] read 실패 {content_path}: {e}", flush=True)
+            continue
+        # 너무 큰 워크북은 truncate — LLM context 보호. 사용자 안내 후 잘림 표시.
+        remaining = max_chars - total
+        if remaining <= 0:
+            sheets.append({
+                "name": sheet_dir.name,
+                "content": "",
+                "char_count": len(text),
+                "truncated": True,
+            })
+            continue
+        if len(text) > remaining:
+            sheets.append({
+                "name": sheet_dir.name,
+                "content": text[:remaining] + f"\n\n... ({len(text):,} 자 중 {remaining:,} 자만 포함)",
+                "char_count": len(text),
+                "truncated": True,
+            })
+            total = max_chars
+        else:
+            sheets.append({
+                "name": sheet_dir.name,
+                "content": text,
+                "char_count": len(text),
+                "truncated": False,
+            })
+            total += len(text)
+    if not sheets:
+        raise HTTPException(
+            status_code=404,
+            detail=f"워크북 디렉토리는 있으나 sheet content.md 없음: {workbook}",
+        )
+    return {
+        "workbook": workbook,
+        "source_dir": str(wb_dir),
+        "sheets": sheets,
+        "total_chars": total,
+    }
+
+
 # 0.1.50 (Step 1+2) — main 이 OneDrive sync 폴더의 사본과 mtime 비교해 stale 인지 확인
 # 후 필요할 때만 xlsx_raw 로 다운로드. raw 의 byte 스트림 없이 light HEAD-ish 응답.
 @app.get("/xlsx_stat")

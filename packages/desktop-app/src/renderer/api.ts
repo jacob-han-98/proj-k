@@ -47,6 +47,54 @@ export async function getSourceView(path: string, section = ''): Promise<SourceV
   }
 }
 
+// B3: P4 시트 리뷰 — xlsx-extractor 가 변환한 sheet 별 content.md 들을 워크북 단위로 합쳐
+// 반환. ConfluencePane 의 webview innerText 추출에 대응되는 LocalSheetView 의 본문 채널.
+//
+// 응답: { workbook, sheets: [{name, content, char_count, truncated}], total_chars }
+// 호출자는 sheet content 를 markdown header (## <sheet name>) 로 묶어 review_stream 에 보냄.
+export interface SheetContentSheet {
+  name: string;
+  content: string;
+  char_count: number;
+  truncated?: boolean;
+}
+export interface SheetContentResult {
+  workbook: string;
+  source_dir: string;
+  sheets: SheetContentSheet[];
+  total_chars: number;
+}
+export async function getSheetContent(
+  relPath: string,
+  maxChars = 60_000,
+): Promise<SheetContentResult | null> {
+  try {
+    const port = await ensurePort();
+    const url = new URL(`http://127.0.0.1:${port}/sheet_content`);
+    url.searchParams.set('relPath', relPath);
+    url.searchParams.set('max_chars', String(maxChars));
+    const res = await fetch(url.toString());
+    if (!res.ok) return null;
+    return (await res.json()) as SheetContentResult;
+  } catch {
+    return null;
+  }
+}
+
+// markdown 헤더로 workbook 을 묶어 review_stream 에 보낼 단일 텍스트.
+// ConfluencePane 의 innerText 추출과 동등 — review_stream 입력 contract 준수.
+export function flattenSheetContent(result: SheetContentResult): string {
+  const parts: string[] = [`# ${result.workbook}`, ''];
+  for (const s of result.sheets) {
+    parts.push(`## ${s.name}`);
+    parts.push('');
+    parts.push(s.content);
+    if (s.truncated) parts.push('\n_(잘림)_');
+    parts.push('');
+  }
+  return parts.join('\n');
+}
+
 // A3-c: agent server-side conversation 관리 — admin 목록 / 상세 / fork / shared 읽기.
 // agent-sdk-poc 가 자체 storage 에 conversation 별 turns 를 저장. Klaud thread (SQLite)
 // 와는 별개 — 추후 conversation_id ↔ thread 매핑이 들어가야 UI 통합 가능.

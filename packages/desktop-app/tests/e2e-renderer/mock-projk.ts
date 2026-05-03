@@ -145,6 +145,25 @@ export const mockProjkInitScript = `
       const ndjson = lines.map((l) => JSON.stringify(l) + '\\n').join('');
       return new Response(ndjson, { status: 200, headers: { 'Content-Type': 'application/x-ndjson' } });
     }
+    if (url.includes('/sheet_content')) {
+      // B3: 워크북 sheet content 들 — LocalSheetView 의 리뷰 버튼이 호출.
+      // 실제 sidecar 는 relPath 의 basename = 워크북. mock 의 fakeP4Tree 는 옛 tree shape
+      // (sheet 노드까지 relPath 에 포함) 라 PK_HUD 가 들어있는 어떤 path 든 워크북으로 매칭.
+      const u = new URL(url);
+      const relPath = u.searchParams.get('relPath') ?? '';
+      if (relPath.includes('PK_HUD')) {
+        return new Response(JSON.stringify({
+          workbook: 'PK_HUD 시스템',
+          source_dir: '/mock/xlsx-extractor/output/PK_HUD 시스템',
+          sheets: [
+            { name: 'HUD_기본', content: '# HUD_기본\\n\\n레이아웃 ...', char_count: 24, truncated: false },
+            { name: 'HUD_전투', content: '# HUD_전투\\n\\n전투 HUD ...', char_count: 22, truncated: false },
+          ],
+          total_chars: 46,
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+      return new Response('not found', { status: 404 });
+    }
     if (url.includes('/source_view')) {
       // A3-b: citation drill-down. mock 답변에 (출처: PK_HUD 시스템.xlsx / HUD_기본 § 레이아웃)
       // 가 들어있으니 그 path 가 들어오면 fixture content 반환. 다른 path 는 404 같은 null.

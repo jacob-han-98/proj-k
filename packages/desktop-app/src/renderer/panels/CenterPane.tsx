@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { TreeNode } from '../../shared/types';
 import { useWorkbenchStore } from '../workbench/store';
 import { docKeyOfNode } from '../workbench/types';
+import { flattenSheetContent, getSheetContent } from '../api';
 
 // Excel for the Web 임베드 URL 의 ?action= 값을 스왑.
 // **0.1.50 회귀 보류**: ?action=embedview 시도 후 사용자 환경에서 SharePoint 가 file
@@ -102,6 +103,7 @@ export function CenterPane({
         relPath={relPath}
         cachedUrl={sheetMappings[relPath] ?? null}
         onUpsertMapping={onUpsertSheetMapping}
+        onRequestReview={onRequestReview}
       />
     );
   }
@@ -319,8 +321,12 @@ function LocalSheetView(props: {
   relPath: string;
   cachedUrl: string | null;
   onUpsertMapping: (relPath: string, url: string) => void;
+  // B3: 워크북 sheet content 추출 → review_stream 입력. xlsx-extractor 미실행 / 출력 없으면
+  // 버튼은 노출되지만 클릭 시 alert 후 원위치.
+  onRequestReview?: (title: string, text: string) => void;
 }) {
-  const { node, relPath, cachedUrl, onUpsertMapping } = props;
+  const { node, relPath, cachedUrl, onUpsertMapping, onRequestReview } = props;
+  const [extractingReview, setExtractingReview] = useState(false);
   const [url, setUrl] = useState<string | null>(cachedUrl);
   const [bgSyncing, setBgSyncing] = useState(false);
   const [fallback, setFallback] = useState(false);
@@ -342,6 +348,27 @@ function LocalSheetView(props: {
   // 에서는 빼서 mount/relPath 변경 시에만 1회 실행되게 한다.
   const onUpsertMappingRef = useRef(onUpsertMapping);
   useEffect(() => { onUpsertMappingRef.current = onUpsertMapping; }, [onUpsertMapping]);
+
+  // B3: sheet content 추출 → review_stream 입력. xlsx-extractor 미실행 또는 워크북 디렉토리
+  // 부재 시 sidecar 가 404 → null → 사용자에게 안내 alert.
+  const requestSheetReview = async () => {
+    if (!onRequestReview) return;
+    setExtractingReview(true);
+    try {
+      const r = await getSheetContent(relPath);
+      if (!r) {
+        alert(
+          '리뷰할 sheet content 를 찾을 수 없습니다.\n\n' +
+            'xlsx-extractor 변환이 안 된 워크북일 수 있어요. ' +
+            'WSL 측에서 packages/xlsx-extractor 를 한 번 돌리면 활성화됩니다.',
+        );
+        return;
+      }
+      onRequestReview(r.workbook, flattenSheetContent(r));
+    } finally {
+      setExtractingReview(false);
+    }
+  };
 
   // mount + relPath 변경 시 ensureFresh 호출.
   useEffect(() => {
@@ -473,6 +500,17 @@ function LocalSheetView(props: {
             >
               🔄 OneDrive 동기화 중…
             </span>
+          )}
+          {onRequestReview && (
+            <button
+              onClick={requestSheetReview}
+              disabled={extractingReview}
+              data-testid="sheet-review"
+              title="xlsx-extractor 가 변환한 sheet content 들을 LLM 으로 리뷰"
+              style={{ marginRight: 6 }}
+            >
+              {extractingReview ? '추출 중…' : '📋 리뷰'}
+            </button>
           )}
           <button
             onClick={() => window.open(displayUrl, '_blank')}

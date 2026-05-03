@@ -214,7 +214,9 @@ def _make_options(
         cwd=str(POC_DIR),
         # 조사 깊이 제어: cross-check 류 timeout 방지 (CLAUDE.md '효율 가이드' 참조).
         # compare_mode 는 oracle/web 단계가 추가되어 더 길게 허용.
-        max_turns=20 if compare_mode else 14,
+        # 14 → 20 (2026-05-03): overview/카테고리 정리 질문이 parallel 부하 하에서 14턴 소진 후
+        # 0자 응답으로 종료되는 케이스 발견 (full-suite 144 중 1건). 비용 영향 작고 안정성 향상.
+        max_turns=24 if compare_mode else 20,
         model=resolved,
         env={
             "CLAUDE_CODE_USE_BEDROCK": os.environ.get("CLAUDE_CODE_USE_BEDROCK", "1"),

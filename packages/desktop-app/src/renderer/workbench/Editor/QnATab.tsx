@@ -1,8 +1,16 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { askStream, getPresetPrompts, searchDocs, type PresetPrompt } from '../../api';
-import { annotateCitedHits } from '../../citations';
+import { annotateCitedHits, splitAnswerWithCitations } from '../../citations';
+import { SourceModal } from '../../panels/SourceModal';
 import type { SearchHit, ThreadDocRef } from '../../../shared/types';
 import { useWorkbenchStore } from '../store';
+
+// A3-b: 답변 안 (출처: ...) 클릭 → modal. 클릭 시 selectedCitation 으로 modal 띄움.
+interface CitationTarget {
+  raw: string;
+  path: string;
+  section: string;
+}
 
 // PR6: 사이드바 "+ 새" 가 만든 default 제목. 사용자가 직접 rename 하기 전엔 이 값이라
 // QnATab 의 첫 메시지가 도착하면 자동으로 그 메시지 30자로 갈아낀다.
@@ -109,6 +117,8 @@ export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Pr
   // A3-a: agent 의 큐레이션된 추천 prompt — empty 화면의 진입 장벽 제거. messages.length===0
   // 일 때만 노출. 클릭 시 input 자동 채움 (사용자가 추가 편집 후 보낼 수 있게 send 자동 X).
   const [presets, setPresets] = useState<PresetPrompt[]>([]);
+  // A3-b: citation 클릭 → /source_view modal. null 이면 닫힘.
+  const [selectedCitation, setSelectedCitation] = useState<CitationTarget | null>(null);
   const taRef = useRef<HTMLTextAreaElement | null>(null);
 
   // mount 시 자기 thread bundle 자체 fetch — 영속된 messages/docs 복원.
@@ -382,8 +392,10 @@ export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Pr
           </div>
         )}
         {messages.map((m, i) => (
-          <div key={i} className={`msg ${m.role}`}>
-            {m.content || '…'}
+          <div key={i} className={`msg ${m.role}`} data-testid={`msg-${m.role}-${i}`}>
+            {m.role === 'assistant' && m.content
+              ? renderAssistantContent(m.content, setSelectedCitation)
+              : m.content || '…'}
           </div>
         ))}
       </div>
@@ -412,6 +424,40 @@ export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Pr
           {busy ? '…' : '보내기'}
         </button>
       </div>
+
+      {selectedCitation && (
+        <SourceModal
+          raw={selectedCitation.raw}
+          path={selectedCitation.path}
+          section={selectedCitation.section}
+          onClose={() => setSelectedCitation(null)}
+        />
+      )}
     </aside>
   );
+}
+
+// A3-b: assistant content 안 (출처: ...) 패턴을 click 가능 button 으로 렌더.
+// streaming 중 incomplete citation (닫는 ')' 미도달) 은 splitAnswerWithCitations 가
+// 매칭 못해서 plain text 로 남는다 — 자연스럽게 stream 이 끝나면 link 로 변신.
+function renderAssistantContent(
+  content: string,
+  onPick: (c: CitationTarget) => void,
+): ReactNode {
+  const segments = splitAnswerWithCitations(content);
+  return segments.map((seg, idx) => {
+    if (seg.kind === 'text') {
+      return <span key={idx}>{seg.text}</span>;
+    }
+    return (
+      <button
+        key={idx}
+        type="button"
+        className="citation-link"
+        title={`출처 보기 — ${seg.raw}`}
+        onClick={() => onPick({ raw: seg.raw, path: seg.path, section: seg.section })}
+        data-testid={`citation-link-${idx}`}
+      >📑 출처</button>
+    );
+  });
 }

@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { extractCitationStrings, annotateCitedHits } from '../../src/renderer/citations';
+import {
+  extractCitationStrings,
+  annotateCitedHits,
+  splitAnswerWithCitations,
+} from '../../src/renderer/citations';
 import type { SearchHit } from '../../src/shared/types';
 
 const hit = (over: Partial<SearchHit>): SearchHit => ({
@@ -71,5 +75,61 @@ describe('annotateCitedHits', () => {
     const answer = '...(출처: A.xlsx / 시트)';
     const hits = [hit({ title: 'A' })];
     expect(annotateCitedHits(answer, hits)[0].cited).toBe(false);
+  });
+});
+
+describe('splitAnswerWithCitations', () => {
+  it('단일 citation 을 text + citation + text 로 분해', () => {
+    const ans = '앞 (출처: PK_HUD 시스템.xlsx / HUD_기본 § 레이아웃) 뒤';
+    const segs = splitAnswerWithCitations(ans);
+    expect(segs).toEqual([
+      { kind: 'text', text: '앞 ' },
+      {
+        kind: 'citation',
+        raw: 'PK_HUD 시스템.xlsx / HUD_기본 § 레이아웃',
+        path: 'PK_HUD 시스템.xlsx / HUD_기본',
+        section: '레이아웃',
+      },
+      { kind: 'text', text: ' 뒤' },
+    ]);
+  });
+
+  it('인용 없는 텍스트는 단일 text segment', () => {
+    expect(splitAnswerWithCitations('plain text')).toEqual([{ kind: 'text', text: 'plain text' }]);
+  });
+
+  it('빈 문자열은 빈 배열', () => {
+    expect(splitAnswerWithCitations('')).toEqual([]);
+  });
+
+  it('연속 citation 사이 사이 빈 text 도 보존하지 않고 직접 인접', () => {
+    // m.index 와 lastIdx 가 같은 경우 빈 text 를 push 하지 않음.
+    // splitPathSection 은 § / # 만 section 구분자로 인식 — '/' 는 path 안 그대로.
+    const ans = '(출처: A § a)(출처: B § b)';
+    const segs = splitAnswerWithCitations(ans);
+    expect(segs).toEqual([
+      { kind: 'citation', raw: 'A § a', path: 'A', section: 'a' },
+      { kind: 'citation', raw: 'B § b', path: 'B', section: 'b' },
+    ]);
+  });
+
+  it('§ 가 없으면 path 만, section 빈 문자열', () => {
+    const segs = splitAnswerWithCitations('foo (출처: external/game/A.md)');
+    expect(segs[1]).toEqual({
+      kind: 'citation',
+      raw: 'external/game/A.md',
+      path: 'external/game/A.md',
+      section: '',
+    });
+  });
+
+  it('# 도 § 와 동등하게 section 구분자로 인식', () => {
+    const segs = splitAnswerWithCitations('foo (출처: A.xlsx / 시트 # 헤더)');
+    expect(segs[1]).toEqual({
+      kind: 'citation',
+      raw: 'A.xlsx / 시트 # 헤더',
+      path: 'A.xlsx / 시트',
+      section: '헤더',
+    });
   });
 });

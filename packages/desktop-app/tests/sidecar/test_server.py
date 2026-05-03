@@ -486,6 +486,103 @@ def test_preset_prompts_handles_upstream_failure(monkeypatch: pytest.MonkeyPatch
     assert res.json() == {"presets": []}
 
 
+def test_source_view_503_when_agent_unset(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A3-b: PROJK_AGENT_URL 미설정 시 — 503 (UI 가 modal 안 fallback 표시)."""
+    monkeypatch.delenv("PROJK_AGENT_URL", raising=False)
+    import importlib
+    import server as server_module
+    importlib.reload(server_module)
+    client = TestClient(server_module.app)
+    res = client.get("/source_view", params={"path": "PK_HUD.xlsx / HUD_기본"})
+    assert res.status_code == 503
+
+
+def test_source_view_proxies_upstream(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A3-b: agent 의 /source_view 응답 그대로 forward."""
+    monkeypatch.setenv("PROJK_AGENT_URL", "http://agent.test")
+
+    import importlib
+    import server as server_module
+    importlib.reload(server_module)
+
+    fake_view = {
+        "path": "PK_HUD.xlsx / HUD_기본",
+        "section": "레이아웃",
+        "content": "# HUD_기본\n\n## 레이아웃\n\n상단 정보바 ...",
+        "section_range": [10, 50],
+        "origin_label": "P4 / PK_HUD",
+        "source": "p4",
+    }
+
+    captured: dict = {}
+
+    class _MockResponse:
+        status_code = 200
+
+        def json(self):
+            return fake_view
+
+    class _MockClient:
+        def __init__(self, *_a, **_kw):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_a):
+            return False
+
+        async def get(self, url, params=None):
+            captured["url"] = url
+            captured["params"] = params
+            return _MockResponse()
+
+    monkeypatch.setattr(server_module.httpx, "AsyncClient", _MockClient)
+    client = TestClient(server_module.app)
+    res = client.get(
+        "/source_view",
+        params={"path": "PK_HUD.xlsx / HUD_기본", "section": "레이아웃"},
+    )
+    assert res.status_code == 200
+    assert res.json() == fake_view
+    assert captured["params"] == {
+        "path": "PK_HUD.xlsx / HUD_기본",
+        "section": "레이아웃",
+    }
+    assert captured["url"].endswith("/source_view")
+
+
+def test_source_view_propagates_upstream_404(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A3-b: agent 가 못 찾으면 (404) — UI 가 '출처 없음' 표시."""
+    monkeypatch.setenv("PROJK_AGENT_URL", "http://agent.test")
+
+    import importlib
+    import server as server_module
+    importlib.reload(server_module)
+
+    class _MockResponse:
+        status_code = 404
+        text = "not found"
+
+    class _MockClient:
+        def __init__(self, *_a, **_kw):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_a):
+            return False
+
+        async def get(self, _url, params=None):
+            return _MockResponse()
+
+    monkeypatch.setattr(server_module.httpx, "AsyncClient", _MockClient)
+    client = TestClient(server_module.app)
+    res = client.get("/source_view", params={"path": "missing"})
+    assert res.status_code == 404
+
+
 def test_cors_preflight_returns_allow_origin(client: TestClient) -> None:
     """Renderer (electron-vite dev) lives at http://localhost:5174 — different
     origin from sidecar at http://127.0.0.1:<port>. POST + JSON triggers preflight,

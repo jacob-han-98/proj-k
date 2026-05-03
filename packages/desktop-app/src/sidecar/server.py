@@ -759,6 +759,36 @@ async def ask_stream(req: AskRequest):
     return StreamingResponse(gen, media_type="application/x-ndjson")
 
 
+# ---------- /source_view (A3-b: 답변 citation drill-down) ----------
+#
+# agent 답변에 (출처: <path> § <section>) 같은 인용이 등장. 사용자가 그것 클릭 →
+# 본 endpoint 호출 → 해당 content.md 본문 + section range 반환 → modal 로 표시.
+# 응답 shape (agent 동등):
+#   { path, section, content, section_range, origin_label, origin_url, source }
+
+
+@app.get("/source_view")
+async def source_view(path: str, section: str = "") -> dict:
+    base = _agent_url()
+    if not base:
+        raise HTTPException(status_code=503, detail="agent 백엔드 URL 미설정")
+    timeout = httpx.Timeout(connect=5.0, read=15.0, write=5.0, pool=5.0)
+    try:
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            r = await client.get(
+                f"{base}/source_view",
+                params={"path": path, "section": section},
+            )
+            if r.status_code != 200:
+                raise HTTPException(
+                    status_code=r.status_code,
+                    detail=f"upstream {r.status_code}: {r.text[:200]}",
+                )
+            return r.json()
+    except httpx.HTTPError as e:
+        raise HTTPException(status_code=502, detail=f"upstream 연결 실패: {e!s}")
+
+
 # ---------- /preset_prompts (A3-a: agent 의 큐레이션된 추천 prompt 노출) ----------
 #
 # agent-sdk-poc 의 PRESETS — Project K 시스템·데이터시트·운영 영역에 특화된 자주 묻는

@@ -46,3 +46,47 @@ export function annotateCitedHits(answer: string, hits: SearchHit[]): SearchHit[
   if (citations.length === 0) return hits.map((h) => ({ ...h, cited: false }));
   return hits.map((h) => ({ ...h, cited: isHitCited(h, citations) }));
 }
+
+// A3-b: 답변 텍스트를 [text part | citation part] 의 array 로 분해 → React 가 citation
+// 만 클릭 가능 link 로 렌더. 매칭 후 path/section 을 분리해서 /source_view 호출에 사용.
+//
+// citation 안 형식 (qna-output-format 스킬 규약):
+//   "<워크북>.xlsx / <시트> § <섹션>"
+//   "Confluence / <공간> / ... / <페이지> § <섹션>"
+//   "DataSheet / <테이블> § Id=<n>"
+// '§' 가 path 와 section 의 경계. 없으면 전체가 path.
+
+export type AnswerSegment =
+  | { kind: 'text'; text: string }
+  | { kind: 'citation'; raw: string; path: string; section: string };
+
+export function splitAnswerWithCitations(answer: string): AnswerSegment[] {
+  const out: AnswerSegment[] = [];
+  CITATION_RE.lastIndex = 0;
+  let lastIdx = 0;
+  let m: RegExpExecArray | null;
+  while ((m = CITATION_RE.exec(answer)) !== null) {
+    if (m.index > lastIdx) {
+      out.push({ kind: 'text', text: answer.slice(lastIdx, m.index) });
+    }
+    const raw = m[1].trim();
+    const { path, section } = splitPathSection(raw);
+    out.push({ kind: 'citation', raw, path, section });
+    lastIdx = m.index + m[0].length;
+  }
+  if (lastIdx < answer.length) {
+    out.push({ kind: 'text', text: answer.slice(lastIdx) });
+  }
+  return out;
+}
+
+function splitPathSection(raw: string): { path: string; section: string } {
+  // '§' (U+00A7) 가 표준. 일부 답변은 '#' 사용 — 둘 다 허용.
+  const sectionMarker = /\s*[§#]\s*/;
+  const m = sectionMarker.exec(raw);
+  if (!m) return { path: raw.trim(), section: '' };
+  return {
+    path: raw.slice(0, m.index).trim(),
+    section: raw.slice(m.index + m[0].length).trim(),
+  };
+}

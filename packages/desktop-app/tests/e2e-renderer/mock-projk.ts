@@ -145,6 +145,24 @@ export const mockProjkInitScript = `
       const ndjson = lines.map((l) => JSON.stringify(l) + '\\n').join('');
       return new Response(ndjson, { status: 200, headers: { 'Content-Type': 'application/x-ndjson' } });
     }
+    if (url.includes('/source_view')) {
+      // A3-b: citation drill-down. mock 답변에 (출처: PK_HUD 시스템.xlsx / HUD_기본 § 레이아웃)
+      // 가 들어있으니 그 path 가 들어오면 fixture content 반환. 다른 path 는 404 같은 null.
+      const u = new URL(url);
+      const path = u.searchParams.get('path') ?? '';
+      const section = u.searchParams.get('section') ?? '';
+      if (path.includes('PK_HUD') || path.includes('HUD_기본')) {
+        return new Response(JSON.stringify({
+          path,
+          section,
+          content: '# HUD_기본\\n\\n## 레이아웃\\n\\n상단 정보바 + 좌측 미니맵. mock content 본문.',
+          section_range: section ? [10, 50] : null,
+          origin_label: 'P4 / 7_System / PK_HUD 시스템.xlsx',
+          source: 'mock',
+        }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+      }
+      return new Response('not found', { status: 404 });
+    }
     if (url.includes('/preset_prompts')) {
       // A3-a: agent-sdk-poc 의 PRESETS 형식 동등. 카테고리 별 mock — chips UI 검증.
       return new Response(JSON.stringify({

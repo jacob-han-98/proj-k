@@ -23,6 +23,30 @@ window.projk?.onSidecarStatus?.((s: SidecarStatus) => {
   if (s.port != null) cachedPort = s.port;
 });
 
+// A3-b: 답변 안 citation 클릭 → content.md 본문 + section range. modal 또는 split 으로 표시.
+export interface SourceView {
+  path: string;
+  section: string;
+  content: string;
+  section_range?: [number, number] | null;
+  origin_label?: string;
+  origin_url?: string;
+  source?: string;
+}
+export async function getSourceView(path: string, section = ''): Promise<SourceView | null> {
+  try {
+    const port = await ensurePort();
+    const url = new URL(`http://127.0.0.1:${port}/source_view`);
+    url.searchParams.set('path', path);
+    if (section) url.searchParams.set('section', section);
+    const res = await fetch(url.toString());
+    if (!res.ok) return null;
+    return (await res.json()) as SourceView;
+  } catch {
+    return null;
+  }
+}
+
 // A3-a: agent-sdk-poc 의 큐레이션된 추천 prompt — sidecar /preset_prompts proxy 통해.
 // QnATab 의 입력란 위에 카테고리별 chips 로 노출. agent 미설정 또는 fail 시 빈 list →
 // UI 가 chips 자체를 hide.

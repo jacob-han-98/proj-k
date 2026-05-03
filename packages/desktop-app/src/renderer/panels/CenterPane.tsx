@@ -107,7 +107,10 @@ export function CenterPane({
   }
 
   // Confluence — webview 안에서 사용자가 직접 로그인.
-  const url = `${CONFLUENCE_BASE}/wiki/spaces/PK/pages/${selection.node.confluencePageId}`;
+  // viewpage.action 은 spaceKey 무관 — Confluence 가 pageId 만으로 canonical URL 로 redirect.
+  // 이전엔 /spaces/PK/pages/<id> 로 hardcoded 였는데 PKTEST (테스트 사본) 등 다른 스페이스
+  // 페이지에선 redirect 안 되거나 깨질 수 있어서 generic URL 로 통일 (B2-3b 후속).
+  const url = `${CONFLUENCE_BASE}/wiki/pages/viewpage.action?pageId=${selection.node.confluencePageId}`;
   return (
     <ConfluencePane
       key={selection.node.id}

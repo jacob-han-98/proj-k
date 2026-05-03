@@ -37,6 +37,24 @@ npm run test:all       # test + test:electron
 3. settings.json 에 `repoRoot` / `p4WorkspaceRoot` / OneDrive Sync 클라이언트가 모두 정상.
 4. Windows + 사용자 OneDrive Business 계정 로그인 상태.
 
+### MCP 라이브 테스트 시 depot 트리는 lazy loading (필수)
+
+P4 depot 트리 (`P4DepotTree.tsx`) 는 *folder 펼침마다* `p4 dirs` + `p4 files -e` 호출
+→ 비동기 fetch → state 업데이트 → DOM 반영. P4 server round-trip 이 들어가서 *수 초*
+걸린다. mcp 자동화로 클릭만 하고 즉시 query 하면 자식이 비어있어 보임 — 실제론 아직
+로딩 중. 옛 회귀: "depot 트리에서 7_System 펼쳤는데 파일이 안 보인다" → lazy load 미완.
+
+**테스트 절차**:
+1. `click-testid` 로 폴더 펼침
+2. **`sleep 5~10` 충분히 기다림** (p4 dirs + p4 files 직렬 실행)
+3. 그 다음 `query-testid` 로 자식 노드 검증
+
+또한 p4 가 한국어 파일명을 args 로 받으면 깨져서 stdin (`-x-`) 로 path 넘김 — 이게
+또 오버헤드. 빠른 검증하려면 root 쪽 (예: `//main/ProjectK`) 만 펼치고 시작.
+
+depot 트리의 query-testid text 는 200char 잘림 — 자식 많은 폴더의 파일 검증은
+`query-testid` 로 *개별 파일 testid* (`depot-row-<full-path>`) 직접 조회 권장.
+
 ### "테스트 해줘" 요청 처리 절차 (필수)
 
 사용자가 "테스트해줘" / "검증해줘" / 비슷한 요청을 하면 다음 순서로:

@@ -24,7 +24,7 @@ async function activeKind(page: import('@playwright/test').Page): Promise<string
   return null;
 }
 
-test('Ctrl+1 → Perforce, Ctrl+2 → Confluence, Ctrl+3 → 빠른검색, Ctrl+4 → QnA', async ({ page }) => {
+test('Ctrl+1~5 → 5 개 패널 순차 활성화 (P4 / Confluence / 빠른검색 / QnA / 최근)', async ({ page }) => {
   // default 는 confluence (store 의 default activeIcon).
   await expect.poll(() => activeKind(page)).toBe('confluence');
 
@@ -39,6 +39,9 @@ test('Ctrl+1 → Perforce, Ctrl+2 → Confluence, Ctrl+3 → 빠른검색, Ctrl+
 
   await page.keyboard.press('Control+4');
   await expect.poll(() => activeKind(page)).toBe('qna');
+
+  await page.keyboard.press('Control+5');
+  await expect.poll(() => activeKind(page)).toBe('recent');
 });
 
 test('Tooltip + aria-keyshortcuts 에 단축키 명시', async ({ page }) => {
@@ -54,6 +57,9 @@ test('Tooltip + aria-keyshortcuts 에 단축키 명시', async ({ page }) => {
 
   const qnaBtn = page.getByTestId('activity-qna');
   await expect(qnaBtn).toHaveAttribute('aria-keyshortcuts', 'Control+4');
+
+  const recentBtn = page.getByTestId('activity-recent');
+  await expect(recentBtn).toHaveAttribute('aria-keyshortcuts', 'Control+5');
 });
 
 test('input 에 focus 일 때 단축키 무시 — 텍스트 입력 충돌 회피', async ({ page }) => {

@@ -5,7 +5,7 @@
 
 import type { TreeNode } from '../../shared/types';
 
-export type SidebarKind = 'p4' | 'confluence' | 'find' | 'qna';
+export type SidebarKind = 'p4' | 'confluence' | 'find' | 'qna' | 'recent';
 
 export type DocTabKind = 'confluence' | 'excel' | 'qna-thread';
 

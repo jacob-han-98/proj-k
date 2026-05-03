@@ -4,6 +4,7 @@ import { P4Panel } from './P4Panel';
 import { ConfluencePanel } from './ConfluencePanel';
 import { QuickFindPanel } from './QuickFindPanel';
 import { QnAThreadsPanel } from './QnAThreadsPanel';
+import { RecentDocsPanel } from './RecentDocsPanel';
 
 // PR3: Activity Bar 의 activeIcon 에 따라 4 개 사이드바 패널을 swap.
 // 핵심: 모든 패널을 동시 mount + display:none 토글 — fetch 중복 / 트리 expanded state /
@@ -63,11 +64,22 @@ export function SidebarHost(props: Props) {
           refreshKey={props.threadsRefreshKey}
         />
       </div>
+      <div
+        className={`sidebar-pane${activeIcon === 'recent' ? '' : ' hidden'}`}
+        data-testid="sidebar-pane-recent"
+        aria-hidden={activeIcon !== 'recent'}
+      >
+        <RecentDocsPanel
+          onOpenSheet={props.onOpenSheet}
+          onOpenConfluencePage={props.onOpenConfluencePage}
+          onOpenThreadInEditor={props.onOpenThreadInEditor}
+        />
+      </div>
     </div>
   );
 }
 
-function SectionHeader({ activeIcon }: { activeIcon: 'p4' | 'confluence' | 'find' | 'qna' }) {
+function SectionHeader({ activeIcon }: { activeIcon: 'p4' | 'confluence' | 'find' | 'qna' | 'recent' }) {
   const label =
     activeIcon === 'p4'
       ? 'PERFORCE'
@@ -75,7 +87,9 @@ function SectionHeader({ activeIcon }: { activeIcon: 'p4' | 'confluence' | 'find
       ? 'CONFLUENCE'
       : activeIcon === 'find'
       ? '빠른 검색'
-      : 'QnA 스레드';
+      : activeIcon === 'qna'
+      ? 'QnA 스레드'
+      : '최근 작업 문서';
   return (
     <div className="sidebar-section-header" data-testid={`sidebar-section-header-${activeIcon}`}>
       {label}

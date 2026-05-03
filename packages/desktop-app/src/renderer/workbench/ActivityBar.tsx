@@ -64,7 +64,7 @@ interface ActivityItem {
   icon: ActivityIconSpec;
   title: string;
   // Ctrl/Cmd + 이 키로 패널 활성화. order = ITEMS 인덱스+1.
-  shortcutDigit: '1' | '2' | '3' | '4';
+  shortcutDigit: '1' | '2' | '3' | '4' | '5';
 }
 
 const ITEMS: ActivityItem[] = [
@@ -72,6 +72,7 @@ const ITEMS: ActivityItem[] = [
   { kind: 'confluence', icon: { type: 'svg', render: () => <ConfluenceIcon /> }, title: 'Confluence', shortcutDigit: '2' },
   { kind: 'find', icon: { type: 'codicon', name: 'search' }, title: '빠른 검색', shortcutDigit: '3' },
   { kind: 'qna', icon: { type: 'codicon', name: 'comment-discussion' }, title: 'QnA', shortcutDigit: '4' },
+  { kind: 'recent', icon: { type: 'codicon', name: 'history' }, title: '최근 작업 문서', shortcutDigit: '5' },
 ];
 
 // Ctrl/Cmd+숫자 → 해당 activity 패널로 전환. VS Code 의 Ctrl+Shift+E/F 등가물 — 4 개라

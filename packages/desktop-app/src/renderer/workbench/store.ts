@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import type { DocTab, OpenTabSpec, SidebarKind } from './types';
 import { tabIdOf, docKeyOfNode } from './types';
+import { touchRecentDoc } from '../recent-docs';
 
 // PR1: activeIcon (Activity Bar 토글).
 // PR2: openTabs / activeTabId / openTab / focusTab / closeTab.
@@ -59,6 +60,9 @@ export const useWorkbenchStore = create<WorkbenchState>((set) => ({
 
   openTab: (spec) => set((state) => {
     const id = tabIdOf(spec);
+    // A4: 최근 작업 문서 history 갱신 — open 시점마다 touch (lastVisitedAt 갱신, openCount++).
+    // 같은 탭을 focus 만 하는 경우도 "다시 봤다" = 작업중 신호로 카운트.
+    touchRecentDocFromSpec(spec, id);
     const existing = state.openTabs.find((t) => t.id === id);
     if (existing) {
       // qna-thread title 이 RENAME 등으로 바뀐 경우 기존 탭의 title 도 갱신해줌.
@@ -157,3 +161,26 @@ export const useWorkbenchStore = create<WorkbenchState>((set) => ({
   closePalette: () => set({ paletteOpen: false }),
   togglePalette: () => set((s) => ({ paletteOpen: !s.paletteOpen })),
 }));
+
+// A4: OpenTabSpec → RecentDocEntry 변환. payload 는 RecentDocsPanel 이 reopen 시 그대로
+// onOpenSheet/onOpenConfluencePage/onOpenThreadInEditor 에 넘기는 데 쓴다.
+function touchRecentDocFromSpec(spec: OpenTabSpec, id: string): void {
+  if (spec.kind === 'excel' || spec.kind === 'confluence') {
+    const node = spec.node;
+    touchRecentDoc({
+      kind: spec.kind,
+      id,
+      title: node.title,
+      subtitle: node.relPath ?? undefined,
+      payload: { ...node },
+    });
+    return;
+  }
+  // qna-thread
+  touchRecentDoc({
+    kind: 'qna-thread',
+    id,
+    title: spec.title,
+    payload: { threadId: spec.threadId, title: spec.title },
+  });
+}

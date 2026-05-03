@@ -207,6 +207,10 @@ def _make_options(
         # default 모드의 도구별 권한 프롬프트는 서버/배치 환경에선 무한 대기를 유발.
         # WebFetch 도메인 화이트리스트도 우회되지만, 어차피 답변에 출처 인용 강제 + 사후 audit 가능.
         permission_mode="bypassPermissions",
+        # 토큰 단위 streaming 활성화 — content_block_delta 이벤트가 StreamEvent 로 yield 됨.
+        # 사용자가 답변 첫 토큰을 47s 대기 → 1-3s 로 단축 (TTFT).
+        # AssistantMessage 는 message_stop 시 여전히 yield 되므로 기존 핸들러 그대로 사용 가능.
+        include_partial_messages=True,
         cwd=str(POC_DIR),
         # 조사 깊이 제어: cross-check 류 timeout 방지 (CLAUDE.md '효율 가이드' 참조).
         # compare_mode 는 oracle/web 단계가 추가되어 더 길게 허용.

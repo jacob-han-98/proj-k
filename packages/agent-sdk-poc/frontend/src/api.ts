@@ -796,6 +796,7 @@ export type StreamEvent =
   | { type: 'thinking'; text: string }
   | { type: 'tool_start'; id: string; tool: string; input: any; label: string }
   | { type: 'tool_end'; id: string; summary: string; label?: string; preview?: string }
+  | { type: 'token'; text: string }   // 토큰 단위 streaming (include_partial_messages 활성화 시)
   | { type: 'result'; data: AskResponse }
   | { type: 'error'; message: string };
 

@@ -60,6 +60,7 @@ interface Progress {
   thinking: string[];            // 누적 사고 (최신이 마지막)
   tools: ToolCallEntry[];        // 호출된 툴 목록 (시간순)
   lastStatus: string;            // 현재 진행 상태 (원시 message)
+  streamingAnswer?: string;      // 토큰 단위 누적 답변 (result 도착 전 미리 표시)
 }
 
 interface Message {
@@ -360,6 +361,18 @@ function App() {
                 },
               };
             });
+          } else if (event.type === 'token') {
+            // 토큰 단위 streaming — result 도착 전 답변 본문 점진적 표시
+            setThreadProgress(prev => {
+              const cur = prev[threadId] || { thinking: [], tools: [], lastStatus: '' };
+              return {
+                ...prev,
+                [threadId]: {
+                  ...cur,
+                  streamingAnswer: (cur.streamingAnswer || '') + event.text,
+                },
+              };
+            });
           } else if (event.type === 'result') {
             const res = event.data;
             const realId = res.conversation_id || threadId;
@@ -530,8 +543,8 @@ function App() {
 
   // ── 진행 타임라인 렌더 ──────────────────────────────────
   const renderProgress = (progress: Progress, opts: { collapsed?: boolean; loading?: boolean }) => {
-    const { thinking, tools, lastStatus } = progress;
-    if (thinking.length === 0 && tools.length === 0 && !lastStatus) return null;
+    const { thinking, tools, lastStatus, streamingAnswer } = progress;
+    if (thinking.length === 0 && tools.length === 0 && !lastStatus && !streamingAnswer) return null;
     return (
       <details className="progress-panel" open={!opts.collapsed}>
         <summary className="progress-summary">
@@ -547,6 +560,23 @@ function App() {
           )}
         </summary>
         <div className="progress-body">
+          {/* 토큰 단위 streaming — result 도착 전 답변이 점진적으로 보임. opacity 낮춰 임시 표시임을 시각화. */}
+          {opts.loading && streamingAnswer && (
+            <div className="streaming-answer" style={{
+              opacity: 0.7,
+              padding: '8px 12px',
+              border: '1px dashed rgba(120, 180, 255, 0.4)',
+              borderRadius: 6,
+              marginBottom: 8,
+              fontSize: '0.92em',
+              whiteSpace: 'pre-wrap',
+              maxHeight: 320,
+              overflowY: 'auto',
+            }}>
+              <div style={{fontSize: '0.78em', opacity: 0.6, marginBottom: 4}}>✍️ 답변 작성 중 — 실시간 미리보기</div>
+              {streamingAnswer}
+            </div>
+          )}
           {tools.map((t, i) => {
             const displayLabel = t.doneLabel || t.label;
             const hasDetail = !!t.preview || !!t.input;

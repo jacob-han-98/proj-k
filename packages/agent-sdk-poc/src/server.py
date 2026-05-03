@@ -35,6 +35,12 @@ from claude_agent_sdk import (
     ToolUseBlock,
     ToolResultBlock,
 )
+# StreamEvent: include_partial_messages=True 일 때 yield 되는 raw Anthropic stream 이벤트.
+# content_block_delta 안에 text_delta 가 있어서 토큰 단위 streaming 가능.
+try:
+    from claude_agent_sdk import StreamEvent  # type: ignore
+except ImportError:
+    StreamEvent = None  # SDK 가 너무 오래된 경우 — partial messages 미지원으로 fallback
 
 from agent import run_query_with_session
 import storage
@@ -301,6 +307,30 @@ async def ask_stream(req: AskStreamRequest):
                 model=req.model,
                 compare_mode=req.compare_mode,
             ):
+                # ── Streaming: content_block_delta 토큰을 즉시 SSE 로 흘려보냄 ──
+                # include_partial_messages=True 일 때 SDK 가 raw Anthropic stream 이벤트를
+                # StreamEvent 로 yield. 사용자 TTFT (time to first text) 단축의 핵심.
+                # AssistantMessage 는 message_stop 시 여전히 yield 되므로 아래 핸들러에서 누적.
+                if StreamEvent is not None and isinstance(msg, StreamEvent):
+                    ev = getattr(msg, "event", None) or {}
+                    if ev.get("type") == "content_block_delta":
+                        delta = ev.get("delta", {}) or {}
+                        if delta.get("type") == "text_delta":
+                            text = delta.get("text", "")
+                            if text:
+                                # writing stage 안내 (한 번만)
+                                if not writing_announced:
+                                    yield json.dumps(
+                                        {"type": "stage", "stage": "writing", "label": "답변 작성"},
+                                        ensure_ascii=False,
+                                    ) + "\n"
+                                    writing_announced = True
+                                yield json.dumps(
+                                    {"type": "token", "text": text},
+                                    ensure_ascii=False,
+                                ) + "\n"
+                    continue
+
                 if isinstance(msg, SystemMessage):
                     subtype = getattr(msg, "subtype", "")
                     if subtype == "init" and hasattr(msg, "data"):

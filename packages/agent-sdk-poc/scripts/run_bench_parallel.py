@@ -52,6 +52,9 @@ def stream_query(base_url: str, question: str, compare_mode: bool, timeout_s: in
     follow_ups: list[str] = []
     error: str | None = None
     events_count = 0
+    ttft_token_s: float | None = None       # streaming: first 'token' event
+    ttft_writing_s: float | None = None     # 'stage:writing' 이벤트 (token 미지원 fallback)
+    token_count = 0
 
     t0 = time.time()
     try:
@@ -69,6 +72,13 @@ def stream_query(base_url: str, question: str, compare_mode: bool, timeout_s: in
                 if t == "tool_start":
                     tool_calls += 1
                     tool_trace.append({"tool": evt.get("tool"), "input_keys": list((evt.get("input") or {}).keys())})
+                elif t == "token":
+                    token_count += 1
+                    if ttft_token_s is None:
+                        ttft_token_s = round(time.time() - t0, 3)
+                elif t == "stage" and evt.get("stage") == "writing":
+                    if ttft_writing_s is None:
+                        ttft_writing_s = round(time.time() - t0, 3)
                 elif t == "result":
                     d = evt.get("data", {})
                     answer = d.get("answer", "")
@@ -84,6 +94,9 @@ def stream_query(base_url: str, question: str, compare_mode: bool, timeout_s: in
     return {
         "answer": answer, "answer_len": len(answer),
         "total_s": round(time.time() - t0, 3),
+        "ttft_token_s": ttft_token_s,
+        "ttft_writing_s": ttft_writing_s,
+        "token_count": token_count,
         "api_seconds_server": api_seconds,
         "cost_usd": cost_usd, "tool_calls": tool_calls,
         "tool_trace": tool_trace, "events_count": events_count,

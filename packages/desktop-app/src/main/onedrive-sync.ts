@@ -4,7 +4,7 @@
 // 가 자동 통과 (Confluence webview 와 동일 패턴).
 
 import { execSync } from 'node:child_process';
-import { copyFile, mkdir, stat, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, stat, utimes, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 
@@ -219,9 +219,17 @@ export async function syncUploadAndUrl(
     return { ok: false, error: `원본 파일 없음: ${localXlsxPath}` };
   }
   const dest = join(account.userFolder, KLAUD_TEMP_DIR, `${relPath}.xlsx`);
+  let srcMtimeMs: number | null = null;
+  try {
+    const s = await stat(localXlsxPath);
+    srcMtimeMs = s?.mtimeMs ?? null;
+  } catch { /* fallback to null */ }
   try {
     await mkdir(dirname(dest), { recursive: true });
     await copyFile(localXlsxPath, dest);
+    // mtime 동기화 — copyFile 은 default 로 dest mtime 을 현재 시각으로 셋. 다음번 ensureFresh
+    // 의 stale 판정 정확성 위해 src mtime 으로 맞춤.
+    if (srcMtimeMs != null) await setDestMtime(dest, srcMtimeMs);
   } catch (e) {
     return { ok: false, error: `sync 폴더 복사 실패: ${(e as Error).message}` };
   }
@@ -244,10 +252,17 @@ export async function syncFromSidecarAndUrl(
     return { ok: false, error: 'OneDrive Business sync 클라이언트 미설정' };
   }
   let buf: Buffer;
+  let srcMtimeMs: number | null = null;
   try {
     const res = await fetch(sidecarUrl);
     if (!res.ok) {
       return { ok: false, error: `sidecar 다운로드 실패 ${res.status}: ${await res.text()}` };
+    }
+    // FileResponse 의 Last-Modified 헤더로 src mtime 회수 — utimes 동기화용.
+    const lm = res.headers.get('last-modified');
+    if (lm) {
+      const t = Date.parse(lm);
+      if (!Number.isNaN(t)) srcMtimeMs = t;
     }
     buf = Buffer.from(await res.arrayBuffer());
   } catch (e) {
@@ -257,6 +272,7 @@ export async function syncFromSidecarAndUrl(
   try {
     await mkdir(dirname(dest), { recursive: true });
     await writeFile(dest, buf);
+    if (srcMtimeMs != null) await setDestMtime(dest, srcMtimeMs);
   } catch (e) {
     return { ok: false, error: `sync 폴더 write 실패: ${(e as Error).message}` };
   }
@@ -304,23 +320,48 @@ export interface SyncProgressEvent {
   error?: string;
 }
 
-async function readSrcMtimeMs(sidecarBaseUrl: string, relPath: string): Promise<number | null> {
+interface SrcStat {
+  mtimeMs: number;
+  size: number;
+}
+
+async function readSrcStat(sidecarBaseUrl: string, relPath: string): Promise<SrcStat | null> {
   try {
     const res = await fetch(`${sidecarBaseUrl}/xlsx_stat?relPath=${encodeURIComponent(relPath)}`);
     if (!res.ok) return null;
-    const j = (await res.json()) as { mtime_ms?: number };
-    return typeof j.mtime_ms === 'number' ? j.mtime_ms : null;
+    const j = (await res.json()) as { mtime_ms?: number; size?: number };
+    if (typeof j.mtime_ms !== 'number') return null;
+    return { mtimeMs: j.mtime_ms, size: typeof j.size === 'number' ? j.size : -1 };
   } catch {
     return null;
   }
 }
 
-async function readDestMtimeMs(destPath: string): Promise<number | null> {
+interface DestStat {
+  mtimeMs: number;
+  size: number;
+}
+
+async function readDestStat(destPath: string): Promise<DestStat | null> {
   try {
     const s = await stat(destPath);
-    return s.mtimeMs;
+    return { mtimeMs: s.mtimeMs, size: s.size };
   } catch {
     return null;
+  }
+}
+
+// dest 의 mtime 을 src 와 동일하게 맞춤. 이 동기화 없이는 다음과 같은 회귀 발생:
+// dest mtime = writeFile 시각 (현재 시각) → src mtime (P4 워크스페이스의 P4 commit 시각)
+// 보다 항상 더 새것 → ensureFreshSync 가 stale 판정 안 하고 재다운로드 X.
+// 만약 옛 dest 가 partial/잘못된 파일이면 영영 그대로 남음 (실측: PK_단축키 시스템 6KB 회귀).
+async function setDestMtime(destPath: string, srcMtimeMs: number): Promise<void> {
+  const t = new Date(srcMtimeMs);
+  try {
+    await utimes(destPath, t, t);
+  } catch (e) {
+    // utimes 실패해도 main 흐름은 성공으로 처리. 다음번 ensureFresh 가 size 비교로 detect 가능.
+    console.warn(`[onedrive-sync] utimes 실패 ${destPath}: ${(e as Error).message}`);
   }
 }
 
@@ -329,6 +370,7 @@ async function backgroundSync(
   account: OneDriveSyncAccount,
   relPath: string,
   dest: string,
+  srcMtimeMs: number,
   onProgress: (e: SyncProgressEvent) => void,
 ): Promise<void> {
   // inflight 는 ensureFreshSync 진입 시 이미 추가됨 (race 회피). 여기서 중복 add 안 함.
@@ -339,6 +381,12 @@ async function backgroundSync(
     const buf = Buffer.from(await res.arrayBuffer());
     await mkdir(dirname(dest), { recursive: true });
     await writeFile(dest, buf);
+    // mtime 동기화 — src(P4 워크스페이스) 의 mtime 으로 dest 를 맞춤. 이게 없으면 다음번
+    // ensureFreshSync 가 항상 dest 가 더 새것이라 판정해서 stale=false → 잘못된 파일 영구.
+    await setDestMtime(dest, srcMtimeMs);
+    console.log(
+      `[onedrive-sync] write+mtime-sync ${relPath} bytes=${buf.length} mtime=${new Date(srcMtimeMs).toISOString()}`,
+    );
     // SharePoint 능동 polling — 작은 파일은 수초 만에 ready, 큰 파일은 정확히 도달 시점.
     // 옛 hardcoded 25s sleep 대체. timeout (30s) 시점엔 그냥 진행 — webview 는 어차피
     // 사용자 SSO chain 이 끝나면 SharePoint 응답 받음.
@@ -381,25 +429,39 @@ export async function ensureFreshSync(
   let releaseInflight = true;
 
   try {
-    const [srcMtime, destMtime] = await Promise.all([
-      readSrcMtimeMs(sidecarBaseUrl, relPath),
-      readDestMtimeMs(dest),
+    const [srcStat, destStat] = await Promise.all([
+      readSrcStat(sidecarBaseUrl, relPath),
+      readDestStat(dest),
     ]);
 
     // src 를 못 찾으면 sync 가 의미 없음. 매핑된 옛 cloud 본문이라도 즉시 반환.
-    if (srcMtime == null) {
+    if (srcStat == null) {
       return { ok: true, url, alreadyFresh: true, syncing: false };
     }
 
-    // dest 가 없거나 src 가 더 새것이면 stale. tolerance 1초 (NTFS mtime 어긋남 회피).
-    const stale = destMtime == null || srcMtime > destMtime + 1000;
+    // stale 판정: dest 가 없거나, src 가 더 새것이거나, size 가 다르면.
+    // size 비교가 핵심 — 옛 backgroundSync 는 dest mtime 을 *write 시각* 으로 박아서
+    // 항상 dest 가 src 보다 새것 → stale=false → 옛 partial 파일 영구. 이번 fix 로 mtime 도
+    // src 와 동기화하지만, 기존 OneDrive 에 잘못 들어간 파일을 detect 하려면 size 도 봐야.
+    // tolerance 1초 (NTFS mtime 어긋남 회피).
+    const stale =
+      destStat == null
+      || srcStat.mtimeMs > destStat.mtimeMs + 1000
+      || (srcStat.size >= 0 && srcStat.size !== destStat.size);
     if (!stale) {
       return { ok: true, url, alreadyFresh: true, syncing: false };
     }
 
+    if (destStat != null) {
+      const reason: string[] = [];
+      if (srcStat.mtimeMs > destStat.mtimeMs + 1000) reason.push('mtime');
+      if (srcStat.size >= 0 && srcStat.size !== destStat.size) reason.push(`size(src=${srcStat.size},dest=${destStat.size})`);
+      console.log(`[onedrive-sync] stale ${relPath} → ${reason.join(',')}`);
+    }
+
     // 백그라운드 sync 시작 — backgroundSync 가 finally 에서 inflight.delete.
     releaseInflight = false;
-    void backgroundSync(sidecarBaseUrl, account, relPath, dest, onProgress).finally(() => {
+    void backgroundSync(sidecarBaseUrl, account, relPath, dest, srcStat.mtimeMs, onProgress).finally(() => {
       inflight.delete(relPath);
     });
     return { ok: true, url, alreadyFresh: false, syncing: true };
@@ -426,9 +488,17 @@ export async function uploadDepotFileAndUrl(
   }
   const rel = depotPathToRel(depotPath);
   const dest = join(account.userFolder, KLAUD_DEPOT_DIR, `${rel}.xlsx`);
+  let srcMtimeMs: number | null = null;
+  try {
+    const s = await stat(localXlsxPath);
+    srcMtimeMs = s?.mtimeMs ?? null;
+  } catch { /* fallback */ }
   try {
     await mkdir(dirname(dest), { recursive: true });
     await copyFile(localXlsxPath, dest);
+    // depot 흐름의 임시 파일 mtime 은 `p4 print -o` 의 다운로드 시각 — P4 commit 시각이 아님.
+    // Phase 2 (다음 PR) 에서 p4 fstat headTime 으로 보강 예정. 현재는 일관성 차원에서만 utimes.
+    if (srcMtimeMs != null) await setDestMtime(dest, srcMtimeMs);
   } catch (e) {
     return { ok: false, error: `OneDrive depot 폴더 복사 실패: ${(e as Error).message}` };
   }

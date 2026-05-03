@@ -21,6 +21,7 @@ vi.mock('node:fs/promises', async () => {
     writeFile: vi.fn(),
     mkdir: vi.fn(),
     copyFile: vi.fn(),
+    utimes: vi.fn(),
   };
 });
 // pollSharePointReady 가 session.fromPartition('persist:onedrive').fetch 호출 — main process
@@ -42,7 +43,7 @@ vi.mock('node:fs', async () => {
 });
 
 import { execSync } from 'node:child_process';
-import { stat, writeFile, mkdir, copyFile } from 'node:fs/promises';
+import { stat, writeFile, mkdir, copyFile, utimes } from 'node:fs/promises';
 import {
   __setPollOptionsForTests,
   detectSyncAccount,
@@ -57,6 +58,7 @@ const statMock = stat as unknown as ReturnType<typeof vi.fn>;
 const writeMock = writeFile as unknown as ReturnType<typeof vi.fn>;
 const mkdirMock = mkdir as unknown as ReturnType<typeof vi.fn>;
 const copyFileMock = copyFile as unknown as ReturnType<typeof vi.fn>;
+const utimesMock = utimes as unknown as ReturnType<typeof vi.fn>;
 
 function makeHeadResponse(status: number, location: string | null = null): Response {
   // node Response constructor — 200 / 3xx 만 직접 만들 수 있고 4xx/5xx 도 가능.
@@ -75,6 +77,7 @@ beforeEach(() => {
   writeMock.mockReset().mockResolvedValue(undefined);
   mkdirMock.mockReset().mockResolvedValue(undefined);
   copyFileMock.mockReset().mockResolvedValue(undefined);
+  utimesMock.mockReset().mockResolvedValue(undefined);
   // 폴링 default — 첫 attempt 에 SharePoint redirect 로 즉시 ready (Doc.aspx). 개별 테스트가 override 가능.
   sessionFetchMock.mockReset().mockResolvedValue(
     makeHeadResponse(302, 'https://t-my.sharepoint.com/personal/u/_layouts/15/Doc.aspx?sourcedoc=...'),
@@ -163,12 +166,12 @@ describe('ensureFreshSync — mtime 비교 분기', () => {
     });
   }
 
-  it('alreadyFresh — dest mtime 가 src mtime 보다 새것이면 sync 건너뜀', async () => {
+  it('alreadyFresh — dest mtime 가 src mtime 보다 새것이고 size 같으면 sync 건너뜀', async () => {
     setupAccount();
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(JSON.stringify({ mtime_ms: 1_000_000, size: 100 }), { status: 200 }),
     );
-    statMock.mockResolvedValue({ mtimeMs: 2_000_000 } as never);
+    statMock.mockResolvedValue({ mtimeMs: 2_000_000, size: 100 } as never);
 
     const events: SyncProgressEvent[] = [];
     const r = await ensureFreshSync('http://127.0.0.1:9999', '7_System/PK_HUD', (e) => events.push(e));
@@ -180,6 +183,55 @@ describe('ensureFreshSync — mtime 비교 분기', () => {
     }
     expect(events).toEqual([]); // 백그라운드 sync 안 시작.
     expect(writeMock).not.toHaveBeenCalled();
+    fetchSpy.mockRestore();
+  });
+
+  it('stale by size — dest mtime 가 src 보다 새것이라도 size 다르면 sync 시작 (PK_단축키 6KB 회귀)', async () => {
+    // 사용자 PC 실측 시나리오: PK_단축키 시스템.xlsx 가 OneDrive 에 6KB 짜리 partial 파일로
+    // 들어감. 그 후 P4 sync 완료로 local 에 25MB 파일 있지만, OneDrive sync 가 dest mtime 을
+    // *write 시각* 으로 박아둬서 dest > src 로 보임 → 옛 mtime-only 분기는 alreadyFresh 판정.
+    // size 비교 추가로 회귀 차단.
+    setupAccount();
+    const fetchSpy = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ mtime_ms: 1_000_000, size: 25_000_000 }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(new Uint8Array([1, 2, 3]), { status: 200 }));
+    // dest 는 mtime 더 새것 + size 6KB 인 가짜 partial 파일.
+    statMock.mockResolvedValue({ mtimeMs: 2_000_000, size: 6_148 } as never);
+
+    const events: SyncProgressEvent[] = [];
+    const r = await ensureFreshSync('http://127.0.0.1:9999', '7_System/PK_단축키 시스템', (e) => events.push(e));
+
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.alreadyFresh).toBe(false); // size mismatch → stale → sync 시작
+      expect(r.syncing).toBe(true);
+    }
+    await waitForCompleted(events);
+    expect(writeMock).toHaveBeenCalled(); // 새 파일 write 됨
+    expect(utimesMock).toHaveBeenCalled(); // mtime 동기화 호출됨
+    expect(events.map((e) => e.state)).toEqual(['started', 'completed']);
+    fetchSpy.mockRestore();
+  });
+
+  it('writeFile 후 utimes 로 src mtime 동기화 (다음번 stale 판정 정확성 보장)', async () => {
+    setupAccount();
+    const SRC_MTIME = 1_700_000_000_000; // 임의의 src mtime ms
+    const fetchSpy = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ mtime_ms: SRC_MTIME, size: 100 }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(new Uint8Array([1, 2, 3, 4]), { status: 200 }));
+    statMock.mockRejectedValue(new Error('ENOENT')); // dest 없음 → stale
+
+    const events: SyncProgressEvent[] = [];
+    await ensureFreshSync('http://127.0.0.1:9999', '7_System/X', (e) => events.push(e));
+    await waitForCompleted(events);
+
+    expect(utimesMock).toHaveBeenCalled();
+    const [destPath, atime, mtime] = utimesMock.mock.calls[0]!;
+    expect(typeof destPath).toBe('string');
+    // utimes 의 atime/mtime 인자는 Date 또는 number. 우리는 Date 사용.
+    expect(mtime).toBeInstanceOf(Date);
+    expect((mtime as Date).getTime()).toBe(SRC_MTIME);
+    expect((atime as Date).getTime()).toBe(SRC_MTIME);
     fetchSpy.mockRestore();
   });
 
@@ -226,7 +278,7 @@ describe('ensureFreshSync — mtime 비교 분기', () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(new Response(JSON.stringify({ mtime_ms: 5_000_000, size: 100 }), { status: 200 }))
       .mockResolvedValueOnce(new Response(new Uint8Array([1]), { status: 200 }));
-    statMock.mockResolvedValue({ mtimeMs: 1_000_000 } as never);
+    statMock.mockResolvedValue({ mtimeMs: 1_000_000, size: 100 } as never);
 
     const events: SyncProgressEvent[] = [];
     const r = await ensureFreshSync('http://127.0.0.1:9999', '7_System/PK_HUD', (e) => events.push(e));
@@ -243,7 +295,7 @@ describe('ensureFreshSync — mtime 비교 분기', () => {
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response('not found', { status: 404 }),
     );
-    statMock.mockResolvedValue({ mtimeMs: 1_000_000 } as never);
+    statMock.mockResolvedValue({ mtimeMs: 1_000_000, size: 100 } as never);
 
     const events: SyncProgressEvent[] = [];
     const r = await ensureFreshSync('http://127.0.0.1:9999', '7_System/MISSING', (e) => events.push(e));
@@ -370,6 +422,7 @@ describe('SharePoint HEAD-poll — 25s sleep 대체', () => {
       makeHeadResponse(302, 'https://t-my.sharepoint.com/personal/u/_layouts/15/Doc.aspx?sourcedoc=z'),
     );
 
+    statMock.mockResolvedValue({ mtimeMs: 5_000_000, size: 1_000 } as never);
     const t0 = Date.now();
     const r = await uploadDepotFileAndUrl(
       '//main/ProjectK/Design/7_System/PK_HUD.xlsx',
@@ -388,13 +441,16 @@ describe('SharePoint HEAD-poll — 25s sleep 대체', () => {
     expect(elapsed).toBeLessThan(200);
     expect(sessionFetchMock).toHaveBeenCalledTimes(1);
     expect(copyFileMock).toHaveBeenCalled();
+    // mtime 동기화 검증 — copyFile 후 utimes 가 src mtime 으로 호출됨.
+    expect(utimesMock).toHaveBeenCalled();
   });
 
-  it('syncUploadAndUrl (legacy file picker) 도 폴링 사용', async () => {
+  it('syncUploadAndUrl (legacy file picker) 도 폴링 사용 + mtime 동기화', async () => {
     setupAccount();
     sessionFetchMock.mockReset().mockResolvedValue(
       makeHeadResponse(302, 'https://t-my.sharepoint.com/personal/u/_layouts/15/Doc.aspx'),
     );
+    statMock.mockResolvedValue({ mtimeMs: 7_000_000, size: 5_000 } as never);
 
     const t0 = Date.now();
     const r = await syncUploadAndUrl('C:/local/PK_HUD.xlsx', '7_System/PK_HUD');
@@ -407,5 +463,6 @@ describe('SharePoint HEAD-poll — 25s sleep 대체', () => {
     }
     expect(elapsed).toBeLessThan(200);
     expect(sessionFetchMock).toHaveBeenCalledTimes(1);
+    expect(utimesMock).toHaveBeenCalled();
   });
 });

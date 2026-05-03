@@ -287,6 +287,7 @@ export function ReviewSplitPane({ tabId: _tabId, title, text, trigger, confluenc
             error={changes.error}
             streamBuffer={changes.streamBuffer}
             status={changes.status}
+            confluencePageId={confluencePageId}
             onApply={changes.items && changes.items.length > 0 ? applyToConfluence : undefined}
           />
         )}

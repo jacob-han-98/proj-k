@@ -52,6 +52,13 @@ const api = {
     | { ok: false; error: string }
   > => ipcRenderer.invoke(IPC.CONFLUENCE_COPY_TO_TEST, sourcePageId),
 
+  // B2-3b: 사전 매칭 체크 — Apply 전 storage 한 번 GET + 각 change.before 매칭 가능 여부 반환.
+  confluencePrecheckMatch: (
+    pageId: string,
+    changes: Array<{ id: string; before: string }>,
+  ): Promise<{ ok: boolean; matched: string[]; unmatched: string[]; error?: string }> =>
+    ipcRenderer.invoke(IPC.CONFLUENCE_PRECHECK_MATCH, pageId, changes),
+
   getUpdaterState: (): Promise<{ state: UpdaterState; lastCheckedAt: number | null }> =>
     ipcRenderer.invoke(IPC.UPDATER_STATE),
   onUpdaterState: (cb: (s: UpdaterState) => void): (() => void) => {

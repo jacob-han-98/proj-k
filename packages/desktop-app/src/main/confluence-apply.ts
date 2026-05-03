@@ -36,6 +36,150 @@ function normalize(s: string): string {
   return s.replace(/\s+/g, ' ').trim();
 }
 
+// HTML 태그 제거 + entity decode 일부 — storage format 의 inline 마크업 (<custom>, <ac:>,
+// <strong> 등) 안 텍스트만 추출. 사용자 본문 (webview innerText) 와 매칭 가능하게 함.
+function stripHtmlForMatch(s: string): string {
+  return s
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// B2-3b: 매칭 시도 — body 안에서 before 를 찾아 after 로 교체. 단계적 fallback:
+//   1) exact substring (가장 안전)
+//   2) whitespace normalize 후 indexOf — 줄바꿈/공백 차이만 다른 경우 회복
+//   3) HTML 태그 strip + normalize — storage 의 inline 마크업이 끼어 있어 본문 텍스트만으로
+//      match 안 되는 경우 (예: <custom>...</custom> 같은 emoji/mention 사이 텍스트)
+//
+// 반환: { ok: true, newBody, strategy } 또는 { ok: false, reason } — UI 진단용.
+export type MatchStrategy = 'exact' | 'normalize' | 'html-strip';
+export interface MatchResult {
+  ok: true;
+  newBody: string;
+  strategy: MatchStrategy;
+}
+export interface NoMatchResult {
+  ok: false;
+  reason: string;
+}
+
+export function tryFindAndReplace(
+  body: string,
+  before: string,
+  after: string,
+): MatchResult | NoMatchResult {
+  const trimmedBefore = before.trim();
+  const trimmedAfter = after.trim();
+  if (!trimmedBefore || !trimmedAfter) {
+    return { ok: false, reason: '빈 before/after' };
+  }
+
+  // 1) Exact
+  if (body.includes(trimmedBefore)) {
+    return { ok: true, newBody: body.replace(trimmedBefore, trimmedAfter), strategy: 'exact' };
+  }
+
+  // 2) Whitespace normalize
+  const normBefore = normalize(trimmedBefore);
+  const normBody = normalize(body);
+  if (normBody.includes(normBefore)) {
+    // 원본 body 에서 \s+ tolerant regex 로 교체 시도.
+    const escaped = trimmedBefore
+      .replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      .replace(/\s+/g, '\\s+');
+    const reBody = body.replace(new RegExp(escaped, 'm'), trimmedAfter);
+    if (reBody !== body) return { ok: true, newBody: reBody, strategy: 'normalize' };
+  }
+
+  // 3) HTML strip + 워드 subsequence — storage 의 inline 마크업 (<custom>, emoji 등) 이
+  //    before 단어 사이에 끼어 있어 exact / normalize 다 fail 하는 경우.
+  //    전략: before 의 모든 단어가 raw body 안에 *순서대로* 등장하면 매칭으로 봄.
+  //    교체 범위 = body 의 first 단어 시작 ~ last 단어 끝. 이 범위에는 inline 마크업도
+  //    함께 swap 됨 (의도 — passage 전체 재작성이라 사용자가 storage 마크업 잃는 것 OK).
+  const strippedBefore = stripHtmlForMatch(trimmedBefore);
+  const beforeWords = strippedBefore.split(/\s+/).filter((w) => w.length > 0);
+  if (beforeWords.length >= 2) {
+    // 단어 subsequence — body 안에서 순차적으로 find.
+    let cursor = 0;
+    let firstStart = -1;
+    let lastEnd = -1;
+    let allFound = true;
+    for (let i = 0; i < beforeWords.length; i++) {
+      const w = beforeWords[i]!;
+      const found = body.indexOf(w, cursor);
+      if (found < 0) { allFound = false; break; }
+      if (i === 0) firstStart = found;
+      if (i === beforeWords.length - 1) lastEnd = found + w.length;
+      cursor = found + w.length;
+    }
+    if (allFound && firstStart >= 0 && lastEnd > firstStart) {
+      const newBody = body.slice(0, firstStart) + trimmedAfter + body.slice(lastEnd);
+      return { ok: true, newBody, strategy: 'html-strip' };
+    }
+  }
+
+  return { ok: false, reason: '매칭 실패 — exact / normalize / html-strip 모두' };
+}
+
+// B2-3b: 사전 매칭 체크 — 페이지 storage 한 번 GET 후 각 change 가 매칭 가능한지만 확인.
+// Apply 전에 ChangesCard 가 호출 → 미매칭 row 에 ⚠ badge 표시.
+export interface PreCheckResult {
+  ok: boolean;
+  matched: string[];
+  unmatched: string[];
+  error?: string;
+}
+
+export async function preCheckChangesMatch(
+  pageId: string,
+  changes: Array<{ id: string; before: string }>,
+): Promise<PreCheckResult> {
+  const creds = await getConfluenceCreds();
+  if (!creds?.apiToken) {
+    return { ok: false, matched: [], unmatched: changes.map((c) => c.id), error: 'Confluence 자격 미설정' };
+  }
+  const auth = authHeader(creds.email, creds.apiToken);
+  let body: string;
+  try {
+    const res = await fetch(
+      `${CONFLUENCE_BASE}/wiki/api/v2/pages/${pageId}?body-format=storage`,
+      { headers: { Authorization: auth, Accept: 'application/json' } },
+    );
+    if (!res.ok) {
+      return {
+        ok: false,
+        matched: [],
+        unmatched: changes.map((c) => c.id),
+        error: `GET page HTTP ${res.status}`,
+      };
+    }
+    const j = (await res.json()) as { body?: { storage?: { value?: string } } };
+    body = j.body?.storage?.value ?? '';
+  } catch (e) {
+    return {
+      ok: false,
+      matched: [],
+      unmatched: changes.map((c) => c.id),
+      error: `GET page 예외: ${(e as Error).message}`,
+    };
+  }
+  const matched: string[] = [];
+  const unmatched: string[] = [];
+  for (const c of changes) {
+    // after='' 로 dummy — match 여부만 본다.
+    const r = tryFindAndReplace(body, c.before, 'X');
+    if (r.ok) matched.push(c.id);
+    else unmatched.push(c.id);
+  }
+  return { ok: true, matched, unmatched };
+}
+
 export async function applyEditsToConfluencePage(
   pageId: string,
   changes: ChangeItem[],
@@ -68,33 +212,18 @@ export async function applyEditsToConfluencePage(
     return { ok: false, applied: 0, skipped: changes.length, skippedIds: changes.map(c => c.id), error: `GET page 실패: ${(e as Error).message}` };
   }
 
-  // 2. before → after 텍스트 교체
+  // 2. before → after 텍스트 교체 — B2-3b: tryFindAndReplace 단계적 fallback 사용.
   let body = pageData.body.storage.value;
   const applied: string[] = [];
   const skipped: string[] = [];
 
   for (const change of changes) {
-    const before = change.before.trim();
-    const after = change.after.trim();
-    if (!before || !after) { skipped.push(change.id); continue; }
-
-    if (body.includes(before)) {
-      // 첫 번째 매칭만 교체 (동일 문구 중복 시 첫 것만)
-      body = body.replace(before, after);
+    const r = tryFindAndReplace(body, change.before, change.after);
+    if (r.ok) {
+      body = r.newBody;
       applied.push(change.id);
     } else {
-      // normalized 버전으로 재시도 (줄바꿈/공백 차이)
-      const normBefore = normalize(before);
-      const normBody = normalize(body);
-      const idx = normBody.indexOf(normBefore);
-      if (idx !== -1) {
-        // normalized 에서 찾았으면 원본 body 에서 approximation 으로 교체
-        // (공백 정규화 후 위치가 달라질 수 있어서 단순 replace 재사용)
-        body = body.replace(new RegExp(before.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+'), 'm'), after);
-        applied.push(change.id);
-      } else {
-        skipped.push(change.id);
-      }
+      skipped.push(change.id);
     }
   }
 

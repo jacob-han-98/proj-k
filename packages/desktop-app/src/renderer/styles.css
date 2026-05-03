@@ -1049,8 +1049,35 @@ html, body, #root { height: 100%; margin: 0; padding: 0; background: var(--bg); 
 }
 .change-badge.accepted { background: rgba(34, 197, 94, 0.2); color: #15803d; }
 .change-badge.rejected { background: rgba(156, 163, 175, 0.2); color: var(--text-dim); }
+/* B2-3b: 사전 매칭 체크 결과 미매칭 — 주황 경고. */
+.change-badge.unmatched {
+  background: rgba(245, 158, 11, 0.2);
+  color: #b45309;
+  margin-left: 6px;
+}
 @media (prefers-color-scheme: dark) {
   .change-badge.accepted { color: #86efac; }
+  .change-badge.unmatched { color: #fcd34d; background: rgba(245, 158, 11, 0.25); }
+}
+.change-item.unmatched {
+  border-color: rgba(245, 158, 11, 0.4);
+  background: rgba(245, 158, 11, 0.05);
+}
+.changes-unmatched-hint {
+  font-size: 11px;
+  font-weight: 400;
+  color: #b45309;
+}
+@media (prefers-color-scheme: dark) {
+  .changes-unmatched-hint { color: #fcd34d; }
+}
+.changes-precheck-error {
+  font-size: 11px;
+  color: #b91c1c;
+  background: rgba(239, 68, 68, 0.08);
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 4px;
+  padding: 4px 8px;
 }
 
 /* B2-3a: per-row 버튼 row + bottom (summary + bulk + apply). */

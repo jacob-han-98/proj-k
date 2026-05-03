@@ -289,6 +289,10 @@ export const mockProjkInitScript = `
     confluenceCopyToTest: (sourcePageId) =>
       Promise.resolve({ ok: true, newPageId: 'mock-copy-' + sourcePageId, newPageUrl: 'https://mock/copy', newTitle: 'mock copy', spaceKey: 'PKTEST' }),
 
+    // B2-3b: 사전 매칭 체크 mock — 모두 matched (테스트가 unmatched 시나리오 원할 시 override).
+    confluencePrecheckMatch: (_pageId, items) =>
+      Promise.resolve({ ok: true, matched: items.map((i) => i.id), unmatched: [] }),
+
     // PR9: P4 자동 발견 + depot 트리 lazy fetch. Playwright mock 은 sample 데이터로 동작.
     p4: {
       discover: () => Promise.resolve({

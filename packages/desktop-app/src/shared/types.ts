@@ -161,6 +161,7 @@ export const IPC = {
   CONFLUENCE_CREDS_SET: 'confluence:creds:set',
   CONFLUENCE_APPLY_EDITS: 'confluence:apply-edits',
   CONFLUENCE_COPY_TO_TEST: 'confluence:copy-to-test',
+  CONFLUENCE_PRECHECK_MATCH: 'confluence:precheck-match',
   EXCEL_OPEN: 'excel:open',
   P4_SYNC: 'p4:sync',
   P4_DISCOVER: 'p4:discover',

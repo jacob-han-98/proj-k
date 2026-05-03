@@ -134,3 +134,81 @@ test('inline diff — added (초록) + removed (빨강) span 표시', async ({ p
   await expect(diff.locator('.diff-removed')).toContainText('old');
   await expect(diff.locator('.diff-added')).toContainText('new');
 });
+
+test('B2-3b: 사전 매칭 체크 unmatched → ⚠ badge + Apply 자동 skip', async ({ page }) => {
+  await setupChanges(page);
+  // mock 의 confluencePrecheckMatch 를 unmatched 응답으로 override (B 만 미매칭).
+  await page.evaluate(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).projk.confluencePrecheckMatch = (_pageId: string, items: Array<{ id: string }>) =>
+      Promise.resolve({ ok: true, matched: items.filter((i) => i.id !== 'B').map((i) => i.id), unmatched: ['B'] });
+  });
+  // changes 새로 받게 → mount cycle 재발동. 가장 쉽게 review-fix 다시 클릭으로 재요청.
+  // 단, ReviewSplitPane 가 changes state 새 trigger 받으려면 review 세션 끊고 다시. 여기선
+  // 단순화 — page reload + 같은 시나리오.
+  await page.reload();
+  // setup 의 stub 가 reload 후엔 다 사라지므로 다시 setup.
+  // (간단한 e2e 위해 별도 helper 안 만들고 inline 으로.)
+
+  const ndjson = (events: Array<Record<string, unknown>>): string =>
+    events.map((e) => JSON.stringify(e)).join('\n') + '\n';
+  await page.route('**/127.0.0.1:**/review_stream', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/x-ndjson',
+      body: ndjson([
+        { type: 'result', data: { review: JSON.stringify({ score: 60, issues: [{ text: 'a' }, { text: 'b' }] }), model: 'sonnet' } },
+      ]),
+    });
+  });
+  await page.route('**/127.0.0.1:**/suggest_edits', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/x-ndjson',
+      body: ndjson([
+        {
+          type: 'result',
+          data: {
+            changes: [
+              { id: 'A', description: 'A', section: 's1', before: 'old A text', after: 'new A text' },
+              { id: 'B', description: 'B', section: 's2', before: 'before B word', after: 'after B word' },
+            ],
+          },
+        },
+      ]),
+    });
+  });
+  await page.evaluate(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).projk.confluencePrecheckMatch = (_pageId: string, items: Array<{ id: string }>) =>
+      Promise.resolve({ ok: true, matched: items.filter((i) => i.id !== 'B').map((i) => i.id), unmatched: ['B'] });
+  });
+  await page.getByTestId('activity-confluence').click();
+  const tree = page.getByTestId('confluence-tree');
+  await tree.getByText('Design', { exact: true }).click();
+  await tree.getByText('시스템 디자인', { exact: true }).click();
+  await tree.getByText('전투', { exact: true }).click();
+  await page.evaluate(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const wv = document.querySelector('webview') as any;
+    if (wv) wv.executeJavaScript = async () => 'mock 본문';
+  });
+  await page.getByTestId('confluence-review').click();
+  await page.getByTestId('review-fix').click();
+
+  await expect(page.getByTestId('changes-card')).toBeVisible();
+  // B 행에 unmatched badge 노출
+  await expect(page.getByTestId('change-unmatched-B')).toBeVisible();
+  // A 행에는 노출 안 됨
+  await expect(page.getByTestId('change-unmatched-A')).toHaveCount(0);
+  // header hint
+  await expect(page.getByTestId('changes-unmatched-hint')).toContainText('1건 미매칭');
+
+  // 전체 적용 → A 만 accepted (B 는 unmatched 자동 제외)
+  await page.getByTestId('changes-accept-all').click();
+  await expect(page.getByTestId('change-A')).toHaveAttribute('data-decision', 'accepted');
+  await expect(page.getByTestId('change-B')).toHaveAttribute('data-decision', 'pending');
+
+  // Apply count = 1 (A 만)
+  await expect(page.getByTestId('changes-apply')).toContainText('1건');
+});

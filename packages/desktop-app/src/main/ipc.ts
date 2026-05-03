@@ -24,7 +24,7 @@ import { join as pathJoin } from 'node:path';
 import { createHash } from 'node:crypto';
 import { getSidecarStatus, onSidecarStatus, startSidecar } from './sidecar';
 import { getConfluenceCreds, setConfluenceCreds } from './auth';
-import { applyEditsToConfluencePage, type ChangeItem as ConfluenceChangeItem } from './confluence-apply';
+import { applyEditsToConfluencePage, preCheckChangesMatch, type ChangeItem as ConfluenceChangeItem } from './confluence-apply';
 import { copyPageToTestSpace } from './confluence-copy';
 import { getUpdaterState, onUpdaterState, quitAndInstall, checkForUpdate, getLastCheckedAt } from './updater';
 import { getSettings, setSettings } from './settings';
@@ -105,6 +105,12 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
   // renderer 가 처리.
   ipcMain.handle(IPC.CONFLUENCE_COPY_TO_TEST, async (_e, sourcePageId: string) => {
     return copyPageToTestSpace(sourcePageId);
+  });
+
+  // B2-3b: 사전 매칭 체크 — Apply 전 ChangesCard 가 호출. storage GET 1회 + 각 change.before
+  // 매칭 가능 여부만 반환. 미매칭 row 에 ⚠ badge 표시 + Apply 시 자동 skip.
+  ipcMain.handle(IPC.CONFLUENCE_PRECHECK_MATCH, async (_e, pageId: string, changes: Array<{ id: string; before: string }>) => {
+    return preCheckChangesMatch(pageId, changes);
   });
 
   // Push sidecar status updates to the renderer

@@ -27,20 +27,56 @@ interface Props {
   status?: string;
   // B2-3a: 적용 버튼이 눌리면 *accepted* 만 필터해서 호출. ReviewSplitPane 가 받아 PUT.
   onApply?: (accepted: ChangeItem[]) => void;
+  // B2-3b: confluence page id 가 있으면 mount 시 사전 매칭 체크 → 미매칭 row 에 ⚠ badge.
+  // null 이면 사전 체크 skip (Excel 등 다른 source).
+  confluencePageId?: string | null;
 }
 
 function changeId(c: ChangeItem, fallbackIdx: number): string {
   return c.id ? String(c.id) : `idx-${fallbackIdx}`;
 }
 
-export function ChangesCard({ changes, streaming, error, streamBuffer, status, onApply }: Props) {
+export function ChangesCard({ changes, streaming, error, streamBuffer, status, onApply, confluencePageId }: Props) {
   const [decisions, setDecisions] = useState<DecisionMap>({});
+  // B2-3b: 사전 매칭 체크 결과 — Set<changeId> = unmatched ids. 'pending' 동안엔 null.
+  const [unmatchedIds, setUnmatchedIds] = useState<Set<string> | null>(null);
+  const [precheckError, setPrecheckError] = useState<string | null>(null);
 
   // changes 가 새로 도착하면 decisions 리셋 (옛 stale state 제거 — 새 suggest_edits 결과는
   // 새 의사결정 사이클).
   useEffect(() => {
     setDecisions({});
+    setUnmatchedIds(null);
+    setPrecheckError(null);
   }, [changes]);
+
+  // B2-3b: 새 changes 도착 + confluencePageId 있으면 사전 매칭 체크. 부담 적음 — storage GET 1회.
+  useEffect(() => {
+    if (!changes || changes.length === 0 || !confluencePageId) {
+      setUnmatchedIds(null);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      const items = changes.map((c, i) => ({ id: changeId(c, i), before: c.before ?? '' }));
+      try {
+        const r = await window.projk.confluencePrecheckMatch(confluencePageId, items);
+        if (cancelled) return;
+        if (r.ok) {
+          setUnmatchedIds(new Set(r.unmatched));
+          setPrecheckError(null);
+        } else {
+          setUnmatchedIds(new Set()); // 체크 자체 실패 시 — Apply 시 시도해보게 비워둠
+          setPrecheckError(r.error ?? '사전 체크 실패');
+        }
+      } catch (e) {
+        if (cancelled) return;
+        setUnmatchedIds(new Set());
+        setPrecheckError((e as Error).message);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [changes, confluencePageId]);
 
   const setDecision = (id: string, d: Decision) => {
     setDecisions((prev) => ({ ...prev, [id]: d }));
@@ -69,7 +105,12 @@ export function ChangesCard({ changes, streaming, error, streamBuffer, status, o
   const acceptAll = () => {
     if (!changes) return;
     const next: DecisionMap = { ...decisions };
-    changes.forEach((c, i) => { next[changeId(c, i)] = 'accepted'; });
+    // B2-3b: 미매칭 항목은 자동 제외 — 어차피 PUT 시 fail. 사용자가 명시적으로 액션 안 하게.
+    changes.forEach((c, i) => {
+      const id = changeId(c, i);
+      if (unmatchedIds?.has(id)) return;
+      next[id] = 'accepted';
+    });
     setDecisions(next);
   };
   const rejectAll = () => {
@@ -81,9 +122,26 @@ export function ChangesCard({ changes, streaming, error, streamBuffer, status, o
 
   const applyAccepted = () => {
     if (!changes || !onApply) return;
-    const accepted = changes.filter((c, i) => (decisions[changeId(c, i)] ?? 'pending') === 'accepted');
+    // B2-3b: accepted + matched 만 — 미매칭은 어차피 PUT 시 skip 되므로 미리 거름.
+    const accepted = changes.filter((c, i) => {
+      const id = changeId(c, i);
+      if ((decisions[id] ?? 'pending') !== 'accepted') return false;
+      if (unmatchedIds?.has(id)) return false;
+      return true;
+    });
     onApply(accepted);
   };
+
+  // B2-3b: counts 의 accepted 도 미매칭 제외해서 — Apply 버튼 disabled / count 정확.
+  const applicableAccepted = useMemo(() => {
+    if (!changes) return 0;
+    let n = 0;
+    for (let i = 0; i < changes.length; i++) {
+      const id = changeId(changes[i]!, i);
+      if ((decisions[id] ?? 'pending') === 'accepted' && !unmatchedIds?.has(id)) n++;
+    }
+    return n;
+  }, [changes, decisions, unmatchedIds]);
 
   if (error) {
     return (
@@ -112,13 +170,29 @@ export function ChangesCard({ changes, streaming, error, streamBuffer, status, o
     );
   }
 
+  const unmatchedCount = unmatchedIds?.size ?? 0;
+
   return (
     <div className="changes-card" data-testid="changes-card">
-      <div className="changes-card-header">✏️ 변경안 ({changes.length}건)</div>
+      <div className="changes-card-header">
+        ✏️ 변경안 ({changes.length}건)
+        {unmatchedCount > 0 && (
+          <span className="changes-unmatched-hint" data-testid="changes-unmatched-hint">
+            {' '}· ⚠ {unmatchedCount}건 미매칭
+          </span>
+        )}
+      </div>
+
+      {precheckError && (
+        <div className="changes-precheck-error" data-testid="changes-precheck-error">
+          사전 매칭 체크 실패: {precheckError} (Apply 시 다시 시도)
+        </div>
+      )}
 
       {changes.map((c, i) => {
         const id = changeId(c, i);
         const decision: Decision = decisions[id] ?? 'pending';
+        const unmatched = !!unmatchedIds?.has(id);
         return (
           <ChangeRow
             key={id}
@@ -126,6 +200,7 @@ export function ChangesCard({ changes, streaming, error, streamBuffer, status, o
             num={i + 1}
             change={c}
             decision={decision}
+            unmatched={unmatched}
             onAccept={() => setDecision(id, 'accepted')}
             onReject={() => setDecision(id, 'rejected')}
             onUndo={() => undo(id)}
@@ -147,7 +222,7 @@ export function ChangesCard({ changes, streaming, error, streamBuffer, status, o
             className="btn-sm"
             onClick={acceptAll}
             data-testid="changes-accept-all"
-            title="모든 항목을 적용으로 표시"
+            title={unmatchedCount > 0 ? `미매칭 ${unmatchedCount}건 제외하고 모두 적용` : '모든 항목을 적용으로 표시'}
           >전체 적용</button>
           <button
             type="button"
@@ -163,11 +238,11 @@ export function ChangesCard({ changes, streaming, error, streamBuffer, status, o
               type="button"
               className="primary"
               onClick={applyAccepted}
-              disabled={counts.accepted === 0}
+              disabled={applicableAccepted === 0}
               data-testid="changes-apply"
-              title={counts.accepted === 0 ? '적용 항목 없음 — 위에서 ✓ 적용 선택' : `${counts.accepted}건 Confluence 에 반영`}
+              title={applicableAccepted === 0 ? '적용 항목 없음 — 위에서 ✓ 적용 선택' : `${applicableAccepted}건 Confluence 에 반영`}
             >
-              ✓ Confluence 에 반영 ({counts.accepted}건)
+              ✓ Confluence 에 반영 ({applicableAccepted}건)
             </button>
           </div>
         )}
@@ -181,24 +256,31 @@ interface ChangeRowProps {
   num: number;
   change: ChangeItem;
   decision: Decision;
+  // B2-3b: 사전 매칭 체크 결과 미매칭 — ⚠ badge + per-row tint + Apply 시 자동 skip.
+  unmatched?: boolean;
   onAccept: () => void;
   onReject: () => void;
   onUndo: () => void;
 }
 
-function ChangeRow({ id, num, change, decision, onAccept, onReject, onUndo }: ChangeRowProps) {
+function ChangeRow({ id, num, change, decision, unmatched, onAccept, onReject, onUndo }: ChangeRowProps) {
   // diff ops — change 가 바뀌지 않으면 같은 결과 재계산 회피.
   const ops = useMemo(() => diffOpsForDisplay(change.before ?? '', change.after ?? ''), [change.before, change.after]);
 
   return (
     <div
-      className={`change-item ${decision}`}
+      className={`change-item ${decision}${unmatched ? ' unmatched' : ''}`}
       data-testid={`change-${id}`}
       data-decision={decision}
     >
       <div className="change-header">
         <span className="change-num">{num}.</span>
         <span className="change-desc">{change.description || change.section || '(설명 없음)'}</span>
+        {unmatched && (
+          <span className="change-badge unmatched" data-testid={`change-unmatched-${id}`} title="페이지 본문에서 before 텍스트 매칭 실패 — Apply 시 자동 skip">
+            ⚠ 미매칭
+          </span>
+        )}
         <span className={`change-badge ${decision}`} data-testid={`change-badge-${id}`}>
           {decision === 'accepted' ? '적용' : decision === 'rejected' ? '거부' : '대기'}
         </span>

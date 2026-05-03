@@ -28,6 +28,14 @@ export interface Settings {
   p4Host?: string;
   p4User?: string;
   p4Client?: string;
+
+  // B2-1 (2026-05-03): Confluence 리뷰/수정 검증용 별도 스페이스. 실 운영 페이지를
+  // 직접 수정하지 않고 사본 만들어 안전하게 검증. 공통 패턴: 본인 personal space (~uid)
+  // 또는 회사가 만든 sandbox 스페이스 (예: `PKTEST`).
+  // 비워두면 "테스트로 복사" 버튼 비활성. 채워두면 노출.
+  confluenceTestSpaceKey?: string;
+  // 선택. 채우면 그 페이지의 자식으로 복사, 비우면 스페이스 root.
+  confluenceTestParentPageId?: string;
 }
 
 function settingsFile(): string {

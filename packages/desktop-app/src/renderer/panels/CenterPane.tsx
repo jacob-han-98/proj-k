@@ -131,6 +131,47 @@ function ConfluencePane({
 }) {
   const webviewRef = useRef<HTMLElement | null>(null);
   const [extracting, setExtracting] = useState(false);
+  // B2-1: 테스트 스페이스 설정 여부 — 설정되어 있으면 "📋 테스트로 복사" 버튼 노출.
+  const [testSpaceKey, setTestSpaceKey] = useState<string | null>(null);
+  const [copying, setCopying] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const s = await window.projk.getSettings();
+        if (!cancelled) setTestSpaceKey(s.confluenceTestSpaceKey?.trim() || null);
+      } catch { /* ignore */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const copyToTestSpace = async () => {
+    if (!node.confluencePageId) {
+      alert('이 노드에 Confluence page ID 가 없어요.');
+      return;
+    }
+    setCopying(true);
+    try {
+      const r = await window.projk.confluenceCopyToTest(node.confluencePageId);
+      if (!r.ok) {
+        alert(`테스트 사본 생성 실패: ${r.error}`);
+        return;
+      }
+      // 새 페이지를 탭으로 open. 기존 흐름 유지: confluence kind + node.
+      const newNode: TreeNode = {
+        id: `confluence:${r.newPageId}`,
+        type: 'page',
+        title: r.newTitle,
+        relPath: `[${r.spaceKey}] ${r.newTitle}`,
+        confluencePageId: r.newPageId,
+      };
+      useWorkbenchStore.getState().openTab({ kind: 'confluence', node: newNode });
+    } catch (e) {
+      alert(`테스트 사본 호출 예외: ${(e as Error).message}`);
+    } finally {
+      setCopying(false);
+    }
+  };
 
   const requestReview = async () => {
     if (!onRequestReview) return;
@@ -180,6 +221,16 @@ function ConfluencePane({
               title="현재 페이지 본문을 LLM 으로 리뷰"
             >
               {extracting ? '추출 중…' : '📋 리뷰'}
+            </button>
+          )}
+          {testSpaceKey && node.confluencePageId && (
+            <button
+              onClick={copyToTestSpace}
+              disabled={copying}
+              data-testid="confluence-copy-test"
+              title={`${testSpaceKey} 스페이스에 안전 사본 만들기 (timestamp 자동 추가)`}
+            >
+              {copying ? '복사 중…' : '📋 테스트로 복사'}
             </button>
           )}
           <button onClick={() => window.open(url, '_blank')} title="외부 브라우저">↗</button>

@@ -160,6 +160,7 @@ export const IPC = {
   CONFLUENCE_CREDS_GET: 'confluence:creds:get',
   CONFLUENCE_CREDS_SET: 'confluence:creds:set',
   CONFLUENCE_APPLY_EDITS: 'confluence:apply-edits',
+  CONFLUENCE_COPY_TO_TEST: 'confluence:copy-to-test',
   EXCEL_OPEN: 'excel:open',
   P4_SYNC: 'p4:sync',
   P4_DISCOVER: 'p4:discover',
@@ -297,6 +298,13 @@ export interface AppSettings {
   p4Host?: string; // P4PORT (예: 'perforce:1666')
   p4User?: string; // P4USER
   p4Client?: string; // P4CLIENT
+
+  // B2-1 (2026-05-03): Confluence 리뷰/수정 검증용 별도 스페이스.
+  // 채우면 doc-header 에 "📋 테스트로 복사" 버튼 노출. 운영 페이지를 안전하게 사본 만들어
+  // 거기서 review/Apply 검증.
+  confluenceTestSpaceKey?: string;
+  // 선택. 채우면 그 페이지의 자식으로 복사, 비우면 스페이스 root.
+  confluenceTestParentPageId?: string;
 }
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC];

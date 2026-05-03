@@ -25,6 +25,7 @@ import { createHash } from 'node:crypto';
 import { getSidecarStatus, onSidecarStatus, startSidecar } from './sidecar';
 import { getConfluenceCreds, setConfluenceCreds } from './auth';
 import { applyEditsToConfluencePage, type ChangeItem as ConfluenceChangeItem } from './confluence-apply';
+import { copyPageToTestSpace } from './confluence-copy';
 import { getUpdaterState, onUpdaterState, quitAndInstall, checkForUpdate, getLastCheckedAt } from './updater';
 import { getSettings, setSettings } from './settings';
 import { tryDb } from './db';
@@ -97,6 +98,13 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
   // Phase 4-4: Confluence 변경안 적용 (storage format GET → text replace → PUT)
   ipcMain.handle(IPC.CONFLUENCE_APPLY_EDITS, async (_e, pageId: string, changes: ConfluenceChangeItem[]) => {
     return applyEditsToConfluencePage(pageId, changes);
+  });
+
+  // B2-1 (2026-05-03): 운영 페이지 → 테스트 스페이스로 안전 사본. SettingsModal 의
+  // confluenceTestSpaceKey 가 설정되어 있어야. 사본은 새 page id 부여 + 자동 탭 open 흐름은
+  // renderer 가 처리.
+  ipcMain.handle(IPC.CONFLUENCE_COPY_TO_TEST, async (_e, sourcePageId: string) => {
+    return copyPageToTestSpace(sourcePageId);
   });
 
   // Push sidecar status updates to the renderer

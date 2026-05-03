@@ -45,6 +45,11 @@ export function SettingsModal({ initialEmail, initialBaseUrl, onClose, onSaved }
   const [p4Discovering, setP4Discovering] = useState(false);
   const [p4DiscoveryMsg, setP4DiscoveryMsg] = useState<string | null>(null);
 
+  // B2-1: Confluence 리뷰/수정 검증용 별도 스페이스. 본인 personal space (~uid) 또는
+  // 회사 sandbox (예: PKTEST) 권장. 비우면 "테스트로 복사" 버튼 비활성.
+  const [confluenceTestSpaceKey, setConfluenceTestSpaceKey] = useState('');
+  const [confluenceTestParentPageId, setConfluenceTestParentPageId] = useState('');
+
   useEffect(() => {
     window.projk.getSettings().then((s) => {
       setSavedSettings(s);
@@ -62,6 +67,8 @@ export function SettingsModal({ initialEmail, initialBaseUrl, onClose, onSaved }
       setP4User(s.p4User ?? '');
       setP4Client(s.p4Client ?? '');
       setP4WorkspaceRoot(s.p4WorkspaceRoot ?? '');
+      setConfluenceTestSpaceKey(s.confluenceTestSpaceKey ?? '');
+      setConfluenceTestParentPageId(s.confluenceTestParentPageId ?? '');
     });
   }, []);
 
@@ -113,6 +120,8 @@ export function SettingsModal({ initialEmail, initialBaseUrl, onClose, onSaved }
         p4User: p4User.trim() || undefined,
         p4Client: p4Client.trim() || undefined,
         p4WorkspaceRoot: p4WorkspaceRoot.trim() || undefined,
+        confluenceTestSpaceKey: confluenceTestSpaceKey.trim() || undefined,
+        confluenceTestParentPageId: confluenceTestParentPageId.trim() || undefined,
       });
 
       // 2) Confluence 자격증명 (비밀 — safeStorage 암호화)
@@ -363,6 +372,35 @@ export function SettingsModal({ initialEmail, initialBaseUrl, onClose, onSaved }
           value={baseUrl}
           onChange={(e) => setBaseUrl(e.target.value)}
         />
+
+        <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 12, marginBottom: 4 }}>
+          Confluence 테스트 스페이스 (선택 — 운영 페이지 안전 사본 검증용)
+        </div>
+        <label htmlFor="settings-conf-test-space">Test Space Key</label>
+        <input
+          id="settings-conf-test-space"
+          aria-label="Confluence Test Space Key"
+          data-testid="settings-conf-test-space"
+          value={confluenceTestSpaceKey}
+          onChange={(e) => setConfluenceTestSpaceKey(e.target.value)}
+          placeholder="예: PKTEST 또는 ~userid"
+          spellCheck={false}
+        />
+        <label htmlFor="settings-conf-test-parent">Test Parent Page ID (선택)</label>
+        <input
+          id="settings-conf-test-parent"
+          aria-label="Confluence Test Parent Page ID"
+          data-testid="settings-conf-test-parent"
+          value={confluenceTestParentPageId}
+          onChange={(e) => setConfluenceTestParentPageId(e.target.value)}
+          placeholder="비우면 스페이스 root 에 사본"
+          spellCheck={false}
+        />
+        <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: -4 }}>
+          채워두면 운영 페이지의 doc-header 에 "📋 테스트로 복사" 버튼 노출. 클릭 →
+          이 스페이스에 사본 생성 (제목에 timestamp 자동 추가) → 새 페이지 자동 탭 open. <br />
+          본인 personal space (<code>~userid</code>) 또는 회사가 만든 sandbox (예: <code>PKTEST</code>) 권장.
+        </div>
 
         <div className="row">
           <button onClick={onClose}>취소</button>

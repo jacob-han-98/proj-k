@@ -44,6 +44,14 @@ const api = {
   ): Promise<{ ok: boolean; applied: number; skipped: number; skippedIds: string[]; pageUrl?: string; error?: string }> =>
     ipcRenderer.invoke(IPC.CONFLUENCE_APPLY_EDITS, pageId, changes),
 
+  // B2-1: 운영 페이지 → 테스트 스페이스 안전 사본. 새 page 생성 후 id/url 반환.
+  confluenceCopyToTest: (
+    sourcePageId: string,
+  ): Promise<
+    | { ok: true; newPageId: string; newPageUrl: string; newTitle: string; spaceKey: string }
+    | { ok: false; error: string }
+  > => ipcRenderer.invoke(IPC.CONFLUENCE_COPY_TO_TEST, sourcePageId),
+
   getUpdaterState: (): Promise<{ state: UpdaterState; lastCheckedAt: number | null }> =>
     ipcRenderer.invoke(IPC.UPDATER_STATE),
   onUpdaterState: (cb: (s: UpdaterState) => void): (() => void) => {

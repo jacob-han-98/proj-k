@@ -47,6 +47,81 @@ export async function getSourceView(path: string, section = ''): Promise<SourceV
   }
 }
 
+// A3-c: agent server-side conversation 관리 — admin 목록 / 상세 / fork / shared 읽기.
+// agent-sdk-poc 가 자체 storage 에 conversation 별 turns 를 저장. Klaud thread (SQLite)
+// 와는 별개 — 추후 conversation_id ↔ thread 매핑이 들어가야 UI 통합 가능.
+export interface ConversationSummary {
+  id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+  turn_count: number;
+  last_elapsed_s?: number | null;
+  last_cost_usd?: number | null;
+}
+export interface ConversationDetail {
+  id: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+  turns: Array<Record<string, unknown>>;
+  // agent 가 추가 필드 붙일 수 있음 — passthrough.
+  [k: string]: unknown;
+}
+export interface ForkResult {
+  conversation_id: string;
+  title: string;
+  turn_count: number;
+}
+export async function listConversations(): Promise<ConversationSummary[]> {
+  try {
+    const port = await ensurePort();
+    const res = await fetch(`http://127.0.0.1:${port}/admin/conversations`);
+    if (!res.ok) return [];
+    const data = (await res.json()) as { conversations?: ConversationSummary[] };
+    return Array.isArray(data?.conversations) ? data.conversations : [];
+  } catch {
+    return [];
+  }
+}
+export async function getConversation(convId: string): Promise<ConversationDetail | null> {
+  try {
+    const port = await ensurePort();
+    const res = await fetch(
+      `http://127.0.0.1:${port}/admin/conversations/${encodeURIComponent(convId)}`,
+    );
+    if (!res.ok) return null;
+    return (await res.json()) as ConversationDetail;
+  } catch {
+    return null;
+  }
+}
+export async function forkConversation(convId: string): Promise<ForkResult | null> {
+  try {
+    const port = await ensurePort();
+    const res = await fetch(
+      `http://127.0.0.1:${port}/conversations/${encodeURIComponent(convId)}/fork`,
+      { method: 'POST' },
+    );
+    if (!res.ok) return null;
+    return (await res.json()) as ForkResult;
+  } catch {
+    return null;
+  }
+}
+export async function getSharedConversation(convId: string): Promise<ConversationDetail | null> {
+  try {
+    const port = await ensurePort();
+    const res = await fetch(
+      `http://127.0.0.1:${port}/shared/${encodeURIComponent(convId)}`,
+    );
+    if (!res.ok) return null;
+    return (await res.json()) as ConversationDetail;
+  } catch {
+    return null;
+  }
+}
+
 // A3-a: agent-sdk-poc 의 큐레이션된 추천 prompt — sidecar /preset_prompts proxy 통해.
 // QnATab 의 입력란 위에 카테고리별 chips 로 노출. agent 미설정 또는 fail 시 빈 list →
 // UI 가 chips 자체를 hide.

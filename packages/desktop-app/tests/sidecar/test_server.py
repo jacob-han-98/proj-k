@@ -583,6 +583,136 @@ def test_source_view_propagates_upstream_404(monkeypatch: pytest.MonkeyPatch) ->
     assert res.status_code == 404
 
 
+def test_admin_conversations_503_when_agent_unset(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A3-c: PROJK_AGENT_URL 미설정 시 list/detail/fork/shared 모두 503."""
+    monkeypatch.delenv("PROJK_AGENT_URL", raising=False)
+    import importlib
+    import server as server_module
+    importlib.reload(server_module)
+    client = TestClient(server_module.app)
+    assert client.get("/admin/conversations").status_code == 503
+    assert client.get("/admin/conversations/abc").status_code == 503
+    assert client.post("/conversations/abc/fork").status_code == 503
+    assert client.get("/shared/abc").status_code == 503
+
+
+def test_admin_conversations_proxies_upstream(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A3-c: list/detail/fork/shared 모두 agent 응답 그대로 forward."""
+    monkeypatch.setenv("PROJK_AGENT_URL", "http://agent.test")
+
+    import importlib
+    import server as server_module
+    importlib.reload(server_module)
+
+    fake_list = {
+        "conversations": [
+            {
+                "id": "c1",
+                "title": "변신 시스템 정리",
+                "created_at": "2026-04-30T10:00:00Z",
+                "updated_at": "2026-04-30T10:30:00Z",
+                "turn_count": 3,
+                "last_elapsed_s": 4.2,
+                "last_cost_usd": 0.012,
+            },
+        ],
+        "total": 1,
+    }
+    fake_detail = {
+        "id": "c1",
+        "title": "변신 시스템 정리",
+        "created_at": "2026-04-30T10:00:00Z",
+        "updated_at": "2026-04-30T10:30:00Z",
+        "turns": [{"question": "Q", "answer": "A"}],
+    }
+    fake_fork = {"conversation_id": "c2", "title": "(fork) 변신 시스템 정리", "turn_count": 3}
+
+    captured: dict = {}
+
+    class _MockResponse:
+        def __init__(self, payload: dict, status: int = 200):
+            self._payload = payload
+            self.status_code = status
+            self.text = ""
+
+        def json(self):
+            return self._payload
+
+    class _MockClient:
+        def __init__(self, *_a, **_kw):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_a):
+            return False
+
+        async def get(self, url, params=None):
+            captured.setdefault("gets", []).append(url)
+            if url.endswith("/admin/conversations"):
+                return _MockResponse(fake_list)
+            if "/admin/conversations/" in url:
+                return _MockResponse(fake_detail)
+            if url.startswith("http://agent.test/shared/"):
+                return _MockResponse(fake_detail)
+            return _MockResponse({}, status=404)
+
+        async def post(self, url, json=None):
+            captured.setdefault("posts", []).append(url)
+            if url.endswith("/fork"):
+                return _MockResponse(fake_fork)
+            return _MockResponse({}, status=404)
+
+    monkeypatch.setattr(server_module.httpx, "AsyncClient", _MockClient)
+    client = TestClient(server_module.app)
+
+    assert client.get("/admin/conversations").json() == fake_list
+    assert client.get("/admin/conversations/c1").json() == fake_detail
+    assert client.post("/conversations/c1/fork").json() == fake_fork
+    assert client.get("/shared/c1").json() == fake_detail
+
+    # url path 가 conv_id 포함해 정확히 forward
+    assert any(u.endswith("/admin/conversations/c1") for u in captured["gets"])
+    assert any(u.endswith("/conversations/c1/fork") for u in captured["posts"])
+    assert any(u.endswith("/shared/c1") for u in captured["gets"])
+
+
+def test_admin_conversations_propagate_404(monkeypatch: pytest.MonkeyPatch) -> None:
+    """A3-c: agent 가 conv_id 못 찾으면 (404) — 그 status 그대로 전달."""
+    monkeypatch.setenv("PROJK_AGENT_URL", "http://agent.test")
+
+    import importlib
+    import server as server_module
+    importlib.reload(server_module)
+
+    class _MockResponse:
+        status_code = 404
+        text = "Conversation not found"
+
+    class _MockClient:
+        def __init__(self, *_a, **_kw):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_a):
+            return False
+
+        async def get(self, _url, params=None):
+            return _MockResponse()
+
+        async def post(self, _url, json=None):
+            return _MockResponse()
+
+    monkeypatch.setattr(server_module.httpx, "AsyncClient", _MockClient)
+    client = TestClient(server_module.app)
+    assert client.get("/admin/conversations/missing").status_code == 404
+    assert client.post("/conversations/missing/fork").status_code == 404
+    assert client.get("/shared/missing").status_code == 404
+
+
 def test_cors_preflight_returns_allow_origin(client: TestClient) -> None:
     """Renderer (electron-vite dev) lives at http://localhost:5174 — different
     origin from sidecar at http://127.0.0.1:<port>. POST + JSON triggers preflight,

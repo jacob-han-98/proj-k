@@ -789,6 +789,92 @@ async def source_view(path: str, section: str = "") -> dict:
         raise HTTPException(status_code=502, detail=f"upstream 연결 실패: {e!s}")
 
 
+# ---------- A3-c: agent server-side conversations (admin/fork/shared) ----------
+#
+# agent-sdk-poc 가 자체 storage 에 conversation 별 turns 를 저장 (Klaud thread 와 별도).
+# 4 endpoint 모두 agent 가 source-of-truth 라 sidecar 는 단순 proxy.
+#   GET  /admin/conversations           → 목록 (id/title/turn_count/updated_at/...)
+#   GET  /admin/conversations/{id}      → 상세 (turns 포함)
+#   POST /conversations/{id}/fork       → 복제 → 새 conversation 반환
+#   GET  /shared/{id}                   → 읽기 전용 상세 (sharing 용)
+
+
+@app.get("/admin/conversations")
+async def admin_conversations() -> dict:
+    base = _agent_url()
+    if not base:
+        raise HTTPException(status_code=503, detail="agent 백엔드 URL 미설정")
+    timeout = httpx.Timeout(connect=5.0, read=15.0, write=5.0, pool=5.0)
+    try:
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            r = await client.get(f"{base}/admin/conversations")
+            if r.status_code != 200:
+                raise HTTPException(
+                    status_code=r.status_code,
+                    detail=f"upstream {r.status_code}: {r.text[:200]}",
+                )
+            return r.json()
+    except httpx.HTTPError as e:
+        raise HTTPException(status_code=502, detail=f"upstream 연결 실패: {e!s}")
+
+
+@app.get("/admin/conversations/{conv_id}")
+async def admin_conversation_detail(conv_id: str) -> dict:
+    base = _agent_url()
+    if not base:
+        raise HTTPException(status_code=503, detail="agent 백엔드 URL 미설정")
+    timeout = httpx.Timeout(connect=5.0, read=15.0, write=5.0, pool=5.0)
+    try:
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            r = await client.get(f"{base}/admin/conversations/{conv_id}")
+            if r.status_code != 200:
+                raise HTTPException(
+                    status_code=r.status_code,
+                    detail=f"upstream {r.status_code}: {r.text[:200]}",
+                )
+            return r.json()
+    except httpx.HTTPError as e:
+        raise HTTPException(status_code=502, detail=f"upstream 연결 실패: {e!s}")
+
+
+@app.post("/conversations/{conv_id}/fork")
+async def fork_conversation(conv_id: str) -> dict:
+    base = _agent_url()
+    if not base:
+        raise HTTPException(status_code=503, detail="agent 백엔드 URL 미설정")
+    timeout = httpx.Timeout(connect=5.0, read=15.0, write=5.0, pool=5.0)
+    try:
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            r = await client.post(f"{base}/conversations/{conv_id}/fork")
+            if r.status_code != 200:
+                raise HTTPException(
+                    status_code=r.status_code,
+                    detail=f"upstream {r.status_code}: {r.text[:200]}",
+                )
+            return r.json()
+    except httpx.HTTPError as e:
+        raise HTTPException(status_code=502, detail=f"upstream 연결 실패: {e!s}")
+
+
+@app.get("/shared/{conv_id}")
+async def shared_conversation(conv_id: str) -> dict:
+    base = _agent_url()
+    if not base:
+        raise HTTPException(status_code=503, detail="agent 백엔드 URL 미설정")
+    timeout = httpx.Timeout(connect=5.0, read=15.0, write=5.0, pool=5.0)
+    try:
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            r = await client.get(f"{base}/shared/{conv_id}")
+            if r.status_code != 200:
+                raise HTTPException(
+                    status_code=r.status_code,
+                    detail=f"upstream {r.status_code}: {r.text[:200]}",
+                )
+            return r.json()
+    except httpx.HTTPError as e:
+        raise HTTPException(status_code=502, detail=f"upstream 연결 실패: {e!s}")
+
+
 # ---------- /preset_prompts (A3-a: agent 의 큐레이션된 추천 prompt 노출) ----------
 #
 # agent-sdk-poc 의 PRESETS — Project K 시스템·데이터시트·운영 영역에 특화된 자주 묻는

@@ -2,6 +2,16 @@ import { app, BrowserWindow, session } from 'electron';
 import { join } from 'node:path';
 import { existsSync } from 'node:fs';
 
+// userData 폴더 이름 통일 — dev / packaged / _electron.launch (real Electron 테스트) 모두
+// 동일 'projk-desktop' 사용. 미설정 시 Electron 이 entry script 옆 package.json 검색하는데
+// out/main/index.js 직접 launch 시 경로 못 찾아 default 'Electron' 으로 떨어짐 →
+// settings.json 미인식 회귀 (사용자 환경과 다른 폴더 보게 됨). app.whenReady 전에 호출 필수.
+//
+// setName 만으로는 부족 — Electron 이 첫 getPath('userData') 호출 결과를 캐시하므로
+// setPath 도 명시. AppData/Roaming/projk-desktop 으로 강제.
+app.setName('projk-desktop');
+app.setPath('userData', join(app.getPath('appData'), 'projk-desktop'));
+
 // 진단 환경에서 background spawn 한 BrowserWindow 가 GPU paint 안 일어나는 케이스 대비
 // SW rendering 강제 옵션. 단, *명시 env 일 때만* 활성 — dev 자동 활성화 제거.
 // 이전 시도에서 dev 자동 SW rendering 이 webview 의 SharePoint SSO chain JS 실행을 막아

@@ -67,7 +67,15 @@ type WorkbenchState = {
   // PR4: editor 영역의 우측 split (어시스턴트). 탭별 isolated.
   tabSplits: Record<string, SplitPayload | undefined>;
   // mode 미지정 = 'pick' (수동 시작 빈 상태). 기존 호출자는 mode 인자 생략 가능.
-  openSplit: (tabId: string, title: string, text: string, mode?: SplitMode) => void;
+  // P2: reviewOptions 까지 명시되면 review 모드의 옵션 panel 도 skip — Excel sheet
+  // 의 즉시 review 시작 흐름이 이 형태.
+  openSplit: (
+    tabId: string,
+    title: string,
+    text: string,
+    mode?: SplitMode,
+    reviewOptions?: ReviewOptions,
+  ) => void;
   // 모드 칩 클릭 / 빈 상태에서 모드 선택. trigger 갱신해 effect 재발동.
   setSplitMode: (tabId: string, mode: SplitMode) => void;
   // P2: 리뷰 옵션 패널의 "리뷰 시작" 버튼이 호출. 옵션 채워지면서 trigger 도 갱신 →
@@ -176,9 +184,12 @@ export const useWorkbenchStore = create<WorkbenchState>((set) => ({
 
   tabSplits: {},
 
-  openSplit: (tabId, title, text, mode = 'pick') => set((state) => ({
+  openSplit: (tabId, title, text, mode = 'pick', reviewOptions) => set((state) => ({
     ...state,
-    tabSplits: { ...state.tabSplits, [tabId]: { title, text, trigger: Date.now(), mode } },
+    tabSplits: {
+      ...state.tabSplits,
+      [tabId]: { title, text, trigger: Date.now(), mode, reviewOptions },
+    },
   })),
 
   setSplitMode: (tabId, mode) => set((state) => {

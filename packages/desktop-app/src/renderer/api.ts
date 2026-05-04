@@ -205,14 +205,58 @@ export async function searchDocs(query: string, limit = 20): Promise<SearchRespo
 export async function askStream(
   question: string,
   onLine: (event: { type: string; payload: unknown }) => void,
+  // P3: 일반 Agent 모드는 conversation_id 와 함께 호출 — backend 가 같은 conv 의
+  // doc_context (read_current_doc tool) 를 hint 로 system prompt 에 주입.
+  // 미지정 시 기존 QnA 동작.
+  conversationId?: string,
 ): Promise<void> {
   const port = await ensurePort();
+  const body: Record<string, unknown> = { question };
+  if (conversationId) body.conversation_id = conversationId;
   const res = await fetch(`http://127.0.0.1:${port}/ask_stream`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ question }),
+    body: JSON.stringify(body),
   });
   await readNdjson(res, onLine);
+}
+
+// P3: 일반 Agent 모드 — doc_context stash/clear.
+// 같은 conv_id 재호출 시 backend 가 덮어씀. 모드 닫을 때 clear 로 정리해 메모리 절약.
+export interface DocContextResult {
+  ok: boolean;
+  conversation_id?: string;
+  content_chars?: number;
+  truncated?: boolean;
+  cleared?: boolean;
+  error?: string;
+}
+
+export async function setDocContext(
+  conversationId: string,
+  payload: { title?: string; page_id?: string; doc_type?: string; content: string },
+): Promise<DocContextResult> {
+  const port = await ensurePort();
+  const res = await fetch(
+    `http://127.0.0.1:${port}/conversations/${encodeURIComponent(conversationId)}/doc_context`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    },
+  );
+  if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
+  return (await res.json()) as DocContextResult;
+}
+
+export async function clearDocContext(conversationId: string): Promise<DocContextResult> {
+  const port = await ensurePort();
+  const res = await fetch(
+    `http://127.0.0.1:${port}/conversations/${encodeURIComponent(conversationId)}/doc_context`,
+    { method: 'DELETE' },
+  );
+  if (!res.ok) return { ok: false, error: `HTTP ${res.status}` };
+  return (await res.json()) as DocContextResult;
 }
 
 // P1: 요약 모드. /summary_stream 도 review 와 동일한 NDJSON 패턴. backend default

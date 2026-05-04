@@ -815,6 +815,9 @@ async def search_docs(req: SearchRequest) -> SearchResponse:
 
 class AskRequest(BaseModel):
     question: str
+    # P3: 일반 Agent 모드는 conversation_id 로 doc_context stash 와 묶어 사용.
+    # 미지정 시 기존 QnA 동작 (backend 가 hint 미주입).
+    conversation_id: str | None = None
 
 
 def _stream_stub(question: str) -> AsyncIterator[str]:
@@ -830,10 +833,9 @@ def _stream_stub(question: str) -> AsyncIterator[str]:
     return gen()
 
 
-async def _proxy_ask_stream(question: str) -> AsyncIterator[str]:
+async def _proxy_ask_stream(payload: dict[str, Any]) -> AsyncIterator[str]:
     """upstream agent-sdk-poc 의 /ask_stream 을 line-by-line 으로 forward."""
     base = _agent_url()
-    payload = {"question": question}
     timeout = httpx.Timeout(connect=10.0, read=None, write=10.0, pool=10.0)
     try:
         async with httpx.AsyncClient(timeout=timeout) as client:
@@ -854,8 +856,61 @@ async def _proxy_ask_stream(question: str) -> AsyncIterator[str]:
 @app.post("/ask_stream")
 async def ask_stream(req: AskRequest):
     base = _agent_url()
-    gen = _proxy_ask_stream(req.question) if base else _stream_stub(req.question)
-    return StreamingResponse(gen, media_type="application/x-ndjson")
+    if not base:
+        return StreamingResponse(_stream_stub(req.question), media_type="application/x-ndjson")
+    payload = req.model_dump(exclude_none=True)
+    return StreamingResponse(_proxy_ask_stream(payload), media_type="application/x-ndjson")
+
+
+# ---------- /conversations/{conv_id}/doc_context (P3: 일반 Agent 모드) ----------
+# Klaud 어시스턴트의 일반 Agent 모드 진입 시 webview innerText 를 backend 의 conv 별
+# doc_context store 에 stash. 같은 conv 의 후속 ask_stream 호출 시 agent 가
+# read_current_doc tool 로 본문을 lazy load — system prompt 에 박지 않음.
+#
+# 메모리 store 라 backend 재시작 시 휘발 — frontend 는 read_current_doc 가
+# status='no_doc' 응답하면 retry 로 다시 stash 하는 게 안전 (backend MEMORY 노트).
+
+
+class DocContextRequest(BaseModel):
+    title: str | None = None
+    page_id: str | None = None
+    doc_type: str | None = None
+    content: str
+
+
+@app.post("/conversations/{conv_id}/doc_context")
+async def stash_doc_context(conv_id: str, req: DocContextRequest):
+    base = _agent_url()
+    if not base:
+        return {"ok": False, "error": "agent 백엔드 URL 미설정"}
+    timeout = httpx.Timeout(connect=10.0, read=10.0, write=10.0, pool=10.0)
+    try:
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            r = await client.post(
+                f"{base}/conversations/{conv_id}/doc_context",
+                json=req.model_dump(exclude_none=True),
+            )
+            if r.status_code != 200:
+                return {"ok": False, "error": f"upstream {r.status_code}: {r.text[:200]}"}
+            return r.json()
+    except httpx.HTTPError as e:
+        return {"ok": False, "error": f"upstream 연결 실패: {e!s}"}
+
+
+@app.delete("/conversations/{conv_id}/doc_context")
+async def clear_doc_context(conv_id: str):
+    base = _agent_url()
+    if not base:
+        return {"ok": False, "error": "agent 백엔드 URL 미설정"}
+    timeout = httpx.Timeout(connect=10.0, read=10.0, write=10.0, pool=10.0)
+    try:
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            r = await client.delete(f"{base}/conversations/{conv_id}/doc_context")
+            if r.status_code != 200:
+                return {"ok": False, "error": f"upstream {r.status_code}: {r.text[:200]}"}
+            return r.json()
+    except httpx.HTTPError as e:
+        return {"ok": False, "error": f"upstream 연결 실패: {e!s}"}
 
 
 # ---------- /source_view (A3-b: 답변 citation drill-down) ----------

@@ -37,7 +37,7 @@ const MODES: Mode[] = [
     label: '일반 Agent 모드',
     description: '이 문서에 포커스한 자유 대화',
     icon: '💬',
-    enabled: false,
+    enabled: true,
   },
 ];
 

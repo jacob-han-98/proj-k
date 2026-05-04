@@ -5,6 +5,7 @@ import { ModePickerEmpty } from './ModePickerEmpty';
 import { ReviewOptionsPanel } from './ReviewOptionsPanel';
 import { ReviewSplitPane } from './ReviewSplitPane';
 import { SummarySplitPane } from './SummarySplitPane';
+import { DocFocusedChat } from './DocFocusedChat';
 
 // P0: ReviewSplitPane 한 단계 위 wrapper. 사용자가 아직 모드를 안 골랐으면
 // ModePickerEmpty (= 첫 스크린샷 빈 상태) 를 보여주고, 모드 선택 시 setSplitMode
@@ -154,8 +155,50 @@ export function DocAssistantPane({
     );
   }
 
-  // P3 미구현 분기 (agent) — 사용자가 비활성 칩을 누를 일은 없지만 (ModePickerEmpty 가
-  // disabled), 외부에서 setSplitMode 가 호출돼 도달할 수 있으므로 안전한 placeholder.
+  if (mode === 'agent') {
+    // P3: 일반 Agent 모드. DocFocusedChat 가 자체적으로 conversation 생성 +
+    // setDocContext (현재 본문 stash) + askStream (conversation_id 와 함께).
+    // unmount 시 clearDocContext 자동 호출 (DocFocusedChat 의 useEffect cleanup).
+    return (
+      <aside className="doc-assistant-pane" data-testid="doc-assistant-pane" data-mode="agent">
+        <header className="doc-assistant-header">
+          <button
+            type="button"
+            className="doc-assistant-back"
+            onClick={() => setSplitMode(tabId, 'pick')}
+            aria-label="모드 다시 선택"
+            title="모드 다시 선택"
+            data-testid="doc-assistant-back"
+          >
+            ←
+          </button>
+          <span className="doc-assistant-title">
+            <i className="codicon codicon-comment-discussion" aria-hidden="true" /> Agent — {title}
+          </span>
+          <button
+            type="button"
+            className="doc-assistant-close"
+            onClick={onClose}
+            aria-label="어시스턴트 닫기"
+            title="어시스턴트 닫기"
+            data-testid="doc-assistant-close"
+          >
+            <i className="codicon codicon-close" aria-hidden="true" />
+          </button>
+        </header>
+        <div className="doc-assistant-body doc-assistant-body-chat">
+          <DocFocusedChat
+            title={title}
+            text={text}
+            trigger={trigger}
+            pageId={confluencePageId}
+          />
+        </div>
+      </aside>
+    );
+  }
+
+  // 알 수 없는 모드 — 외부에서 잘못된 setSplitMode 호출된 경우만 도달. 안전한 fallback.
   return (
     <aside className="doc-assistant-pane" data-testid="doc-assistant-pane" data-mode={mode}>
       <header className="doc-assistant-header">
@@ -175,7 +218,7 @@ export function DocAssistantPane({
       </header>
       <div className="doc-assistant-body">
         <div className="doc-assistant-placeholder" data-testid="doc-assistant-placeholder">
-          <p>이 모드는 준비 중입니다.</p>
+          <p>알 수 없는 모드입니다.</p>
           <button
             type="button"
             onClick={() => setSplitMode(tabId, 'pick')}

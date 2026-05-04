@@ -3,6 +3,7 @@ import type { SearchHit, TreeNode } from '../../../shared/types';
 import { CenterPane } from '../../panels/CenterPane';
 import { useWorkbenchStore } from '../store';
 import type { SplitPayload } from '../store';
+import { DEFAULT_REVIEW_OPTIONS } from '../../panels/review-options-mapping';
 import { QnATab } from './QnATab';
 import { DocAssistantPane } from './DocAssistantPane';
 import { TabBar } from './TabBar';
@@ -148,9 +149,13 @@ function DocTabContent({
           onPromptCreds={onPromptCreds}
           sheetMappings={sheetMappings}
           onUpsertSheetMapping={onUpsertSheetMapping}
-          onRequestReview={(title, text, mode) =>
-            useWorkbenchStore.getState().openSplit(tabId, title, text, mode)
-          }
+          onRequestReview={(title, text, mode) => {
+            // P2: sheet review 처럼 mode='review' 직접 시작 흐름은 옵션 panel skip —
+            // DEFAULT_REVIEW_OPTIONS 미리 채워서 즉시 ReviewSplitPane mount.
+            // Confluence 어시스턴트 (mode 미지정 → 'pick') 는 reviewOptions 미지정.
+            const reviewOptions = mode === 'review' ? DEFAULT_REVIEW_OPTIONS : undefined;
+            useWorkbenchStore.getState().openSplit(tabId, title, text, mode, reviewOptions);
+          }}
         />
       </div>
       {split && (

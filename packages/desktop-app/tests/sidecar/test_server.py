@@ -756,6 +756,49 @@ def test_review_stream_returns_ndjson_error_without_agent_url(client: TestClient
     assert events[0]["type"] == "error"
 
 
+def test_doc_context_stash_returns_error_without_agent_url(client: TestClient) -> None:
+    """P3: doc_context POST 도 agent URL 미설정 시 ok=false 단발 응답.
+    NDJSON 아닌 JSON 객체 — 단발 endpoint 라 stream 아님."""
+    res = client.post(
+        "/conversations/test-conv-1/doc_context",
+        json={"title": "t", "content": "x"},
+    )
+    assert res.status_code == 200
+    body = res.json()
+    assert body.get("ok") is False
+    assert "백엔드 URL 미설정" in body.get("error", "")
+
+
+def test_doc_context_clear_returns_error_without_agent_url(client: TestClient) -> None:
+    """P3: DELETE 도 같은 정책."""
+    res = client.delete("/conversations/test-conv-1/doc_context")
+    assert res.status_code == 200
+    body = res.json()
+    assert body.get("ok") is False
+
+
+def test_doc_context_requires_content(client: TestClient) -> None:
+    """P3: content 필수 — 빠지면 422 (Pydantic validation)."""
+    res = client.post(
+        "/conversations/test-conv-1/doc_context",
+        json={"title": "t"},  # content 없음
+    )
+    assert res.status_code == 422
+
+
+def test_ask_stream_accepts_optional_conversation_id(client: TestClient) -> None:
+    """P3: /ask_stream 의 conversation_id 옵셔널 필드 schema 검증.
+    미지정 시 (기존 호출자) 422 안 나야 한다."""
+    with client.stream("POST", "/ask_stream", json={"question": "test"}) as res:
+        assert res.status_code == 200
+    with client.stream(
+        "POST",
+        "/ask_stream",
+        json={"question": "test", "conversation_id": "conv-1"},
+    ) as res:
+        assert res.status_code == 200
+
+
 def test_summary_stream_returns_ndjson_error_without_agent_url(client: TestClient) -> None:
     """P1: /summary_stream 도 review_stream 과 동일 정책 — agent URL 미설정 시 200
     NDJSON + type=error 단발 (stream contract 유지). renderer 가 같은 파서 재사용."""

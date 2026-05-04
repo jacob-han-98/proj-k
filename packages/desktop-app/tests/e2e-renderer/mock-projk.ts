@@ -194,6 +194,18 @@ export const mockProjkInitScript = `
       }), { status: 200, headers: { 'Content-Type': 'application/json' } });
     }
     if (url.includes('/ask_stream')) {
+      // P3: 테스트가 자체 응답을 정의하고 싶으면 window.__askStreamOverride 를 set.
+      // body 는 NDJSON 문자열, captureBody 는 init.body JSON.parse 결과.
+      // capture 는 매번 갱신해서 마지막 호출의 payload 검증 가능.
+      if (init && init.body && typeof init.body === 'string') {
+        try {
+          (window).__askStreamCapturedBody = JSON.parse(init.body);
+        } catch { /* ignore */ }
+      }
+      const override = (window).__askStreamOverride;
+      if (typeof override === 'string') {
+        return new Response(override, { status: 200, headers: { 'Content-Type': 'application/x-ndjson' } });
+      }
       // agent-sdk-poc (2026-05) 신규 schema: token={text}, result={data:{answer}}.
       // Klaud 의 readToken/readResultData 가 양쪽 받지만 mock 은 신규 schema 따라가
       // 실제 backend 와 동일한 contract 검증.

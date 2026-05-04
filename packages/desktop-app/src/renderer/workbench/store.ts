@@ -3,6 +3,32 @@ import type { DocTab, OpenTabSpec, SidebarKind } from './types';
 import { tabIdOf, docKeyOfNode } from './types';
 import { touchRecentDoc } from '../recent-docs';
 
+// 마지막으로 선택했던 액티비티바 아이콘을 localStorage 에 영속.
+// recent-docs.ts / App.tsx 의 sidebar width 와 같은 패턴 — 인스톨/계정 무관, 부팅 직후 즉시 복원.
+// export 는 vitest 단위 테스트용 (jsdom 환경 없이도 mock localStorage 로 분기 검증 가능).
+export const ACTIVE_ICON_STORAGE_KEY = 'klaud.activeIcon';
+const VALID_ICONS: ReadonlySet<SidebarKind> = new Set(['p4', 'confluence', 'find', 'qna', 'recent']);
+
+export function loadActiveIcon(): SidebarKind {
+  if (typeof localStorage === 'undefined') return 'confluence';
+  try {
+    const raw = localStorage.getItem(ACTIVE_ICON_STORAGE_KEY);
+    if (raw && VALID_ICONS.has(raw as SidebarKind)) return raw as SidebarKind;
+  } catch {
+    /* localStorage 접근 실패 — 기본값 사용 */
+  }
+  return 'confluence';
+}
+
+export function saveActiveIcon(kind: SidebarKind): void {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    localStorage.setItem(ACTIVE_ICON_STORAGE_KEY, kind);
+  } catch {
+    /* quota 초과 등 — silently 무시 */
+  }
+}
+
 // PR1: activeIcon (Activity Bar 토글).
 // PR2: openTabs / activeTabId / openTab / focusTab / closeTab.
 // PR3+: 사이드바 토글 routing, qna-thread 탭, split state.
@@ -51,9 +77,12 @@ type WorkbenchState = {
 };
 
 export const useWorkbenchStore = create<WorkbenchState>((set) => ({
-  // 부팅 시 기본은 Confluence — 현재 사용자가 가장 자주 여는 영역.
-  activeIcon: 'confluence',
-  setActiveIcon: (kind) => set({ activeIcon: kind }),
+  // 마지막으로 선택했던 아이콘 복원. 처음 부팅이면 Confluence.
+  activeIcon: loadActiveIcon(),
+  setActiveIcon: (kind) => {
+    saveActiveIcon(kind);
+    set({ activeIcon: kind });
+  },
 
   openTabs: [],
   activeTabId: null,

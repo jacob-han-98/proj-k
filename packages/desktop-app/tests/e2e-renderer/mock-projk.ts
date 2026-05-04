@@ -288,6 +288,9 @@ export const mockProjkInitScript = `
     onMcpCommand: () => () => {},
     mcpReply: () => {},
 
+    // webview 단축키 forward — mock 환경엔 webview 가 없으니 main 이 보낼 일 없음. no-op.
+    onShortcut: () => () => {},
+
     // Frameless window controls (TitleBar 가 호출). Playwright 환경에선 no-op.
     win: {
       minimize: () => Promise.resolve(),

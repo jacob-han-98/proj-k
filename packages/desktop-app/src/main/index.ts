@@ -1,6 +1,7 @@
 import { app, BrowserWindow, session } from 'electron';
 import { join } from 'node:path';
 import { existsSync } from 'node:fs';
+import { IPC, type ShortcutEvent } from '../shared/types';
 
 // userData 폴더 이름 통일 — dev / packaged / _electron.launch (real Electron 테스트) 모두
 // 동일 'projk-desktop' 사용. 미설정 시 Electron 이 entry script 옆 package.json 검색하는데
@@ -106,6 +107,34 @@ function installPartitions(): void {
   });
 }
 
+// webview 안에서 우리 앱 단축키 (Ctrl+P / Ctrl+1~5) 가 가로채이는 회귀 차단.
+// 사용자가 Confluence/SharePoint 페이지를 webview 로 보다가 Ctrl+P 누르면 webview
+// 측 페이지의 키 핸들러가 먼저 받아 (Confluence 의 "Browse" 등) main renderer 의
+// window keydown 까지 전달 안 됨. main 의 before-input-event 는 webContents 별로
+// keyDown 을 가로챌 수 있어 — 매칭되는 단축키면 e.preventDefault + main window 로
+// IPC dispatch. App.tsx / ActivityBar.tsx 의 기존 핸들러와 같은 동작을 보장.
+function installShortcutInterceptor(): void {
+  app.on('web-contents-created', (_event, contents) => {
+    if (contents.getType() !== 'webview') return;
+    contents.on('before-input-event', (event, input) => {
+      if (input.type !== 'keyDown') return;
+      if (!(input.control || input.meta)) return;
+      if (input.shift || input.alt) return;
+      const k = input.key.toLowerCase();
+      if (!mainWindow || mainWindow.isDestroyed()) return;
+      let payload: ShortcutEvent | null = null;
+      if (k === 'p') {
+        payload = { name: 'command-palette' };
+      } else if (k === '1' || k === '2' || k === '3' || k === '4' || k === '5') {
+        payload = { name: 'activity-bar', digit: k };
+      }
+      if (!payload) return;
+      event.preventDefault();
+      mainWindow.webContents.send(IPC.SHORTCUT_TRIGGER, payload);
+    });
+  });
+}
+
 // 진단용 — 모든 webContents (main + webview + 자식 frame) 의 navigation/load/error
 // 이벤트를 main 콘솔에 기록. webview 가 어떤 URL 로 redirect 되어 어디서 멈추는지
 // (SSO chain / X-Frame deny / crashed 등) 추적. mcp 의 klaud_get_logs 로 받음.
@@ -185,6 +214,7 @@ app.whenReady().then(async () => {
   await initThreadsDb().catch((e) => console.error('[main] initThreadsDb', e));
   logEnvironment();
   installPartitions();
+  installShortcutInterceptor();
   installWebContentsTracing();
   registerIpc(() => mainWindow);
   createWindow();

@@ -8,6 +8,7 @@ import {
   type P4DepotOpenResult,
   type P4DiscoveryInfo,
   type P4TreeResult,
+  type ShortcutEvent,
   type SidecarStatus,
   type ThreadBundle,
   type ThreadCitation,
@@ -102,6 +103,14 @@ const api = {
       ipcRenderer.on(IPC.WINDOW_MAXIMIZED, handler);
       return () => ipcRenderer.off(IPC.WINDOW_MAXIMIZED, handler);
     },
+  },
+
+  // webview 가 focus 를 가져가 keydown 을 가로챈 경우에도 main 이 before-input-event
+  // 로 우리 단축키를 detect → 이 채널로 forward. renderer 는 같은 핸들러로 동작.
+  onShortcut: (cb: (ev: ShortcutEvent) => void): (() => void) => {
+    const handler = (_e: unknown, ev: ShortcutEvent) => cb(ev);
+    ipcRenderer.on(IPC.SHORTCUT_TRIGGER, handler);
+    return () => ipcRenderer.off(IPC.SHORTCUT_TRIGGER, handler);
   },
 
   // mcp-bridge 가 보내는 명령을 renderer 가 수신하기 위한 hook.

@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import type { SearchHit, SidecarStatus, TreeNode } from '../shared/types';
+import {
+  TREE_PERSIST_KEYS,
+  clearString,
+  loadString,
+  saveString,
+} from './workbench/Sidebar/tree-state-persist';
 import { SettingsModal } from './panels/SettingsModal';
 import { DiagnosticsModal } from './panels/DiagnosticsModal';
 import { UpdateToast } from './panels/UpdateToast';
@@ -143,6 +149,94 @@ export function App() {
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, []);
+
+  // webview 가 focus 를 가져가 keydown 이 main renderer 까지 전달 안 되는 케이스
+  // (Confluence/SharePoint 페이지 안에서 Ctrl+P 누르면 그쪽 핸들러가 먼저 받음).
+  // main 의 before-input-event 가 webview 단축키를 가로채 이리로 forward → 같은
+  // togglePalette / setActiveIcon 호출. 결과적으로 어디에 focus 있어도 동일 동작.
+  useEffect(() => {
+    const off = window.projk.onShortcut((ev) => {
+      if (ev.name === 'command-palette') {
+        useWorkbenchStore.getState().togglePalette();
+        return;
+      }
+      if (ev.name === 'activity-bar') {
+        const map = {
+          '1': 'p4',
+          '2': 'confluence',
+          '3': 'find',
+          '4': 'qna',
+          '5': 'recent',
+        } as const;
+        useWorkbenchStore.getState().setActiveIcon(map[ev.digit]);
+      }
+    });
+    return off;
+  }, []);
+
+  // 마지막 트리 selection 영속 + 부팅 시 복원. "유지하려고 시도하지만 항목이 없어졌다면
+  // 무리하게 탐색하거나 포커스하려고 하지 않음" — 트리 walk 해서 nodeId 가 valid 일 때만 복원.
+  //
+  // 회귀 방지 (race condition): 사이드카 starting 동안 첫 getP4Tree/getConfluenceTree 가 빈
+  // 결과를 돌려줌 → findTreeNode null → silent skip 으로 끝나면 사용자 selection 영원히 미복원.
+  // 사이드카 ready 신호 시 한 번 더 시도. restored flag 로 중복 호출 가드. 사용자가 부팅 직후
+  // 다른 곳을 클릭했으면 setSelection prev ?? new 로 덮어쓰지 않음.
+  useEffect(() => {
+    let cancelled = false;
+    let restored = false;
+    const tryRestore = async () => {
+      if (cancelled || restored) return;
+      const raw = loadString(TREE_PERSIST_KEYS.LAST_SELECTION);
+      if (!raw) return;
+      let stored: { kind: 'sheet' | 'confluence'; nodeId: string };
+      try {
+        stored = JSON.parse(raw);
+      } catch {
+        return;
+      }
+      if (!stored?.nodeId || (stored.kind !== 'sheet' && stored.kind !== 'confluence')) return;
+      try {
+        const tree =
+          stored.kind === 'sheet'
+            ? await window.projk.getP4Tree()
+            : await window.projk.getConfluenceTree();
+        if (cancelled || restored) return;
+        // 트리 비어있음 = 사이드카 미준비. ready 신호 시 재시도 — 영속 키는 그대로 보존.
+        if (tree.nodes.length === 0) return;
+        const node = findTreeNode(tree.nodes, stored.nodeId);
+        if (!node) {
+          // 트리는 있는데 해당 노드만 없음 = 진짜 사라진 항목. 다음 부팅에 또 시도하지 않게 정리.
+          restored = true;
+          clearString(TREE_PERSIST_KEYS.LAST_SELECTION);
+          return;
+        }
+        restored = true;
+        setSelection((prev) => prev ?? { kind: stored.kind, node });
+      } catch (e) {
+        console.warn('lastSelection 복원 실패', e);
+      }
+    };
+    void tryRestore();
+    const off = window.projk.onSidecarStatus((s) => {
+      if (s.state === 'ready') void tryRestore();
+    });
+    return () => {
+      cancelled = true;
+      off?.();
+    };
+  }, []);
+
+  // selection 변경 시 영속. null 이면 키 제거 — 다음 부팅에 복원 시도 안 함.
+  useEffect(() => {
+    if (!selection) {
+      clearString(TREE_PERSIST_KEYS.LAST_SELECTION);
+      return;
+    }
+    saveString(
+      TREE_PERSIST_KEYS.LAST_SELECTION,
+      JSON.stringify({ kind: selection.kind, nodeId: selection.node.id }),
+    );
+  }, [selection]);
 
   // PR2: selection ↔ workbench tabs 양방향 sync.
   // selection 은 진실 소스를 유지 (트리 active highlight + ChatPanel confluencePageId 추출).
@@ -482,4 +576,17 @@ export function App() {
       <CommandPalette />
     </div>
   );
+}
+
+// 트리 walk 해서 nodeId 매칭되는 TreeNode 반환. 없으면 null. lastSelection 복원의 valid
+// 검증에 사용.
+function findTreeNode(nodes: TreeNode[], id: string): TreeNode | null {
+  for (const n of nodes) {
+    if (n.id === id) return n;
+    if (n.children) {
+      const hit = findTreeNode(n.children, id);
+      if (hit) return hit;
+    }
+  }
+  return null;
 }

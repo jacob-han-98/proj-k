@@ -1,5 +1,12 @@
 import { useEffect, useState, type ReactElement } from 'react';
 import type { TreeNode, ConfluenceTreeResult } from '../../../shared/types';
+import { iconNodeFor } from './tree-icons';
+import {
+  TREE_PERSIST_KEYS,
+  loadExpanded,
+  pruneExpanded,
+  saveExpanded,
+} from './tree-state-persist';
 
 // PR3: Confluence 사이드바 패널. 트리만. 헤더/탭 없음.
 
@@ -10,7 +17,10 @@ interface Props {
 
 export function ConfluencePanel({ selectedId, onOpenConfluencePage }: Props) {
   const [confluence, setConfluence] = useState<ConfluenceTreeResult | null>(null);
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  // 펼쳐진 폴더/페이지 ID 영속. mount 시 prefill, 트리 도착 시 invalid id 는 prune.
+  const [expanded, setExpanded] = useState<Set<string>>(() =>
+    loadExpanded(TREE_PERSIST_KEYS.CONFLUENCE_EXPANDED),
+  );
 
   useEffect(() => {
     const fetchTree = () => {
@@ -26,11 +36,32 @@ export function ConfluencePanel({ selectedId, onOpenConfluencePage }: Props) {
     return off;
   }, []);
 
+  // 트리 도착 시 영속된 expanded 중 사라진 id 제거 (없어진 페이지에 무리한 복원 시도 방지).
+  // 빈 트리 (사이드카 starting / 데이터 미설정) 에선 prune skip — 영속값이 빈 set 으로 덮여
+  // 영구 손실되는 race 차단 (P4Panel 과 동일 fix).
+  useEffect(() => {
+    if (!confluence || confluence.nodes.length === 0) return;
+    const valid = collectAllIds(confluence.nodes);
+    setExpanded((prev) => {
+      const pruned = pruneExpanded(prev, valid);
+      if (pruned.size === prev.size) {
+        let same = true;
+        for (const id of prev) {
+          if (!pruned.has(id)) { same = false; break; }
+        }
+        if (same) return prev;
+      }
+      saveExpanded(TREE_PERSIST_KEYS.CONFLUENCE_EXPANDED, pruned);
+      return pruned;
+    });
+  }, [confluence]);
+
   const toggle = (id: string) => {
     setExpanded((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
+      saveExpanded(TREE_PERSIST_KEYS.CONFLUENCE_EXPANDED, next);
       return next;
     });
   };
@@ -54,7 +85,7 @@ export function ConfluencePanel({ selectedId, onOpenConfluencePage }: Props) {
           title={node.title}
         >
           <span className="caret">{hasChildren ? (isOpen ? '▾' : '▸') : ''}</span>
-          <span className="icon">{iconFor(node)}</span>
+          <span className="icon">{iconNodeFor(node)}</span>
           <span className="label">{node.title}</span>
         </div>
         {hasChildren && isOpen && (
@@ -93,8 +124,14 @@ export function ConfluencePanel({ selectedId, onOpenConfluencePage }: Props) {
   );
 }
 
-function iconFor(node: TreeNode): string {
-  if (node.type === 'folder') return '📁';
-  if (node.type === 'page') return '📄';
-  return '•';
+// 트리 walk — 모든 노드의 id 를 수집. expanded prune 시 valid 검증에 사용.
+function collectAllIds(nodes: TreeNode[]): Set<string> {
+  const out = new Set<string>();
+  const walk = (n: TreeNode) => {
+    out.add(n.id);
+    if (n.children) for (const c of n.children) walk(c);
+  };
+  for (const n of nodes) walk(n);
+  return out;
 }
+

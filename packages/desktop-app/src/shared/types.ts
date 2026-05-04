@@ -204,6 +204,10 @@ export const IPC = {
   THREADS_APPEND_MESSAGE: 'threads:append-message',
   THREADS_UPSERT_DOC: 'threads:upsert-doc',
   THREADS_PIN_DOC: 'threads:pin-doc',
+  // main → renderer push: webview 가 focus 잡고 있어도 우리 앱 단축키 (Ctrl+P /
+  // Ctrl+1~5) 가 우선해야. main 의 webContents.before-input-event 에서 가로채 이리로
+  // forward → renderer 가 togglePalette / setActiveIcon 수행.
+  SHORTCUT_TRIGGER: 'shortcut:trigger',
   // frameless window 컨트롤 — 우상단 min/max/close 버튼이 호출.
   WINDOW_MINIMIZE: 'window:minimize',
   WINDOW_MAXIMIZE_TOGGLE: 'window:maximize-toggle',
@@ -212,6 +216,13 @@ export const IPC = {
   WINDOW_MAXIMIZED: 'window:maximized',
   WINDOW_IS_MAXIMIZED: 'window:is-maximized',
 } as const;
+
+// main → renderer 단축키 forward payload. webview 안에서 발생한 키도 우리 앱 단축키면
+// main 이 가로채 동일하게 동작시키기 위해. Ctrl+P / Ctrl+1~5 만 (현재 사용 중인 글로벌
+// 단축키와 동일 — 새 단축키 추가 시 이 union 도 같이 확장).
+export type ShortcutEvent =
+  | { name: 'command-palette' }
+  | { name: 'activity-bar'; digit: '1' | '2' | '3' | '4' | '5' };
 
 // Phase 3 thread workspace IPC payloads.
 export interface ThreadSummary {

@@ -1,6 +1,15 @@
 import { useEffect, useState, type ReactElement } from 'react';
 import type { TreeNode, P4TreeResult } from '../../../shared/types';
 import { P4DepotTree } from './P4DepotTree';
+import { iconNodeFor } from './tree-icons';
+import {
+  TREE_PERSIST_KEYS,
+  loadExpanded,
+  loadString,
+  pruneExpanded,
+  saveExpanded,
+  saveString,
+} from './tree-state-persist';
 import { useWorkbenchStore } from '../store';
 import { docKeyOfLocal } from '../types';
 
@@ -16,9 +25,16 @@ interface Props {
 
 export function P4Panel({ selectedId, onOpenSheet }: Props) {
   // PR9b: source 탭 토글 — local (데이터 루트 미러) vs depot (Perforce 서버 직접 조회, 보기 전용).
-  const [source, setSource] = useState<P4Source>('local');
+  // 마지막 선택한 source 탭은 localStorage 영속.
+  const [source, setSource] = useState<P4Source>(() => {
+    const stored = loadString(TREE_PERSIST_KEYS.P4_SOURCE_TAB);
+    return stored === 'depot' ? 'depot' : 'local';
+  });
   const [p4, setP4] = useState<P4TreeResult | null>(null);
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  // 펼쳐진 폴더 ID 도 영속. mount 시 localStorage 로 prefill, 트리 도착 후 invalid id 는 prune.
+  const [expanded, setExpanded] = useState<Set<string>>(() =>
+    loadExpanded(TREE_PERSIST_KEYS.P4_LOCAL_EXPANDED),
+  );
   const editingDocs = useWorkbenchStore((s) => s.editingDocs);
   const setDocEditing = useWorkbenchStore((s) => s.setDocEditing);
 
@@ -34,11 +50,41 @@ export function P4Panel({ selectedId, onOpenSheet }: Props) {
     return off;
   }, []);
 
+  // 트리 데이터 도착 시 영속된 expanded 중 사라진 ID 는 silently 제거.
+  // "항목이 없어졌다면 무리하게 탐색하거나 포커스하려고 하지 않음" 정책 (사용자 요구).
+  //
+  // 회귀 방지: 빈 트리 (사이드카 starting / 데이터 루트 미설정 / fallback 빈 결과) 에선
+  // prune 트리거 안 함. 그러지 않으면 valid 가 빈 set 이라 영속된 expanded 가 모두 날아가고
+  // 그 빈 결과가 localStorage 까지 save 되어 — 사용자 마지막 펼침 상태가 영구 손실.
+  useEffect(() => {
+    if (!p4 || p4.nodes.length === 0) return;
+    const valid = collectAllIds(p4.nodes);
+    setExpanded((prev) => {
+      const pruned = pruneExpanded(prev, valid);
+      // pruned 가 prev 와 동일하면 동일 reference 반환 → re-render 회피.
+      if (pruned.size === prev.size) {
+        let same = true;
+        for (const id of prev) {
+          if (!pruned.has(id)) { same = false; break; }
+        }
+        if (same) return prev;
+      }
+      saveExpanded(TREE_PERSIST_KEYS.P4_LOCAL_EXPANDED, pruned);
+      return pruned;
+    });
+  }, [p4]);
+
+  // source 탭 변경 시 영속.
+  useEffect(() => {
+    saveString(TREE_PERSIST_KEYS.P4_SOURCE_TAB, source);
+  }, [source]);
+
   const toggle = (id: string) => {
     setExpanded((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
+      saveExpanded(TREE_PERSIST_KEYS.P4_LOCAL_EXPANDED, next);
       return next;
     });
   };
@@ -76,7 +122,7 @@ export function P4Panel({ selectedId, onOpenSheet }: Props) {
           data-testid={`p4-row-${node.id}`}
         >
           <span className="caret">{hasChildren ? (isOpen ? '▾' : '▸') : ''}</span>
-          <span className="icon">{iconFor(node)}</span>
+          <span className="icon">{iconNodeFor(node)}</span>
           <span className="label">{node.title}</span>
           {isSheet && (
             <button
@@ -169,9 +215,13 @@ export function P4Panel({ selectedId, onOpenSheet }: Props) {
   );
 }
 
-function iconFor(node: TreeNode): string {
-  if (node.type === 'category') return '📁';
-  if (node.type === 'workbook') return '📘';
-  if (node.type === 'sheet') return '📄';
-  return '•';
+// 트리 walk — 모든 노드의 id 를 수집. expanded prune 시 valid 검증에 사용.
+function collectAllIds(nodes: TreeNode[]): Set<string> {
+  const out = new Set<string>();
+  const walk = (n: TreeNode) => {
+    out.add(n.id);
+    if (n.children) for (const c of n.children) walk(c);
+  };
+  for (const n of nodes) walk(n);
+  return out;
 }

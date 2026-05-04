@@ -2019,7 +2019,62 @@ html, body, #root { height: 100%; margin: 0; padding: 0; background: var(--bg); 
 .cmd-palette-row.active { background: var(--accent); color: var(--accent-fg); }
 .cmd-palette-row.active .cmd-palette-path,
 .cmd-palette-row.active .cmd-palette-source { color: var(--accent-fg); opacity: 0.85; }
-.cmd-palette-icon { width: 18px; flex-shrink: 0; text-align: center; }
+.cmd-palette-icon {
+  width: 18px;
+  flex-shrink: 0;
+  text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+/* active row 의 SVG 아이콘은 글자 색에 따라가도록 (currentColor 기반). */
+.cmd-palette-row.active .cmd-palette-icon { color: var(--accent-fg); }
+
+/* source 필터 칩 row — input 바로 아래. 좁은 padding 으로 깔끔하게. */
+.cmd-palette-filters {
+  display: flex;
+  gap: 6px;
+  padding: 6px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+.cmd-palette-filter-chip {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 11px;
+  line-height: 1.4;
+  transition: background 120ms, border-color 120ms, color 120ms;
+}
+.cmd-palette-filter-chip:hover { background: var(--hover); }
+.cmd-palette-filter-chip.on {
+  background: var(--accent);
+  color: var(--accent-fg);
+  border-color: var(--accent);
+}
+.cmd-palette-filter-chip.off {
+  color: var(--text-dim);
+  background: transparent;
+}
+.cmd-palette-filter-chip.off .cmd-palette-filter-icon { opacity: 0.5; }
+.cmd-palette-filter-checkbox { font-size: 13px; }
+.cmd-palette-filter-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.cmd-palette-filter-label { font-weight: 500; }
+.cmd-palette-filter-kbd {
+  font-family: 'Cascadia Code', 'Consolas', monospace;
+  font-size: 10px;
+  opacity: 0.7;
+  margin-left: 2px;
+}
 .cmd-palette-body {
   flex: 1 1 auto;
   min-width: 0;

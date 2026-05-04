@@ -10,13 +10,14 @@ import { useWorkbenchStore } from './store';
 //   - Confluence: Atlassian 공식 2-chevron 마크 (https://atlassian.design — public brand asset).
 // 둘 다 24×24 viewBox 로 codicons 24px font-size 와 시각적 무게 일치.
 
-function PerforceIcon() {
+// brand 아이콘은 CommandPalette / EditorHost 등 다른 곳도 같은 시각 언어로 사용 → export.
+export function PerforceIcon({ size = 24 }: { size?: number } = {}) {
   // Bold "P4" — Perforce 의 universal 텍스트 마크. 실제 P4V 도 동일한 letterform 사용.
   // SVG <text> 로 렌더 — 시스템 폰트 기반이라 어떤 환경에서도 깔끔.
   return (
     <svg
-      width="24"
-      height="24"
+      width={size}
+      height={size}
       viewBox="0 0 24 24"
       aria-hidden="true"
       style={{ display: 'block' }}
@@ -37,13 +38,13 @@ function PerforceIcon() {
   );
 }
 
-function ConfluenceIcon() {
+export function ConfluenceIcon({ size = 24 }: { size?: number } = {}) {
   // 두 개의 opposing curve — Atlassian Confluence brand mark.
   // 24×24 grid, fill currentColor 로 monochrome 처리.
   return (
     <svg
-      width="24"
-      height="24"
+      width={size}
+      height={size}
       viewBox="0 0 24 24"
       fill="currentColor"
       aria-hidden="true"

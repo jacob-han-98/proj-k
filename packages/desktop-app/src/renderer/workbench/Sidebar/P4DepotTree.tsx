@@ -2,6 +2,11 @@ import { useEffect, useState, type ReactElement } from 'react';
 import type { P4DepotEntry, TreeNode } from '../../../shared/types';
 import { useWorkbenchStore } from '../store';
 import { docKeyOfDepot } from '../types';
+import {
+  TREE_PERSIST_KEYS,
+  loadExpanded,
+  saveExpanded,
+} from './tree-state-persist';
 
 // PR9b: depot 트리 — lazy expand. mount 시 root depot list, 폴더 expand 시 자식 fetch.
 // 보기 전용. 파일 클릭 시 안내만 (편집은 별도 P4 checkout 흐름).
@@ -34,7 +39,11 @@ const initial: State = {
 
 export function P4DepotTree() {
   const [state, setState] = useState<State>(initial);
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  // depot 트리는 lazy fetch — 영속된 expanded 가 있으면 부팅 시 그 path 들의 자식 fetch 까지
+  // chain. 사용자 마지막 브라우징 위치를 그대로 복원.
+  const [expanded, setExpanded] = useState<Set<string>>(() =>
+    loadExpanded(TREE_PERSIST_KEYS.P4_DEPOT_EXPANDED),
+  );
   const [refreshKey, setRefreshKey] = useState(0);
   const [discovering, setDiscovering] = useState(false);
   const [discoveryMsg, setDiscoveryMsg] = useState<string | null>(null);
@@ -126,6 +135,7 @@ export function P4DepotTree() {
   // mount 시 + 새로고침 클릭 시 root 재 fetch + 2단계 깊이까지 auto-expand.
   // stream workspace (단일 root '//main/ProjectK') 에서는 root + 그 자식까지 자동 펼침이라
   // 첫 진입에 ART/Build/Design/... 이 즉시 보임.
+  // 추가로 영속된 expanded path 들도 자식 fetch — 사용자가 마지막에 펼쳐뒀던 폴더 그대로 복원.
   useEffect(() => {
     let cancelled = false;
     void (async () => {
@@ -145,10 +155,18 @@ export function P4DepotTree() {
         setExpanded(new Set());
         return;
       }
-      // 각 root 의 자식 병렬 fetch — 2단계 auto-expand 위해.
+      // root + 영속된 non-root expanded path 들을 한 번에 자식 fetch.
+      // 영속이 없으면 기존 동작 (root + 1 level). 영속이 있으면 그 path 들도 동시 fetch →
+      // 사용자가 보던 깊이까지 한 번에 화면 복원. 무효 path 는 ok=false → expanded 에서 제거.
+      const rootPaths = new Set(r.entries.map((e) => e.path));
+      const persistedExpanded = loadExpanded(TREE_PERSIST_KEYS.P4_DEPOT_EXPANDED);
+      const pathsToFetch = [
+        ...r.entries.map((e) => e.path),
+        ...Array.from(persistedExpanded).filter((p) => !rootPaths.has(p)),
+      ];
       const childResults = await Promise.all(
-        r.entries.map((e) =>
-          window.projk.p4.depotDirs(e.path).catch((err) => ({
+        pathsToFetch.map((p) =>
+          window.projk.p4.depotDirs(p).catch((err) => ({
             ok: false as const,
             entries: [] as P4DepotEntry[],
             diagnostics: (err as Error).message,
@@ -158,10 +176,19 @@ export function P4DepotTree() {
       if (cancelled) return;
       const childrenByPath = new Map<string, P4DepotEntry[]>();
       const errorByPath = new Map<string, string>();
-      r.entries.forEach((e, i) => {
+      const orphanedPaths = new Set<string>();
+      pathsToFetch.forEach((p, i) => {
         const cr = childResults[i];
-        childrenByPath.set(e.path, cr.entries);
-        if (!cr.ok && cr.diagnostics) errorByPath.set(e.path, cr.diagnostics);
+        if (cr.ok) {
+          childrenByPath.set(p, cr.entries);
+        } else if (rootPaths.has(p)) {
+          // root 는 P4 응답이 비어도 표시 유지 (사용자가 좌표 자체는 바꾼 적 없음).
+          childrenByPath.set(p, cr.entries);
+          if (cr.diagnostics) errorByPath.set(p, cr.diagnostics);
+        } else {
+          // 영속된 path 가 P4 에 더 이상 없음 → expanded 에서 제거 (회복 시도 안 함).
+          orphanedPaths.add(p);
+        }
       });
       setState({
         loaded: true,
@@ -172,8 +199,13 @@ export function P4DepotTree() {
         loadingPaths: new Set(),
         errorByPath,
       });
-      // 모든 root 를 expanded 로 만들어서 첫 자식까지 한 번에 보이게.
-      setExpanded(new Set(r.entries.map((e) => e.path)));
+      // root 는 항상 expanded + 영속된 expanded 중 valid 만 유지.
+      const nextExpanded = new Set<string>(rootPaths);
+      for (const p of persistedExpanded) {
+        if (!orphanedPaths.has(p)) nextExpanded.add(p);
+      }
+      setExpanded(nextExpanded);
+      saveExpanded(TREE_PERSIST_KEYS.P4_DEPOT_EXPANDED, nextExpanded);
     })();
     void reloadCachedPaths();
     return () => {
@@ -194,11 +226,16 @@ export function P4DepotTree() {
       setExpanded((prev) => {
         const next = new Set(prev);
         next.delete(path);
+        saveExpanded(TREE_PERSIST_KEYS.P4_DEPOT_EXPANDED, next);
         return next;
       });
       return;
     }
-    setExpanded((prev) => new Set(prev).add(path));
+    setExpanded((prev) => {
+      const next = new Set(prev).add(path);
+      saveExpanded(TREE_PERSIST_KEYS.P4_DEPOT_EXPANDED, next);
+      return next;
+    });
     // 자식이 캐시에 없으면 fetch (loading 중이거나 이전에 실패해도 한 번 더 시도하려면 새로고침).
     if (!state.childrenByPath.has(path) && !state.loadingPaths.has(path)) {
       setState((s) => {

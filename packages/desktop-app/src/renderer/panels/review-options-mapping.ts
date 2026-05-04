@@ -17,26 +17,32 @@ export interface ReviewOptions {
   verificationCap: ReviewIssueCap;
   suggestionCap: ReviewIssueCap;
   categories: ReviewCategory[];
-  reviewerPersona: ReviewerPersona;
+  // P2 보강: 다중 페르소나 (체크박스). 빈 배열은 default ('planner-lead' 단독) 와 동일
+  // 효과 — backend 가 그렇게 해석. 사용자는 둘 다 토글하면 두 톤이 결합된 검토 받음.
+  reviewerPersonas: ReviewerPersona[];
 }
 
-// 옵션 패널 첫 진입 시 default — 두 번째 스크린샷에서 5 / 5 / 5 + 모든 카테고리 +
-// 기획팀장이 highlight 된 상태.
+// 옵션 패널 첫 진입 시 default — 두 번째 스크린샷의 highlight 와 일치.
+// 5 / 5 / 5 + 모든 카테고리 + 기획팀장 단독 (사용자가 명시적으로 추가 토글 가능).
 export const DEFAULT_REVIEW_OPTIONS: ReviewOptions = {
   issueCap: 5,
   verificationCap: 5,
   suggestionCap: 5,
   categories: ['logic-flow', 'qa-checklist', 'readability'],
-  reviewerPersona: 'planner-lead',
+  reviewerPersonas: ['planner-lead'],
 };
 
 // backend payload — server.py 가 받는 snake_case 키.
+// P2 보강 — reviewer_personas (array) 신규 + reviewer_persona (single) back-compat.
 export interface ReviewOptionsPayload {
   issue_cap: number | 'all';
   verification_cap: number | 'all';
   suggestion_cap: number | 'all';
   categories: ReviewCategory[];
-  reviewer_persona: ReviewerPersona;
+  reviewer_personas: ReviewerPersona[];
+  // backend 가 personas 우선 처리하지만, single 만 처리하는 구버전 호환을 위해 첫
+  // persona 를 single 필드에도 함께 전송. backend 가 array 받으면 이건 무시됨.
+  reviewer_persona?: ReviewerPersona;
 }
 
 export function toBackendPayload(opts: ReviewOptions): ReviewOptionsPayload {
@@ -46,7 +52,9 @@ export function toBackendPayload(opts: ReviewOptions): ReviewOptionsPayload {
     suggestion_cap: opts.suggestionCap,
     // 빈 배열도 그대로 전송 — backend 가 "모든 관점" 로 해석. 명시적 신호라 omit 안 함.
     categories: [...opts.categories],
-    reviewer_persona: opts.reviewerPersona,
+    reviewer_personas: [...opts.reviewerPersonas],
+    // back-compat: 첫 persona (또는 default 'planner-lead') 를 single 필드에도.
+    reviewer_persona: opts.reviewerPersonas[0] ?? 'planner-lead',
   };
 }
 
@@ -69,8 +77,13 @@ export function setCap(
   return { ...opts, [field]: value };
 }
 
-// 페르소나 단일 선택.
-export function setPersona(opts: ReviewOptions, persona: ReviewerPersona): ReviewOptions {
-  if (opts.reviewerPersona === persona) return opts;
-  return { ...opts, reviewerPersona: persona };
+// 페르소나 다중 토글. 이미 있으면 빼고, 없으면 추가. insertion order 유지.
+// 단, 마지막 하나를 끄면 자동으로 default ('planner-lead') 로 — 빈 상태 방지.
+export function togglePersona(opts: ReviewOptions, persona: ReviewerPersona): ReviewOptions {
+  if (opts.reviewerPersonas.includes(persona)) {
+    const next = opts.reviewerPersonas.filter((p) => p !== persona);
+    if (next.length === 0) return { ...opts, reviewerPersonas: ['planner-lead'] };
+    return { ...opts, reviewerPersonas: next };
+  }
+  return { ...opts, reviewerPersonas: [...opts.reviewerPersonas, persona] };
 }

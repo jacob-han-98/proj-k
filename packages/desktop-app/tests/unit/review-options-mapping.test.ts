@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 import {
   DEFAULT_REVIEW_OPTIONS,
   setCap,
-  setPersona,
   toBackendPayload,
   toggleCategory,
+  togglePersona,
   type ReviewOptions,
 } from '../../src/renderer/panels/review-options-mapping';
 
@@ -17,13 +17,13 @@ import {
 
 describe('review-options-mapping', () => {
   describe('DEFAULT_REVIEW_OPTIONS', () => {
-    it('caps 5 + 모든 카테고리 + 기획팀장 — 두 번째 스크린샷 default 와 일치', () => {
+    it('caps 5 + 모든 카테고리 + 기획팀장 단독 — 두 번째 스크린샷 default 와 일치', () => {
       expect(DEFAULT_REVIEW_OPTIONS).toEqual({
         issueCap: 5,
         verificationCap: 5,
         suggestionCap: 5,
         categories: ['logic-flow', 'qa-checklist', 'readability'],
-        reviewerPersona: 'planner-lead',
+        reviewerPersonas: ['planner-lead'],
       });
     });
   });
@@ -35,15 +35,25 @@ describe('review-options-mapping', () => {
         verificationCap: 0,
         suggestionCap: 'all',
         categories: ['logic-flow', 'qa-checklist'],
-        reviewerPersona: 'programmer',
+        reviewerPersonas: ['programmer'],
       };
-      expect(toBackendPayload(opts)).toEqual({
-        issue_cap: 10,
-        verification_cap: 0,
-        suggestion_cap: 'all',
-        categories: ['logic-flow', 'qa-checklist'],
-        reviewer_persona: 'programmer',
+      const out = toBackendPayload(opts);
+      expect(out.issue_cap).toBe(10);
+      expect(out.verification_cap).toBe(0);
+      expect(out.suggestion_cap).toBe('all');
+      expect(out.categories).toEqual(['logic-flow', 'qa-checklist']);
+      expect(out.reviewer_personas).toEqual(['programmer']);
+      // back-compat: 첫 persona 가 single 필드에도.
+      expect(out.reviewer_persona).toBe('programmer');
+    });
+
+    it('persona 다중 — array 그대로 + back-compat single 은 첫 요소', () => {
+      const out = toBackendPayload({
+        ...DEFAULT_REVIEW_OPTIONS,
+        reviewerPersonas: ['planner-lead', 'programmer'],
       });
+      expect(out.reviewer_personas).toEqual(['planner-lead', 'programmer']);
+      expect(out.reviewer_persona).toBe('planner-lead');
     });
 
     it("'all' literal 그대로 직렬화 — number 로 안 변환", () => {
@@ -57,12 +67,14 @@ describe('review-options-mapping', () => {
       expect(out.categories).toEqual([]);
     });
 
-    it('categories 배열은 새 인스턴스 반환 (mutation 안 함)', () => {
-      const opts = { ...DEFAULT_REVIEW_OPTIONS };
+    it('immutable — array 들이 원본과 분리됨', () => {
+      const opts: ReviewOptions = { ...DEFAULT_REVIEW_OPTIONS };
       const out = toBackendPayload(opts);
       out.categories.push('logic-flow');
+      out.reviewer_personas.push('programmer');
       // 원본은 그대로
       expect(opts.categories).toEqual(['logic-flow', 'qa-checklist', 'readability']);
+      expect(opts.reviewerPersonas).toEqual(['planner-lead']);
     });
   });
 
@@ -107,15 +119,34 @@ describe('review-options-mapping', () => {
     });
   });
 
-  describe('setPersona', () => {
-    it('페르소나 변경', () => {
-      const out = setPersona(DEFAULT_REVIEW_OPTIONS, 'programmer');
-      expect(out.reviewerPersona).toBe('programmer');
+  describe('togglePersona (다중)', () => {
+    it('미포함 페르소나 추가 — insertion order', () => {
+      const out = togglePersona(DEFAULT_REVIEW_OPTIONS, 'programmer');
+      expect(out.reviewerPersonas).toEqual(['planner-lead', 'programmer']);
     });
 
-    it('같은 값이면 같은 reference', () => {
-      const out = setPersona(DEFAULT_REVIEW_OPTIONS, 'planner-lead');
-      expect(out).toBe(DEFAULT_REVIEW_OPTIONS);
+    it('포함된 페르소나 제거', () => {
+      const start: ReviewOptions = {
+        ...DEFAULT_REVIEW_OPTIONS,
+        reviewerPersonas: ['planner-lead', 'programmer'],
+      };
+      const out = togglePersona(start, 'planner-lead');
+      expect(out.reviewerPersonas).toEqual(['programmer']);
+    });
+
+    it('마지막 한 개 끄면 자동으로 default planner-lead — 빈 상태 방지', () => {
+      const start: ReviewOptions = {
+        ...DEFAULT_REVIEW_OPTIONS,
+        reviewerPersonas: ['programmer'],
+      };
+      const out = togglePersona(start, 'programmer');
+      expect(out.reviewerPersonas).toEqual(['planner-lead']);
+    });
+
+    it('immutable — 원본은 안 바뀜', () => {
+      const start = { ...DEFAULT_REVIEW_OPTIONS };
+      togglePersona(start, 'programmer');
+      expect(start.reviewerPersonas).toEqual(['planner-lead']);
     });
   });
 });

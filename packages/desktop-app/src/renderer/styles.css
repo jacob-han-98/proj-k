@@ -2159,6 +2159,37 @@ html, body, #root { height: 100%; margin: 0; padding: 0; background: var(--bg); 
   border-color: var(--accent);
 }
 
+/* P2 보강: persona 체크박스 (다중 선택 가능). chip 톤 유지하되 input[type=checkbox] 노출. */
+.review-options-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  font-size: 11px;
+  color: var(--text);
+  background: var(--bg-elev);
+  cursor: pointer;
+  transition: background 0.08s ease, border-color 0.08s ease, color 0.08s ease;
+}
+
+.review-options-checkbox:hover {
+  background: var(--list-hoverBackground);
+  border-color: var(--accent);
+}
+
+.review-options-checkbox.on {
+  background: var(--accent);
+  color: var(--accent-fg);
+  border-color: var(--accent);
+}
+
+.review-options-checkbox input[type='checkbox'] {
+  margin: 0;
+  cursor: pointer;
+}
+
 .review-options-start {
   all: unset;
   margin-top: 6px;

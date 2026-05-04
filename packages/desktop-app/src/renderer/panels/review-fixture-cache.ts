@@ -38,6 +38,25 @@ export function hashContent(text: string): string {
   return (h >>> 0).toString(36);
 }
 
+// P2 보강: 옵션 stable hash. 같은 옵션 → 같은 hash. ReviewSplitPane 의 cache key 가
+// content + options 모두로 잡혀서 옵션 변경 시 자동 cache miss → 새 stream 발동.
+//
+// 회귀: 이전엔 contentHash 만으로 키 잡아 옵션 변경해도 cache hit → 같은 결과 표시.
+// 사용자 보고 "카테고리/persona 옵션이 무효" 의 root cause 였음.
+export function hashReviewOptions(opts: {
+  issueCap: number | string;
+  verificationCap: number | string;
+  suggestionCap: number | string;
+  categories: string[];
+  reviewerPersonas: string[];
+}): string {
+  // 카테고리/페르소나는 정렬 후 직렬화 — insertion order 가 결과에 영향 안 주므로.
+  const cats = [...opts.categories].sort().join(',');
+  const personas = [...opts.reviewerPersonas].sort().join(',');
+  const stable = `${opts.issueCap}|${opts.verificationCap}|${opts.suggestionCap}|${cats}|${personas}`;
+  return hashContent(stable);
+}
+
 export function loadFixture(pageId: string, contentHash: string): ReviewFixture | null {
   if (!pageId) return null;
   try {

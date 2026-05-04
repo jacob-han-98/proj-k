@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   fixtureKey,
   hashContent,
+  hashReviewOptions,
   invalidateFixture,
   listAllFixtures,
   loadFixture,
@@ -50,6 +51,52 @@ describe('hashContent + fixtureKey', () => {
   });
   it('fixtureKey prefix 와 구조', () => {
     expect(fixtureKey('p123', 'abc')).toBe('klaud:review-fixture:p123:abc');
+  });
+});
+
+// P2 보강: 옵션 변경 시 cache miss 보장. ReviewSplitPane 의 contentHash 가
+// `${hashContent(text)}-${hashReviewOptions(opts)}` 라 옵션 토글마다 새 키.
+describe('hashReviewOptions', () => {
+  const baseOpts = {
+    issueCap: 5 as number | string,
+    verificationCap: 5 as number | string,
+    suggestionCap: 5 as number | string,
+    categories: ['logic-flow', 'qa-checklist', 'readability'],
+    reviewerPersonas: ['planner-lead'],
+  };
+
+  it('같은 옵션 → 같은 hash', () => {
+    expect(hashReviewOptions(baseOpts)).toBe(hashReviewOptions({ ...baseOpts }));
+  });
+
+  it('cap 다르면 다른 hash', () => {
+    const a = hashReviewOptions(baseOpts);
+    const b = hashReviewOptions({ ...baseOpts, issueCap: 10 });
+    expect(a).not.toBe(b);
+  });
+
+  it('카테고리 추가/제거 시 다른 hash', () => {
+    const a = hashReviewOptions(baseOpts);
+    const b = hashReviewOptions({ ...baseOpts, categories: ['logic-flow'] });
+    expect(a).not.toBe(b);
+  });
+
+  it('카테고리 순서 무관 (정렬 후 hash) — 사용자 토글 순서 다른 case 도 같은 결과 인정', () => {
+    const a = hashReviewOptions({ ...baseOpts, categories: ['logic-flow', 'qa-checklist'] });
+    const b = hashReviewOptions({ ...baseOpts, categories: ['qa-checklist', 'logic-flow'] });
+    expect(a).toBe(b);
+  });
+
+  it('persona 다중 추가 시 다른 hash — 새 stream 발동 신호', () => {
+    const a = hashReviewOptions(baseOpts);
+    const b = hashReviewOptions({ ...baseOpts, reviewerPersonas: ['planner-lead', 'programmer'] });
+    expect(a).not.toBe(b);
+  });
+
+  it("'all' literal cap 도 stable (string vs number 차이 반영)", () => {
+    const a = hashReviewOptions({ ...baseOpts, issueCap: 'all' });
+    const b = hashReviewOptions({ ...baseOpts, issueCap: 0 });
+    expect(a).not.toBe(b);
   });
 });
 

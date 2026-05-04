@@ -2,8 +2,8 @@ import { useState } from 'react';
 import {
   DEFAULT_REVIEW_OPTIONS,
   setCap,
-  setPersona,
   toggleCategory,
+  togglePersona,
   type ReviewCategory,
   type ReviewIssueCap,
   type ReviewOptions,
@@ -127,17 +127,24 @@ export function ReviewOptionsPanel({ onStart, onBack }: Props) {
         <div className="review-options-row" data-testid="review-options-persona">
           <span className="review-options-row-label">리뷰어</span>
           <div className="review-options-chips">
-            {PERSONA_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                className={`review-options-chip${options.reviewerPersona === opt.value ? ' on' : ''}`}
-                onClick={() => setOptions((cur) => setPersona(cur, opt.value))}
-                data-testid={`review-options-persona-${opt.value}`}
-              >
-                {opt.label}
-              </button>
-            ))}
+            {PERSONA_OPTIONS.map((opt) => {
+              const on = options.reviewerPersonas.includes(opt.value);
+              return (
+                <label
+                  key={opt.value}
+                  className={`review-options-checkbox${on ? ' on' : ''}`}
+                  data-testid={`review-options-persona-${opt.value}`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={on}
+                    onChange={() => setOptions((cur) => togglePersona(cur, opt.value))}
+                    data-testid={`review-options-persona-${opt.value}-checkbox`}
+                  />
+                  <span>{opt.label}</span>
+                </label>
+              );
+            })}
           </div>
         </div>
 

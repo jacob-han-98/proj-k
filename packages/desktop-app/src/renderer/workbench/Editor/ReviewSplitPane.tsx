@@ -4,6 +4,7 @@ import { ReviewCard, type ReviewData } from '../../panels/ReviewCard';
 import { ChangesCard } from '../../panels/ChangesCard';
 import {
   hashContent,
+  hashReviewOptions,
   invalidateFixture,
   loadFixture,
   saveFixture,
@@ -102,9 +103,15 @@ export function ReviewSplitPane({ tabId: _tabId, title, text, trigger, reviewOpt
   // B2-2: "🔁 새 리뷰" 클릭 시 +1 — 같은 trigger 라도 effect 재발동시키기 위함.
   const [refreshNonce, setRefreshNonce] = useState(0);
 
-  // contentHash 는 본문 변경 detect 용. confluencePageId + hash 로 fixture key 잡음.
-  // Excel 탭 (confluencePageId=null) 은 캐시 안 함 — Excel 리뷰는 향후 별도 흐름.
-  const contentHash = useMemo(() => hashContent(text), [text]);
+  // contentHash 는 본문 + 옵션 변경 detect 용. confluencePageId + hash 로 fixture key 잡음.
+  // P2 보강: 옵션 변경 시 cache miss 보장 위해 옵션 hash 도 결합.
+  // 회귀 방지: 이전엔 본문만으로 키 잡아 옵션 토글해도 cache hit 으로 같은 결과 → 사용자가
+  // 옵션이 안 먹히는 것처럼 보고함. 옵션도 키에 포함 = 옵션 변경마다 새 stream.
+  const contentHash = useMemo(() => {
+    const ch = hashContent(text);
+    if (!reviewOptions) return ch;
+    return `${ch}-${hashReviewOptions(reviewOptions)}`;
+  }, [text, reviewOptions]);
 
   // 새 trigger 또는 refreshNonce 변경 시 review 재시작 — 단, refreshNonce 가 0 이 아닐
   // 때만 cache 무시 (forceFresh).

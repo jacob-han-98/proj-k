@@ -34,9 +34,11 @@ const MODES: Mode[] = [
   },
   {
     key: 'agent',
-    label: '일반 Agent 모드',
-    description: '이 문서에 포커스한 자유 대화',
-    icon: '💬',
+    label: 'Agent 와 대화',
+    // Phase B: 클릭 시 split 안에 띄우지 않고 4번째 액티비티 (qna) 로 점프 + 이 문서를
+    // 첨부로 push. DocAssistantPane 의 onPickMode 콜백이 reroute 처리 (split 닫음).
+    description: 'Ctrl+4 액티비티에서 첨부와 함께 대화',
+    icon: '🤖',
     enabled: true,
   },
 ];

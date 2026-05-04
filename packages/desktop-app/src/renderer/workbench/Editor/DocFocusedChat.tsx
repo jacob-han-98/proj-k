@@ -2,6 +2,14 @@ import { useEffect, useRef, useState } from 'react';
 import { askStream, clearDocContext, setDocContext } from '../../api';
 import { readErrorMessage, readResultData, readToken } from '../../stream-events';
 
+// **DEPRECATED — Phase B (2026-05-04)**: 사용자 결정으로 split 의 'agent' 모드 폐지.
+// 4번째 액티비티 (qna) 의 QnATab + 첨부 모델 (renderer/qna/dispatch.ts) 이 대체. 새 진입점은
+//   - 진입점 2: CenterPane 헤더 '🤖 Agent에 질문' 버튼 (A2)
+//   - 진입점 3: ReviewCard 각 item 옆 💬 (A3)
+// 두 진입점 모두 attachDocToQnA / attachReviewItemToQnA dispatch 가 thread 생성 + 첨부 + activity swap.
+// 이 컴포넌트는 옛 코드 경로 fallback 으로만 남아있고 Phase E 끝나면 같이 제거 예정.
+// 새 코드는 이 파일을 import 하지 말 것.
+
 // P3: 일반 Agent 모드 — 현재 열린 문서를 backend 에 stash 후 자유 대화.
 // QnATab 과 달리 thread DB / preset chips / 검색 결과 패널 없음. 단순 chat:
 // - mount: conversation_id 생성 → setDocContext(title, content)

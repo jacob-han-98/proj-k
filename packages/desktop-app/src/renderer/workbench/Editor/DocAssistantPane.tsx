@@ -2,6 +2,7 @@ import { useWorkbenchStore } from '../store';
 import type { SplitMode } from '../store';
 import type { TreeNode } from '../../../shared/types';
 import type { ReviewOptions } from '../../panels/review-options-mapping';
+import { attachDocToQnA } from '../../qna/dispatch';
 import { ModePickerEmpty } from './ModePickerEmpty';
 import { ReviewOptionsPanel } from './ReviewOptionsPanel';
 import { ReviewSplitPane } from './ReviewSplitPane';
@@ -68,7 +69,33 @@ export function DocAssistantPane({
           </button>
         </header>
         <div className="doc-assistant-body">
-          <ModePickerEmpty title={title} onPickMode={(m) => setSplitMode(tabId, m)} />
+          <ModePickerEmpty
+            title={title}
+            onPickMode={(m) => {
+              // Phase B: 사용자 결정으로 split 의 'agent' 모드는 폐지. 칩 클릭 시 그
+              // 자리에서 채팅을 띄우지 않고 4번째 액티비티 (qna) 로 점프 + 첨부 push +
+              // split 닫음. 사용자가 다른 모드 (요약/리뷰) 다시 골라야 하면 어시스턴트
+              // 다시 열기. 진입점 2 (CenterPane 헤더 '🤖 Agent에 질문' 버튼) 와 동일 흐름.
+              if (m === 'agent') {
+                if (!docNode) {
+                  // EditorHost 가 아직 docNode 안 내려준 옛 호출자 — fallback 으로 split
+                  // 닫기만 (사용자 화면이 멈추지 않게). 일반 흐름에선 도달 안 함.
+                  onClose();
+                  return;
+                }
+                void (async () => {
+                  await attachDocToQnA({
+                    node: docNode,
+                    text,
+                    type: docNode.confluencePageId ? 'confluence' : 'excel',
+                  });
+                  onClose();
+                })();
+                return;
+              }
+              setSplitMode(tabId, m);
+            }}
+          />
         </div>
       </aside>
     );
@@ -162,9 +189,11 @@ export function DocAssistantPane({
   }
 
   if (mode === 'agent') {
-    // P3: 일반 Agent 모드. DocFocusedChat 가 자체적으로 conversation 생성 +
-    // setDocContext (현재 본문 stash) + askStream (conversation_id 와 함께).
-    // unmount 시 clearDocContext 자동 호출 (DocFocusedChat 의 useEffect cleanup).
+    // **DEPRECATED — Phase B (2026-05-04)**: split 의 'agent' 모드는 폐지. 새 진입점은
+    // ModePickerEmpty 의 Agent 칩 클릭 시 attachDocToQnA + onClose 흐름으로 reroute 됨
+    // (위 분기 참조). 이 분기는 옛 코드 경로가 직접 setSplitMode(tabId, 'agent') 호출 시
+    // 도달하는 fallback — 새 흐름에선 도달 안 한다. Phase E 끝나면 DocFocusedChat 까지
+    // 같이 제거 예정. 그동안엔 동작은 그대로 두어 회귀 안전.
     return (
       <aside className="doc-assistant-pane" data-testid="doc-assistant-pane" data-mode="agent">
         <header className="doc-assistant-header">

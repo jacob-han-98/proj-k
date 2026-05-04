@@ -20,8 +20,10 @@ import { AttachmentChips } from '../../qna/AttachmentChips';
 import { buildAttachmentPrompt, type QnAAttachment } from '../../qna/attachments';
 import {
   FollowUpCards,
+  ProgressTimeline,
   RenderAssistantMarkdown,
   RenderSourceCards,
+  type ProgressEvent,
   type QnASource,
 } from '../../qna/render';
 
@@ -53,16 +55,12 @@ interface Message {
   // followUps 는 마지막 assistant 메시지에만 FollowUpCards 로 노출.
   sources?: QnASource[];
   followUps?: string[];
+  // Phase E: 진행 내역 (status / thinking / tool calls). streaming 끝나면 collapse 가
+  // default — 사용자가 "✅ 진행 내역 펼치기" 클릭 시 표시. 영속 X (메모리만), thread
+  // 다시 mount 하면 안 보임.
+  progressEvents?: ProgressEvent[];
+  progressExpanded?: boolean;
 }
-
-// Phase C: streaming 중 진행 상태. status/thinking/tool 이벤트 누적.
-// streaming 끝나면 reset. 사용자가 "동작 중인지" 즉시 인지 — 빈 화면 / 무반응 방지.
-interface Progress {
-  status: string | null;
-  thinkingPreview: string | null;
-  activeTools: { id: string; label: string }[];
-}
-const EMPTY_PROGRESS: Progress = { status: null, thinkingPreview: null, activeTools: [] };
 
 interface Props {
   threadId: string;
@@ -157,8 +155,6 @@ export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Pr
   const [presets, setPresets] = useState<PresetPrompt[]>([]);
   // A3-b: citation 클릭 → /source_view modal. null 이면 닫힘.
   const [selectedCitation, setSelectedCitation] = useState<CitationTarget | null>(null);
-  // Phase C: streaming 중 progress. send() 마다 reset, streaming 끝나면 cleared.
-  const [progress, setProgress] = useState<Progress>(EMPTY_PROGRESS);
   const taRef = useRef<HTMLTextAreaElement | null>(null);
 
   // Phase A1: 이 thread 의 미발송 첨부. 진입점 2/3 (Phase A2/A3) 가 store.attachToQnA 로
@@ -254,7 +250,6 @@ export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Pr
     setInput('');
     setHits([]);
     setSearchTookMs(null);
-    setProgress(EMPTY_PROGRESS); // 새 send 시작 — 옛 progress 클리어.
 
     // Phase A1: 첫 메시지에 한해 pendingAttachments 를 system prefix 로 변환해 question
     // 앞에 prepend. 두 번째 메시지부터는 backend conversation 이 컨텍스트를 유지하므로
@@ -338,7 +333,35 @@ export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Pr
     // ask stream — backend 로 보내는 question 은 첨부 prefix 가 prepend 된 형태.
     // conversation_id 도입으로 backend 가 thread 단위 turn 을 누적해 컨텍스트 유지.
     let assembled = '';
-    setMessages((m) => [...m, { role: 'assistant', content: '' }]);
+    // Phase E: 새 assistant message 가 자기 progress 를 들고 있도록 빈 events 로 시작.
+    // streaming 중에는 자동 expanded — 끝나면 user 가 다시 펼칠 때까지 collapse.
+    setMessages((m) => [...m, { role: 'assistant', content: '', progressEvents: [], progressExpanded: false }]);
+    const appendProgress = (ev: ProgressEvent) => {
+      setMessages((m) => {
+        const copy = [...m];
+        const last = copy[copy.length - 1];
+        if (last?.role !== 'assistant') return m;
+        copy[copy.length - 1] = {
+          ...last,
+          progressEvents: [...(last.progressEvents ?? []), ev],
+        };
+        return copy;
+      });
+    };
+    const updateLastTool = (id: string, summary: string) => {
+      setMessages((m) => {
+        const copy = [...m];
+        const last = copy[copy.length - 1];
+        if (last?.role !== 'assistant' || !last.progressEvents) return m;
+        copy[copy.length - 1] = {
+          ...last,
+          progressEvents: last.progressEvents.map((e) =>
+            e.kind === 'tool' && e.id === id ? { ...e, summary, ended: true } : e,
+          ),
+        };
+        return copy;
+      });
+    };
     try {
       await askStream(
         questionForBackend,
@@ -355,29 +378,17 @@ export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Pr
               });
             }
           } else if (e.type === 'status') {
-            // Phase C: 진행 라벨 — Progress 라인의 메인. "📨 분석 중..." 등.
             const s = readStatus(e);
-            if (s) setProgress((p) => ({ ...p, status: s }));
+            if (s) appendProgress({ kind: 'status', text: s });
           } else if (e.type === 'thinking') {
-            // 모델 reasoning preview. 60자만 잘라 progress 의 보조 라벨로.
             const t = readThinking(e);
-            if (t) setProgress((p) => ({ ...p, thinkingPreview: t.slice(0, 60) }));
+            if (t) appendProgress({ kind: 'thinking', text: t });
           } else if (e.type === 'tool_start') {
             const ts = readToolStart(e);
-            if (ts) {
-              setProgress((p) => ({
-                ...p,
-                activeTools: [...p.activeTools, { id: ts.id, label: ts.label }],
-              }));
-            }
+            if (ts) appendProgress({ kind: 'tool', id: ts.id, label: ts.label, ended: false });
           } else if (e.type === 'tool_end') {
             const te = readToolEnd(e);
-            if (te) {
-              setProgress((p) => ({
-                ...p,
-                activeTools: p.activeTools.filter((t) => t.id !== te.id),
-              }));
-            }
+            if (te) updateLastTool(te.id, te.summary);
           } else if (e.type === 'result') {
             // result 도착 — 최종 answer + sources + follow_ups 메시지에 영속.
             const data = readResultData(e);
@@ -389,11 +400,15 @@ export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Pr
             }
             setMessages((m) => {
               const copy = [...m];
+              const last = copy[copy.length - 1];
               copy[copy.length - 1] = {
                 role: 'assistant',
                 content: assembled,
                 sources: sources.length > 0 ? sources : undefined,
                 followUps: followUps.length > 0 ? followUps : undefined,
+                // Phase E: progressEvents 보존 — streaming 끝나도 펼치기 토글로 다시 볼 수 있게.
+                progressEvents: last?.role === 'assistant' ? last.progressEvents : undefined,
+                progressExpanded: false, // streaming 끝 → 자동 collapse.
               };
               return copy;
             });
@@ -411,7 +426,6 @@ export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Pr
       });
     } finally {
       setBusy(false);
-      setProgress(EMPTY_PROGRESS); // streaming 끝 — progress 클리어. 다음 send 까지 빈 상태.
     }
 
     // assistant 영속
@@ -525,10 +539,29 @@ export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Pr
           </div>
         )}
         {messages.map((m, i) => {
-          const isLastAssistant =
-            m.role === 'assistant' && i === messages.length - 1 && !busy;
+          const isLast = i === messages.length - 1;
+          const isStreaming = m.role === 'assistant' && isLast && busy;
+          const isLastAssistant = m.role === 'assistant' && isLast && !busy;
           return (
             <div key={i} className={`msg ${m.role}`} data-testid={`msg-${m.role}-${i}`}>
+              {/* Phase E: assistant 메시지의 진행 내역 — 본문 위에 토글 헤더. streaming
+                  중에는 자동 펼침, 끝나면 collapse 가 default. 사용자가 다시 펼치기 가능. */}
+              {m.role === 'assistant' && (m.progressEvents || isStreaming) && (
+                <ProgressTimeline
+                  events={m.progressEvents ?? []}
+                  expanded={!!m.progressExpanded}
+                  streaming={isStreaming}
+                  onToggle={() => {
+                    setMessages((cur) => {
+                      const copy = [...cur];
+                      const target = copy[i];
+                      if (!target || target.role !== 'assistant') return cur;
+                      copy[i] = { ...target, progressExpanded: !target.progressExpanded };
+                      return copy;
+                    });
+                  }}
+                />
+              )}
               {m.role === 'assistant' && m.content ? (
                 <RenderAssistantMarkdown
                   content={m.content}
@@ -565,10 +598,6 @@ export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Pr
             </div>
           );
         })}
-        {/* Phase C: streaming 중 progress 라인 — 메시지 영역 끝에 sticky 로 보여줌. */}
-        {busy && (progress.status || progress.thinkingPreview || progress.activeTools.length > 0) && (
-          <ProgressLine progress={progress} />
-        )}
       </div>
 
       {messages.length === 0 && presets.length > 0 && (
@@ -617,24 +646,4 @@ export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Pr
   );
 }
 
-// Phase C: streaming progress 한 라인 — status 메인 라벨 + thinking 보조 라벨 + 활성 tool 칩.
-function ProgressLine({ progress }: { progress: Progress }) {
-  return (
-    <div className="qna-progress" data-testid="qna-progress">
-      <div className="qna-progress-main">
-        <span className="dots" aria-hidden="true" />
-        <span>{progress.status ?? '응답 생성 중'}</span>
-        {progress.activeTools.map((t) => (
-          <span key={t.id} className="qna-progress-tool" data-testid={`qna-progress-tool-${t.id}`}>
-            🔧 {t.label}
-          </span>
-        ))}
-      </div>
-      {progress.thinkingPreview && (
-        <div className="qna-progress-thinking" title={progress.thinkingPreview}>
-          {progress.thinkingPreview}
-        </div>
-      )}
-    </div>
-  );
-}
+// Phase E: 옛 ProgressLine 은 ProgressTimeline 으로 대체. 이 자리는 비어있음.

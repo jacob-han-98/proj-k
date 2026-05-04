@@ -824,6 +824,56 @@ html, body, #root { height: 100%; margin: 0; padding: 0; background: var(--bg); 
   white-space: nowrap;
 }
 
+/* Phase E: 진행 내역 펼치기 토글 — assistant 메시지 본문 위에 accordion. streaming
+   중에는 자동 펼침, 끝나면 collapse. 옛 .qna-progress* 룰은 더 이상 사용되지 않음. */
+.qna-progress-timeline {
+  margin-bottom: 8px;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.qna-progress-summary {
+  background: var(--hover);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 10px;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-dim);
+  font-size: 11px;
+}
+.qna-progress-summary:hover { background: var(--border); }
+.qna-progress-summary[aria-expanded="true"] { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+.qna-progress-arrow { font-size: 9px; color: var(--text-dim); }
+.qna-progress-events {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-top: 0;
+  border-bottom-left-radius: 6px;
+  border-bottom-right-radius: 6px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 280px;
+  overflow-y: auto;
+}
+.qna-progress-row { font-size: 11px; line-height: 1.5; }
+.qna-progress-row-status { color: var(--text); font-weight: 500; }
+.qna-progress-row-thinking { color: var(--text-dim); font-style: italic; }
+.qna-progress-row-tool {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.qna-progress-tool-icon { font-size: 10px; flex-shrink: 0; }
+.qna-progress-tool-label { color: var(--text); font-weight: 500; }
+.qna-progress-tool-summary { color: var(--text-dim); font-size: 10px; }
+
 /* PR5: .chat 은 더 이상 grid 자식이 아니라 EditorHost > .tab-slot 안의 flex item (QnATab).
    border-left 도 제거 — 탭 split 안이라 좌측 경계가 의미 없음. 다른 .chat 하위 스타일
    (.messages, .msg, .input-row, .search-results 등) 은 그대로 재사용. */

@@ -453,6 +453,85 @@ function renderSourceCard(
   );
 }
 
+// ── 진행 내역 타임라인 ── (Phase E)
+// agent backend 가 stream 중 status/thinking/tool_start/tool_end 이벤트를 흘리면 그 시퀀스를
+// 메시지에 부착해 사용자에게 "Agent 가 무엇을 했는지" 가시화. 기본 collapsed, "✅ 진행 내역
+// 펼치기 · 툴 N회" 토글로 펼침. streaming 중에는 자동 expanded. 사용자가 토글 가능.
+//
+// 영속: 메모리만. 같은 thread 를 다시 mount 해도 옛 turn 의 진행 내역은 안 보임 (DB 부담 X).
+// 사용자가 thread 안에서 새로 답변 받으면 그 turn 부터 다시 누적.
+export type ProgressEvent =
+  | { kind: 'status'; text: string }
+  | { kind: 'thinking'; text: string }
+  | { kind: 'tool'; id: string; label: string; summary?: string; ended: boolean };
+
+export interface ProgressTimelineProps {
+  events: ProgressEvent[];
+  expanded: boolean;
+  onToggle: () => void;
+  // streaming 중인지 — true 면 자동 펼침 + 라벨 다르게 ("진행 중").
+  streaming: boolean;
+}
+
+export function ProgressTimeline({ events, expanded, onToggle, streaming }: ProgressTimelineProps) {
+  if (events.length === 0 && !streaming) return null;
+
+  const toolCount = events.filter((e) => e.kind === 'tool').length;
+  const isOpen = streaming || expanded;
+  const summaryLabel = streaming
+    ? `⏳ 진행 중 · 툴 ${toolCount}회`
+    : `✅ 진행 내역 ${expanded ? '접기' : '펼치기'} · 툴 ${toolCount}회`;
+
+  return (
+    <div className="qna-progress-timeline" data-testid="qna-progress-timeline">
+      <button
+        type="button"
+        className="qna-progress-summary"
+        onClick={streaming ? undefined : onToggle}
+        aria-expanded={isOpen}
+        data-testid="qna-progress-summary"
+      >
+        <span className="qna-progress-arrow" aria-hidden="true">{isOpen ? '▼' : '▶'}</span>
+        <span>{summaryLabel}</span>
+      </button>
+      {isOpen && (
+        <div className="qna-progress-events" data-testid="qna-progress-events">
+          {events.map((e, i) => (
+            <ProgressEventRow key={i} event={e} />
+          ))}
+          {events.length === 0 && streaming && (
+            <div className="qna-progress-row qna-progress-row-status">대기 중<span className="dots" /></div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ProgressEventRow({ event }: { event: ProgressEvent }) {
+  if (event.kind === 'status') {
+    return <div className="qna-progress-row qna-progress-row-status">{event.text}</div>;
+  }
+  if (event.kind === 'thinking') {
+    return (
+      <div className="qna-progress-row qna-progress-row-thinking" title={event.text}>
+        💭 {event.text.slice(0, 100)}
+        {event.text.length > 100 ? '…' : ''}
+      </div>
+    );
+  }
+  // tool
+  return (
+    <div className="qna-progress-row qna-progress-row-tool">
+      <span className="qna-progress-tool-icon" aria-hidden="true">
+        {event.ended ? '✓' : '🔧'}
+      </span>
+      <span className="qna-progress-tool-label">{event.label}</span>
+      {event.summary && <span className="qna-progress-tool-summary">{event.summary}</span>}
+    </div>
+  );
+}
+
 // ── Follow-up 질문 카드 ── (Phase C → D 디자인 강화)
 // agent-sdk-poc 의 FollowUpCards 디자인에 가깝게 — 큰 카드 + 화살표 ›. 클릭 → 입력란 채움.
 export interface FollowUpCardsProps {

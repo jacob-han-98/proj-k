@@ -94,3 +94,9 @@ scripts/telegram/state/
 
 # agent-sdk-poc 벤치 측정 결과 (재생성 가능, 사이즈 큼)
 packages/agent-sdk-poc/scripts/bench_out/
+
+# desktop-app 일회성 진단 산출물 (스크린샷 비교, probe 스크립트 등)
+packages/desktop-app/.tmp-*
+
+# Playwright 테스트 산출물 (실패 trace/screenshot)
+test-results/

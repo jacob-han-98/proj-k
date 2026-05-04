@@ -1336,13 +1336,16 @@ class ReviewOptions(BaseModel):
 
     cap 필드: int (0/5/10) 또는 "all". 0 이면 해당 카테고리 생략.
     categories: ["logic-flow", "qa-checklist", "readability"] 부분집합. 빈 배열/미지정이면 모든 관점.
-    reviewer_persona: "planner-lead" (기본) | "programmer".
+    reviewer_persona (호환): single. "planner-lead" (기본) | "programmer".
+    reviewer_personas: multi. ["planner-lead", "programmer"] 둘 다 동시 적용 가능.
+                       명시되면 reviewer_persona 보다 우선. 빈 배열 = default.
     """
     issue_cap: int | str | None = None
     verification_cap: int | str | None = None
     suggestion_cap: int | str | None = None
     categories: list[str] | None = None
     reviewer_persona: str | None = None
+    reviewer_personas: list[str] | None = None
 
 
 class ReviewStreamRequest(BaseModel):
@@ -1493,14 +1496,45 @@ def _build_review_options_block(opts: ReviewOptions | None) -> str:
     return "\n\n## 리뷰어 추가 지시 (사용자 옵션)\n\n" + "\n\n".join(parts)
 
 
+def _resolve_personas(opts: ReviewOptions | None) -> list[str]:
+    """우선순위: reviewer_personas (multi, 빈 배열 제외) > reviewer_persona (single, 호환) > default.
+
+    미지원 키는 필터링, 순서 보존하며 중복 제거.
+    """
+    raw: list[str] = []
+    if opts:
+        if opts.reviewer_personas:
+            raw = list(opts.reviewer_personas)
+        elif opts.reviewer_persona:
+            raw = [opts.reviewer_persona]
+    seen: set[str] = set()
+    out: list[str] = []
+    for p in raw:
+        if p in _PERSONA_LINES and p not in seen:
+            out.append(p)
+            seen.add(p)
+    return out or ["planner-lead"]
+
+
 def _build_review_system(opts: ReviewOptions | None) -> str:
-    """persona 변형 — 기본 _REVIEW_SYSTEM 에 첫 단락 톤 가이드 한 줄 끼워 넣음."""
-    persona = (opts.reviewer_persona if opts else None) or "planner-lead"
-    persona_line = _PERSONA_LINES.get(persona, _PERSONA_LINES["planner-lead"])
-    # 기본 system prompt 의 두 번째 줄(Analyze...) 앞에 persona 를 한 줄 끼워 넣는다.
+    """persona 변형 — 기본 _REVIEW_SYSTEM 에 첫 단락 톤 가이드 끼워 넣음.
+
+    single 이면 라인 하나, multi 면 라인 여러 개 + "두 관점 모두에서 검토" 안내 한 줄.
+    """
+    personas = _resolve_personas(opts)
+    persona_lines = [_PERSONA_LINES[p] for p in personas]
+    if len(persona_lines) > 1:
+        combined = (
+            "이번 리뷰는 다음 여러 페르소나의 관점을 **모두** 적용해 검토하세요. "
+            "각 issue/verification 의 perspective 필드는 그 항목이 가장 잘 들어맞는 페르소나로 표기.\n"
+            + "\n".join(f"- {line}" for line in persona_lines)
+        )
+    else:
+        combined = persona_lines[0]
+    # 기본 system prompt 의 두 번째 줄(Analyze...) 앞에 톤 가이드를 끼워 넣는다.
     return _REVIEW_SYSTEM.replace(
         "Analyze the document from multiple perspectives. Respond in Korean.",
-        f"{persona_line}\nAnalyze the document from multiple perspectives. Respond in Korean.",
+        f"{combined}\nAnalyze the document from multiple perspectives. Respond in Korean.",
         1,
     )
 
@@ -1535,8 +1569,9 @@ async def review_stream(req: ReviewStreamRequest):
         opts_summary = ""
         if req.review_options is not None:
             o = req.review_options
+            personas_used = _resolve_personas(o)
             opts_summary = (
-                f" opts(persona={o.reviewer_persona or 'planner-lead'},"
+                f" opts(personas={personas_used},"
                 f"caps={o.issue_cap}/{o.verification_cap}/{o.suggestion_cap},"
                 f"cats={o.categories or 'all'})"
             )

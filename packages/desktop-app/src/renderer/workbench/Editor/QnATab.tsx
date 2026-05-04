@@ -21,6 +21,7 @@ import { buildAttachmentPrompt, type QnAAttachment } from '../../qna/attachments
 import {
   FollowUpCards,
   RenderAssistantMarkdown,
+  RenderSourceCards,
   type QnASource,
 } from '../../qna/render';
 
@@ -540,6 +541,16 @@ export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Pr
                 />
               ) : (
                 m.content || '…'
+              )}
+              {/* Phase D: assistant 메시지의 출처 카드 그룹 (PK / 타게임 / 웹). 본문 끝에. */}
+              {m.role === 'assistant' && m.sources && (
+                <RenderSourceCards
+                  sources={m.sources}
+                  onOpen={(path, section) => {
+                    const raw = section ? `${path} § ${section}` : path;
+                    setSelectedCitation({ raw, path, section });
+                  }}
+                />
               )}
               {/* Phase C: 마지막 assistant 메시지 + 답변 완료 시 follow-ups. busy 중엔 숨김. */}
               {isLastAssistant && m.followUps && (

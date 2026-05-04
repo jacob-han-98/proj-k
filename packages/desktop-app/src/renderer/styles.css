@@ -681,6 +681,149 @@ html, body, #root { height: 100%; margin: 0; padding: 0; background: var(--bg); 
 }
 .qna-followup-chip:hover { background: var(--hover); }
 
+/* Phase D: assistant 답변 카드 디자인 강화 — 회색 plain 에서 glass 스타일 카드로.
+   max-width 넓혀 표/긴 답변이 자연스럽게 흐르게. white-space: normal 로 override
+   (markdown 안에서 ReactMarkdown 이 줄바꿈 처리하므로 pre-wrap 불필요). */
+.chat .msg.assistant {
+  background: var(--bg-sidebar);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 16px;
+  max-width: 100%;
+  white-space: normal;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+/* Phase D: 인라인 출처 chip 의 우선순위 강화. ReactMarkdown 의 a tag 기본 link 스타일을
+   확실히 덮어 쓰도록 .qna-md 스코프로. 사용자가 옛 빌드 화면에서 chip 안 보이는 이슈
+   회귀 방지 — 일반 a 색이 chip 룰을 가리지 않게. */
+.qna-md a.inline-source-link {
+  color: var(--text);
+  text-decoration: none;
+}
+.qna-md a.inline-source-link:hover { color: var(--text); }
+
+/* Phase D: 답변 끝 출처 카드 그룹 — agent-sdk-poc 의 RenderSourceCards 스타일 이식.
+   PK / 타게임 / 웹 3 그룹. 그룹마다 sources-title + 카드 grid (한 줄에 1~2개 wrap). */
+.qna-message-sources {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.qna-sources-title {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dim);
+  letter-spacing: 0.4px;
+}
+.qna-sources-title-external { color: #9333ea; }
+.qna-sources-title-web { color: #0891b2; }
+.qna-source-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.qna-source-card {
+  display: inline-flex;
+  align-items: stretch;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  max-width: 100%;
+}
+.qna-source-card-external { border-color: #9333ea55; background: #9333ea08; }
+.qna-source-card-web { border-color: #0891b255; background: #0891b208; }
+.qna-source-card-main {
+  background: transparent;
+  border: 0;
+  padding: 8px 10px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  text-align: left;
+  color: var(--text);
+  font-size: 11px;
+  max-width: 360px;
+}
+.qna-source-card-main:disabled { cursor: default; opacity: 0.7; }
+.qna-source-card-main:not(:disabled):hover { background: var(--hover); }
+.qna-source-card-icon { display: inline-flex; line-height: 0; flex-shrink: 0; }
+.qna-source-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.qna-source-card-text {
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.qna-source-card-sections {
+  font-size: 10px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.qna-source-card-ext {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 8px;
+  text-decoration: none;
+  color: var(--text-dim);
+  border-left: 1px solid var(--border);
+  font-size: 11px;
+}
+.qna-source-card-ext:hover { background: var(--hover); color: var(--text); }
+
+/* Phase D: follow-up 카드 — agent-sdk-poc 디자인 (큰 카드 + ›). 기존 chip 형은 제거. */
+.qna-followups-title {
+  margin: 0 0 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-dim);
+}
+.qna-followups-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.qna-followup-card {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+}
+.qna-followup-card:hover { background: var(--hover); }
+.qna-followup-arrow {
+  color: var(--text-dim);
+  font-size: 16px;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+.qna-followup-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* PR5: .chat 은 더 이상 grid 자식이 아니라 EditorHost > .tab-slot 안의 flex item (QnATab).
    border-left 도 제거 — 탭 split 안이라 좌측 경계가 의미 없음. 다른 .chat 하위 스타일
    (.messages, .msg, .input-row, .search-results 등) 은 그대로 재사용. */

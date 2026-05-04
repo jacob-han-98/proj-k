@@ -29,6 +29,19 @@ export interface QnASource {
   origin_url?: string;
 }
 
+function DataSheetIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 18 18" fill="none" style={{ flexShrink: 0 }}>
+      <rect width="18" height="18" rx="3" fill="#dc2626" />
+      <rect x="4" y="4" width="10" height="10" rx="1" fill="none" stroke="white" strokeWidth="1.1" />
+      <line x1="4" y1="7.5" x2="14" y2="7.5" stroke="white" strokeWidth="1.1" />
+      <line x1="4" y1="11" x2="14" y2="11" stroke="white" strokeWidth="1.1" />
+      <line x1="7.5" y1="4" x2="7.5" y2="14" stroke="white" strokeWidth="1.1" />
+      <line x1="11" y1="4" x2="11" y2="14" stroke="white" strokeWidth="1.1" />
+    </svg>
+  );
+}
+
 // ── Icons ──
 export function ExcelIcon() {
   return (
@@ -130,7 +143,7 @@ function inlineCodeToUrl(text: string): string | null {
 
 // ── 인라인 출처 body 파서 — kind 별 분기 ──
 export interface ParsedSourceBody {
-  kind: 'xlsx' | 'confluence' | 'external' | 'web' | 'other';
+  kind: 'xlsx' | 'confluence' | 'external' | 'web' | 'datasheet' | 'other';
   levels: string[];
   url?: string;
 }
@@ -163,6 +176,11 @@ export function parseInlineSourceBody(body: string): ParsedSourceBody {
     const rest = label.replace(/^Confluence\s*\/\s*/, '').trim();
     const parts = rest.split(/\s*\/\s*/).map((p) => p.trim()).filter(Boolean);
     return { kind: 'confluence', levels: ['Confluence', ...parts.map((p) => `"${p}"`), ...sectionLevels] };
+  }
+  if (/^DataSheet\s*\//i.test(label)) {
+    const rest = label.replace(/^DataSheet\s*\/\s*/i, '').trim();
+    const parts = rest.split(/\s*\/\s*/).map((p) => p.trim()).filter(Boolean);
+    return { kind: 'datasheet', levels: ['DataSheet', ...parts.map((p) => `"${p}"`), ...sectionLevels] };
   }
   const xm = label.match(/^(.+?\.xlsx)\s*\/\s*(.+?)(?:\s+시트)?\s*$/);
   if (xm) return { kind: 'xlsx', levels: [xm[1], `"${xm[2]}" 시트`, ...sectionLevels] };
@@ -248,7 +266,9 @@ export function RenderAssistantMarkdown({
               ? ExternalIcon
               : parsed.kind === 'web'
                 ? WebIcon
-                : ExcelIcon;
+                : parsed.kind === 'datasheet'
+                  ? DataSheetIcon
+                  : ExcelIcon;
         const isExternal = parsed.kind === 'external';
         const isWeb = parsed.kind === 'web';
         return (
@@ -304,9 +324,137 @@ export function RenderAssistantMarkdown({
   );
 }
 
-// ── Follow-up 질문 카드 ──
-// agent backend 가 result.follow_ups 에 짧은 후속 질문 2-3개를 담아준다 (답변 끝의 "더 볼 만한
-// 방향" 섹션과 동기). 클릭 → 입력란에 채움 (자동 send 안 함, 사용자가 편집 가능).
+// ── 출처 카드 ── (Phase D)
+// agent-sdk-poc 의 RenderSourceCards 이식. 답변 하단에 sources 를 3 그룹으로 분리:
+//   PK (xlsx / confluence / datasheet — 회사 자산)
+//   타게임 (external — oracle 큐레이트 참고 자료)
+//   웹 (web — Deep Research)
+// 같은 path 의 sources 는 section 만 누적 (중복 카드 방지). path 없으면 workbook|sheet 키.
+export interface RenderSourceCardsProps {
+  sources: QnASource[];
+  onOpen: (path: string, section: string) => void;
+}
+
+export function RenderSourceCards({ sources, onOpen }: RenderSourceCardsProps) {
+  if (!sources || sources.length === 0) return null;
+
+  // 동일 path 의 source 중복 제거 + section 누적.
+  const groups = new Map<string, { src: QnASource; sections: string[] }>();
+  for (const s of sources) {
+    const key = s.path ?? `${s.workbook ?? ''}|${s.sheet ?? ''}`;
+    const existing = groups.get(key);
+    const sec = (s.section_path ?? '').trim();
+    if (existing) {
+      if (sec && !existing.sections.includes(sec)) existing.sections.push(sec);
+    } else {
+      groups.set(key, { src: s, sections: sec ? [sec] : [] });
+    }
+  }
+  const entries = Array.from(groups.values());
+  const primary = entries.filter(({ src }) => src.source !== 'external' && src.source !== 'web');
+  const external = entries.filter(({ src }) => src.source === 'external');
+  const web = entries.filter(({ src }) => src.source === 'web');
+
+  return (
+    <div className="qna-message-sources" data-testid="qna-message-sources">
+      {primary.length > 0 && (
+        <>
+          <p className="qna-sources-title">출처</p>
+          <div className="qna-source-cards">{primary.map((e, i) => renderSourceCard(e, i, onOpen))}</div>
+        </>
+      )}
+      {external.length > 0 && (
+        <>
+          <p className="qna-sources-title qna-sources-title-external">참고 자료 (타게임)</p>
+          <div className="qna-source-cards">{external.map((e, i) => renderSourceCard(e, i, onOpen))}</div>
+        </>
+      )}
+      {web.length > 0 && (
+        <>
+          <p className="qna-sources-title qna-sources-title-web">참고 자료 (웹)</p>
+          <div className="qna-source-cards">{web.map((e, i) => renderSourceCard(e, i, onOpen))}</div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function renderSourceCard(
+  { src, sections }: { src: QnASource; sections: string[] },
+  i: number,
+  onOpen: (path: string, section: string) => void,
+) {
+  const isConfluence =
+    src.source === 'confluence' || (src.workbook ?? '').startsWith('Confluence');
+  const isExternal = src.source === 'external';
+  const isWeb = src.source === 'web';
+  const isDataSheet = src.source === 'datasheet';
+  const displayLabel =
+    src.origin_label ||
+    [src.workbook, src.sheet].filter(Boolean).join(' / ') ||
+    src.path ||
+    '(unknown)';
+  const extLink = src.origin_url ?? src.source_url ?? '';
+  const firstSection = sections[0] ?? '';
+  const canOpen = !!src.path && !isExternal && !isWeb;
+  const Icon = isWeb
+    ? WebIcon
+    : isExternal
+      ? ExternalIcon
+      : isDataSheet
+        ? DataSheetIcon
+        : isConfluence
+          ? ConfluenceIcon
+          : ExcelIcon;
+  const cardClass = `qna-source-card${isExternal ? ' qna-source-card-external' : ''}${isWeb ? ' qna-source-card-web' : ''}`;
+  const onCardClick = () => {
+    if (canOpen) onOpen(src.path!, firstSection);
+    else if (isWeb && extLink) window.open(extLink, '_blank', 'noopener,noreferrer');
+  };
+  const cardTitle = isWeb
+    ? `웹 자료 새 창에서 열기 — ${extLink || '링크 없음'}`
+    : isExternal
+      ? '외부 참고 자료 — 원문 링크는 향후 지원'
+      : src.path ?? displayLabel;
+  return (
+    <div key={i} className={cardClass} title={cardTitle}>
+      <button
+        className="qna-source-card-main"
+        onClick={onCardClick}
+        disabled={!canOpen && !isWeb}
+        type="button"
+        data-testid={`qna-source-card-${i}`}
+      >
+        <span className="qna-source-card-icon">
+          <Icon />
+        </span>
+        <div className="qna-source-card-body">
+          <span className="qna-source-card-text">{displayLabel}</span>
+          {sections.length > 0 && (
+            <span className="qna-source-card-sections">
+              {sections.slice(0, 4).join(' · ')}
+              {sections.length > 4 ? ` …+${sections.length - 4}` : ''}
+            </span>
+          )}
+        </div>
+      </button>
+      {extLink && !isWeb && (
+        <a
+          className="qna-source-card-ext"
+          href={extLink}
+          target="_blank"
+          rel="noreferrer"
+          title="원본 링크 새 창에서 열기"
+        >
+          ↗
+        </a>
+      )}
+    </div>
+  );
+}
+
+// ── Follow-up 질문 카드 ── (Phase C → D 디자인 강화)
+// agent-sdk-poc 의 FollowUpCards 디자인에 가깝게 — 큰 카드 + 화살표 ›. 클릭 → 입력란 채움.
 export interface FollowUpCardsProps {
   followUps: string[];
   onPick: (q: string) => void;
@@ -316,18 +464,19 @@ export function FollowUpCards({ followUps, onPick }: FollowUpCardsProps) {
   if (!followUps || followUps.length === 0) return null;
   return (
     <div className="qna-followups" data-testid="qna-followups">
-      <div className="qna-followups-hint">↪ 이어서 물어볼 만한 질문</div>
-      <div className="qna-followups-row">
+      <p className="qna-followups-title">이어서 물어볼 만한 질문</p>
+      <div className="qna-followups-cards">
         {followUps.map((q, i) => (
           <button
             key={i}
             type="button"
-            className="qna-followup-chip"
+            className="qna-followup-card"
             onClick={() => onPick(q)}
-            title={q}
+            title="이 질문으로 이어서 물어보기"
             data-testid={`qna-followup-${i}`}
           >
-            {q}
+            <span className="qna-followup-arrow">›</span>
+            <span className="qna-followup-text">{q}</span>
           </button>
         ))}
       </div>

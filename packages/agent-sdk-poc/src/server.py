@@ -20,6 +20,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
@@ -51,6 +52,18 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 log = logging.getLogger("projk-agent-sdk")
 
 app = FastAPI(title="Project K Agent SDK", version="0.1.0")
+
+# Vite dev (frontend/ 의 npm run dev) 가 :5173 에서 떠서 :8090 직접 호출 시
+# CORS preflight 차단되므로 모두 허용. 0.0.0.0 listen 이라 외부 노출 위험 있지만
+# dev/internal 도구라 의도된 trade-off. production (nginx 같은 reverse proxy 뒤)
+# 에선 same-origin 이라 CORS 무관.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origin_regex=r".*",
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 STATIC_DIR = Path(__file__).parent.parent / "static"
 if STATIC_DIR.exists():
@@ -1273,6 +1286,13 @@ class ReviewStreamRequest(BaseModel):
     review_instruction: str | None = None
 
 
+class SummaryStreamRequest(BaseModel):
+    title: str
+    text: str
+    model: str | None = None
+    summary_style: str | None = "default"
+
+
 class SuggestEditsRequest(BaseModel):
     title: str
     text: str | None = None
@@ -1519,6 +1539,134 @@ async def suggest_edits(req: SuggestEditsRequest):
                     "model": model,
                     "usage": usage,
                     "raw_count": len(changes),
+                },
+            }
+        )
+
+    return StreamingResponse(gen(), media_type="application/x-ndjson")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# /summary_stream — Klaud Confluence 어시스턴트 "요약하기" 모드
+# ═══════════════════════════════════════════════════════════════════════════════
+# 단일 Bedrock 호출, NDJSON token 스트림. /review_stream 와 분리된 별도 endpoint —
+# 기존 /review_stream / /ask_stream 흐름에 영향 차단. RAG 미사용 (사용자가 보고
+# 있는 페이지 텍스트만 컨텍스트).
+
+_SUMMARY_SYSTEM_DEFAULT = """You are a senior planning assistant for Project K, a mobile MMORPG. Your job is to summarize a single Confluence wiki page so a designer can grasp it in under a minute. Respond in Korean.
+
+## 출력 구조 (markdown)
+
+1. **결론 먼저** — 페이지가 무엇을 다루는지 1~2문장. 용어/시스템 이름은 원문 그대로.
+2. **핵심 항목** — 불릿 5~10개. 각 불릿은 1문장. 수치·공식·규칙·Enum·식별자(`CamelCase`)는 원문 표기 유지.
+3. **관련 시스템** — 본문이 명시적으로 언급한 다른 시스템·문서·페이지가 있을 때만 불릿. 없으면 이 섹션 자체를 생략.
+
+## 규칙
+
+- **추측 금지** — 본문에 없는 내용은 추가하지 말 것. 모호하면 모호한 채로 인용.
+- **수치 보존** — 숫자/단위/공식은 원문 그대로. 임의 변환·반올림 X.
+- **용어 보존** — 기획자가 쓰는 한국어 용어 + 영문 식별자 모두 원문대로.
+- **분량** — 일반 페이지 800자 내, 큰 페이지(본문 5천자 초과)는 1500자 내. 그 이상은 잘라낼 것.
+- **장식 금지** — 자화자찬, 메타 코멘트("이 페이지는 잘 정리되어 있습니다" 류), 이모지, 수식어 X.
+- **문단 X, 불릿 O** — "핵심 항목"은 반드시 불릿 리스트로.
+- **markdown만** — 코드 펜스(```) 로 감싸지 말 것. 본문 자체가 markdown.
+
+## 형식 예시
+
+```
+## 결론
+<1~2문장>
+
+## 핵심 항목
+- <불릿 1>
+- <불릿 2>
+- ...
+
+## 관련 시스템
+- <본문 명시 시스템/문서>
+```
+
+위 구조 그대로 출력. 다른 헤더 추가 X."""
+
+
+@app.post("/summary_stream")
+async def summary_stream(req: SummaryStreamRequest):
+    """Confluence 페이지 요약 — Bedrock 단일 호출, NDJSON 토큰 스트리밍.
+
+    이벤트:
+        {"type":"status","message":"..."}
+        {"type":"token","text":"..."}            # text_delta 마다
+        {"type":"result","data":{"summary":"<markdown>","model":"...","usage":{...}}}
+        {"type":"error","message":"..."}
+    """
+    title = req.title or ""
+    text = (req.text or "")[:100000]
+    style = (req.summary_style or "default").lower()
+    # 향후 "bullet" / "executive" 분기 자리 — 지금은 default 만.
+    system_prompt = _SUMMARY_SYSTEM_DEFAULT
+    model = _bd_normalize_model(req.model)
+    user_msg = (
+        f"Page Title: {title}\n\nPage Content:\n{text}\n\n"
+        f"위 페이지를 시스템 메시지의 구조와 규칙에 따라 한국어로 요약해줘."
+    )
+
+    if not text.strip():
+        return StreamingResponse(
+            iter([_ndj({"type": "error", "message": "text is empty"})]),
+            media_type="application/x-ndjson",
+        )
+
+    async def gen():
+        log_event(
+            "summary",
+            "summary_stream",
+            f"{title[:60]} ({len(text)}c, {model}, style={style})",
+        )
+        yield _ndj({"type": "status", "message": f"📖 본문 정독 중... ({model})"})
+        yield _ndj({"type": "status", "message": f"📄 길이: {len(text):,}자"})
+
+        acc: list[str] = []
+        usage: dict = {}
+        try:
+            async for ev in _bd_stream(
+                messages=[{"role": "user", "content": user_msg}],
+                system=system_prompt,
+                model=model,
+                max_tokens=2048,
+                temperature=0.0,
+            ):
+                t = ev.get("type")
+                if t == "content_block_delta":
+                    d = ev.get("delta", {})
+                    if d.get("type") == "text_delta":
+                        chunk = d.get("text", "")
+                        if chunk:
+                            acc.append(chunk)
+                            yield _ndj({"type": "token", "text": chunk})
+                elif t == "message_delta":
+                    u = ev.get("usage")
+                    if u:
+                        usage.update(u)
+        except _BdStreamErr as e:
+            log_event("summary", "summary_error", str(e)[:200])
+            yield _ndj({"type": "error", "message": f"Bedrock stream error: {e}"})
+            return
+        except Exception as e:
+            log_event("summary", "summary_error", str(e)[:200])
+            yield _ndj({"type": "error", "message": f"unexpected: {e}"})
+            return
+
+        full = "".join(acc).strip()
+        log_event("summary", "summary_done", f"{len(full)} chars, usage={usage}")
+        yield _ndj({"type": "status", "message": "📋 요약 정리 중..."})
+        yield _ndj(
+            {
+                "type": "result",
+                "data": {
+                    "summary": full,
+                    "model": model,
+                    "usage": usage,
+                    "summary_style": style,
                 },
             }
         )

@@ -155,7 +155,25 @@ export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Pr
   const [presets, setPresets] = useState<PresetPrompt[]>([]);
   // A3-b: citation 클릭 → /source_view modal. null 이면 닫힘.
   const [selectedCitation, setSelectedCitation] = useState<CitationTarget | null>(null);
+  // Phase F: 입력창 옆 토글 — 모델 선택 / Deep Research / 정지 버튼.
+  // localStorage 영속 — 사용자 선호 보존 (다음 thread 도 같은 default).
+  const [model, setModel] = useState<string>(() => {
+    if (typeof localStorage === 'undefined') return 'opus';
+    return localStorage.getItem('klaud.qna.model') ?? 'opus';
+  });
+  const [compareMode, setCompareMode] = useState<boolean>(() => {
+    if (typeof localStorage === 'undefined') return false;
+    return localStorage.getItem('klaud.qna.compareMode') === 'true';
+  });
+  const abortRef = useRef<AbortController | null>(null);
   const taRef = useRef<HTMLTextAreaElement | null>(null);
+
+  useEffect(() => {
+    try { localStorage.setItem('klaud.qna.model', model); } catch { /* quota */ }
+  }, [model]);
+  useEffect(() => {
+    try { localStorage.setItem('klaud.qna.compareMode', String(compareMode)); } catch { /* quota */ }
+  }, [compareMode]);
 
   // Phase A1: 이 thread 의 미발송 첨부. 진입점 2/3 (Phase A2/A3) 가 store.attachToQnA 로
   // push 해두고, 사용자가 qna 액티비티로 와서 첫 메시지 보낼 때 prepend 후 clear.
@@ -363,6 +381,9 @@ export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Pr
       });
     };
     try {
+      // Phase F: 새 AbortController — 사용자가 ⏹ 클릭 시 fetch cancel.
+      const ac = new AbortController();
+      abortRef.current = ac;
       await askStream(
         questionForBackend,
         (event) => {
@@ -415,8 +436,21 @@ export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Pr
           }
         },
         conversationId,
+        { model, compareMode, signal: ac.signal },
       );
     } catch (e) {
+      // AbortError — 사용자가 정지 버튼 누른 케이스. 오류 message 대신 "(중단됨)" 마커.
+      if (e instanceof DOMException && e.name === 'AbortError') {
+        assembled = assembled || '(사용자가 중단)';
+        setMessages((m) => {
+          const copy = [...m];
+          const last = copy[copy.length - 1];
+          copy[copy.length - 1] = { ...last, role: 'assistant', content: assembled };
+          return copy;
+        });
+        // finally 가 abortRef 정리.
+        return;
+      }
       const msg = e instanceof Error ? e.message : String(e);
       assembled = `[오류] ${msg}`;
       setMessages((m) => {
@@ -426,6 +460,7 @@ export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Pr
       });
     } finally {
       setBusy(false);
+      abortRef.current = null;
     }
 
     // assistant 영속
@@ -629,9 +664,49 @@ export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Pr
           }
           data-testid="chat-input"
         />
-        <button onClick={() => void send()} disabled={busy} data-testid="chat-send">
-          {busy ? '…' : '보내기'}
-        </button>
+        {busy ? (
+          <button
+            onClick={() => abortRef.current?.abort()}
+            data-testid="chat-stop"
+            title="응답 정지"
+            className="chat-stop"
+          >
+            ⏹ 정지
+          </button>
+        ) : (
+          <button onClick={() => void send()} data-testid="chat-send">
+            보내기
+          </button>
+        )}
+      </div>
+      {/* Phase F: 입력창 아래 옵션 라인 — 모델 / Deep Research. busy 중에도 다음 send 용으로
+          변경 가능. localStorage 영속. */}
+      <div className="qna-input-options" data-testid="qna-input-options">
+        <select
+          className="qna-model-select"
+          value={model}
+          onChange={(e) => setModel(e.target.value)}
+          disabled={busy}
+          data-testid="qna-model-select"
+          title="응답 생성 모델"
+        >
+          <option value="opus">Opus</option>
+          <option value="sonnet">Sonnet</option>
+          <option value="haiku">Haiku</option>
+        </select>
+        <label
+          className={`qna-compare-toggle${compareMode ? ' on' : ''}`}
+          title="Deep Research — oracle 큐레이트 타게임 + WebSearch fallback"
+          data-testid="qna-compare-toggle"
+        >
+          <input
+            type="checkbox"
+            checked={compareMode}
+            onChange={(e) => setCompareMode(e.target.checked)}
+            disabled={busy}
+          />
+          <span>🌟 Deep Research</span>
+        </label>
       </div>
 
       {selectedCitation && (

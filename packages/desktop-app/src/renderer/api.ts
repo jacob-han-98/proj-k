@@ -209,14 +209,22 @@ export async function askStream(
   // doc_context (read_current_doc tool) 를 hint 로 system prompt 에 주입.
   // 미지정 시 기존 QnA 동작.
   conversationId?: string,
+  // Phase F: 입력창의 모델 선택 / Deep Research 토글 / 정지 버튼.
+  //   model: 'opus' | 'sonnet' | 등 — backend default 'claude-opus-*' 와 동일 키
+  //   compareMode: Deep Research (oracle 큐레이트 타게임 + WebSearch fallback)
+  //   signal: AbortController.signal — 사용자 ⏹ 클릭 시 fetch 취소
+  opts: { model?: string; compareMode?: boolean; signal?: AbortSignal } = {},
 ): Promise<void> {
   const port = await ensurePort();
   const body: Record<string, unknown> = { question };
   if (conversationId) body.conversation_id = conversationId;
+  if (opts.model) body.model = opts.model;
+  if (opts.compareMode) body.compare_mode = true;
   const res = await fetch(`http://127.0.0.1:${port}/ask_stream`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
+    signal: opts.signal,
   });
   await readNdjson(res, onLine);
 }

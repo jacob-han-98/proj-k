@@ -874,6 +874,48 @@ html, body, #root { height: 100%; margin: 0; padding: 0; background: var(--bg); 
 .qna-progress-tool-label { color: var(--text); font-weight: 500; }
 .qna-progress-tool-summary { color: var(--text-dim); font-size: 10px; }
 
+/* Phase F: 입력창 옵션 라인 — 모델 select + Deep Research 토글. */
+.qna-input-options {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 12px 8px;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.qna-model-select {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 11px;
+  cursor: pointer;
+}
+.qna-model-select:disabled { cursor: default; opacity: 0.6; }
+.qna-compare-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  padding: 3px 8px;
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  user-select: none;
+}
+.qna-compare-toggle.on {
+  background: #9333ea15;
+  border-color: #9333ea66;
+  color: #9333ea;
+}
+.qna-compare-toggle input { margin: 0; cursor: pointer; }
+.chat-stop {
+  background: #dc2626;
+  color: white;
+  border-color: #dc2626;
+}
+.chat-stop:hover { background: #b91c1c; }
+
 /* PR5: .chat 은 더 이상 grid 자식이 아니라 EditorHost > .tab-slot 안의 flex item (QnATab).
    border-left 도 제거 — 탭 split 안이라 좌측 경계가 의미 없음. 다른 .chat 하위 스타일
    (.messages, .msg, .input-row, .search-results 등) 은 그대로 재사용. */

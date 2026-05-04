@@ -1,5 +1,6 @@
 import { describe, expect, it, beforeEach } from 'vitest';
 import { useWorkbenchStore } from '../../src/renderer/workbench/store';
+import { DEFAULT_REVIEW_OPTIONS } from '../../src/renderer/panels/review-options-mapping';
 
 // P0: SplitPayload 의 mode 필드 분기 검증.
 // - openSplit 기본 mode 는 'pick' (수동 시작 — 사용자가 모드 칩 누를 때까지 백엔드 호출 X).
@@ -67,5 +68,47 @@ describe('SplitPayload mode', () => {
     expect(useWorkbenchStore.getState().tabSplits['tab-1']).toBeDefined();
     useWorkbenchStore.getState().closeSplit('tab-1');
     expect(useWorkbenchStore.getState().tabSplits['tab-1']).toBeUndefined();
+  });
+});
+
+// P2: setReviewOptions 액션 검증.
+//
+// 회귀 방지:
+// - 옵션 채워지면 trigger 갱신 → ReviewSplitPane 의 reviewStream 이 시작.
+// - mode 전환 시 reviewOptions reset (사용자가 review → 다른 모드 → review 다시 가면 옵션 폼 새로).
+describe('SplitPayload reviewOptions', () => {
+  beforeEach(() => {
+    useWorkbenchStore.setState({ tabSplits: {} });
+  });
+
+  it('openSplit 직후엔 reviewOptions=undefined (옵션 폼 노출 신호)', () => {
+    useWorkbenchStore.getState().openSplit('tab-1', '제목', '본문', 'review');
+    expect(useWorkbenchStore.getState().tabSplits['tab-1']?.reviewOptions).toBeUndefined();
+  });
+
+  it('setReviewOptions 호출 시 옵션 채워지고 trigger 갱신 → ReviewSplitPane mount 트리거', async () => {
+    useWorkbenchStore.getState().openSplit('tab-1', '제목', '본문', 'review');
+    const t0 = useWorkbenchStore.getState().tabSplits['tab-1']!.trigger;
+
+    await new Promise((r) => setTimeout(r, 5));
+    useWorkbenchStore.getState().setReviewOptions('tab-1', DEFAULT_REVIEW_OPTIONS);
+
+    const split = useWorkbenchStore.getState().tabSplits['tab-1'];
+    expect(split?.reviewOptions).toEqual(DEFAULT_REVIEW_OPTIONS);
+    expect(split!.trigger).toBeGreaterThan(t0);
+  });
+
+  it('mode 전환 시 reviewOptions 도 reset — review → summary → review 다시 가면 옵션 폼 새로', () => {
+    useWorkbenchStore.getState().openSplit('tab-1', '제목', '본문', 'review');
+    useWorkbenchStore.getState().setReviewOptions('tab-1', DEFAULT_REVIEW_OPTIONS);
+    expect(useWorkbenchStore.getState().tabSplits['tab-1']?.reviewOptions).toBeDefined();
+
+    useWorkbenchStore.getState().setSplitMode('tab-1', 'summary');
+    expect(useWorkbenchStore.getState().tabSplits['tab-1']?.reviewOptions).toBeUndefined();
+  });
+
+  it('setReviewOptions 가 존재 안 하는 tabId 로 호출되면 silent no-op', () => {
+    useWorkbenchStore.getState().setReviewOptions('tab-없음', DEFAULT_REVIEW_OPTIONS);
+    expect(useWorkbenchStore.getState().tabSplits['tab-없음']).toBeUndefined();
   });
 });

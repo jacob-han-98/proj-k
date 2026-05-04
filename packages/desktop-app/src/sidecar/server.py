@@ -1008,11 +1008,22 @@ async def preset_prompts() -> dict:
 
 # ---------- /review_stream (Phase 4-2: Confluence webview body → agent → stream) ----------
 
+class ReviewOptionsModel(BaseModel):
+    # P2: 사용자가 ReviewOptionsPanel 에서 고른 6개 컨트롤. backend agent 가 받아
+    # system prompt / instruction 으로 변환. sidecar 는 그대로 pass-through.
+    issue_cap: int | str  # 0 | 5 | 10 | "all"
+    verification_cap: int | str
+    suggestion_cap: int | str
+    categories: list[str]  # ["logic-flow" | "qa-checklist" | "readability"]
+    reviewer_persona: str  # "planner-lead" | "programmer"
+
+
 class ReviewRequest(BaseModel):
     title: str
     text: str
     model: str | None = None
     review_instruction: str | None = None
+    review_options: ReviewOptionsModel | None = None
 
 
 async def _proxy_review_stream(payload: dict[str, Any]) -> AsyncIterator[str]:

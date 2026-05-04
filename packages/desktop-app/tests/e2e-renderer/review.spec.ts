@@ -103,6 +103,7 @@ test('리뷰 streaming → result.data.review (WSL 포맷, JSON 문자열) → R
 
   await page.getByTestId('confluence-assistant').click();
   await page.getByTestId('mode-pick-review').click();
+  await page.getByTestId('review-options-start').click();
 
   const card = page.getByTestId('review-card');
   await expect(card).toBeVisible();
@@ -146,6 +147,7 @@ test('리뷰 — result.data.review 가 ```json ... ``` 마크다운 펜스로 �
   await selectConfluencePageAndStubWebview(page, '본문');
   await page.getByTestId('confluence-assistant').click();
   await page.getByTestId('mode-pick-review').click();
+  await page.getByTestId('review-options-start').click();
 
   const card = page.getByTestId('review-card');
   await expect(card).toContainText('82/100');
@@ -172,6 +174,7 @@ test('리뷰 — legacy {type, payload} 포맷도 defensive 하게 파싱', asyn
 
   await page.getByTestId('confluence-assistant').click();
   await page.getByTestId('mode-pick-review').click();
+  await page.getByTestId('review-options-start').click();
   const card = page.getByTestId('review-card');
   await expect(card).toContainText('50/100');
   await expect(card).toContainText('legacy 포맷 OK');
@@ -224,6 +227,7 @@ test('리뷰 → "원본 수정" → ChangesCard streaming → before/after 렌�
 
   await page.getByTestId('confluence-assistant').click();
   await page.getByTestId('mode-pick-review').click();
+  await page.getByTestId('review-options-start').click();
   await expect(page.getByTestId('review-card')).toContainText('60/100');
 
   await page.getByTestId('review-fix').click();
@@ -258,6 +262,7 @@ test('리뷰 — error 이벤트 시 review-error 메시지 표시', async ({ pa
 
   await page.getByTestId('confluence-assistant').click();
   await page.getByTestId('mode-pick-review').click();
+  await page.getByTestId('review-options-start').click();
   const card = page.getByTestId('review-card');
   await expect(card).toContainText('[리뷰 오류]');
   await expect(card).toContainText('agent 백엔드 URL 미설정');
@@ -278,6 +283,7 @@ test('리뷰 — actionable 항목 0건이면 "원본 수정" 버튼 미노출',
 
   await page.getByTestId('confluence-assistant').click();
   await page.getByTestId('mode-pick-review').click();
+  await page.getByTestId('review-options-start').click();
   await expect(page.getByTestId('review-card')).toContainText('95/100');
   await expect(page.getByTestId('review-fix')).toHaveCount(0);
 });

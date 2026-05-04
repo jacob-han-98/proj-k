@@ -2061,6 +2061,123 @@ html, body, #root { height: 100%; margin: 0; padding: 0; background: var(--bg); 
   border-color: var(--accent);
 }
 
+/* P2: 리뷰 옵션 패널 — 두 번째 스크린샷의 6 컨트롤 폼.
+   doc-assistant-pane 안 body 영역에 mount. label · chip 그룹 · 시작 버튼 위에서 아래로. */
+.review-options-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px 0;
+}
+
+.review-options-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 0 6px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 8px;
+}
+
+.review-options-back {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 3px;
+  cursor: pointer;
+  color: var(--text-dim);
+  font-size: 14px;
+  transition: background 0.08s ease, color 0.08s ease;
+}
+
+.review-options-back:hover {
+  background: var(--list-hoverBackground);
+  color: var(--text);
+}
+
+.review-options-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.review-options-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.review-options-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.review-options-row-label {
+  flex: 0 0 88px;
+  font-size: 12px;
+  color: var(--text-dim);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.review-options-chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  flex: 1 1 auto;
+}
+
+.review-options-chip {
+  all: unset;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  font-size: 11px;
+  color: var(--text);
+  background: var(--bg-elev);
+  cursor: pointer;
+  transition: background 0.08s ease, border-color 0.08s ease, color 0.08s ease;
+}
+
+.review-options-chip:hover {
+  background: var(--list-hoverBackground);
+  border-color: var(--accent);
+}
+
+.review-options-chip.on {
+  background: var(--accent);
+  color: var(--accent-fg);
+  border-color: var(--accent);
+}
+
+.review-options-start {
+  all: unset;
+  margin-top: 6px;
+  padding: 8px 12px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--accent);
+  color: var(--accent-fg);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+  transition: opacity 0.08s ease;
+}
+
+.review-options-start:hover {
+  opacity: 0.9;
+}
+
 .review-apply-msg {
   font-size: 11px;
   color: var(--text);

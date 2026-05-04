@@ -8,6 +8,7 @@ import type {
   SearchResponse,
   SidecarStatus,
 } from '../../src/shared/types';
+import type { ReviewOptionsPayload } from './panels/review-options-mapping';
 
 let cachedPort: number | null = null;
 
@@ -218,7 +219,14 @@ export async function askStream(
 // chrome-extension/sidebar 와 동일 (title/text/model/review_instruction) 라서
 // upstream agent 의 /review_stream 가 그대로 동작한다.
 export async function reviewStream(
-  payload: { title: string; text: string; model?: string; review_instruction?: string },
+  payload: {
+    title: string;
+    text: string;
+    model?: string;
+    review_instruction?: string;
+    // P2: 옵션 패널에서 고른 6개 컨트롤. backend 가 옵셔널로 받음 — 미지정 시 기존 동작.
+    review_options?: ReviewOptionsPayload;
+  },
   onLine: (event: { type: string; payload: unknown }) => void,
 ): Promise<void> {
   const port = await ensurePort();

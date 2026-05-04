@@ -44,6 +44,7 @@ async function setup(page: Page, opts: { reviewBody: unknown; bodyText: string }
 async function clickReview(page: Page) {
   await page.getByTestId('confluence-assistant').click();
   await page.getByTestId('mode-pick-review').click();
+  await page.getByTestId('review-options-start').click();
 }
 
 async function closeReview(page: Page) {

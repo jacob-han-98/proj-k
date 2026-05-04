@@ -255,8 +255,10 @@ test('리뷰 split — 활성 시 좌우 분할 + 닫기 X 동작', async ({ pag
   await expect(splitRight).toBeVisible();
   await expect(page.getByTestId('doc-assistant-pane')).toBeVisible();
 
-  // 리뷰 모드 칩 클릭 → ReviewSplitPane 으로 swap
+  // 리뷰 모드 칩 클릭 → 옵션 폼 → 시작 → ReviewSplitPane 으로 swap
   await page.getByTestId('mode-pick-review').click();
+  await expect(page.getByTestId('review-options-panel')).toBeVisible();
+  await page.getByTestId('review-options-start').click();
   await expect(page.getByTestId('review-split-pane')).toBeVisible();
 
   // 닫기 X → split-right 사라짐

@@ -64,6 +64,7 @@ async function selectConfluencePage(page: Page) {
   });
   await page.getByTestId('confluence-assistant').click();
   await page.getByTestId('mode-pick-review').click();
+  await page.getByTestId('review-options-start').click();
 }
 
 test('default — 모든 item liked, 👍 active', async ({ page }) => {

@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import type { DocTab, OpenTabSpec, SidebarKind } from './types';
 import { tabIdOf, docKeyOfNode } from './types';
 import { touchRecentDoc } from '../recent-docs';
+import type { ReviewOptions } from '../panels/review-options-mapping';
 
 // 마지막으로 선택했던 액티비티바 아이콘을 localStorage 에 영속.
 // recent-docs.ts / App.tsx 의 sidebar width 와 같은 패턴 — 인스톨/계정 무관, 부팅 직후 즉시 복원.
@@ -45,6 +46,9 @@ export interface SplitPayload {
   text: string;
   trigger: number;
   mode: SplitMode;
+  // P2: review 모드의 옵션 패널 — 사용자가 "리뷰 시작" 누르기 전엔 undefined.
+  // 채워지는 시점에 trigger 가 갱신돼 ReviewSplitPane 의 reviewStream 이 시작.
+  reviewOptions?: ReviewOptions;
 }
 
 type WorkbenchState = {
@@ -66,6 +70,10 @@ type WorkbenchState = {
   openSplit: (tabId: string, title: string, text: string, mode?: SplitMode) => void;
   // 모드 칩 클릭 / 빈 상태에서 모드 선택. trigger 갱신해 effect 재발동.
   setSplitMode: (tabId: string, mode: SplitMode) => void;
+  // P2: 리뷰 옵션 패널의 "리뷰 시작" 버튼이 호출. 옵션 채워지면서 trigger 도 갱신 →
+  // DocAssistantPane 의 review 분기가 ReviewOptionsPanel → ReviewSplitPane 으로 swap +
+  // ReviewSplitPane 의 trigger-deps useEffect 가 reviewStream 시작.
+  setReviewOptions: (tabId: string, options: ReviewOptions) => void;
   closeSplit: (tabId: string) => void;
 
   // Excel 시트의 편집 모드 추적. docKey (`local:<relPath>` / `depot:<path>`) → editing.
@@ -177,9 +185,26 @@ export const useWorkbenchStore = create<WorkbenchState>((set) => ({
     const cur = state.tabSplits[tabId];
     if (!cur) return state;
     if (cur.mode === mode) return state;
+    // 모드 전환 시 reviewOptions 도 reset — 사용자가 리뷰 → 다른 모드 → 리뷰 다시 가면
+    // 옵션 패널 새로 보이는 게 자연스러움.
     return {
       ...state,
-      tabSplits: { ...state.tabSplits, [tabId]: { ...cur, mode, trigger: Date.now() } },
+      tabSplits: {
+        ...state.tabSplits,
+        [tabId]: { ...cur, mode, trigger: Date.now(), reviewOptions: undefined },
+      },
+    };
+  }),
+
+  setReviewOptions: (tabId, options) => set((state) => {
+    const cur = state.tabSplits[tabId];
+    if (!cur) return state;
+    return {
+      ...state,
+      tabSplits: {
+        ...state.tabSplits,
+        [tabId]: { ...cur, reviewOptions: options, trigger: Date.now() },
+      },
     };
   }),
 

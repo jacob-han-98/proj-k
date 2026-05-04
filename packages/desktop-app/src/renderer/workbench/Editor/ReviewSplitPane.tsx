@@ -8,6 +8,10 @@ import {
   loadFixture,
   saveFixture,
 } from '../../panels/review-fixture-cache';
+import {
+  toBackendPayload,
+  type ReviewOptions,
+} from '../../panels/review-options-mapping';
 import { readErrorMessage, readToken } from '../../stream-events';
 
 // PR4: ChatPanel 에 있던 리뷰/변경안 파이프라인을 editor 탭의 우측 split 으로 이전.
@@ -44,6 +48,9 @@ interface Props {
   text: string;
   // 새 리뷰 요청 시점의 timestamp. 같은 페이지 재요청도 effect 재발동시키는 dedupe key.
   trigger: number;
+  // P2: 사용자가 옵션 패널에서 고른 옵션. P0/Excel sheet review 흐름은 미지정 (undefined)
+  // — backend 가 받지 않으면 기존 동작.
+  reviewOptions?: ReviewOptions;
   // Confluence 탭이면 페이지 ID, Excel 탭이면 null. Apply 시 PUT 대상.
   confluencePageId: string | null;
   onClose: () => void;
@@ -87,7 +94,7 @@ function parseChangesResult(e: { [k: string]: unknown }): ChangeItem[] | null {
   return null;
 }
 
-export function ReviewSplitPane({ tabId: _tabId, title, text, trigger, confluencePageId, onClose }: Props) {
+export function ReviewSplitPane({ tabId: _tabId, title, text, trigger, reviewOptions, confluencePageId, onClose }: Props) {
   const [review, setReview] = useState<ReviewState>({ data: null, streaming: true });
   const [changes, setChanges] = useState<ChangesState | null>(null);
   const [busy, setBusy] = useState(false);
@@ -130,7 +137,9 @@ export function ReviewSplitPane({ tabId: _tabId, title, text, trigger, confluenc
 
     void (async () => {
       try {
-        await reviewStream({ title, text }, (event) => {
+        const reviewPayload: { title: string; text: string; review_options?: ReturnType<typeof toBackendPayload> } = { title, text };
+        if (reviewOptions) reviewPayload.review_options = toBackendPayload(reviewOptions);
+        await reviewStream(reviewPayload, (event) => {
           if (cancelled) return;
           const e = event as unknown as { type: string; [k: string]: unknown };
           if (e.type === 'status') {

@@ -1,6 +1,8 @@
 import { useWorkbenchStore } from '../store';
 import type { SplitMode } from '../store';
+import type { ReviewOptions } from '../../panels/review-options-mapping';
 import { ModePickerEmpty } from './ModePickerEmpty';
+import { ReviewOptionsPanel } from './ReviewOptionsPanel';
 import { ReviewSplitPane } from './ReviewSplitPane';
 
 // P0: ReviewSplitPane 한 단계 위 wrapper. 사용자가 아직 모드를 안 골랐으면
@@ -20,6 +22,9 @@ interface Props {
   text: string;
   trigger: number;
   mode: SplitMode;
+  // P2: 사용자가 리뷰 옵션 패널에서 "리뷰 시작" 누르기 전엔 undefined.
+  // 채워지면 ReviewSplitPane 이 mount + reviewStream 호출 시 첨부.
+  reviewOptions: ReviewOptions | undefined;
   confluencePageId: string | null;
   onClose: () => void;
 }
@@ -30,10 +35,12 @@ export function DocAssistantPane({
   text,
   trigger,
   mode,
+  reviewOptions,
   confluencePageId,
   onClose,
 }: Props) {
   const setSplitMode = useWorkbenchStore((s) => s.setSplitMode);
+  const setReviewOptions = useWorkbenchStore((s) => s.setReviewOptions);
 
   if (mode === 'pick') {
     return (
@@ -61,14 +68,43 @@ export function DocAssistantPane({
   }
 
   if (mode === 'review') {
-    // 기존 흐름 그대로 재사용 — ReviewSplitPane 자체는 P0 에서 변경 X.
-    // 사용자가 "← 모드 변경" 누르면 ModePickerEmpty 로 돌아갈 수 있게 wrapping 만 추가.
+    // P2: 옵션 미선택 → 옵션 폼. "리뷰 시작" 누르면 reviewOptions 채워지고 동시에
+    // trigger 갱신 → 이 분기가 ReviewSplitPane 으로 swap.
+    if (!reviewOptions) {
+      return (
+        <aside className="doc-assistant-pane" data-testid="doc-assistant-pane" data-mode="review-options">
+          <header className="doc-assistant-header">
+            <span className="doc-assistant-title">
+              <i className="codicon codicon-checklist" aria-hidden="true" /> 리뷰 — {title}
+            </span>
+            <button
+              type="button"
+              className="doc-assistant-close"
+              onClick={onClose}
+              aria-label="어시스턴트 닫기"
+              title="어시스턴트 닫기"
+              data-testid="doc-assistant-close"
+            >
+              <i className="codicon codicon-close" aria-hidden="true" />
+            </button>
+          </header>
+          <div className="doc-assistant-body">
+            <ReviewOptionsPanel
+              onStart={(opts) => setReviewOptions(tabId, opts)}
+              onBack={() => setSplitMode(tabId, 'pick')}
+            />
+          </div>
+        </aside>
+      );
+    }
+    // 옵션 채워짐 → 기존 ReviewSplitPane 재사용. options 도 reviewStream 에 전달.
     return (
       <ReviewSplitPane
         tabId={tabId}
         title={title}
         text={text}
         trigger={trigger}
+        reviewOptions={reviewOptions}
         confluencePageId={confluencePageId}
         onClose={onClose}
       />

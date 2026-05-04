@@ -174,6 +174,7 @@ function DocTabContent({
               text={split.text}
               trigger={split.trigger}
               mode={split.mode}
+              reviewOptions={split.reviewOptions}
               confluencePageId={confluencePageId}
               onClose={() => useWorkbenchStore.getState().closeSplit(tabId)}
             />

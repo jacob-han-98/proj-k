@@ -415,11 +415,12 @@ def _walk_xlsx_dir(dir_path: Path, root: Path) -> list[TreeNode]:
             continue
         rel_xlsx = Path(entry.path).relative_to(root).as_posix()
         rel_no_ext = rel_xlsx[: -len(".xlsx")]
-        title = name[: -len(".xlsx")]
+        # title 은 확장자 포함한 원본 이름 그대로 (사용자 가독성). relPath/id 는 종전처럼
+        # `.xlsx` 떼어 sheetMappings/xlsx_raw 컨벤션 유지.
         nodes.append(TreeNode(
             id=f"sheet:{rel_no_ext}",
             type="sheet",
-            title=title,
+            title=name,
             relPath=rel_no_ext,
         ))
     # subdirectories (folder nodes, recursive)

@@ -55,6 +55,124 @@ function attachChromeStripper(wv: HTMLElement): () => void {
   };
 }
 
+// Confluence Cloud (Atlassian) 의 상단 글로벌 네비게이션 + 좌측 통합 사이드바를 강제 숨김.
+// 우리 사이드바가 이미 페이지 트리를 들고 있어 webview 안 트리는 중복.
+//
+// 2024 redesign 이후 Atlassian 은 좌측에 [global app-switcher icons + space navigation]
+// 을 통합한 새 shell 을 사용 — selector 가 자주 바뀌어 enum 만으론 부족. 두 가지 전략 병용:
+//   (1) 알려진 selector 들 광범위하게 display:none + style 태그
+//   (2) 본문(`[role=main]` / `#content` / `#main-content`) 을 anchor 로 잡고 그 조상 사슬을
+//       타고 올라가며 형제 중 nav/aside/header 를 inline style 로 hide — selector 가 변해도
+//       구조적으로 잡힘
+//   (3) MutationObserver 로 SPA 가 새 노드 mount 할 때마다 재적용 (throttle 포함).
+//
+// 본문 영역( #main-content / [role=main] ) 은 review 본문 추출이 의존하므로 그대로 둠.
+function attachConfluenceChromeStripper(wv: HTMLElement): () => void {
+  const inject = () => {
+    const code = `(function(){
+      if (window.__klaudConfluenceStripper) return;
+      window.__klaudConfluenceStripper = true;
+
+      var SELECTORS = [
+        // 상단 글로벌 네비게이션
+        'header[role="banner"]',
+        'nav[aria-label="Site"]',
+        'nav[aria-label="App"]',
+        '[data-testid="atlassian-navigation"]',
+        '[data-vc="atlassian-navigation"]',
+        '#AkTopNavigation',
+        '.aui-header','#header',
+        '#confluence-banner',
+        // 좌측 통합 사이드바 (2024 redesign — global nav + space tree)
+        'nav[aria-label*="Space"]','nav[aria-label*="space"]',
+        'nav[aria-label*="앱"]','nav[aria-label*="navigation"]',
+        '[data-testid="space-navigation"]','[data-test-id="space-navigation"]',
+        '[data-testid="navigation"]','[data-testid="app-navigation"]',
+        '[data-testid="app-navigation-stable"]',
+        '[data-testid="ak-navigation"]','[data-testid="ak-side-navigation"]',
+        '[data-testid="side-navigation"]','[data-testid="primary-side-navigation"]',
+        '[data-testid="grid-side-nav"]','[data-testid="navigation-stable"]',
+        '[data-vc="page-layout-sidebar"]','[data-vc="navigation-app"]',
+        '[data-vc*="navigation"]','[data-vc*="side-nav"]',
+        '#AkNavigationContent','#AkSideNavigation','#side-bar',
+        'aside[aria-label]','aside[role="navigation"]',
+        // grid 영역 기반 (새 Atlassian shell)
+        '[data-grid-area="left-panel"]','[data-grid-area="banner"]',
+        '[data-grid="left-panel"]','[data-grid="banner"]'
+      ];
+
+      var s = document.getElementById('klaud-confluence-hider');
+      if (!s) {
+        s = document.createElement('style');
+        s.id = 'klaud-confluence-hider';
+        s.textContent = SELECTORS.map(function(sel){return sel+'{display:none !important;visibility:hidden !important;}';}).join('')
+          + 'body{padding-top:0 !important;margin-top:0 !important;padding-left:0 !important;margin-left:0 !important;}'
+          + 'main,[role="main"],#main-content,#content,[data-vc="page-layout-main"],[data-testid="grid-main"]{'
+          + 'width:100% !important;margin-left:0 !important;padding-left:0 !important;max-width:none !important;left:0 !important;}';
+        document.head.appendChild(s);
+      }
+
+      // 구조적 fallback — main 의 조상 사슬에서 형제 nav/aside/header 를 inline 으로 숨김.
+      // selector 가 바뀌어도 layout 구조는 안정적이라 잡힘.
+      function structuralStrip() {
+        var main = document.querySelector('[role="main"]')
+          || document.querySelector('#main-content')
+          || document.querySelector('#content')
+          || document.querySelector('main');
+        if (!main) return;
+        var el = main;
+        var depth = 0;
+        while (el && el.parentElement && depth < 12) {
+          var p = el.parentElement;
+          if (p === document.body || p === document.documentElement) break;
+          var sibs = p.children;
+          for (var i = 0; i < sibs.length; i++) {
+            var c = sibs[i];
+            if (c === el) continue;
+            if (c.contains(main)) continue;
+            var tag = c.tagName;
+            // role=navigation / banner / complementary 도 hide
+            var role = c.getAttribute && c.getAttribute('role');
+            if (tag === 'NAV' || tag === 'ASIDE' || tag === 'HEADER'
+                || role === 'navigation' || role === 'banner' || role === 'complementary') {
+              c.style.setProperty('display','none','important');
+            }
+          }
+          el = p;
+          depth++;
+        }
+      }
+      structuralStrip();
+
+      // MutationObserver — SPA 가 sidebar 를 늦게 mount 하거나 navigation 후 재구성하는 경우 대응.
+      // throttle: 100ms 윈도우.
+      var pending = false;
+      var obs = new MutationObserver(function() {
+        if (pending) return;
+        pending = true;
+        setTimeout(function() {
+          pending = false;
+          // selector 적용은 CSS 가 자동 처리. 구조적 strip 만 재실행.
+          structuralStrip();
+        }, 100);
+      });
+      obs.observe(document.documentElement, {childList:true, subtree:true});
+    })();`;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (wv as any).executeJavaScript?.(code).catch(() => {});
+  };
+  wv.addEventListener('dom-ready', inject);
+  wv.addEventListener('did-navigate-in-page', inject);
+  return () => {
+    try {
+      wv.removeEventListener('dom-ready', inject);
+      wv.removeEventListener('did-navigate-in-page', inject);
+    } catch {
+      /* webview 이미 detached — 무시 */
+    }
+  };
+}
+
 interface Props {
   selection: { kind: 'sheet' | 'confluence'; node: TreeNode } | null;
   confluenceConfigured: boolean;
@@ -139,6 +257,9 @@ function ConfluencePane({
   // B2-1: 테스트 스페이스 설정 여부 — 설정되어 있으면 "📋 테스트로 복사" 버튼 노출.
   const [testSpaceKey, setTestSpaceKey] = useState<string | null>(null);
   const [copying, setCopying] = useState(false);
+  // 사용자 토글 — 기본 false (Confluence 의 상단 네비 / 좌측 트리 숨김). true 면 원본 그대로.
+  // 토글 시 webview 를 remount 해서 stripper 를 깨끗하게 부착/미부착으로 새 로드.
+  const [showInternalMenu, setShowInternalMenu] = useState(false);
   useEffect(() => {
     let cancelled = false;
     void (async () => {
@@ -149,6 +270,16 @@ function ConfluencePane({
     })();
     return () => { cancelled = true; };
   }, []);
+
+  // Confluence webview 안의 상단 글로벌 네비 + 좌측 space sidebar 숨김.
+  // 우리 사이드바가 페이지 트리 들고 있어서 webview 안 트리는 중복.
+  // 사용자가 "내부 메뉴 보기" 켜면 stripper 미부착 — webview key 변경으로 fresh remount.
+  useEffect(() => {
+    if (showInternalMenu) return;
+    const wv = webviewRef.current;
+    if (!wv) return;
+    return attachConfluenceChromeStripper(wv);
+  }, [showInternalMenu]);
 
   const copyToTestSpace = async () => {
     if (!node.confluencePageId) {
@@ -238,11 +369,26 @@ function ConfluencePane({
               {copying ? '복사 중…' : '📋 테스트로 복사'}
             </button>
           )}
+          <label
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--text-dim)', marginLeft: 4, marginRight: 4, cursor: 'pointer' }}
+            title="Confluence 의 상단 메뉴와 좌측 트리를 표시 (꺼짐 = 우리 트리만)"
+          >
+            <input
+              type="checkbox"
+              checked={showInternalMenu}
+              onChange={(e) => setShowInternalMenu(e.target.checked)}
+              data-testid="confluence-show-internal-menu"
+            />
+            내부 메뉴 보기
+          </label>
           <button onClick={() => window.open(url, '_blank')} title="외부 브라우저">↗</button>
         </span>
       </div>
+      {/* key 에 토글 상태 포함 → 사용자가 보기 모드 바꿀 때 webview 강제 remount.
+          이미 적용된 CSS/inline 스타일을 일일이 되돌리지 않고 fresh load 로 처리. */}
       {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
       <webview
+        key={showInternalMenu ? 'with-chrome' : 'no-chrome'}
         ref={webviewRef as any}
         src={url}
         partition="persist:confluence"

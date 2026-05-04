@@ -323,12 +323,13 @@ def test_tree_endpoints_with_real_fs(monkeypatch: pytest.MonkeyPatch, tmp_path) 
     sys_cat = body["nodes"][0]
     assert sys_cat["title"] == "7_System"
     assert sys_cat["type"] == "category"
-    # children 정렬: folder 가 위, sheet 가 아래
+    # children 정렬: folder 가 위, sheet 가 아래.
+    # title 은 0.1.50+ 부터 확장자 포함 (사용자 가독성), relPath 만 strip 된 채 유지.
     titles = [c["title"] for c in sys_cat["children"]]
-    assert titles == ["경제밸런스", "PK_HUD 시스템", "PK_NPC"]
+    assert titles == ["경제밸런스", "PK_HUD 시스템.xlsx", "PK_NPC.xlsx"]
     # ~$lock 파일 / README.md 노출 안 됨
-    assert "~$PK_HUD 시스템" not in titles
-    assert "README" not in titles
+    assert "~$PK_HUD 시스템.xlsx" not in titles
+    assert "README.md" not in titles
 
     # 서브폴더 — folder 노드, .xlsx 자식 한 개
     folder = sys_cat["children"][0]
@@ -337,7 +338,8 @@ def test_tree_endpoints_with_real_fs(monkeypatch: pytest.MonkeyPatch, tmp_path) 
     assert len(folder["children"]) == 1
     gold = folder["children"][0]
     assert gold["type"] == "sheet"
-    assert gold["title"] == "PK_골드 밸런스"
+    assert gold["title"] == "PK_골드 밸런스.xlsx"
+    # relPath/id 는 종전 컨벤션 (sheetMappings/xlsx_raw 호환) — 확장자 strip.
     assert gold["relPath"] == "7_System/경제밸런스/PK_골드 밸런스"
 
     # root level sheet — relPath 는 카테고리 + 파일명 (확장자 없음)

@@ -1127,6 +1127,10 @@ async def get_gdd_table(args: dict):
 # ── MCP Server Factory ───────────────────────────────────────
 
 def create_projk_server():
+    # read_current_doc — Klaud "일반 Agent 모드" 의 doc-focused tool.
+    # doc_context.stash() 된 conv 에서만 의미 있음. 미stash conv 에서 호출되면 빈 응답.
+    from doc_context import read_current_doc
+
     return create_sdk_mcp_server(
         name="projk",
         version="0.1.0",
@@ -1144,5 +1148,6 @@ def create_projk_server():
             list_gdd_tables,
             find_gdd_tables,
             get_gdd_table,
+            read_current_doc,
         ],
     )

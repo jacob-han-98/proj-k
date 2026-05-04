@@ -46,6 +46,7 @@ except ImportError:
 from agent import run_query_with_session
 import storage
 import followups as followups_mod
+import doc_context as doc_ctx
 from preset_prompts import PRESETS
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -283,7 +284,14 @@ async def ask_stream(req: AskStreamRequest):
     sdk_sid = sdk_session_by_conv.get(conv_id)
     question = req.question
 
+    # Klaud 일반 Agent 모드 — doc_context 가 stash 된 conv 만 read_current_doc 가
+    # 실제로 본문 반환. system prompt 의 hint 도 이 case 에서만 추가.
+    doc_entry = doc_ctx.get(conv_id)
+    current_doc_title = doc_entry.get("title") if doc_entry else None
+
     async def event_gen():
+        # tool 안에서 contextvar.get() 으로 어떤 conv 의 doc 을 반환할지 알기 위해 set.
+        doc_ctx.current_conv_id.set(conv_id)
         start = time.time()
         log_event(conv_id, "ask_stream", question[:100])
 
@@ -319,6 +327,7 @@ async def ask_stream(req: AskStreamRequest):
                 session_id=nonlocal_sdk_sid,
                 model=req.model,
                 compare_mode=req.compare_mode,
+                current_doc_title=current_doc_title,
             ):
                 # ── Streaming: content_block_delta 토큰을 즉시 SSE 로 흘려보냄 ──
                 # include_partial_messages=True 일 때 SDK 가 raw Anthropic stream 이벤트를
@@ -568,6 +577,49 @@ async def fork_conversation(conv_id: str):
         "title": new["title"],
         "turn_count": len(new["turns"]),
     }
+
+
+class DocContextRequest(BaseModel):
+    """Klaud "일반 Agent 모드" — webview innerText stash."""
+    title: str | None = ""
+    page_id: str | None = None
+    doc_type: str | None = None
+    content: str
+
+
+@app.post("/conversations/{conv_id}/doc_context")
+async def stash_doc_context(conv_id: str, req: DocContextRequest):
+    """Klaud 일반 Agent 모드 — 사용자가 보고 있는 문서 본문을 conv 단위로 stash.
+
+    같은 conv_id 로 재호출되면 덮어씀. 이후 ask_stream 안에서 agent 가
+    read_current_doc tool 을 호출하면 이 본문을 반환.
+    """
+    if not req.content or not req.content.strip():
+        return {"ok": False, "error": "content is empty"}
+    entry = doc_ctx.stash(
+        conv_id,
+        content=req.content,
+        title=req.title or "",
+        page_id=req.page_id,
+        doc_type=req.doc_type,
+    )
+    log_event(
+        conv_id,
+        "doc_context_stash",
+        f"{(req.title or '')[:40]} ({len(req.content)}c, type={req.doc_type}, truncated={entry.get('truncated', False)})",
+    )
+    return {
+        "ok": True,
+        "conversation_id": conv_id,
+        "content_chars": len(entry.get("content", "")),
+        "truncated": entry.get("truncated", False),
+    }
+
+
+@app.delete("/conversations/{conv_id}/doc_context")
+async def clear_doc_context(conv_id: str):
+    cleared = doc_ctx.clear(conv_id)
+    return {"ok": True, "cleared": cleared}
 
 
 @app.get("/shared/{conv_id}")

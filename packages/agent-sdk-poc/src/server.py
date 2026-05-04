@@ -1279,11 +1279,26 @@ CRITICAL RULES:
   ❌ WRONG: before="KeywordA || 텍스트A" (includes pipes)"""
 
 
+class ReviewOptions(BaseModel):
+    """리뷰 옵션 패널 입력 (모두 옵셔널 — 미지정 시 기존 동작 유지).
+
+    cap 필드: int (0/5/10) 또는 "all". 0 이면 해당 카테고리 생략.
+    categories: ["logic-flow", "qa-checklist", "readability"] 부분집합. 빈 배열/미지정이면 모든 관점.
+    reviewer_persona: "planner-lead" (기본) | "programmer".
+    """
+    issue_cap: int | str | None = None
+    verification_cap: int | str | None = None
+    suggestion_cap: int | str | None = None
+    categories: list[str] | None = None
+    reviewer_persona: str | None = None
+
+
 class ReviewStreamRequest(BaseModel):
     title: str
     text: str
     model: str | None = None
     review_instruction: str | None = None
+    review_options: ReviewOptions | None = None
 
 
 class SummaryStreamRequest(BaseModel):
@@ -1340,6 +1355,104 @@ def _extract_json_array(s: str) -> list | None:
         return None
 
 
+_PERSONA_LINES = {
+    "planner-lead": (
+        "You write as a SENIOR GAME DESIGN LEAD. Prioritize: "
+        "타 시스템과의 충돌·정합성, 기획 컨벤션 일관성, 누락된 설계 의도, "
+        "기획서의 완결성·자기충족성. 구현 디테일보다 설계 일관성에 무게."
+    ),
+    "programmer": (
+        "You write as a SENIOR GAMEPLAY PROGRAMMER. Prioritize: "
+        "구현 가능성, 엣지 케이스, 동시성·타이밍, 데이터 타입/단위 정확성, "
+        "성능 함의, 서버/클라 처리 분담. 설계 의도보다 구현 명세의 부족함에 무게."
+    ),
+}
+
+_CATEGORY_FOCUS_LINES = {
+    "logic-flow": (
+        "**로직/플로우 일관성·완결성** — flow 필드를 가장 꼼꼼히 작성하고, "
+        "조건 분기·상태 전이·예외 처리에서 빠진 흐름을 issues 로 강하게 지적."
+    ),
+    "qa-checklist": (
+        "**QA 가 검증해야 할 시나리오** — qa_checklist 를 가장 꼼꼼히 작성하고, "
+        "기본 흐름 + 엣지 케이스 + 경계값 + 시스템 간 상호작용을 빠짐없이 커버."
+    ),
+    "readability": (
+        "**기획자/구현자가 읽기 좋은 문서 가독성** — readability 를 가장 꼼꼼히 평가하고, "
+        "용어 일관성·계층 구조·모호 표현·독립성을 issues/suggestions 로 적극 지적."
+    ),
+}
+
+
+def _format_cap(label: str, val: int | str | None) -> str | None:
+    """cap 값 → instruction 한 줄. None 이면 줄 자체 생략."""
+    if val is None or val == "all":
+        return None  # cap 없음 → 가이드 문구 X (기존 동작)
+    try:
+        n = int(val)
+    except (TypeError, ValueError):
+        return None
+    if n <= 0:
+        return f"- **{label}**: 0건 — 이 카테고리는 분석/도출 생략하고 빈 배열로 응답."
+    return f"- **{label}**: 최대 {n}건만 도출. 가장 중요한 것부터 우선 선별."
+
+
+def _build_review_options_block(opts: ReviewOptions | None) -> str:
+    """review_options → 사용자 prompt 에 끼울 추가 instruction 블록.
+
+    빈 옵션이면 빈 문자열 반환 → 기존 동작 동일 (backward compat).
+    """
+    if opts is None:
+        return ""
+
+    cap_lines = [
+        line for line in [
+            _format_cap("issues", opts.issue_cap),
+            _format_cap("verifications", opts.verification_cap),
+            _format_cap("suggestions", opts.suggestion_cap),
+        ] if line
+    ]
+
+    cats = [c for c in (opts.categories or []) if c in _CATEGORY_FOCUS_LINES]
+    if cats:
+        # 명시된 카테고리만 출력. 명시 안 된 것은 빈 배열로 응답.
+        focus_lines = [f"- {_CATEGORY_FOCUS_LINES[c]}" for c in cats]
+        omit_targets: list[str] = []
+        if "qa-checklist" not in cats:
+            omit_targets.append("`qa_checklist`")
+        if "readability" not in cats:
+            omit_targets.append("`readability.issues`")
+        if omit_targets:
+            focus_lines.append(
+                f"- 사용자가 선택하지 않은 카테고리는 응답에서 비워라: "
+                f"{', '.join(omit_targets)} 는 빈 배열 / `readability.score` 는 그대로 평가."
+            )
+    else:
+        focus_lines = []
+
+    parts: list[str] = []
+    if cap_lines:
+        parts.append("### 리뷰 결과 분량 가이드\n" + "\n".join(cap_lines))
+    if focus_lines:
+        parts.append("### 우선 관점\n" + "\n".join(focus_lines))
+
+    if not parts:
+        return ""
+    return "\n\n## 리뷰어 추가 지시 (사용자 옵션)\n\n" + "\n\n".join(parts)
+
+
+def _build_review_system(opts: ReviewOptions | None) -> str:
+    """persona 변형 — 기본 _REVIEW_SYSTEM 에 첫 단락 톤 가이드 한 줄 끼워 넣음."""
+    persona = (opts.reviewer_persona if opts else None) or "planner-lead"
+    persona_line = _PERSONA_LINES.get(persona, _PERSONA_LINES["planner-lead"])
+    # 기본 system prompt 의 두 번째 줄(Analyze...) 앞에 persona 를 한 줄 끼워 넣는다.
+    return _REVIEW_SYSTEM.replace(
+        "Analyze the document from multiple perspectives. Respond in Korean.",
+        f"{persona_line}\nAnalyze the document from multiple perspectives. Respond in Korean.",
+        1,
+    )
+
+
 @app.post("/review_stream")
 async def review_stream(req: ReviewStreamRequest):
     """Confluence 페이지 리뷰 — Bedrock 단일 호출, NDJSON 토큰 스트리밍.
@@ -1357,14 +1470,25 @@ async def review_stream(req: ReviewStreamRequest):
         if req.review_instruction
         else ""
     )
+    options_block = _build_review_options_block(req.review_options)
     user_msg = (
         f"Page Title: {title}\n\nPage Content:\n{text}"
-        f"{instruction_block}\n\nReview this document thoroughly and return the JSON result:"
+        f"{instruction_block}{options_block}"
+        f"\n\nReview this document thoroughly and return the JSON result:"
     )
+    system_prompt = _build_review_system(req.review_options)
     model = _bd_normalize_model(req.model)
 
     async def gen():
-        log_event("review", "review_stream", f"{title[:60]} ({len(text)}c, {model})")
+        opts_summary = ""
+        if req.review_options is not None:
+            o = req.review_options
+            opts_summary = (
+                f" opts(persona={o.reviewer_persona or 'planner-lead'},"
+                f"caps={o.issue_cap}/{o.verification_cap}/{o.suggestion_cap},"
+                f"cats={o.categories or 'all'})"
+            )
+        log_event("review", "review_stream", f"{title[:60]} ({len(text)}c, {model}){opts_summary}")
         yield _ndj({"type": "status", "message": f"🧠 문서 분석 중... ({model})"})
         yield _ndj({"type": "status", "message": f"📄 길이: {len(text):,}자"})
 
@@ -1373,7 +1497,7 @@ async def review_stream(req: ReviewStreamRequest):
         try:
             async for ev in _bd_stream(
                 messages=[{"role": "user", "content": user_msg}],
-                system=_REVIEW_SYSTEM,
+                system=system_prompt,
                 model=model,
                 max_tokens=8192,
                 temperature=0.0,

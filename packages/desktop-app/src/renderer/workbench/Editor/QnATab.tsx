@@ -1,12 +1,28 @@
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { askStream, getPresetPrompts, searchDocs, setDocContext, type PresetPrompt } from '../../api';
-import { annotateCitedHits, splitAnswerWithCitations } from '../../citations';
+import { annotateCitedHits } from '../../citations';
+// citations.splitAnswerWithCitations 는 Phase C 부터 미사용 — RenderAssistantMarkdown 이 대체.
 import { SourceModal } from '../../panels/SourceModal';
-import { readResultData, readToken, type StreamEvent } from '../../stream-events';
+import {
+  readFollowUps,
+  readResultData,
+  readSources,
+  readStatus,
+  readThinking,
+  readToken,
+  readToolEnd,
+  readToolStart,
+  type StreamEvent,
+} from '../../stream-events';
 import type { SearchHit, ThreadDocRef } from '../../../shared/types';
 import { useWorkbenchStore } from '../store';
 import { AttachmentChips } from '../../qna/AttachmentChips';
 import { buildAttachmentPrompt, type QnAAttachment } from '../../qna/attachments';
+import {
+  FollowUpCards,
+  RenderAssistantMarkdown,
+  type QnASource,
+} from '../../qna/render';
 
 // A3-b: 답변 안 (출처: ...) 클릭 → modal. 클릭 시 selectedCitation 으로 modal 띄움.
 interface CitationTarget {
@@ -31,7 +47,21 @@ const EMPTY_ATTACHMENTS: readonly QnAAttachment[] = Object.freeze([]);
 interface Message {
   role: 'user' | 'assistant';
   content: string;
+  // Phase C: assistant 메시지의 출처 / 후속질문. backend result 이벤트에서 도착.
+  // sources 는 인라인 출처 클릭 시 origin_label 매칭으로 정확한 path 매핑에 사용.
+  // followUps 는 마지막 assistant 메시지에만 FollowUpCards 로 노출.
+  sources?: QnASource[];
+  followUps?: string[];
 }
+
+// Phase C: streaming 중 진행 상태. status/thinking/tool 이벤트 누적.
+// streaming 끝나면 reset. 사용자가 "동작 중인지" 즉시 인지 — 빈 화면 / 무반응 방지.
+interface Progress {
+  status: string | null;
+  thinkingPreview: string | null;
+  activeTools: { id: string; label: string }[];
+}
+const EMPTY_PROGRESS: Progress = { status: null, thinkingPreview: null, activeTools: [] };
 
 interface Props {
   threadId: string;
@@ -126,6 +156,8 @@ export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Pr
   const [presets, setPresets] = useState<PresetPrompt[]>([]);
   // A3-b: citation 클릭 → /source_view modal. null 이면 닫힘.
   const [selectedCitation, setSelectedCitation] = useState<CitationTarget | null>(null);
+  // Phase C: streaming 중 progress. send() 마다 reset, streaming 끝나면 cleared.
+  const [progress, setProgress] = useState<Progress>(EMPTY_PROGRESS);
   const taRef = useRef<HTMLTextAreaElement | null>(null);
 
   // Phase A1: 이 thread 의 미발송 첨부. 진입점 2/3 (Phase A2/A3) 가 store.attachToQnA 로
@@ -221,6 +253,7 @@ export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Pr
     setInput('');
     setHits([]);
     setSearchTookMs(null);
+    setProgress(EMPTY_PROGRESS); // 새 send 시작 — 옛 progress 클리어.
 
     // Phase A1: 첫 메시지에 한해 pendingAttachments 를 system prefix 로 변환해 question
     // 앞에 prepend. 두 번째 메시지부터는 backend conversation 이 컨텍스트를 유지하므로
@@ -311,8 +344,6 @@ export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Pr
         (event) => {
           const e = event as unknown as StreamEvent;
           if (e.type === 'token') {
-            // agent (2026-05): {type:"token", text:"..."}. 옛 mock 은 {payload:"..."}.
-            // readToken 이 양쪽 다 받음.
             const tok = readToken(e);
             if (tok) {
               assembled += tok;
@@ -322,18 +353,49 @@ export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Pr
                 return copy;
               });
             }
+          } else if (e.type === 'status') {
+            // Phase C: 진행 라벨 — Progress 라인의 메인. "📨 분석 중..." 등.
+            const s = readStatus(e);
+            if (s) setProgress((p) => ({ ...p, status: s }));
+          } else if (e.type === 'thinking') {
+            // 모델 reasoning preview. 60자만 잘라 progress 의 보조 라벨로.
+            const t = readThinking(e);
+            if (t) setProgress((p) => ({ ...p, thinkingPreview: t.slice(0, 60) }));
+          } else if (e.type === 'tool_start') {
+            const ts = readToolStart(e);
+            if (ts) {
+              setProgress((p) => ({
+                ...p,
+                activeTools: [...p.activeTools, { id: ts.id, label: ts.label }],
+              }));
+            }
+          } else if (e.type === 'tool_end') {
+            const te = readToolEnd(e);
+            if (te) {
+              setProgress((p) => ({
+                ...p,
+                activeTools: p.activeTools.filter((t) => t.id !== te.id),
+              }));
+            }
           } else if (e.type === 'result') {
-            // agent: {type:"result", data:{answer, sources, follow_ups, ...}}. 옛 mock: {payload:{answer:...}}.
+            // result 도착 — 최종 answer + sources + follow_ups 메시지에 영속.
             const data = readResultData(e);
             const ans = data && typeof data.answer === 'string' ? data.answer : null;
+            const sources = readSources(data) as QnASource[];
+            const followUps = readFollowUps(data);
             if (ans) {
               assembled = ans;
-              setMessages((m) => {
-                const copy = [...m];
-                copy[copy.length - 1] = { role: 'assistant', content: assembled };
-                return copy;
-              });
             }
+            setMessages((m) => {
+              const copy = [...m];
+              copy[copy.length - 1] = {
+                role: 'assistant',
+                content: assembled,
+                sources: sources.length > 0 ? sources : undefined,
+                followUps: followUps.length > 0 ? followUps : undefined,
+              };
+              return copy;
+            });
           }
         },
         conversationId,
@@ -348,6 +410,7 @@ export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Pr
       });
     } finally {
       setBusy(false);
+      setProgress(EMPTY_PROGRESS); // streaming 끝 — progress 클리어. 다음 send 까지 빈 상태.
     }
 
     // assistant 영속
@@ -460,13 +523,41 @@ export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Pr
             질문을 입력하면 관련 문서가 먼저 표시되고 답변이 이어 스트림됩니다.
           </div>
         )}
-        {messages.map((m, i) => (
-          <div key={i} className={`msg ${m.role}`} data-testid={`msg-${m.role}-${i}`}>
-            {m.role === 'assistant' && m.content
-              ? renderAssistantContent(m.content, setSelectedCitation)
-              : m.content || '…'}
-          </div>
-        ))}
+        {messages.map((m, i) => {
+          const isLastAssistant =
+            m.role === 'assistant' && i === messages.length - 1 && !busy;
+          return (
+            <div key={i} className={`msg ${m.role}`} data-testid={`msg-${m.role}-${i}`}>
+              {m.role === 'assistant' && m.content ? (
+                <RenderAssistantMarkdown
+                  content={m.content}
+                  sources={m.sources}
+                  onOpenSource={(path, section) => {
+                    // 인라인 출처 클릭 — SourceModal 열기. raw 라벨은 path § section 형태로 재조립.
+                    const raw = section ? `${path} § ${section}` : path;
+                    setSelectedCitation({ raw, path, section });
+                  }}
+                />
+              ) : (
+                m.content || '…'
+              )}
+              {/* Phase C: 마지막 assistant 메시지 + 답변 완료 시 follow-ups. busy 중엔 숨김. */}
+              {isLastAssistant && m.followUps && (
+                <FollowUpCards
+                  followUps={m.followUps}
+                  onPick={(q) => {
+                    setInput(q);
+                    setTimeout(() => taRef.current?.focus(), 0);
+                  }}
+                />
+              )}
+            </div>
+          );
+        })}
+        {/* Phase C: streaming 중 progress 라인 — 메시지 영역 끝에 sticky 로 보여줌. */}
+        {busy && (progress.status || progress.thinkingPreview || progress.activeTools.length > 0) && (
+          <ProgressLine progress={progress} />
+        )}
       </div>
 
       {messages.length === 0 && presets.length > 0 && (
@@ -515,27 +606,24 @@ export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Pr
   );
 }
 
-// A3-b: assistant content 안 (출처: ...) 패턴을 click 가능 button 으로 렌더.
-// streaming 중 incomplete citation (닫는 ')' 미도달) 은 splitAnswerWithCitations 가
-// 매칭 못해서 plain text 로 남는다 — 자연스럽게 stream 이 끝나면 link 로 변신.
-function renderAssistantContent(
-  content: string,
-  onPick: (c: CitationTarget) => void,
-): ReactNode {
-  const segments = splitAnswerWithCitations(content);
-  return segments.map((seg, idx) => {
-    if (seg.kind === 'text') {
-      return <span key={idx}>{seg.text}</span>;
-    }
-    return (
-      <button
-        key={idx}
-        type="button"
-        className="citation-link"
-        title={`출처 보기 — ${seg.raw}`}
-        onClick={() => onPick({ raw: seg.raw, path: seg.path, section: seg.section })}
-        data-testid={`citation-link-${idx}`}
-      >📑 출처</button>
-    );
-  });
+// Phase C: streaming progress 한 라인 — status 메인 라벨 + thinking 보조 라벨 + 활성 tool 칩.
+function ProgressLine({ progress }: { progress: Progress }) {
+  return (
+    <div className="qna-progress" data-testid="qna-progress">
+      <div className="qna-progress-main">
+        <span className="dots" aria-hidden="true" />
+        <span>{progress.status ?? '응답 생성 중'}</span>
+        {progress.activeTools.map((t) => (
+          <span key={t.id} className="qna-progress-tool" data-testid={`qna-progress-tool-${t.id}`}>
+            🔧 {t.label}
+          </span>
+        ))}
+      </div>
+      {progress.thinkingPreview && (
+        <div className="qna-progress-thinking" title={progress.thinkingPreview}>
+          {progress.thinkingPreview}
+        </div>
+      )}
+    </div>
+  );
 }

@@ -92,7 +92,7 @@ describe('attachDocToQnA — 진입점 2', () => {
   it('Excel(시트) 첨부도 동일하게 동작 — type=excel', async () => {
     const sheetNode: TreeNode = {
       id: 'local:7_System/PK_변신.xlsx',
-      type: 'file',
+      type: 'workbook',
       title: 'PK_변신',
       relPath: '7_System/PK_변신.xlsx',
     };

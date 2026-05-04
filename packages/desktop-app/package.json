@@ -34,6 +34,8 @@
     "@vscode/codicons": "^0.0.45",
     "chokidar": "^4.0.1",
     "electron-updater": "^6.3.9",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
     "sql.js": "^1.13.0",
     "ws": "^8.18.0",
     "zustand": "^5.0.12"

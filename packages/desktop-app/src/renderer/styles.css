@@ -549,6 +549,138 @@ html, body, #root { height: 100%; margin: 0; padding: 0; background: var(--bg); 
   color: var(--text);
 }
 
+/* Phase C: Markdown 렌더 — agent-sdk-poc 의 assistantRender 와 시각 일관성 (이식했지만
+   양쪽 분리 유지, 변경 시 cross-claude-bridge 로 통지). */
+.qna-md p { margin: 4px 0; }
+.qna-md h1, .qna-md h2, .qna-md h3, .qna-md h4 {
+  margin: 8px 0 4px;
+  font-weight: 600;
+}
+.qna-md h1 { font-size: 16px; }
+.qna-md h2 { font-size: 14px; }
+.qna-md h3 { font-size: 13px; }
+.qna-md h4 { font-size: 12px; }
+.qna-md ul, .qna-md ol { margin: 4px 0; padding-left: 18px; }
+.qna-md li { margin: 2px 0; }
+.qna-md code:not(pre code) {
+  background: var(--hover);
+  padding: 1px 4px;
+  border-radius: 3px;
+  font-size: 0.92em;
+}
+.qna-md pre {
+  background: var(--hover);
+  padding: 8px;
+  border-radius: 4px;
+  overflow-x: auto;
+  margin: 6px 0;
+}
+.qna-md pre code { background: transparent; padding: 0; }
+.qna-md table {
+  border-collapse: collapse;
+  margin: 6px 0;
+  font-size: 12px;
+}
+.qna-md th, .qna-md td {
+  border: 1px solid var(--border);
+  padding: 3px 6px;
+  text-align: left;
+}
+.qna-md th { background: var(--hover); font-weight: 600; }
+.qna-md blockquote {
+  border-left: 3px solid var(--border);
+  padding-left: 8px;
+  margin: 4px 0;
+  color: var(--text-dim);
+}
+
+/* 인라인 출처 링크 — kind 별 아이콘 + chip 형태. xlsx (초록) / confluence (파랑) /
+   external (보라) / web (시안). 클릭 → SourceModal 열기 또는 새 창 (web). */
+.inline-source-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px 1px 4px;
+  margin: 0 1px;
+  border-radius: 3px;
+  background: var(--hover);
+  text-decoration: none;
+  color: var(--text);
+  font-size: 11px;
+  vertical-align: baseline;
+  cursor: pointer;
+}
+.inline-source-link:hover { background: var(--border); }
+.inline-source-icon { display: inline-flex; line-height: 0; }
+.inline-source-part { white-space: nowrap; }
+.inline-source-sep { color: var(--text-dim); }
+.inline-source-external { cursor: default; opacity: 0.85; }
+.inline-source-external:hover { background: var(--hover); }
+.inline-code-link { text-decoration: none; }
+
+/* Phase C: streaming progress 라인. dots 애니메이션은 기존 .dots (review 와 공유). */
+.qna-progress {
+  font-size: 11px;
+  color: var(--text-dim);
+  padding: 6px 8px;
+  margin: 4px 0;
+  background: var(--hover);
+  border-radius: 4px;
+}
+.qna-progress-main {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.qna-progress-tool {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1px 6px;
+  font-size: 10px;
+}
+.qna-progress-thinking {
+  margin-top: 4px;
+  font-size: 10px;
+  color: var(--text-dim);
+  font-style: italic;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Follow-up 카드 — 답변 끝 후속질문. 클릭 → 입력란 자동 채움 (auto send X). */
+.qna-followups {
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px dashed var(--border);
+}
+.qna-followups-hint {
+  font-size: 10px;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+.qna-followups-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.qna-followup-chip {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 3px 10px;
+  font-size: 11px;
+  color: var(--text);
+  cursor: pointer;
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.qna-followup-chip:hover { background: var(--hover); }
+
 /* PR5: .chat 은 더 이상 grid 자식이 아니라 EditorHost > .tab-slot 안의 flex item (QnATab).
    border-left 도 제거 — 탭 split 안이라 좌측 경계가 의미 없음. 다른 .chat 하위 스타일
    (.messages, .msg, .input-row, .search-results 등) 은 그대로 재사용. */

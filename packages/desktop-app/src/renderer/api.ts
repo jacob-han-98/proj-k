@@ -215,6 +215,28 @@ export async function askStream(
   await readNdjson(res, onLine);
 }
 
+// P1: 요약 모드. /summary_stream 도 review 와 동일한 NDJSON 패턴. backend default
+// 는 model=opus / max_tokens=8194 — frontend 가 안 보내면 그대로 적용.
+// result.data.summary 가 markdown 문자열 (review 와 다른 점 — review 는 JSON 문자열).
+export async function summaryStream(
+  payload: {
+    title: string;
+    text: string;
+    model?: string;
+    summary_style?: string;
+    max_tokens?: number;
+  },
+  onLine: (event: { type: string; payload: unknown }) => void,
+): Promise<void> {
+  const port = await ensurePort();
+  const res = await fetch(`http://127.0.0.1:${port}/summary_stream`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  await readNdjson(res, onLine);
+}
+
 // Phase 4-2: Confluence webview body → /review_stream → NDJSON. payload shape는
 // chrome-extension/sidebar 와 동일 (title/text/model/review_instruction) 라서
 // upstream agent 의 /review_stream 가 그대로 동작한다.

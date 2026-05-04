@@ -23,7 +23,7 @@ const MODES: Mode[] = [
     label: '요약하기',
     description: '문서 본문을 짧게 정리',
     icon: '📄',
-    enabled: false,
+    enabled: true,
   },
   {
     key: 'review',

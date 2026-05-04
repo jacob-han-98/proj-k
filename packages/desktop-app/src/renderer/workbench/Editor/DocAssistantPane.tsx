@@ -4,6 +4,7 @@ import type { ReviewOptions } from '../../panels/review-options-mapping';
 import { ModePickerEmpty } from './ModePickerEmpty';
 import { ReviewOptionsPanel } from './ReviewOptionsPanel';
 import { ReviewSplitPane } from './ReviewSplitPane';
+import { SummarySplitPane } from './SummarySplitPane';
 
 // P0: ReviewSplitPane 한 단계 위 wrapper. 사용자가 아직 모드를 안 골랐으면
 // ModePickerEmpty (= 첫 스크린샷 빈 상태) 를 보여주고, 모드 선택 시 setSplitMode
@@ -111,7 +112,49 @@ export function DocAssistantPane({
     );
   }
 
-  // P1 / P3 미구현 분기 — 사용자가 비활성 칩을 누를 일은 없지만 (ModePickerEmpty 가
+  if (mode === 'summary') {
+    // P1: 요약 모드. SummarySplitPane 가 자체 stream + 캐시. 헤더에 "← 모드 변경" 버튼.
+    return (
+      <aside className="doc-assistant-pane" data-testid="doc-assistant-pane" data-mode="summary">
+        <header className="doc-assistant-header">
+          <button
+            type="button"
+            className="doc-assistant-back"
+            onClick={() => setSplitMode(tabId, 'pick')}
+            aria-label="모드 다시 선택"
+            title="모드 다시 선택"
+            data-testid="doc-assistant-back"
+          >
+            ←
+          </button>
+          <span className="doc-assistant-title">
+            <i className="codicon codicon-book" aria-hidden="true" /> 요약 — {title}
+          </span>
+          <button
+            type="button"
+            className="doc-assistant-close"
+            onClick={onClose}
+            aria-label="어시스턴트 닫기"
+            title="어시스턴트 닫기"
+            data-testid="doc-assistant-close"
+          >
+            <i className="codicon codicon-close" aria-hidden="true" />
+          </button>
+        </header>
+        <div className="doc-assistant-body">
+          <SummarySplitPane
+            tabId={tabId}
+            title={title}
+            text={text}
+            trigger={trigger}
+            confluencePageId={confluencePageId}
+          />
+        </div>
+      </aside>
+    );
+  }
+
+  // P3 미구현 분기 (agent) — 사용자가 비활성 칩을 누를 일은 없지만 (ModePickerEmpty 가
   // disabled), 외부에서 setSplitMode 가 호출돼 도달할 수 있으므로 안전한 placeholder.
   return (
     <aside className="doc-assistant-pane" data-testid="doc-assistant-pane" data-mode={mode}>

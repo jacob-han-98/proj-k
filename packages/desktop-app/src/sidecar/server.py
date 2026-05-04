@@ -1006,6 +1006,50 @@ async def preset_prompts() -> dict:
         return {"presets": []}
 
 
+# ---------- /summary_stream (P1: Confluence webview body → agent 요약 모드) ----------
+# review_stream 과 동일한 NDJSON proxy 패턴. agent-sdk-poc 의 /summary_stream 이
+# {data.summary} markdown 문자열 + token 토큰 단위 스트리밍.
+# 별도 endpoint 라 review 와 영향 0 (사용자 컨펌됨).
+
+
+class SummaryRequest(BaseModel):
+    title: str
+    text: str
+    model: str | None = None
+    summary_style: str | None = None  # backend 가 향후 분기 — 지금은 "default" 만 처리
+    max_tokens: int | None = None     # backend 가 기본 8194 적용
+
+
+async def _proxy_summary_stream(payload: dict[str, Any]) -> AsyncIterator[str]:
+    base = _agent_url()
+    timeout = httpx.Timeout(connect=10.0, read=None, write=10.0, pool=10.0)
+    try:
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            async with client.stream("POST", f"{base}/summary_stream", json=payload) as r:
+                if r.status_code != 200:
+                    err = await r.aread()
+                    yield json.dumps(
+                        {"type": "error", "payload": f"upstream {r.status_code}: {err.decode('utf-8', 'ignore')[:200]}"}
+                    ) + "\n"
+                    return
+                async for line in r.aiter_lines():
+                    if line.strip():
+                        yield line + "\n"
+    except httpx.HTTPError as e:
+        yield json.dumps({"type": "error", "payload": f"upstream 연결 실패: {e!s}"}) + "\n"
+
+
+@app.post("/summary_stream")
+async def summary_stream(req: SummaryRequest):
+    base = _agent_url()
+    if not base:
+        async def stub() -> AsyncIterator[str]:
+            yield json.dumps({"type": "error", "payload": "agent 백엔드 URL 미설정 — SettingsModal 에서 설정"}) + "\n"
+        return StreamingResponse(stub(), media_type="application/x-ndjson")
+    payload = req.model_dump(exclude_none=True)
+    return StreamingResponse(_proxy_summary_stream(payload), media_type="application/x-ndjson")
+
+
 # ---------- /review_stream (Phase 4-2: Confluence webview body → agent → stream) ----------
 
 class ReviewOptionsModel(BaseModel):

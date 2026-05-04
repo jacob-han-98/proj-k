@@ -756,6 +756,36 @@ def test_review_stream_returns_ndjson_error_without_agent_url(client: TestClient
     assert events[0]["type"] == "error"
 
 
+def test_summary_stream_returns_ndjson_error_without_agent_url(client: TestClient) -> None:
+    """P1: /summary_stream 도 review_stream 과 동일 정책 — agent URL 미설정 시 200
+    NDJSON + type=error 단발 (stream contract 유지). renderer 가 같은 파서 재사용."""
+    with client.stream("POST", "/summary_stream", json={"title": "t", "text": "x"}) as res:
+        assert res.status_code == 200
+        assert "application/x-ndjson" in res.headers.get("content-type", "")
+        events = [json.loads(line) for line in res.iter_lines() if line.strip()]
+    assert len(events) >= 1
+    assert events[0]["type"] == "error"
+
+
+def test_summary_stream_accepts_optional_fields(client: TestClient) -> None:
+    """P1: /summary_stream payload 가 model / summary_style / max_tokens 옵셔널 필드
+    모두 받는지. agent URL 미설정 환경이라 실제 proxy 안 가지만 schema validation 만
+    검증 — 422 (validation error) 안 나야 200 NDJSON 응답."""
+    with client.stream(
+        "POST",
+        "/summary_stream",
+        json={
+            "title": "t",
+            "text": "x",
+            "model": "opus",
+            "summary_style": "default",
+            "max_tokens": 4096,
+        },
+    ) as res:
+        # validation 통과 = 200. 그 후 agent URL 미설정 → error 이벤트.
+        assert res.status_code == 200
+
+
 def test_suggest_edits_returns_ndjson_error_without_agent_url(client: TestClient) -> None:
     with client.stream(
         "POST",

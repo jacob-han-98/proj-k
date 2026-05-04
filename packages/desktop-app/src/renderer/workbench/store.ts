@@ -33,12 +33,18 @@ export function saveActiveIcon(kind: SidebarKind): void {
 // PR2: openTabs / activeTabId / openTab / focusTab / closeTab.
 // PR3+: 사이드바 토글 routing, qna-thread 탭, split state.
 
-// PR4: 탭별 review split. tabId → 그 탭이 split 켜졌을 때 ReviewSplitPane 에 넘길 payload.
-// trigger 는 같은 페이지를 다시 리뷰 요청해도 useEffect 가 재발동되도록 dedupe key.
+// PR4: 탭별 review split. tabId → 그 탭이 split 켜졌을 때 DocAssistantPane 에 넘길 payload.
+// trigger 는 같은 페이지를 다시 요청해도 useEffect 가 재발동되도록 dedupe key.
+//
+// P0: 단일 "리뷰" → 3-mode 어시스턴트로 확장. mode='pick' 은 사용자가 모드 칩을
+// 아직 안 골랐다는 빈 상태 (수동 시작) — DocAssistantPane 이 ModePickerEmpty 노출.
+// 'summary' / 'review' / 'agent' 는 각 모드 컴포넌트로 라우팅.
+export type SplitMode = 'pick' | 'summary' | 'review' | 'agent';
 export interface SplitPayload {
   title: string;
   text: string;
   trigger: number;
+  mode: SplitMode;
 }
 
 type WorkbenchState = {
@@ -54,9 +60,12 @@ type WorkbenchState = {
   // 탭이 닫히면 그 탭의 split payload 도 같이 정리.
   closeTab: (id: string) => void;
 
-  // PR4: editor 영역의 우측 split (리뷰/변경안). 탭별 isolated.
+  // PR4: editor 영역의 우측 split (어시스턴트). 탭별 isolated.
   tabSplits: Record<string, SplitPayload | undefined>;
-  openSplit: (tabId: string, title: string, text: string) => void;
+  // mode 미지정 = 'pick' (수동 시작 빈 상태). 기존 호출자는 mode 인자 생략 가능.
+  openSplit: (tabId: string, title: string, text: string, mode?: SplitMode) => void;
+  // 모드 칩 클릭 / 빈 상태에서 모드 선택. trigger 갱신해 effect 재발동.
+  setSplitMode: (tabId: string, mode: SplitMode) => void;
   closeSplit: (tabId: string) => void;
 
   // Excel 시트의 편집 모드 추적. docKey (`local:<relPath>` / `depot:<path>`) → editing.
@@ -159,10 +168,20 @@ export const useWorkbenchStore = create<WorkbenchState>((set) => ({
 
   tabSplits: {},
 
-  openSplit: (tabId, title, text) => set((state) => ({
+  openSplit: (tabId, title, text, mode = 'pick') => set((state) => ({
     ...state,
-    tabSplits: { ...state.tabSplits, [tabId]: { title, text, trigger: Date.now() } },
+    tabSplits: { ...state.tabSplits, [tabId]: { title, text, trigger: Date.now(), mode } },
   })),
+
+  setSplitMode: (tabId, mode) => set((state) => {
+    const cur = state.tabSplits[tabId];
+    if (!cur) return state;
+    if (cur.mode === mode) return state;
+    return {
+      ...state,
+      tabSplits: { ...state.tabSplits, [tabId]: { ...cur, mode, trigger: Date.now() } },
+    };
+  }),
 
   closeSplit: (tabId) => set((state) => {
     if (!state.tabSplits[tabId]) return state;

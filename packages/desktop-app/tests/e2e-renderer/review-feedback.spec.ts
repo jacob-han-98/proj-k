@@ -62,7 +62,8 @@ async function selectConfluencePage(page: Page) {
       (wv as any).executeJavaScript = async () => '문서 본문 mock';
     }
   });
-  await page.getByTestId('confluence-review').click();
+  await page.getByTestId('confluence-assistant').click();
+  await page.getByTestId('mode-pick-review').click();
 }
 
 test('default — 모든 item liked, 👍 active', async ({ page }) => {

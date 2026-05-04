@@ -63,8 +63,9 @@ test.describe('실제 agent 통합 — WSL :8090 + sidecar :3502 필요', () => 
       if (wv) wv.executeJavaScript = async () => text;
     }, SHORT_REVIEW_TEXT);
 
-    // 리뷰 버튼 클릭
-    await page.getByTestId('confluence-review').click();
+    // 어시스턴트 → 리뷰 모드 칩 클릭 (P0: 수동 시작)
+    await page.getByTestId('confluence-assistant').click();
+    await page.getByTestId('mode-pick-review').click();
 
     // 사용자 메시지 확인
     await expect(page.locator('.msg.user').last()).toContainText('리뷰 요청');
@@ -120,7 +121,8 @@ test.describe('실제 agent 통합 — WSL :8090 + sidecar :3502 필요', () => 
       if (wv) wv.executeJavaScript = async () => 'test body';
     });
 
-    await page.getByTestId('confluence-review').click();
+    await page.getByTestId('confluence-assistant').click();
+    await page.getByTestId('mode-pick-review').click();
 
     const card = page.getByTestId('review-card');
     await expect(card).toBeVisible({ timeout: 5000 });

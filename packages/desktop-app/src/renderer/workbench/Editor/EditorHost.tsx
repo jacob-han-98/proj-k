@@ -4,7 +4,7 @@ import { CenterPane } from '../../panels/CenterPane';
 import { useWorkbenchStore } from '../store';
 import type { SplitPayload } from '../store';
 import { QnATab } from './QnATab';
-import { ReviewSplitPane } from './ReviewSplitPane';
+import { DocAssistantPane } from './DocAssistantPane';
 import { TabBar } from './TabBar';
 import { AgentWebView } from './AgentWebView';
 
@@ -148,8 +148,8 @@ function DocTabContent({
           onPromptCreds={onPromptCreds}
           sheetMappings={sheetMappings}
           onUpsertSheetMapping={onUpsertSheetMapping}
-          onRequestReview={(title, text) =>
-            useWorkbenchStore.getState().openSplit(tabId, title, text)
+          onRequestReview={(title, text, mode) =>
+            useWorkbenchStore.getState().openSplit(tabId, title, text, mode)
           }
         />
       </div>
@@ -168,11 +168,12 @@ function DocTabContent({
             data-testid={`tab-split-right-${tabId}`}
             style={{ flex: `0 0 ${(rightRatio * 100).toFixed(2)}%` }}
           >
-            <ReviewSplitPane
+            <DocAssistantPane
               tabId={tabId}
               title={split.title}
               text={split.text}
               trigger={split.trigger}
+              mode={split.mode}
               confluencePageId={confluencePageId}
               onClose={() => useWorkbenchStore.getState().closeSplit(tabId)}
             />

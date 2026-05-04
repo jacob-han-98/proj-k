@@ -249,10 +249,14 @@ test('리뷰 split — 활성 시 좌우 분할 + 닫기 X 동작', async ({ pag
     if (wv) wv.executeJavaScript = async () => '본문 mock';
   });
 
-  // 리뷰 트리거 → split-right 등장
-  await page.getByTestId('confluence-review').click();
+  // 어시스턴트 트리거 → split-right 등장 (mode='pick' 빈 상태)
+  await page.getByTestId('confluence-assistant').click();
   const splitRight = page.getByTestId('tab-split-right-confluence:3');
   await expect(splitRight).toBeVisible();
+  await expect(page.getByTestId('doc-assistant-pane')).toBeVisible();
+
+  // 리뷰 모드 칩 클릭 → ReviewSplitPane 으로 swap
+  await page.getByTestId('mode-pick-review').click();
   await expect(page.getByTestId('review-split-pane')).toBeVisible();
 
   // 닫기 X → split-right 사라짐

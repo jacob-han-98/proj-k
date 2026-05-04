@@ -57,7 +57,8 @@ async function setupChanges(page: Page): Promise<{ getApplyArgs: () => Promise<u
   });
 
   // Review → "✏️ 원본 수정안" → ChangesCard
-  await page.getByTestId('confluence-review').click();
+  await page.getByTestId('confluence-assistant').click();
+  await page.getByTestId('mode-pick-review').click();
   await page.getByTestId('review-fix').click();
   await expect(page.getByTestId('changes-card')).toBeVisible();
   await expect(page.getByTestId('change-A')).toBeVisible();
@@ -193,7 +194,8 @@ test('B2-3b: 사전 매칭 체크 unmatched → ⚠ badge + Apply 자동 skip', 
     const wv = document.querySelector('webview') as any;
     if (wv) wv.executeJavaScript = async () => 'mock 본문';
   });
-  await page.getByTestId('confluence-review').click();
+  await page.getByTestId('confluence-assistant').click();
+  await page.getByTestId('mode-pick-review').click();
   await page.getByTestId('review-fix').click();
 
   await expect(page.getByTestId('changes-card')).toBeVisible();

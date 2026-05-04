@@ -181,7 +181,9 @@ interface Props {
   sheetMappings: Record<string, string>;
   onUpsertSheetMapping: (relPath: string, url: string) => void;
   // Phase 4-2: Confluence webview body 를 추출해 ChatPanel 의 review stream 으로 보낸다.
-  onRequestReview?: (title: string, text: string) => void;
+  // P0: 어시스턴트 패널 trigger. mode 미지정 = 'pick' (모드 선택 빈 상태) — Confluence
+  // 어시스턴트 흐름. Excel 시트 리뷰 같이 단일 모드 작업은 mode='review' 로 즉시 시작.
+  onRequestReview?: (title: string, text: string, mode?: 'pick' | 'review') => void;
 }
 
 const CONFLUENCE_BASE = 'https://bighitcorp.atlassian.net';
@@ -250,7 +252,9 @@ function ConfluencePane({
 }: {
   url: string;
   node: TreeNode;
-  onRequestReview?: (title: string, text: string) => void;
+  // P0: 어시스턴트 패널 trigger. mode 미지정 = 'pick' (모드 선택 빈 상태) — Confluence
+  // 어시스턴트 흐름. Excel 시트 리뷰 같이 단일 모드 작업은 mode='review' 로 즉시 시작.
+  onRequestReview?: (title: string, text: string, mode?: 'pick' | 'review') => void;
 }) {
   const webviewRef = useRef<HTMLElement | null>(null);
   const [extracting, setExtracting] = useState(false);
@@ -353,10 +357,10 @@ function ConfluencePane({
             <button
               onClick={requestReview}
               disabled={extracting}
-              data-testid="confluence-review"
-              title="현재 페이지 본문을 LLM 으로 리뷰"
+              data-testid="confluence-assistant"
+              title="어시스턴트 열기 (요약 / 리뷰 / 일반 Agent)"
             >
-              {extracting ? '추출 중…' : '📋 리뷰'}
+              {extracting ? '추출 중…' : '📎 어시스턴트'}
             </button>
           )}
           {testSpaceKey && node.confluencePageId && (
@@ -469,7 +473,9 @@ function LocalSheetView(props: {
   onUpsertMapping: (relPath: string, url: string) => void;
   // B3: 워크북 sheet content 추출 → review_stream 입력. xlsx-extractor 미실행 / 출력 없으면
   // 버튼은 노출되지만 클릭 시 alert 후 원위치.
-  onRequestReview?: (title: string, text: string) => void;
+  // P0: 어시스턴트 패널 trigger. mode 미지정 = 'pick' (모드 선택 빈 상태) — Confluence
+  // 어시스턴트 흐름. Excel 시트 리뷰 같이 단일 모드 작업은 mode='review' 로 즉시 시작.
+  onRequestReview?: (title: string, text: string, mode?: 'pick' | 'review') => void;
 }) {
   const { node, relPath, cachedUrl, onUpsertMapping, onRequestReview } = props;
   const [extractingReview, setExtractingReview] = useState(false);
@@ -510,7 +516,8 @@ function LocalSheetView(props: {
         );
         return;
       }
-      onRequestReview(r.workbook, flattenSheetContent(r));
+      // Excel 시트 리뷰는 단일 모드 작업 — 어시스턴트 picker 거치지 않고 즉시 review 시작.
+      onRequestReview(r.workbook, flattenSheetContent(r), 'review');
     } finally {
       setExtractingReview(false);
     }

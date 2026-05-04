@@ -55,6 +55,14 @@ interface Props {
   cachedModel?: string | null;
   // B2-2: "🔁 새 리뷰" 클릭 시 호출 — 부모 (ReviewSplitPane) 가 cache invalidate + 재 stream.
   onReRunRequest?: () => void;
+  // Phase A3: 각 리뷰 항목 옆 💬 — 그 항목 + 대상 문서를 컨텍스트로 qna 액티비티 jump.
+  // 사용자 결정: 리뷰 "전체" 가 아니라 콕 짚은 항목 단위. 미지정 시 버튼 hidden — 캐시
+  // viewer 등 read-only 컨텍스트에서 비활성.
+  onAttachReviewItem?: (
+    itemText: string,
+    category: 'issue' | 'verification' | 'suggestion',
+    perspective?: string,
+  ) => void;
 }
 
 export function ReviewCard({
@@ -68,6 +76,7 @@ export function ReviewCard({
   cachedAt,
   cachedModel,
   onReRunRequest,
+  onAttachReviewItem,
 }: Props) {
   // streamBuffer 에서 partial parse — final data 가 도착하기 전에도 sections 등장.
   const partialData = useMemo<ReviewData | null>(() => {
@@ -132,6 +141,7 @@ export function ReviewCard({
         feedback={feedback}
         onSetStatus={setItemStatus}
         onSetEdit={setItemEdit}
+        onAttachReviewItem={onAttachReviewItem}
       />
       <ReviewSection
         kind="info"
@@ -141,6 +151,7 @@ export function ReviewCard({
         feedback={feedback}
         onSetStatus={setItemStatus}
         onSetEdit={setItemEdit}
+        onAttachReviewItem={onAttachReviewItem}
       />
       <ReviewSection
         kind="suggestion"
@@ -150,6 +161,7 @@ export function ReviewCard({
         feedback={feedback}
         onSetStatus={setItemStatus}
         onSetEdit={setItemEdit}
+        onAttachReviewItem={onAttachReviewItem}
       />
 
       {effectiveData.flow && (
@@ -286,9 +298,30 @@ interface SectionProps {
   feedback: FeedbackMap;
   onSetStatus: (id: string, status: ItemStatus) => void;
   onSetEdit: (id: string, text: string) => void;
+  onAttachReviewItem?: Props['onAttachReviewItem'];
 }
 
-function ReviewSection({ kind, title, category, items, feedback, onSetStatus, onSetEdit }: SectionProps) {
+// section category ('issues') → dispatch category ('issue') 단수형 매핑.
+// dispatch.ReviewItemCategory 와 합쳐 backend 첨부에 들어가는 라벨 통일.
+const SECTION_TO_DISPATCH: Record<
+  SectionProps['category'],
+  'issue' | 'verification' | 'suggestion'
+> = {
+  issues: 'issue',
+  verifications: 'verification',
+  suggestions: 'suggestion',
+};
+
+function ReviewSection({
+  kind,
+  title,
+  category,
+  items,
+  feedback,
+  onSetStatus,
+  onSetEdit,
+  onAttachReviewItem,
+}: SectionProps) {
   if (!items || items.length === 0) return null;
   return (
     <div className={`review-section ${kind}`}>
@@ -298,6 +331,7 @@ function ReviewSection({ kind, title, category, items, feedback, onSetStatus, on
         const perspective = typeof item === 'string' ? undefined : item.perspective;
         const id = itemId(category, i, text);
         const fb = feedback[id] ?? { status: 'liked' as ItemStatus };
+        const dispatchCat = SECTION_TO_DISPATCH[category];
         return (
           <ReviewItemRow
             key={id}
@@ -308,6 +342,11 @@ function ReviewSection({ kind, title, category, items, feedback, onSetStatus, on
             editText={fb.editText ?? ''}
             onSetStatus={(s) => onSetStatus(id, s)}
             onSetEdit={(t) => onSetEdit(id, t)}
+            onAttach={
+              onAttachReviewItem
+                ? () => onAttachReviewItem(text, dispatchCat, perspective)
+                : undefined
+            }
           />
         );
       })}
@@ -323,6 +362,7 @@ function ReviewItemRow({
   editText,
   onSetStatus,
   onSetEdit,
+  onAttach,
 }: {
   id: string;
   text: string;
@@ -331,6 +371,7 @@ function ReviewItemRow({
   editText: string;
   onSetStatus: (s: ItemStatus) => void;
   onSetEdit: (t: string) => void;
+  onAttach?: () => void;
 }) {
   return (
     <div className={`review-item-outer ${status}`} data-testid={`ri-${id}`}>
@@ -367,6 +408,18 @@ function ReviewItemRow({
             aria-pressed={status === 'edited'}
             data-testid={`ri-edit-${id}`}
           >✏️</button>
+          {/* Phase A3: 이 항목 하나만 +대상 문서를 컨텍스트로 Agent 와 대화. 사용자가
+              "이거 정말 수정해야 하나?" 같은 후속 질문을 자연스럽게 이어가게. */}
+          {onAttach && (
+            <button
+              type="button"
+              className="ri-btn"
+              onClick={onAttach}
+              title="이 항목으로 Agent 와 대화 (Ctrl+4 — qna 액티비티)"
+              aria-label="agent에 질문"
+              data-testid={`ri-agent-${id}`}
+            >💬</button>
+          )}
         </div>
       </div>
       {status === 'edited' && (

@@ -1,5 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { attachDocToQnA } from '../../src/renderer/qna/dispatch';
+import {
+  attachDocToQnA,
+  attachReviewItemToQnA,
+} from '../../src/renderer/qna/dispatch';
 import { useWorkbenchStore } from '../../src/renderer/workbench/store';
 import type { TreeNode } from '../../src/shared/types';
 
@@ -107,6 +110,74 @@ describe('attachDocToQnA — 진입점 2', () => {
       // Excel 노드에 confluencePageId 가 없으니 pageId 도 undefined.
       expect(atts![0]!.ref.pageId).toBeUndefined();
     }
+  });
+
+  describe('attachReviewItemToQnA — 진입점 3', () => {
+    it('리뷰 항목 단위 첨부 — review-item kind, category/perspective 보존', async () => {
+      const r = await attachReviewItemToQnA({
+        docNode: NODE_CONFLUENCE,
+        docTitle: 'PVP 시스템 설계',
+        itemText: '회복 쿨타임 처리가 클라/서버 비대칭 — Boss 전투에서 어긋남',
+        category: 'issue',
+        perspective: '프로그래머',
+      });
+
+      expect(r.ok).toBe(true);
+      const s = useWorkbenchStore.getState();
+      const atts = s.qnaPendingAttachments[r.threadId!];
+      expect(atts).toHaveLength(1);
+      expect(atts![0]!.kind).toBe('review-item');
+      if (atts![0]!.kind === 'review-item') {
+        // 사용자 결정: 리뷰 "전체" 가 아니라 항목 1개. 본문/카테고리/perspective 모두 정확히 박힘.
+        expect(atts![0]!.ref.category).toBe('issue');
+        expect(atts![0]!.ref.text).toContain('회복 쿨타임');
+        expect(atts![0]!.ref.docTitle).toBe('PVP 시스템 설계');
+        expect(atts![0]!.ref.docNodeId).toBe('confluence:1234');
+        expect(atts![0]!.ref.perspective).toBe('프로그래머');
+      }
+
+      // 사용자 결정: split 닫지 않음 — activity 만 swap. 따라서 도큐먼트 탭은 그대로.
+      expect(s.activeIcon).toBe('qna');
+      expect(s.activityIconPulse?.kind).toBe('qna');
+
+      // qna-thread 탭 추가 + 제목은 항목 본문 30자.
+      const qnaTab = s.openTabs.find((t) => t.kind === 'qna-thread');
+      expect(qnaTab).toBeDefined();
+      if (qnaTab?.kind === 'qna-thread') {
+        expect(qnaTab.title).toContain('리뷰:');
+      }
+    });
+
+    it('perspective 미지정 — undefined 그대로 저장 (강제 default 안 잡음)', async () => {
+      const r = await attachReviewItemToQnA({
+        docNode: NODE_CONFLUENCE,
+        docTitle: 'PVP 시스템 설계',
+        itemText: '검증 필요한 항목',
+        category: 'verification',
+      });
+      expect(r.ok).toBe(true);
+      const atts = useWorkbenchStore.getState().qnaPendingAttachments[r.threadId!];
+      if (atts![0]!.kind === 'review-item') {
+        expect(atts![0]!.ref.perspective).toBeUndefined();
+      }
+    });
+
+    it('thread create 실패 시 ok:false, store 상태 변화 X', async () => {
+      vi.stubGlobal('window', {
+        projk: {
+          threads: { create: vi.fn(async () => { throw new Error('IPC 단절'); }) },
+        },
+      });
+      const r = await attachReviewItemToQnA({
+        docNode: NODE_CONFLUENCE,
+        docTitle: 'X',
+        itemText: 'X',
+        category: 'issue',
+      });
+      expect(r.ok).toBe(false);
+      expect(useWorkbenchStore.getState().openTabs).toHaveLength(0);
+      expect(useWorkbenchStore.getState().activeIcon).toBe('confluence');
+    });
   });
 
   it('thread create 실패 시 ok:false + error 메시지, store 상태 변화 X', async () => {

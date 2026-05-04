@@ -1,5 +1,6 @@
 import { useWorkbenchStore } from '../store';
 import type { SplitMode } from '../store';
+import type { TreeNode } from '../../../shared/types';
 import type { ReviewOptions } from '../../panels/review-options-mapping';
 import { ModePickerEmpty } from './ModePickerEmpty';
 import { ReviewOptionsPanel } from './ReviewOptionsPanel';
@@ -28,6 +29,9 @@ interface Props {
   // 채워지면 ReviewSplitPane 이 mount + reviewStream 호출 시 첨부.
   reviewOptions: ReviewOptions | undefined;
   confluencePageId: string | null;
+  // Phase A3: ReviewSplitPane 까지 흘려 ReviewCard 의 💬 (리뷰 항목 → qna) 활성화.
+  // EditorHost 의 DocTabContent 가 tab.node 그대로 전달.
+  docNode?: TreeNode;
   onClose: () => void;
 }
 
@@ -39,6 +43,7 @@ export function DocAssistantPane({
   mode,
   reviewOptions,
   confluencePageId,
+  docNode,
   onClose,
 }: Props) {
   const setSplitMode = useWorkbenchStore((s) => s.setSplitMode);
@@ -108,6 +113,7 @@ export function DocAssistantPane({
         trigger={trigger}
         reviewOptions={reviewOptions}
         confluencePageId={confluencePageId}
+        docNode={docNode}
         onClose={onClose}
       />
     );

@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { reviewStream, suggestEditsStream, type ChangeItem } from '../../api';
+import type { TreeNode } from '../../../shared/types';
+import { attachReviewItemToQnA } from '../../qna/dispatch';
 import { ReviewCard, type ReviewData } from '../../panels/ReviewCard';
 import { ChangesCard } from '../../panels/ChangesCard';
 import {
@@ -54,6 +56,10 @@ interface Props {
   reviewOptions?: ReviewOptions;
   // Confluence 탭이면 페이지 ID, Excel 탭이면 null. Apply 시 PUT 대상.
   confluencePageId: string | null;
+  // Phase A3: 리뷰 항목 → qna 진입점이 새 thread 의 첨부에 docNodeId/docTitle 을 박아 넣음.
+  // ReviewCard 의 onAttachReviewItem 클릭 시 attachReviewItemToQnA 가 이 node 를 인용.
+  // 미지정 시 ReviewCard 의 💬 버튼 hidden — 진입점 비활성화.
+  docNode?: TreeNode;
   onClose: () => void;
 }
 
@@ -95,7 +101,7 @@ function parseChangesResult(e: { [k: string]: unknown }): ChangeItem[] | null {
   return null;
 }
 
-export function ReviewSplitPane({ tabId: _tabId, title, text, trigger, reviewOptions, confluencePageId, onClose }: Props) {
+export function ReviewSplitPane({ tabId: _tabId, title, text, trigger, reviewOptions, confluencePageId, docNode, onClose }: Props) {
   const [review, setReview] = useState<ReviewState>({ data: null, streaming: true });
   const [changes, setChanges] = useState<ChangesState | null>(null);
   const [busy, setBusy] = useState(false);
@@ -289,6 +295,19 @@ export function ReviewSplitPane({ tabId: _tabId, title, text, trigger, reviewOpt
           cachedModel={review.cachedModel ?? null}
           onReRunRequest={() => setRefreshNonce((n) => n + 1)}
           onFixRequest={(filtered) => void startFix(filtered)}
+          onAttachReviewItem={
+            docNode
+              ? (itemText, category, perspective) => {
+                  void attachReviewItemToQnA({
+                    docNode,
+                    docTitle: title,
+                    itemText,
+                    category,
+                    perspective,
+                  });
+                }
+              : undefined
+          }
         />
         {changes && (
           <ChangesCard

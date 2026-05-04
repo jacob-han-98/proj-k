@@ -181,6 +181,7 @@ function DocTabContent({
               mode={split.mode}
               reviewOptions={split.reviewOptions}
               confluencePageId={confluencePageId}
+              docNode={node}
               onClose={() => useWorkbenchStore.getState().closeSplit(tabId)}
             />
           </div>

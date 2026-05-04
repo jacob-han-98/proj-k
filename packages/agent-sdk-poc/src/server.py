@@ -1291,6 +1291,7 @@ class SummaryStreamRequest(BaseModel):
     text: str
     model: str | None = None
     summary_style: str | None = "default"
+    max_tokens: int | None = None
 
 
 class SuggestEditsRequest(BaseModel):
@@ -1604,7 +1605,9 @@ async def summary_stream(req: SummaryStreamRequest):
     style = (req.summary_style or "default").lower()
     # 향후 "bullet" / "executive" 분기 자리 — 지금은 default 만.
     system_prompt = _SUMMARY_SYSTEM_DEFAULT
-    model = _bd_normalize_model(req.model)
+    # 기본 모델 = opus (요약 품질 우선). req.model 명시되면 그대로.
+    model = _bd_normalize_model(req.model) if req.model else "opus"
+    max_tokens = req.max_tokens if req.max_tokens else 8194
     user_msg = (
         f"Page Title: {title}\n\nPage Content:\n{text}\n\n"
         f"위 페이지를 시스템 메시지의 구조와 규칙에 따라 한국어로 요약해줘."
@@ -1620,7 +1623,7 @@ async def summary_stream(req: SummaryStreamRequest):
         log_event(
             "summary",
             "summary_stream",
-            f"{title[:60]} ({len(text)}c, {model}, style={style})",
+            f"{title[:60]} ({len(text)}c, {model}, max={max_tokens}, style={style})",
         )
         yield _ndj({"type": "status", "message": f"📖 본문 정독 중... ({model})"})
         yield _ndj({"type": "status", "message": f"📄 길이: {len(text):,}자"})
@@ -1632,7 +1635,7 @@ async def summary_stream(req: SummaryStreamRequest):
                 messages=[{"role": "user", "content": user_msg}],
                 system=system_prompt,
                 model=model,
-                max_tokens=2048,
+                max_tokens=max_tokens,
                 temperature=0.0,
             ):
                 t = ev.get("type")

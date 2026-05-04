@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { askStream, getPresetPrompts, searchDocs, type PresetPrompt } from '../../api';
+import { askStream, getPresetPrompts, searchDocs, setDocContext, type PresetPrompt } from '../../api';
 import { annotateCitedHits, splitAnswerWithCitations } from '../../citations';
 import { SourceModal } from '../../panels/SourceModal';
 import { readResultData, readToken, type StreamEvent } from '../../stream-events';
@@ -245,6 +245,28 @@ export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Pr
       });
     } catch (e) {
       console.warn('appendMessage(user) 실패', e);
+    }
+
+    // Phase A2: 첨부 중 doc kind 이고 본문(text) 있으면 backend 에 stash. 진입점 2 (문서
+    // → qna) 의 dispatch 가 본문을 한 번 추출해 attachment.ref.text 에 담아둔 형태.
+    // backend 의 read_current_doc tool 이 이 stash 를 lazy 인용 — prompt prefix 에 본문
+    // 통째로 박는 것보다 토큰 효율적. 첫 doc 첨부만 stash (현 backend setDocContext 가
+    // single doc API). multi-doc 지원은 향후 backend 변경 후.
+    const docAttWithText = attachmentsToConsume.find(
+      (a): a is Extract<QnAAttachment, { kind: 'doc' }> => a.kind === 'doc' && !!a.ref.text,
+    );
+    if (docAttWithText) {
+      try {
+        await setDocContext(conversationId, {
+          title: docAttWithText.title,
+          page_id: docAttWithText.ref.pageId,
+          doc_type: docAttWithText.ref.type,
+          content: docAttWithText.ref.text!,
+        });
+      } catch (e) {
+        // backend 미가용 시 stash 실패 — UI 안 멈춤. 이후 askStream 에 prefix 만으로 진행.
+        console.warn('setDocContext 실패 (계속 진행)', e);
+      }
     }
 
     // 첨부 consume — 다음 mount 때 다시 보이지 않게 store 에서 제거. 첫 메시지 보낸

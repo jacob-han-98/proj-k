@@ -1437,6 +1437,18 @@ html, body, #root { height: 100%; margin: 0; padding: 0; background: var(--bg); 
   background: var(--activityBar-activeBorder);
 }
 
+/* Phase A2: 진입점 2/3 자동 전환 시 0.6s pulse — 사용자가 어디로 갔는지 즉시 인지하게.
+   ring 밝기를 부드럽게 키웠다 줄임. transform scale 은 layout shift 유발하므로 회피. */
+@keyframes activity-icon-pulse {
+  0%   { box-shadow: 0 0 0 0 var(--accent); }
+  50%  { box-shadow: 0 0 0 4px var(--accent); opacity: 0.85; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+.activity-bar-item.pulse {
+  animation: activity-icon-pulse 0.6s ease-out;
+  border-radius: 4px;
+}
+
 /* ---------- PR2: Editor host + tabs (VS Code 35px tab bar) ---------- */
 /* .editor-host 는 grid-area:center 를 차지하고 그 안을 flex column 으로:
      [.tab-bar 35px] + [.tab-content-area flex 1, position relative]

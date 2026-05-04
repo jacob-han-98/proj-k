@@ -28,6 +28,13 @@ export type QnAAttachment =
         type: 'confluence' | 'excel';
         nodeId: string;
         relPath?: string;
+        // Phase A2: 진입점에서 한 번 추출한 본문을 첨부에 캐시. QnATab 의 첫 send 시점에
+        // setDocContext(conversationId, {title, content}) 로 backend 에 stash → backend
+        // agent 가 read_current_doc tool 로 lazy 인용. text 가 없으면 stash 생략 (메타만
+        // 으로 backend 가 알아서 lookup 하는 흐름은 TBD).
+        text?: string;
+        // Confluence pageId — backend 가 출처 인용 시 라벨/링크 만들 때 사용.
+        pageId?: string;
       };
     }
   | {

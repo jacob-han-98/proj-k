@@ -1,4 +1,4 @@
-import { useEffect, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import type { SidebarKind } from './types';
 import { useWorkbenchStore } from './store';
 
@@ -89,6 +89,19 @@ function shouldIgnoreShortcut(target: EventTarget | null): boolean {
 export function ActivityBar() {
   const activeIcon = useWorkbenchStore((s) => s.activeIcon);
   const setActiveIcon = useWorkbenchStore((s) => s.setActiveIcon);
+  // Phase A2: 진입점 2/3 dispatch 시 store.pulseActivityIcon 이 timestamp 갱신 → 이 컴포넌트가
+  // 그걸 보고 0.6s 동안 .pulse class 적용 → CSS keyframes 가 시각 피드백. 같은 timestamp 면
+  // useEffect 가 재발동 안 해 깜빡임 없음.
+  const activityIconPulse = useWorkbenchStore((s) => s.activityIconPulse);
+  const [pulsingKind, setPulsingKind] = useState<SidebarKind | null>(null);
+
+  useEffect(() => {
+    if (!activityIconPulse) return;
+    setPulsingKind(activityIconPulse.kind);
+    const timer = setTimeout(() => setPulsingKind(null), 600);
+    return () => clearTimeout(timer);
+    // ts 가 dep — 같은 kind 로 연달아 dispatch 해도 ts 가 다르면 다시 발동.
+  }, [activityIconPulse?.ts, activityIconPulse?.kind]);
 
   // Ctrl/Cmd+1~4 단축키 — window 레벨 keydown listener.
   useEffect(() => {
@@ -110,12 +123,13 @@ export function ActivityBar() {
     <nav className="activity-bar" data-testid="activity-bar" aria-label="Activity Bar">
       {ITEMS.map((item) => {
         const isActive = activeIcon === item.kind;
+        const isPulsing = pulsingKind === item.kind;
         const shortcutLabel = `Ctrl+${item.shortcutDigit}`;
         return (
           <button
             key={item.kind}
             type="button"
-            className={`activity-bar-item${isActive ? ' active' : ''}`}
+            className={`activity-bar-item${isActive ? ' active' : ''}${isPulsing ? ' pulse' : ''}`}
             data-testid={`activity-${item.kind}`}
             title={`${item.title} (${shortcutLabel})`}
             aria-label={`${item.title} (${shortcutLabel})`}

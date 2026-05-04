@@ -110,6 +110,13 @@ type WorkbenchState = {
   attachToQnA: (threadId: string, att: QnAAttachment) => void;
   detachFromQnA: (threadId: string, attId: string) => void;
   clearPendingAttachments: (threadId: string) => void;
+
+  // Phase A2: 진입점 2/3 가 setActiveIcon 으로 자동 전환할 때 사용자가 "어디로 갔지?"
+  // 헤매지 않게 해당 아이콘에 0.6s pulse. timestamp 를 두고 ActivityBar 가 그 값 변화를
+  // 감지해 className 적용 → CSS keyframes 로 펄스 → 자동 종료. timestamp 마다 다른 값이라
+  // 같은 아이콘으로 연달아 dispatch 해도 매번 새로 발동 (값이 같으면 React 가 변화 X 로 간주).
+  activityIconPulse: { kind: SidebarKind; ts: number } | null;
+  pulseActivityIcon: (kind: SidebarKind) => void;
 };
 
 export const useWorkbenchStore = create<WorkbenchState>((set) => ({
@@ -300,6 +307,9 @@ export const useWorkbenchStore = create<WorkbenchState>((set) => ({
     delete map[threadId];
     return { ...state, qnaPendingAttachments: map };
   }),
+
+  activityIconPulse: null,
+  pulseActivityIcon: (kind) => set({ activityIconPulse: { kind, ts: Date.now() } }),
 }));
 
 // A4: OpenTabSpec → RecentDocEntry 변환. payload 는 RecentDocsPanel 이 reopen 시 그대로

@@ -3,6 +3,7 @@ import type { TreeNode } from '../../shared/types';
 import { useWorkbenchStore } from '../workbench/store';
 import { docKeyOfNode } from '../workbench/types';
 import { flattenSheetContent, getSheetContent } from '../api';
+import { attachDocToQnA } from '../qna/dispatch';
 
 // Excel for the Web 임베드 URL 의 ?action= 값을 스왑.
 // **0.1.50 회귀 보류**: ?action=embedview 시도 후 사용자 환경에서 SharePoint 가 file
@@ -347,6 +348,39 @@ function ConfluencePane({
     }
   };
 
+  // Phase A2: 진입점 2 — webview 본문 추출 후 qna 액티비티의 새 thread 에 doc 첨부.
+  // requestReview 와 추출 로직은 동일, dispatch 만 다르게 (split 안 띄우고 ActivityBar swap).
+  // 사용자 결정: split의 'agent' 모드는 폐지하고 4번째 액티비티로 통합.
+  const requestAgentQuery = async () => {
+    const wv = webviewRef.current;
+    if (!wv) {
+      alert('webview 가 아직 mount 되지 않았어요.');
+      return;
+    }
+    setExtracting(true);
+    try {
+      const code = `(() => {
+        const el = document.querySelector('#main-content')
+          || document.querySelector('[role="main"]')
+          || document.body;
+        return el ? (el.innerText || '').trim() : '';
+      })()`;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const text = (await (wv as any).executeJavaScript(code)) as string;
+      if (!text) {
+        alert('webview 본문 추출 결과가 비어있습니다 — 페이지 로딩 끝났는지 확인하세요.');
+        return;
+      }
+      const r = await attachDocToQnA({ node, text, type: 'confluence' });
+      if (!r.ok) alert(`Agent 질문 시작 실패: ${r.error}`);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      alert(`webview 본문 추출 실패: ${msg}`);
+    } finally {
+      setExtracting(false);
+    }
+  };
+
   return (
     <main className="center" data-testid="center-pane">
       <div className="doc-header">
@@ -358,11 +392,19 @@ function ConfluencePane({
               onClick={requestReview}
               disabled={extracting}
               data-testid="confluence-assistant"
-              title="어시스턴트 열기 (요약 / 리뷰 / 일반 Agent)"
+              title="어시스턴트 열기 (요약 / 리뷰)"
             >
               {extracting ? '추출 중…' : '📎 어시스턴트'}
             </button>
           )}
+          <button
+            onClick={requestAgentQuery}
+            disabled={extracting}
+            data-testid="confluence-agent-query"
+            title="이 문서를 첨부해 Agent 와 대화 (Ctrl+4 — qna 액티비티)"
+          >
+            {extracting ? '추출 중…' : '🤖 Agent에 질문'}
+          </button>
           {testSpaceKey && node.confluencePageId && (
             <button
               onClick={copyToTestSpace}
@@ -523,6 +565,31 @@ function LocalSheetView(props: {
     }
   };
 
+  // Phase A2: 진입점 2 — sheet content 추출 후 qna 액티비티의 새 thread 에 doc 첨부.
+  // requestSheetReview 와 추출 로직 동일, dispatch 만 다름.
+  const requestSheetAgent = async () => {
+    setExtractingReview(true);
+    try {
+      const r = await getSheetContent(relPath);
+      if (!r) {
+        alert(
+          'Agent 에 첨부할 sheet content 를 찾을 수 없습니다.\n\n' +
+            'xlsx-extractor 변환이 안 된 워크북일 수 있어요. ' +
+            'WSL 측에서 packages/xlsx-extractor 를 한 번 돌리면 활성화됩니다.',
+        );
+        return;
+      }
+      const dispatch = await attachDocToQnA({
+        node,
+        text: flattenSheetContent(r),
+        type: 'excel',
+      });
+      if (!dispatch.ok) alert(`Agent 질문 시작 실패: ${dispatch.error}`);
+    } finally {
+      setExtractingReview(false);
+    }
+  };
+
   // mount + relPath 변경 시 ensureFresh 호출.
   useEffect(() => {
     let cancelled = false;
@@ -665,6 +732,15 @@ function LocalSheetView(props: {
               {extractingReview ? '추출 중…' : '📋 리뷰'}
             </button>
           )}
+          <button
+            onClick={requestSheetAgent}
+            disabled={extractingReview}
+            data-testid="sheet-agent-query"
+            title="이 시트를 첨부해 Agent 와 대화 (Ctrl+4 — qna 액티비티)"
+            style={{ marginRight: 6 }}
+          >
+            {extractingReview ? '추출 중…' : '🤖 Agent에 질문'}
+          </button>
           <button
             onClick={() => window.open(displayUrl, '_blank')}
             data-testid="sheet-open-onedrive"

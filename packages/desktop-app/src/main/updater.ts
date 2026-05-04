@@ -14,7 +14,7 @@
 //
 // dev URL 미설정 시: updater 자체를 비활성. 빌드 미반영/오프라인 환경 보호.
 
-import { BrowserWindow } from 'electron';
+import { app, BrowserWindow } from 'electron';
 import { autoUpdater, type UpdateInfo, type ProgressInfo } from 'electron-updater';
 import { effectiveUpdateFeedUrl, getSettings } from './settings';
 
@@ -47,6 +47,7 @@ export function getLastCheckedAt(): number | null {
 export async function checkForUpdate(): Promise<void> {
   // 사용자가 indicator 클릭 시 즉시 폴링.
   // electron-updater 는 자체 throttle 이 있어 너무 자주 부르면 캐시된 결과 반환.
+  if (!app.isPackaged) return;
   if (!process.env.PROJK_UPDATE_FEED_URL && !current.state) return;
   try {
     lastCheckedAt = Date.now();
@@ -71,6 +72,14 @@ export function initUpdater(getWindow: () => BrowserWindow | null): void {
   if (initialized) return;
   initialized = true;
 
+  // VS Code 에서 직접 띄운 dev 인스턴스(app.isPackaged === false)는 updater 비활성.
+  // 코드 핫리로드로 충분하고, 피드 서버가 안 떠있으면 ERR_CONNECTION_REFUSED 토스트가
+  // 5초마다 떠서 시끄러움. 인스톨러로 설치된 사용자 빌드(packaged)에서만 동작.
+  if (!app.isPackaged) {
+    console.log('[updater] dev 인스턴스(app.isPackaged=false) — updater 비활성');
+    return;
+  }
+
   const feedUrl = effectiveUpdateFeedUrl();
   if (!feedUrl) {
     console.log('[updater] feed URL 미설정 — updater 비활성 (설정에서 입력 가능)');
@@ -81,7 +90,6 @@ export function initUpdater(getWindow: () => BrowserWindow | null): void {
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
   autoUpdater.allowDowngrade = false;
-  autoUpdater.forceDevUpdateConfig = true; // dev 빌드도 업데이트 체크 허용
 
   // 빌드된 앱이 자기 publish 메타데이터에서 url을 읽지만, dev 환경에서는 환경변수 우선.
   autoUpdater.setFeedURL({

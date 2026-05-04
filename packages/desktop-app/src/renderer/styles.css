@@ -504,6 +504,51 @@ html, body, #root { height: 100%; margin: 0; padding: 0; background: var(--bg); 
 .thread-doc-chip.xlsx { border-color: #10b98155; }
 .thread-doc-chip.pinned { border-color: var(--accent); }
 
+/* Phase A1: QnA 입력창 위 첨부 칩 라인. 사용자가 진입점 2/3 으로 push 한 컨텍스트가
+   여기에 가시화 — VS Code chat input 위 file pill 패턴. ✕ 로 떼고, 첫 메시지 send 시
+   소비. doc 은 회색 톤, review-item 은 주황 톤으로 시각 구분. */
+.qna-attachment-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px 8px 0 8px;
+}
+.qna-attachment-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 2px 4px 2px 8px;
+  font-size: 11px;
+  color: var(--text);
+  white-space: nowrap;
+  max-width: 240px;
+}
+.qna-attachment-chip-doc { border-color: #6b728055; background: var(--bg); }
+.qna-attachment-chip-review-item { border-color: #f5972055; background: #f5972011; }
+.qna-attachment-icon { font-size: 12px; line-height: 1; }
+.qna-attachment-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 180px;
+}
+.qna-attachment-detach {
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  color: var(--text-dim);
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 2px;
+  border-radius: 8px;
+}
+.qna-attachment-detach:hover {
+  background: var(--hover);
+  color: var(--text);
+}
+
 /* PR5: .chat 은 더 이상 grid 자식이 아니라 EditorHost > .tab-slot 안의 flex item (QnATab).
    border-left 도 제거 — 탭 split 안이라 좌측 경계가 의미 없음. 다른 .chat 하위 스타일
    (.messages, .msg, .input-row, .search-results 등) 은 그대로 재사용. */
@@ -2115,6 +2160,14 @@ html, body, #root { height: 100%; margin: 0; padding: 0; background: var(--bg); 
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+/* persona row 아래 helper text — backend 의 "위주" 의미를 사용자에게 정확히 안내. */
+.review-options-hint {
+  font-size: 11px;
+  color: var(--text-dim);
+  padding: 0 4px;
+  margin-top: -4px;
 }
 
 .review-options-row-label {

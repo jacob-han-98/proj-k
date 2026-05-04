@@ -3,6 +3,7 @@ import type { DocTab, OpenTabSpec, SidebarKind } from './types';
 import { tabIdOf, docKeyOfNode } from './types';
 import { touchRecentDoc } from '../recent-docs';
 import type { ReviewOptions } from '../panels/review-options-mapping';
+import type { QnAAttachment } from '../qna/attachments';
 
 // 마지막으로 선택했던 액티비티바 아이콘을 localStorage 에 영속.
 // recent-docs.ts / App.tsx 의 sidebar width 와 같은 패턴 — 인스톨/계정 무관, 부팅 직후 즉시 복원.
@@ -99,6 +100,16 @@ type WorkbenchState = {
   openPalette: () => void;
   closePalette: () => void;
   togglePalette: () => void;
+
+  // Phase A1: QnA 액티비티의 컨텍스트 첨부 (체부 모델). thread 단위로 격리 — 한 thread 의
+  // 첨부가 다른 thread 에 새지 않도록. lifecycle 은 renderer/qna/attachments.ts 헤더 참조.
+  // Phase A2/A3 에서 진입점 (에디터 헤더 / 리뷰 항목 옆 아이콘) 가 attachToQnA 를 호출.
+  // QnATab 이 mount 시 자기 threadId 의 pending 을 읽어 칩 표시 + 첫 메시지 prepend.
+  // closeTab(qna-thread) 시 같이 정리 — leak 방지.
+  qnaPendingAttachments: Record<string, QnAAttachment[]>;
+  attachToQnA: (threadId: string, att: QnAAttachment) => void;
+  detachFromQnA: (threadId: string, attId: string) => void;
+  clearPendingAttachments: (threadId: string) => void;
 };
 
 export const useWorkbenchStore = create<WorkbenchState>((set) => ({
@@ -179,7 +190,23 @@ export const useWorkbenchStore = create<WorkbenchState>((set) => ({
         }
       }
     }
-    return { ...state, openTabs: next, activeTabId: nextActive, tabSplits: splits, editingDocs };
+    // qna-thread 탭이 닫히면 그 thread 의 미발송 첨부도 같이 정리. 다음에 같은 thread 가
+    // 재오픈 (사이드바 ThreadList row 클릭) 되어도 사용자가 의식하지 않은 옛 첨부가
+    // 부활하지 않게 — leak 방지 + UX 단순.
+    let qnaPendingAttachments = state.qnaPendingAttachments;
+    if (closing && closing.kind === 'qna-thread' && qnaPendingAttachments[closing.threadId]) {
+      const a = { ...qnaPendingAttachments };
+      delete a[closing.threadId];
+      qnaPendingAttachments = a;
+    }
+    return {
+      ...state,
+      openTabs: next,
+      activeTabId: nextActive,
+      tabSplits: splits,
+      editingDocs,
+      qnaPendingAttachments,
+    };
   }),
 
   tabSplits: {},
@@ -246,6 +273,33 @@ export const useWorkbenchStore = create<WorkbenchState>((set) => ({
   openPalette: () => set({ paletteOpen: true }),
   closePalette: () => set({ paletteOpen: false }),
   togglePalette: () => set((s) => ({ paletteOpen: !s.paletteOpen })),
+
+  qnaPendingAttachments: {},
+  attachToQnA: (threadId, att) => set((state) => {
+    const cur = state.qnaPendingAttachments[threadId] ?? [];
+    // 같은 id 중복 push 는 무시 — idempotent. 진입점이 재호출돼도 안전.
+    if (cur.some((a) => a.id === att.id)) return state;
+    return {
+      ...state,
+      qnaPendingAttachments: { ...state.qnaPendingAttachments, [threadId]: [...cur, att] },
+    };
+  }),
+  detachFromQnA: (threadId, attId) => set((state) => {
+    const cur = state.qnaPendingAttachments[threadId];
+    if (!cur || cur.length === 0) return state;
+    const next = cur.filter((a) => a.id !== attId);
+    if (next.length === cur.length) return state;
+    const map = { ...state.qnaPendingAttachments };
+    if (next.length === 0) delete map[threadId];
+    else map[threadId] = next;
+    return { ...state, qnaPendingAttachments: map };
+  }),
+  clearPendingAttachments: (threadId) => set((state) => {
+    if (!state.qnaPendingAttachments[threadId]) return state;
+    const map = { ...state.qnaPendingAttachments };
+    delete map[threadId];
+    return { ...state, qnaPendingAttachments: map };
+  }),
 }));
 
 // A4: OpenTabSpec → RecentDocEntry 변환. payload 는 RecentDocsPanel 이 reopen 시 그대로

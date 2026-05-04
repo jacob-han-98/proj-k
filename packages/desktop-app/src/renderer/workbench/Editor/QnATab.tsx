@@ -5,6 +5,8 @@ import { SourceModal } from '../../panels/SourceModal';
 import { readResultData, readToken, type StreamEvent } from '../../stream-events';
 import type { SearchHit, ThreadDocRef } from '../../../shared/types';
 import { useWorkbenchStore } from '../store';
+import { AttachmentChips } from '../../qna/AttachmentChips';
+import { buildAttachmentPrompt, type QnAAttachment } from '../../qna/attachments';
 
 // A3-b: 답변 안 (출처: ...) 클릭 → modal. 클릭 시 selectedCitation 으로 modal 띄움.
 interface CitationTarget {
@@ -16,6 +18,10 @@ interface CitationTarget {
 // PR6: 사이드바 "+ 새" 가 만든 default 제목. 사용자가 직접 rename 하기 전엔 이 값이라
 // QnATab 의 첫 메시지가 도착하면 자동으로 그 메시지 30자로 갈아낀다.
 const DEFAULT_THREAD_TITLE = '새 스레드';
+
+// 빈 첨부 array 는 컴포넌트 외부에 한 번 정의 — zustand selector 가 매 render 마다
+// 새 array 를 만들면 useEffect dep 비교가 동등성을 잃어 무한 루프 가능. 같은 ref 로 안정.
+const EMPTY_ATTACHMENTS: readonly QnAAttachment[] = Object.freeze([]);
 
 // PR5: editor 영역의 QnA 대화 탭. PR4까지 우측 360px ChatPanel 이 하던 일을 여기로 이전.
 // review/changes 는 ReviewSplitPane (PR4) 으로 이미 이전됨. 자동 thread 생성도 제거 —
@@ -122,6 +128,20 @@ export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Pr
   const [selectedCitation, setSelectedCitation] = useState<CitationTarget | null>(null);
   const taRef = useRef<HTMLTextAreaElement | null>(null);
 
+  // Phase A1: 이 thread 의 미발송 첨부. 진입점 2/3 (Phase A2/A3) 가 store.attachToQnA 로
+  // push 해두고, 사용자가 qna 액티비티로 와서 첫 메시지 보낼 때 prepend 후 clear.
+  const pendingAttachments = useWorkbenchStore(
+    (s) => s.qnaPendingAttachments[threadId] ?? EMPTY_ATTACHMENTS,
+  );
+  const detachFromQnA = useWorkbenchStore((s) => s.detachFromQnA);
+  const clearPendingAttachments = useWorkbenchStore((s) => s.clearPendingAttachments);
+
+  // backend 의 conversation 단위 컨텍스트를 thread 와 1:1 로 묶음. 같은 thread 의 모든
+  // turn 이 같은 conversation_id 로 askStream → backend 가 그 conv 의 turns 누적해 답변.
+  // thread DB (frontend SQLite) 와 conversation (backend) 이 이중 영속이지만 thread 가
+  // truth, conversation 은 backend 가 인용 대상으로 활용.
+  const conversationId = `klaud-thread-${threadId}`;
+
   // mount 시 자기 thread bundle 자체 fetch — 영속된 messages/docs 복원.
   // threadId 는 탭 lifetime 동안 불변이므로 [threadId] 의존성은 사실상 mount 한 번.
   useEffect(() => {
@@ -202,9 +222,20 @@ export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Pr
     setHits([]);
     setSearchTookMs(null);
 
+    // Phase A1: 첫 메시지에 한해 pendingAttachments 를 system prefix 로 변환해 question
+    // 앞에 prepend. 두 번째 메시지부터는 backend conversation 이 컨텍스트를 유지하므로
+    // 다시 보내지 않는다. UI 의 사용자 turn 은 q 그대로 표시 (사용자가 친 그대로) — backend
+    // 로 보내는 것만 prepend 된 형태.
+    const isFirstMessage = messages.length === 0;
+    const attachmentsToConsume: readonly QnAAttachment[] = isFirstMessage
+      ? pendingAttachments
+      : EMPTY_ATTACHMENTS;
+    const prefix = buildAttachmentPrompt(attachmentsToConsume);
+    const questionForBackend = prefix ? `${prefix}\n${q}` : q;
+
     setMessages((m) => [...m, { role: 'user', content: q }]);
 
-    // user 영속
+    // user 영속 — attachments meta 도 함께 (추후 분석/감사용). 본문은 사용자가 본 그대로.
     try {
       await window.projk.threads.appendMessage({
         id: genMsgId(),
@@ -214,6 +245,12 @@ export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Pr
       });
     } catch (e) {
       console.warn('appendMessage(user) 실패', e);
+    }
+
+    // 첨부 consume — 다음 mount 때 다시 보이지 않게 store 에서 제거. 첫 메시지 보낸
+    // 시점이 적절한 cutoff (사용자가 ✕ 눌러 떼는 거 외엔 자동으로 떼지 않음).
+    if (attachmentsToConsume.length > 0) {
+      clearPendingAttachments(threadId);
     }
 
     // search-first
@@ -242,38 +279,43 @@ export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Pr
       }
     }
 
-    // ask stream
+    // ask stream — backend 로 보내는 question 은 첨부 prefix 가 prepend 된 형태.
+    // conversation_id 도입으로 backend 가 thread 단위 turn 을 누적해 컨텍스트 유지.
     let assembled = '';
     setMessages((m) => [...m, { role: 'assistant', content: '' }]);
     try {
-      await askStream(q, (event) => {
-        const e = event as unknown as StreamEvent;
-        if (e.type === 'token') {
-          // agent (2026-05): {type:"token", text:"..."}. 옛 mock 은 {payload:"..."}.
-          // readToken 이 양쪽 다 받음.
-          const tok = readToken(e);
-          if (tok) {
-            assembled += tok;
-            setMessages((m) => {
-              const copy = [...m];
-              copy[copy.length - 1] = { role: 'assistant', content: assembled };
-              return copy;
-            });
+      await askStream(
+        questionForBackend,
+        (event) => {
+          const e = event as unknown as StreamEvent;
+          if (e.type === 'token') {
+            // agent (2026-05): {type:"token", text:"..."}. 옛 mock 은 {payload:"..."}.
+            // readToken 이 양쪽 다 받음.
+            const tok = readToken(e);
+            if (tok) {
+              assembled += tok;
+              setMessages((m) => {
+                const copy = [...m];
+                copy[copy.length - 1] = { role: 'assistant', content: assembled };
+                return copy;
+              });
+            }
+          } else if (e.type === 'result') {
+            // agent: {type:"result", data:{answer, sources, follow_ups, ...}}. 옛 mock: {payload:{answer:...}}.
+            const data = readResultData(e);
+            const ans = data && typeof data.answer === 'string' ? data.answer : null;
+            if (ans) {
+              assembled = ans;
+              setMessages((m) => {
+                const copy = [...m];
+                copy[copy.length - 1] = { role: 'assistant', content: assembled };
+                return copy;
+              });
+            }
           }
-        } else if (e.type === 'result') {
-          // agent: {type:"result", data:{answer, sources, follow_ups, ...}}. 옛 mock: {payload:{answer:...}}.
-          const data = readResultData(e);
-          const ans = data && typeof data.answer === 'string' ? data.answer : null;
-          if (ans) {
-            assembled = ans;
-            setMessages((m) => {
-              const copy = [...m];
-              copy[copy.length - 1] = { role: 'assistant', content: assembled };
-              return copy;
-            });
-          }
-        }
-      });
+        },
+        conversationId,
+      );
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       assembled = `[오류] ${msg}`;
@@ -416,13 +458,22 @@ export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Pr
         />
       )}
 
+      <AttachmentChips
+        attachments={pendingAttachments}
+        onDetach={(id) => detachFromQnA(threadId, id)}
+      />
+
       <div className="input-row">
         <textarea
           ref={taRef}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={onKeyDown}
-          placeholder="질문을 입력하세요 (Ctrl+Enter)"
+          placeholder={
+            pendingAttachments.length > 0
+              ? '첨부 컨텍스트에 대해 질문하세요 (Ctrl+Enter)'
+              : '질문을 입력하세요 (Ctrl+Enter)'
+          }
           data-testid="chat-input"
         />
         <button onClick={() => void send()} disabled={busy} data-testid="chat-send">

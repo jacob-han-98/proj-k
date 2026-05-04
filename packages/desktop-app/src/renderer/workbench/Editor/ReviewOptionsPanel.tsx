@@ -147,6 +147,13 @@ export function ReviewOptionsPanel({ onStart, onBack }: Props) {
             })}
           </div>
         </div>
+        {/* inbox 2026-05-04 정정: backend 의 reviewer_personas 는 "Prioritize" 가이드라
+            선택한 페르소나 100% 차단이 아니라 "위주". 사용자에게 정확한 표현 노출. */}
+        <div className="review-options-hint" data-testid="review-options-persona-hint">
+          {options.reviewerPersonas.length > 1
+            ? '선택한 두 관점을 모두 적용해 검토합니다.'
+            : `${PERSONA_OPTIONS.find((o) => o.value === options.reviewerPersonas[0])?.label ?? '기획팀장'} 위주로 검토합니다 (다른 관점이 일부 섞일 수 있음).`}
+        </div>
 
         <button
           type="button"

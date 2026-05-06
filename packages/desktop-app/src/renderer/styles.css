@@ -1079,8 +1079,10 @@ html, body, #root { height: 100%; margin: 0; padding: 0; background: var(--bg); 
   min-height: 0;
 }
 /* Phase I (2026-05-06): 채팅 영역 중앙 정렬 — agent-sdk-poc 웹과 동일 패턴.
-   messages 와 입력 박스 모두 max-width 820px + auto margin 으로 가운데 컬럼.
-   사용자가 위→아래 자연스럽게 읽도록 좌우 여백 균등. */
+   messages 컨테이너 자체에 max-width 820 + auto margin 으로 가운데 컬럼. 옛 코드는
+   '.chat .messages > *' selector 로 자식에 max-width 적용했지만 .msg.assistant 의
+   max-width:100% 룰 (Phase D, specificity 더 높음) 이 이겨서 답변 시작 후 컬럼이
+   풀려버림. messages 자체에 max-width 두면 specificity 충돌 없음. */
 .chat .messages {
   flex: 1;
   overflow-y: auto;
@@ -1089,10 +1091,8 @@ html, body, #root { height: 100%; margin: 0; padding: 0; background: var(--bg); 
   flex-direction: column;
   gap: 16px;
   align-items: stretch;
-}
-.chat .messages > * {
-  max-width: 820px;
   width: 100%;
+  max-width: 820px;
   margin-left: auto;
   margin-right: auto;
 }

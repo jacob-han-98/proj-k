@@ -1293,6 +1293,67 @@ _STRATEGIES = {
 }
 
 
+def _strip_sheet_from_path(path: str, sheet: str) -> str:
+    """워크북 path 에서 마지막 시트 segment 제거.
+
+    sub-strategy 의 hit path 는 "7_System / PK_HUD / HUD_기본" 형식.
+    워크북 단위 hit 으로 fold 시 마지막 ` / <sheet>` 부분을 떼어 "7_System / PK_HUD" 만 남김.
+    """
+    if not path or not sheet:
+        return path
+    suffix = f" / {sheet}"
+    if path.endswith(suffix):
+        return path[: -len(suffix)]
+    return path
+
+
+def _make_workbook_hit(seed: dict, workbook: str) -> dict:
+    """xlsx 시트 hit 으로부터 워크북 fold hit 의 초기 state 생성.
+
+    seed 는 그 워크북의 첫 (가장 강한) 시트 hit. summary/matched_via/content_md_path/
+    rerank_source 모두 seed 기준 — 대표 시트의 정보를 워크북 hit 에 노출.
+    """
+    sheet = seed.get("title") or ""
+    seed_path = seed.get("path") or ""
+    return {
+        "doc_id": f"xlsx::{workbook}",
+        "type": "xlsx",
+        "title": workbook,
+        "path": _strip_sheet_from_path(seed_path, sheet),
+        "workbook": workbook,
+        "space": None,
+        "summary": seed.get("summary"),
+        "score": 0.0,                          # 누적 합산 (아래 fold 루프에서 +=)
+        "matched_via": seed.get("matched_via"),
+        "matched_text": seed.get("matched_text"),
+        "rerank_source": seed.get("rerank_source"),
+        "content_md_path": seed.get("content_md_path"),
+        "matched_sheets": [],                  # 신규 — UI 가 펼쳐서 시트 목록 노출
+    }
+
+
+def _sheet_entry(sheet_hit: dict) -> dict:
+    """워크북 hit 안의 matched_sheets 항목 (시트 단위 원본 정보 보존)."""
+    return {
+        "sheet": sheet_hit.get("title"),
+        "doc_id": sheet_hit.get("doc_id"),     # "xlsx::<workbook>::<sheet>" 그대로 유지
+        "title": sheet_hit.get("title"),
+        "summary": sheet_hit.get("summary"),
+        "score": sheet_hit.get("score"),
+        "matched_via": sheet_hit.get("matched_via"),
+        "matched_text": sheet_hit.get("matched_text"),
+        "source": sheet_hit.get("rerank_source"),
+        "content_md_path": sheet_hit.get("content_md_path"),
+    }
+
+
+# 워크북 fold 시 sub-strategy 가 시트 단위로 yield 한 hit 들이 1 워크북에 몰릴 수 있어
+# (예: PK_HUD 워크북의 시트 8개가 다 매칭) 외부 limit 보다 더 많은 sheet hit 을 받아야
+# 워크북 N개 채울 수 있다. internal_limit = max(limit * MULT, MIN_BUFFER).
+_FOLD_INTERNAL_LIMIT_MULT = 6
+_FOLD_INTERNAL_LIMIT_MIN = 30
+
+
 async def quick_find_stream(
     query: str,
     limit: int = 10,
@@ -1307,7 +1368,19 @@ async def quick_find_stream(
     min_high_hits: int | None = None,
     overlap_threshold: int | None = None,
 ) -> AsyncIterator[dict]:
-    """Quick Find dispatcher."""
+    """Quick Find dispatcher.
+
+    Sub-strategy 는 시트 단위로 hit 을 yield 하지만 사용자 멘탈 모델은
+    "문서(워크북) / 페이지" 단위. 이 dispatcher 가 fold layer 로 동작해서
+    같은 워크북의 시트 hit 들을 합치고 (score sum), matched_sheets 로 시트 목록
+    노출. confluence hit 은 페이지=문서 자연 매핑이므로 변경 없이 통과.
+
+    fold 효과:
+    - limit 의 의미가 "10 워크북/페이지" 가 됨 (이전: "10 시트/페이지")
+    - score 가 합산되므로 시트 매칭이 풍부한 워크북이 confluence 페이지보다 상위
+    - frontend 의 client-side grouping 이 idempotent — 이미 fold 된 데이터는
+      single 분기로 빠짐
+    """
     if skip_rerank:
         strategy = "l1"
     fn = _STRATEGIES.get(strategy)
@@ -1323,8 +1396,76 @@ async def quick_find_stream(
     }.items():
         if v is not None:
             extra[k] = v
-    async for ev in fn(query=query, limit=limit, kinds=kinds, model=model, **extra):
+
+    # Sub-strategy 에 internal limit 더 크게 — fold 후 워크북 수가 줄어들 buffer.
+    internal_limit = max(limit * _FOLD_INTERNAL_LIMIT_MULT, _FOLD_INTERNAL_LIMIT_MIN)
+
+    xlsx_groups: dict[str, dict] = {}     # workbook -> fold state
+    confluence_hits: list[dict] = []
+    sub_result: dict | None = None
+
+    async for ev in fn(query=query, limit=internal_limit, kinds=kinds, model=model, **extra):
+        t = ev.get("type")
+        if t == "status":
+            yield ev
+            continue
+        if t == "error":
+            yield ev
+            return
+        if t == "hit":
+            d = ev.get("data") or {}
+            kind = d.get("type")
+            if kind == "xlsx":
+                wb = d.get("workbook") or "?"
+                grp = xlsx_groups.get(wb)
+                if grp is None:
+                    grp = _make_workbook_hit(d, wb)
+                    xlsx_groups[wb] = grp
+                grp["score"] += float(d.get("score") or 0.0)
+                grp["matched_sheets"].append(_sheet_entry(d))
+            elif kind == "confluence":
+                confluence_hits.append(d)
+            # else: 미지원 type 은 drop
+            continue
+        if t == "result":
+            sub_result = ev.get("data") or {}
+            continue
+        # 그 외 이벤트는 그대로 forward
         yield ev
+
+    # fold 마무리: matched_sheets 정렬 (score desc), score round
+    folded_xlsx: list[dict] = []
+    for grp in xlsx_groups.values():
+        grp["matched_sheets"].sort(key=lambda s: s.get("score") or 0.0, reverse=True)
+        grp["score"] = round(grp["score"], 3)
+        folded_xlsx.append(grp)
+
+    # confluence hit 은 score round 만 (이미 sub-strategy 가 매김)
+    for c in confluence_hits:
+        if "score" in c:
+            try:
+                c["score"] = round(float(c["score"]), 3)
+            except Exception:
+                pass
+
+    all_hits = folded_xlsx + confluence_hits
+    all_hits.sort(key=lambda h: h.get("score") or 0.0, reverse=True)
+    final_hits = all_hits[:limit]
+
+    for i, h in enumerate(final_hits, start=1):
+        h["rank"] = i
+        yield {"type": "hit", "data": h}
+
+    # 최종 result 는 sub-strategy 의 result 가 있으면 이어받되 total/yielded 갱신.
+    final_result = dict(sub_result) if sub_result else {}
+    final_result["total"] = len(final_hits)
+    final_result.setdefault("strategy", strategy)
+    final_result["fold"] = {
+        "workbooks": len(folded_xlsx),
+        "confluence_pages": len(confluence_hits),
+        "internal_limit": internal_limit,
+    }
+    yield {"type": "result", "data": final_result}
 
 
 def _hit_payload(c: Candidate, *, source: str, rank: int = 0) -> dict:

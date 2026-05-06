@@ -44,6 +44,7 @@ class Doc:
     key_terms: list[str]      # 핵심 용어 리스트
     summary_md_path: str      # index/summaries/.../*.md 절대경로
     content_md_path: str      # 실제 content.md 절대경로 (frontend 가 열 때 사용)
+    confluence_page_id: str | None = None   # confluence only — manifest 의 numeric id
 
 
 # ── 인덱스 빌드 (모듈 로드 시 한 번) ───────────────────────────────────────
@@ -143,6 +144,83 @@ def _parse_summary_md(path: Path) -> Doc | None:
         )
 
 
+_CONF_PAGE_ID_BY_TITLE_PATH: dict[tuple[str, ...], str] = {}
+_CONF_PAGE_ID_LOADED = False
+
+
+def _load_confluence_page_id_map() -> dict[tuple[str, ...], str]:
+    """confluence-downloader 의 _manifest.json 을 로드해 (title-path tuple) → page_id 매핑.
+
+    manifest 의 트리를 재귀 traverse 하면서 노드별 (root...leaf) title path 를 키로 등록.
+    quick_find 의 Doc.path 는 file-safe form ('/' 대신 ' / ', ':' 대신 '_') 이므로
+    조회 시에도 동일 normalize 적용.
+    """
+    global _CONF_PAGE_ID_BY_TITLE_PATH, _CONF_PAGE_ID_LOADED
+    if _CONF_PAGE_ID_LOADED:
+        return _CONF_PAGE_ID_BY_TITLE_PATH
+    manifest_path = CONF_OUTPUT_DIR / "_manifest.json"
+    if not manifest_path.exists():
+        _CONF_PAGE_ID_LOADED = True
+        return _CONF_PAGE_ID_BY_TITLE_PATH
+
+    try:
+        import json as _json
+        manifest = _json.loads(manifest_path.read_text(encoding="utf-8"))
+    except Exception:
+        _CONF_PAGE_ID_LOADED = True
+        return _CONF_PAGE_ID_BY_TITLE_PATH
+
+    def _safe(s: str) -> str:
+        # quick_find Doc.path 와 동일 정규화 — file-safe form 으로
+        return (s or "").replace(":", "_").strip()
+
+    out: dict[tuple[str, ...], str] = {}
+    def _walk(node: dict, parents: list[str]):
+        title = node.get("title") or ""
+        page_id = node.get("id")
+        # root ("Design") 은 path 에 안 포함됨 — quick_find 인덱스의 path 와 맞춤.
+        # 또한 일반 페이지(type=page) 만 등록.
+        path_segments = parents + [_safe(title)]
+        if page_id is not None and len(path_segments) >= 1:
+            key = tuple(path_segments)
+            out[key] = str(page_id)
+            # title-only fallback: 같은 title 의 페이지가 유니크하면 title 만으로도 lookup
+            # (depth 정보가 안 맞을 수도 있어서)
+            single = (path_segments[-1],)
+            if single not in out:
+                out[single] = str(page_id)
+        children = node.get("children") or []
+        for c in children:
+            _walk(c, path_segments)
+
+    # root 의 children 부터 시작 (root title 자체 = "Design" 같은 컨테이너이므로 path 에 미포함)
+    for c in manifest.get("children") or []:
+        _walk(c, [])
+
+    _CONF_PAGE_ID_BY_TITLE_PATH = out
+    _CONF_PAGE_ID_LOADED = True
+    return out
+
+
+def _lookup_conf_page_id(doc: Doc) -> str | None:
+    """confluence Doc 의 path 로 manifest 의 page_id lookup."""
+    if doc.kind != "confluence":
+        return None
+    pmap = _load_confluence_page_id_map()
+    if not pmap:
+        return None
+    # Doc.path 는 " / " separator, file-safe form
+    segments = [s.strip() for s in doc.path.split(" / ") if s.strip()]
+    if not segments:
+        return pmap.get((doc.title,))
+    # full path 매칭 우선
+    full_key = tuple(segments)
+    if full_key in pmap:
+        return pmap[full_key]
+    # leaf title-only fallback
+    return pmap.get((doc.title,))
+
+
 def build_index() -> list[Doc]:
     """인덱스 빌드 (한 번만 실행, 이후 cache).
 
@@ -167,7 +245,12 @@ def build_index() -> list[Doc]:
             len(d.path) == len(existing.path) and len(d.summary) > len(existing.summary)
         ):
             seen[key] = d
-    _INDEX = list(seen.values())
+    docs = list(seen.values())
+    # confluence Doc 에 page_id 첨부 (manifest lookup)
+    for d in docs:
+        if d.kind == "confluence":
+            d.confluence_page_id = _lookup_conf_page_id(d)
+    _INDEX = docs
     _INDEX_BUILT = True
     _build_reverse_lookups(_INDEX)
     return _INDEX
@@ -217,6 +300,13 @@ class Candidate:
     matched_text: str = ""    # 디버그/배지용
 
 
+def _ns(s: str) -> str:
+    """공백 제거 normalize — 한국어 query 의 띄어쓰기 변형 매칭용.
+    "가시나무숲" 사용자 query 가 "가시나무 숲" 페이지 제목에 매칭되도록.
+    """
+    return s.replace(" ", "").replace("　", "")
+
+
 def _score_substring(query: str, doc: Doc) -> tuple[float, str, str]:
     """주어진 doc 에 대한 (score, matched_via, matched_text). 매칭 없으면 (0, '', '')."""
     q = query.lower().strip()
@@ -228,6 +318,12 @@ def _score_substring(query: str, doc: Doc) -> tuple[float, str, str]:
     path_l = doc.path.lower()
     summary_l = doc.summary.lower()
     key_terms_l = [t.lower() for t in doc.key_terms]
+
+    # 공백 제거 normalize 비교를 위한 폼 (한국어 띄어쓰기 변형 흡수)
+    q_ns = _ns(q)
+    title_ns = _ns(title_l)
+    path_ns = _ns(path_l)
+    summary_ns = _ns(summary_l)
 
     # 점수 우선순위 — 워크북/title (구조적 매칭) 가 key_term/path/summary 보다 높음.
     # workbook_substring 을 0.75 → 0.88 로 올려 key_term_exact (0.80) 보다 위에 둠.
@@ -249,6 +345,10 @@ def _score_substring(query: str, doc: Doc) -> tuple[float, str, str]:
     # 5. title substring
     if q in title_l:
         return 0.85, "title_substring", doc.title
+    # 5b. title substring — 공백 제거 normalize ("가시나무숲" ↔ "가시나무 숲")
+    # 위 일반 substring 에서 매칭 안 됐을 때만 도달. q 또는 title 에 공백 변형이 있어야 매칭됨.
+    if q_ns and title_ns and q_ns in title_ns:
+        return 0.83, "title_substring_ns", doc.title
     # 6. space 정확/부분
     if space_l and q in space_l:
         return 0.82, "space_substring", doc.space or ""
@@ -263,17 +363,30 @@ def _score_substring(query: str, doc: Doc) -> tuple[float, str, str]:
     # 9. path substring (파일경로)
     if q in path_l:
         return 0.55, "path_substring", doc.path
+    # 9b. path substring — 공백 제거 normalize
+    if q_ns and path_ns and q_ns in path_ns and q not in path_l:
+        return 0.53, "path_substring_ns", doc.path
     # 10. summary substring
     if q in summary_l:
         return 0.40, "summary_substring", (doc.summary[:80] + "...") if len(doc.summary) > 80 else doc.summary
+    # 10b. summary substring — 공백 제거 normalize
+    if q_ns and summary_ns and q_ns in summary_ns and q not in summary_l:
+        text = (doc.summary[:80] + "...") if len(doc.summary) > 80 else doc.summary
+        return 0.38, "summary_substring_ns", text
     return 0.0, "", ""
 
 
 def search_substring(query: str, docs: list[Doc], kinds: list[str] | None = None,
-                     limit: int = 50) -> list[Candidate]:
+                     limit: int = 50,
+                     balance_kinds: bool = False) -> list[Candidate]:
     """Phase 1 — substring/key_term 기반 후보 추출.
 
     한 query 가 여러 단어이면 단어별 점수 합산 (단순 OR).
+
+    balance_kinds=True 이고 kinds 미지정 시 kind 별 minimum quota 를 보장한다.
+    배경: xlsx 의 workbook_substring(0.88) 점수가 confluence 의 title_substring(0.85)
+    보다 강해서 도메인 용어 query (예: '셀레탄') 에서 xlsx 가 top-N 을 다 채우고
+    conf 가 cutoff 에서 밀려나는 케이스 다수. quota 로 conf 가 최소 N건 들어오도록.
     """
     tokens = [t for t in re.split(r"\s+", query.strip()) if t]
     if not tokens:
@@ -299,6 +412,33 @@ def search_substring(query: str, docs: list[Doc], kinds: list[str] | None = None
         if best_score > 0:
             out.append(Candidate(doc=d, score=best_score, matched_via=best_via, matched_text=best_text))
     out.sort(key=lambda c: -c.score)
+
+    if balance_kinds and not kinds:
+        kinds_in_out = list(dict.fromkeys(c.doc.kind for c in out))
+        if len(kinds_in_out) > 1:
+            # kind 별 minimum quota — 각 kind 최소 max(limit//5, 5) 건 보장.
+            # 강한 kind 가 약한 kind 를 cutoff 에서 밀어내지 않도록.
+            min_quota = max(limit // 5, 5)
+            picked_ids: set[int] = set()
+            balanced: list[Candidate] = []
+            # 1) kind 별 top min_quota 먼저 확보
+            for k in kinds_in_out:
+                kind_cands = [c for c in out if c.doc.kind == k]
+                for c in kind_cands[:min_quota]:
+                    if id(c) not in picked_ids:
+                        balanced.append(c)
+                        picked_ids.add(id(c))
+            # 2) 남은 자리는 score 순서대로 채움
+            for c in out:
+                if len(balanced) >= limit:
+                    break
+                if id(c) in picked_ids:
+                    continue
+                balanced.append(c)
+                picked_ids.add(id(c))
+            balanced.sort(key=lambda c: -c.score)
+            return balanced[:limit]
+
     return out[:limit]
 
 
@@ -406,7 +546,7 @@ async def strategy_l1(
     yield {"type": "status", "message": f"📚 인덱스 {len(docs):,}건"}
 
     t1 = time.time()
-    candidates = search_substring(query, docs, kinds=kinds, limit=50)
+    candidates = search_substring(query, docs, kinds=kinds, limit=50, balance_kinds=True)
     phase1_ms = int((time.time() - t1) * 1000)
 
     by_via: dict[str, int] = {}
@@ -451,7 +591,7 @@ async def strategy_haiku_rerank(
     yield {"type": "status", "message": f"📚 인덱스 {len(docs):,}건"}
 
     t1 = time.time()
-    candidates = search_substring(query, docs, kinds=kinds, limit=50)
+    candidates = search_substring(query, docs, kinds=kinds, limit=50, balance_kinds=True)
     phase1_ms = int((time.time() - t1) * 1000)
 
     by_via: dict[str, int] = {}
@@ -765,7 +905,7 @@ async def strategy_parallel(
 
     # ── L1 (sync, 빠름) — Vector embed 와 병렬로 launch ──
     async def _l1():
-        return search_substring(query, docs, kinds=kinds, limit=limit)
+        return search_substring(query, docs, kinds=kinds, limit=limit, balance_kinds=True)
 
     async def _vector():
         coll = _get_chroma_collection()
@@ -1064,7 +1204,7 @@ async def strategy_auto(
 
     # ── Phase 1a: L1 + Vector 병렬 실행 ──
     async def _l1_run():
-        return search_substring(query, docs, kinds=kinds, limit=20)
+        return search_substring(query, docs, kinds=kinds, limit=20, balance_kinds=True)
 
     async def _vec_run():
         coll = _get_chroma_collection()
@@ -1470,7 +1610,7 @@ async def quick_find_stream(
 
 def _hit_payload(c: Candidate, *, source: str, rank: int = 0) -> dict:
     d = c.doc
-    return {
+    payload = {
         "doc_id": d.doc_id,
         "type": d.kind,
         "title": d.title,
@@ -1485,6 +1625,10 @@ def _hit_payload(c: Candidate, *, source: str, rank: int = 0) -> dict:
         "rank": rank,
         "content_md_path": d.content_md_path,
     }
+    if d.kind == "confluence" and d.confluence_page_id:
+        # frontend 가 ConfluencePage open URL (pageId={numeric}) 빌드 시 사용
+        payload["confluence_page_id"] = d.confluence_page_id
+    return payload
 
 
 # ── self-test (live Bedrock 필요) ────────────────────────────────────────

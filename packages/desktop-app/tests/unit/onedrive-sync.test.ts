@@ -48,6 +48,7 @@ import {
   __setPollOptionsForTests,
   detectSyncAccount,
   ensureFreshSync,
+  repollCloudReady,
   syncUploadAndUrl,
   uploadDepotFileAndUrl,
   type SyncProgressEvent,
@@ -166,7 +167,11 @@ describe('ensureFreshSync — mtime 비교 분기', () => {
     });
   }
 
-  it('alreadyFresh — dest mtime 가 src mtime 보다 새것이고 size 같으면 sync 건너뜀', async () => {
+  // 0.1.51 v6 — ensureFreshSync 가 모든 단계 직렬 await. backgroundSync fire-and-forget 제거.
+  // 반환 shape: { ok:true, url, status:'ready' } | { ok:true, url, status:'cloud-not-ready', pollAttempts, pollLastStatus } | { ok:false, error }
+  // 진행 events: 'uploading' (stale 시) → 'verifying' → 'completed' (ready) 또는 'verifying' (cloud-not-ready 면 completed 없음)
+
+  it('alreadyFresh — dest mtime/size 매치도 cloud verify-poll 후 ready 반환', async () => {
     setupAccount();
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(JSON.stringify({ mtime_ms: 1_000_000, size: 100 }), { status: 200 }),
@@ -177,103 +182,69 @@ describe('ensureFreshSync — mtime 비교 분기', () => {
     const r = await ensureFreshSync('http://127.0.0.1:9999', '7_System/PK_HUD', (e) => events.push(e));
 
     expect(r.ok).toBe(true);
-    if (r.ok) {
-      expect(r.alreadyFresh).toBe(true);
-      expect(r.syncing).toBe(false);
-    }
-    expect(events).toEqual([]); // 백그라운드 sync 안 시작.
+    if (r.ok) expect(r.status).toBe('ready');
+    // upload 안 함 (writeFile 호출 X) — verify-poll 만.
     expect(writeMock).not.toHaveBeenCalled();
+    expect(events.map((e) => e.state)).toEqual(['verifying', 'completed']);
+    expect(sessionFetchMock).toHaveBeenCalled(); // verify-poll
     fetchSpy.mockRestore();
   });
 
-  it('stale by size — dest mtime 가 src 보다 새것이라도 size 다르면 sync 시작 (PK_단축키 6KB 회귀)', async () => {
-    // 사용자 PC 실측 시나리오: PK_단축키 시스템.xlsx 가 OneDrive 에 6KB 짜리 partial 파일로
-    // 들어감. 그 후 P4 sync 완료로 local 에 25MB 파일 있지만, OneDrive sync 가 dest mtime 을
-    // *write 시각* 으로 박아둬서 dest > src 로 보임 → 옛 mtime-only 분기는 alreadyFresh 판정.
-    // size 비교 추가로 회귀 차단.
+  it('stale by size — size mismatch (PK_단축키 6KB 회귀) → upload + verify → ready', async () => {
     setupAccount();
     const fetchSpy = vi.spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(new Response(JSON.stringify({ mtime_ms: 1_000_000, size: 25_000_000 }), { status: 200 }))
       .mockResolvedValueOnce(new Response(new Uint8Array([1, 2, 3]), { status: 200 }));
-    // dest 는 mtime 더 새것 + size 6KB 인 가짜 partial 파일.
     statMock.mockResolvedValue({ mtimeMs: 2_000_000, size: 6_148 } as never);
 
     const events: SyncProgressEvent[] = [];
     const r = await ensureFreshSync('http://127.0.0.1:9999', '7_System/PK_단축키 시스템', (e) => events.push(e));
 
     expect(r.ok).toBe(true);
-    if (r.ok) {
-      expect(r.alreadyFresh).toBe(false); // size mismatch → stale → sync 시작
-      expect(r.syncing).toBe(true);
-    }
-    await waitForCompleted(events);
-    expect(writeMock).toHaveBeenCalled(); // 새 파일 write 됨
-    expect(utimesMock).toHaveBeenCalled(); // mtime 동기화 호출됨
-    expect(events.map((e) => e.state)).toEqual(['started', 'completed']);
+    if (r.ok) expect(r.status).toBe('ready');
+    expect(writeMock).toHaveBeenCalled();
+    // 0.1.51 회귀 — utimes 절대 호출 X (OneDrive Sync 와 충돌 회피).
+    expect(utimesMock).not.toHaveBeenCalled();
+    expect(events.map((e) => e.state)).toEqual(['uploading', 'verifying', 'completed']);
     fetchSpy.mockRestore();
   });
 
-  it('writeFile 후 utimes 로 src mtime 동기화 (다음번 stale 판정 정확성 보장)', async () => {
+  it('writeFile 후 mtime 건드리지 않음 (OneDrive Sync 충돌 회피 — 0.1.51 회귀)', async () => {
     setupAccount();
-    const SRC_MTIME = 1_700_000_000_000; // 임의의 src mtime ms
+    const SRC_MTIME = 1_700_000_000_000;
     const fetchSpy = vi.spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(new Response(JSON.stringify({ mtime_ms: SRC_MTIME, size: 100 }), { status: 200 }))
       .mockResolvedValueOnce(new Response(new Uint8Array([1, 2, 3, 4]), { status: 200 }));
-    statMock.mockRejectedValue(new Error('ENOENT')); // dest 없음 → stale
+    statMock.mockRejectedValue(new Error('ENOENT'));
 
-    const events: SyncProgressEvent[] = [];
-    await ensureFreshSync('http://127.0.0.1:9999', '7_System/X', (e) => events.push(e));
-    await waitForCompleted(events);
-
-    expect(utimesMock).toHaveBeenCalled();
-    const [destPath, atime, mtime] = utimesMock.mock.calls[0]!;
-    expect(typeof destPath).toBe('string');
-    // utimes 의 atime/mtime 인자는 Date 또는 number. 우리는 Date 사용.
-    expect(mtime).toBeInstanceOf(Date);
-    expect((mtime as Date).getTime()).toBe(SRC_MTIME);
-    expect((atime as Date).getTime()).toBe(SRC_MTIME);
+    await ensureFreshSync('http://127.0.0.1:9999', '7_System/X', () => {});
+    expect(writeMock).toHaveBeenCalled();
+    expect(utimesMock).not.toHaveBeenCalled();
     fetchSpy.mockRestore();
   });
 
-  // 백그라운드 sync 가 짧은 polling 후 'completed' 까지 끝나기를 기다리는 helper.
-  // __setPollOptionsForTests 로 maxMs=100 잡아두니 최대 ~150ms 면 끝남.
-  async function waitForCompleted(events: SyncProgressEvent[], timeoutMs = 500): Promise<void> {
-    const t0 = Date.now();
-    while (Date.now() - t0 < timeoutMs) {
-      if (events.some((e) => e.state === 'completed' || e.state === 'failed')) return;
-      await new Promise((r) => setTimeout(r, 10));
-    }
-  }
-
-  it('stale — dest 가 없으면 백그라운드 sync 시작 + syncing:true', async () => {
+  it('stale — dest 가 없으면 upload + verify 후 ready', async () => {
     setupAccount();
     const fetchSpy = vi.spyOn(globalThis, 'fetch')
-      // 첫 호출: xlsx_stat
       .mockResolvedValueOnce(new Response(JSON.stringify({ mtime_ms: 1_000_000, size: 100 }), { status: 200 }))
-      // 두번째: xlsx_raw (백그라운드 sync 가 호출).
       .mockResolvedValueOnce(new Response(new Uint8Array([1, 2, 3]), { status: 200 }));
-    statMock.mockRejectedValue(new Error('ENOENT')); // dest 없음.
+    statMock.mockRejectedValue(new Error('ENOENT'));
 
     const events: SyncProgressEvent[] = [];
     const r = await ensureFreshSync('http://127.0.0.1:9999', '7_System/PK_HUD', (e) => events.push(e));
 
     expect(r.ok).toBe(true);
     if (r.ok) {
-      expect(r.alreadyFresh).toBe(false);
-      expect(r.syncing).toBe(true);
+      expect(r.status).toBe('ready');
       expect(r.url).toContain('Klaud-temp');
-      // 0.1.50 회귀 원복 — ?action=embedview 가 SharePoint download 응답 트리거 → ?web=1 로 복귀.
-      expect(r.url).toContain('web=1');
+      expect(r.url).toContain('web=1'); // view 강제는 renderer 의 redirect intercept 에서
     }
-    await waitForCompleted(events);
     expect(writeMock).toHaveBeenCalled();
-    expect(sessionFetchMock).toHaveBeenCalled();
-    expect(events.map((e) => e.state)).toEqual(['started', 'completed']);
-
+    expect(events.map((e) => e.state)).toEqual(['uploading', 'verifying', 'completed']);
     fetchSpy.mockRestore();
   });
 
-  it('stale — src 가 dest 보다 새것이면 백그라운드 sync 시작', async () => {
+  it('stale — src 가 dest 보다 새것이면 upload + verify 후 ready', async () => {
     setupAccount();
     const fetchSpy = vi.spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(new Response(JSON.stringify({ mtime_ms: 5_000_000, size: 100 }), { status: 200 }))
@@ -283,14 +254,13 @@ describe('ensureFreshSync — mtime 비교 분기', () => {
     const events: SyncProgressEvent[] = [];
     const r = await ensureFreshSync('http://127.0.0.1:9999', '7_System/PK_HUD', (e) => events.push(e));
 
-    if (r.ok) expect(r.syncing).toBe(true);
-    await waitForCompleted(events);
-    expect(events.map((e) => e.state)).toContain('completed');
-
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.status).toBe('ready');
+    expect(events.map((e) => e.state)).toEqual(['uploading', 'verifying', 'completed']);
     fetchSpy.mockRestore();
   });
 
-  it('src mtime 을 못 가져오면 (sidecar 404) alreadyFresh:true 로 fallback (옛 cloud 본문 유지)', async () => {
+  it('src mtime 을 못 가져오면 (sidecar 404) verify-only path → cloud ready 면 status:ready', async () => {
     setupAccount();
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response('not found', { status: 404 }),
@@ -301,12 +271,9 @@ describe('ensureFreshSync — mtime 비교 분기', () => {
     const r = await ensureFreshSync('http://127.0.0.1:9999', '7_System/MISSING', (e) => events.push(e));
 
     expect(r.ok).toBe(true);
-    if (r.ok) {
-      expect(r.alreadyFresh).toBe(true);
-      expect(r.syncing).toBe(false);
-    }
-    expect(events).toEqual([]);
+    if (r.ok) expect(r.status).toBe('ready');
     expect(writeMock).not.toHaveBeenCalled();
+    expect(events.map((e) => e.state)).toEqual(['verifying', 'completed']);
     fetchSpy.mockRestore();
   });
 
@@ -314,6 +281,37 @@ describe('ensureFreshSync — mtime 비교 분기', () => {
     execMock.mockImplementation(() => regMissing());
     const r = await ensureFreshSync('http://127.0.0.1:9999', 'x', () => {});
     expect(r.ok).toBe(false);
+  });
+
+  it('동시 호출 (StrictMode dev double-fire / rapid double-click) — Promise 공유 → 둘 다 같은 결과', async () => {
+    // 0.1.51 v7 회귀 방지. 옛 동작 (set+verify-only 5s budget) 은 두 번째 호출이 짧은 타임아웃에
+    // 걸려서 false cloud-not-ready 반환 → renderer 가 정상 동작 중인데도 카드 노출. v7 은 두
+    // 번째 호출이 첫 번째의 Promise 를 그대로 await — 같은 결과 받음.
+    setupAccount();
+    const fetchSpy = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(JSON.stringify({ mtime_ms: 1_000_000, size: 100 }), { status: 200 }));
+    statMock.mockResolvedValue({ mtimeMs: 2_000_000, size: 100 } as never);
+
+    // 두 호출이 같은 relPath 로 거의 동시에 진입.
+    const events1: SyncProgressEvent[] = [];
+    const events2: SyncProgressEvent[] = [];
+    const [r1, r2] = await Promise.all([
+      ensureFreshSync('http://127.0.0.1:9999', '7_System/PK_HUD', (e) => events1.push(e)),
+      ensureFreshSync('http://127.0.0.1:9999', '7_System/PK_HUD', (e) => events2.push(e)),
+    ]);
+
+    // 둘 다 ok:true status:'ready' — 옛 verify-only 5s timeout false negative 안 발생.
+    expect(r1.ok).toBe(true);
+    expect(r2.ok).toBe(true);
+    if (r1.ok && r2.ok) {
+      expect(r1.status).toBe('ready');
+      expect(r2.status).toBe('ready');
+      expect(r1.url).toBe(r2.url);
+    }
+    // 첫 호출의 onProgress 만 실제 작업 신호 받음 (Promise 공유 — 두 번째는 await 만).
+    // 첫 호출자의 events 에는 'verifying','completed' 가 정확히 1회씩.
+    expect(events1.map((e) => e.state)).toEqual(['verifying', 'completed']);
+    fetchSpy.mockRestore();
   });
 });
 
@@ -328,15 +326,7 @@ describe('SharePoint HEAD-poll — 25s sleep 대체', () => {
     });
   }
 
-  async function waitForCompleted(events: SyncProgressEvent[], timeoutMs = 500): Promise<void> {
-    const t0 = Date.now();
-    while (Date.now() - t0 < timeoutMs) {
-      if (events.some((e) => e.state === 'completed' || e.state === 'failed')) return;
-      await new Promise((r) => setTimeout(r, 10));
-    }
-  }
-
-  it('첫 폴링에 SharePoint redirect (302 → Doc.aspx) 받으면 즉시 ready → completed', async () => {
+  it('첫 폴링에 302 redirect (Doc.aspx) → status:ready', async () => {
     setupAccount();
     const fetchSpy = vi.spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(new Response(JSON.stringify({ mtime_ms: 1_000_000 }), { status: 200 }))
@@ -347,16 +337,16 @@ describe('SharePoint HEAD-poll — 25s sleep 대체', () => {
     );
 
     const events: SyncProgressEvent[] = [];
-    await ensureFreshSync('http://127.0.0.1:9999', 'x', (e) => events.push(e));
-    await waitForCompleted(events);
+    const r = await ensureFreshSync('http://127.0.0.1:9999', 'x', (e) => events.push(e));
 
-    expect(events.map((e) => e.state)).toEqual(['started', 'completed']);
-    // 첫 폴링에 ready → sessionFetch 1회만 호출.
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.status).toBe('ready');
+    expect(events.map((e) => e.state)).toEqual(['uploading', 'verifying', 'completed']);
     expect(sessionFetchMock).toHaveBeenCalledTimes(1);
     fetchSpy.mockRestore();
   });
 
-  it('404 → 404 → 302 시퀀스 — backoff 후 ready 도달', async () => {
+  it('404 → 404 → 302 시퀀스 — backoff 후 ready', async () => {
     setupAccount();
     const fetchSpy = vi.spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(new Response(JSON.stringify({ mtime_ms: 1_000_000 }), { status: 200 }))
@@ -368,10 +358,11 @@ describe('SharePoint HEAD-poll — 25s sleep 대체', () => {
       .mockResolvedValueOnce(makeHeadResponse(302, 'https://t-my.sharepoint.com/personal/u/_layouts/15/Doc.aspx?sourcedoc=g'));
 
     const events: SyncProgressEvent[] = [];
-    await ensureFreshSync('http://127.0.0.1:9999', 'x', (e) => events.push(e));
-    await waitForCompleted(events);
+    const r = await ensureFreshSync('http://127.0.0.1:9999', 'x', (e) => events.push(e));
 
-    expect(events.map((e) => e.state)).toEqual(['started', 'completed']);
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.status).toBe('ready');
+    expect(events.map((e) => e.state)).toEqual(['uploading', 'verifying', 'completed']);
     expect(sessionFetchMock).toHaveBeenCalledTimes(3);
     fetchSpy.mockRestore();
   });
@@ -383,22 +374,22 @@ describe('SharePoint HEAD-poll — 25s sleep 대체', () => {
       .mockResolvedValueOnce(new Response(new Uint8Array([1]), { status: 200 }));
     statMock.mockRejectedValue(new Error('ENOENT'));
     sessionFetchMock.mockReset()
-      // 첫 시도: SSO 안 된 상태 — login 으로 redirect.
       .mockResolvedValueOnce(makeHeadResponse(302, 'https://login.microsoftonline.com/abc/oauth2/authorize?...'))
-      // 두번째: 사용자 webview 가 SSO 끝내서 cookies 셋 → SharePoint redirect.
       .mockResolvedValueOnce(makeHeadResponse(302, 'https://t-my.sharepoint.com/personal/u/_layouts/15/Doc.aspx'));
 
     const events: SyncProgressEvent[] = [];
-    await ensureFreshSync('http://127.0.0.1:9999', 'x', (e) => events.push(e));
-    await waitForCompleted(events);
+    const r = await ensureFreshSync('http://127.0.0.1:9999', 'x', (e) => events.push(e));
 
-    expect(events.map((e) => e.state)).toEqual(['started', 'completed']);
-    // login redirect 한 번 무시 + SharePoint redirect 한 번 = 총 2회.
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.status).toBe('ready');
+    expect(events.map((e) => e.state)).toEqual(['uploading', 'verifying', 'completed']);
     expect(sessionFetchMock).toHaveBeenCalledTimes(2);
     fetchSpy.mockRestore();
   });
 
-  it('계속 404 받아도 maxMs 지나면 fallback 으로 completed (사용자 webview 가 어차피 SP 응답 받음)', async () => {
+  it('계속 404 → maxMs timeout → status:cloud-not-ready (옛 v5 cloud-not-ready event 제거됨)', async () => {
+    // v6: poll timeout 시 IPC return 으로 status:'cloud-not-ready' + pollAttempts/pollLastStatus 직접 전달.
+    // 옛 'cloud-not-ready' progress event 는 emit 안 됨 (renderer 는 IPC await result 로만 카드 결정).
     setupAccount();
     const fetchSpy = vi.spyOn(globalThis, 'fetch')
       .mockResolvedValueOnce(new Response(JSON.stringify({ mtime_ms: 1_000_000 }), { status: 200 }))
@@ -407,14 +398,78 @@ describe('SharePoint HEAD-poll — 25s sleep 대체', () => {
     sessionFetchMock.mockReset().mockResolvedValue(makeHeadResponse(404));
 
     const events: SyncProgressEvent[] = [];
-    await ensureFreshSync('http://127.0.0.1:9999', 'x', (e) => events.push(e));
-    await waitForCompleted(events, 1000);
+    const r = await ensureFreshSync('http://127.0.0.1:9999', 'x', (e) => events.push(e));
 
-    expect(events.map((e) => e.state)).toEqual(['started', 'completed']);
-    // maxMs=100ms 안에 1ms + 1ms + 1.5ms + 2ms ... 폴링 → 최소 몇 회 이상.
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.status).toBe('cloud-not-ready');
+      if (r.status === 'cloud-not-ready') {
+        expect(r.pollAttempts).toBeGreaterThanOrEqual(2);
+        expect(r.pollLastStatus).toBe(404);
+        expect(r.url).toContain('Klaud-temp');
+      }
+    }
+    // 'completed' 안 떨어짐 (poll timeout 이라). 'cloud-not-ready' progress 도 없음 (제거됨).
+    expect(events.map((e) => e.state)).toEqual(['uploading', 'verifying']);
     expect(sessionFetchMock.mock.calls.length).toBeGreaterThanOrEqual(2);
     fetchSpy.mockRestore();
   });
+});
+
+describe('repollCloudReady — cloud-not-ready 재시도', () => {
+  function setupAccount(): void {
+    execMock.mockImplementation((cmd: string) => {
+      if (cmd.includes('UserFolder')) return regOutput('UserFolder', 'C:\\Users\\u\\OneDrive');
+      if (cmd.includes('UserEmail')) return regOutput('UserEmail', 'u@hybe.im');
+      if (cmd.includes('UserUrl')) return regOutput('UserUrl', 'https://t-my.sharepoint.com/personal/u_hybe_im');
+      if (cmd.includes('SPOResourceId')) return regOutput('SPOResourceId', '');
+      regMissing();
+    });
+  }
+
+  it('SharePoint 가 그 사이 ready 됐으면 ready:true 반환', async () => {
+    setupAccount();
+    sessionFetchMock.mockReset().mockResolvedValue(
+      makeHeadResponse(302, 'https://t-my.sharepoint.com/personal/u_hybe_im/_layouts/15/Doc.aspx?sourcedoc=g'),
+    );
+
+    const r = await repollCloudReady('7_System/PK_HUD');
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.ready).toBe(true);
+      expect(r.pollAttempts).toBeGreaterThanOrEqual(1);
+    }
+  });
+
+  it('여전히 cloud 못 찾으면 ready:false + 메타데이터 반환 (재시도 카드 유지)', async () => {
+    setupAccount();
+    sessionFetchMock.mockReset().mockResolvedValue(makeHeadResponse(404));
+
+    const r = await repollCloudReady('7_System/PK_HUD');
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.ready).toBe(false);
+      expect(r.pollLastStatus).toBe(404);
+    }
+  });
+
+  it('account 미설정이면 ok:false', async () => {
+    execMock.mockImplementation(() => regMissing());
+    const r = await repollCloudReady('x');
+    expect(r.ok).toBe(false);
+  });
+});
+
+describe('depot/upload 폴링 흐름', () => {
+  function setupAccount(): void {
+    execMock.mockImplementation((cmd: string) => {
+      if (cmd.includes('UserFolder')) return regOutput('UserFolder', 'C:\\Users\\u\\OneDrive');
+      if (cmd.includes('UserEmail')) return regOutput('UserEmail', 'u@hybe.im');
+      if (cmd.includes('UserUrl')) return regOutput('UserUrl', 'https://t-my.sharepoint.com/personal/u_hybe_im');
+      if (cmd.includes('SPOResourceId')) return regOutput('SPOResourceId', '');
+      regMissing();
+    });
+  }
 
   it('uploadDepotFileAndUrl 도 폴링 사용 — Klaud-depot 폴더 URL 검증', async () => {
     setupAccount();
@@ -435,14 +490,14 @@ describe('SharePoint HEAD-poll — 25s sleep 대체', () => {
       // depot URL 은 Klaud-depot 폴더 + // prefix 제거 + 확장자 떼고 다시 붙임 패턴.
       expect(r.url).toContain('Klaud-depot');
       expect(r.url).toContain('main/ProjectK/Design/7_System/PK_HUD.xlsx');
-      expect(r.url).toContain('web=1');
+      expect(r.url).toContain('web=1'); // 0.1.51 v3 — view 강제는 renderer 의 redirect intercept 에서
     }
     // 폴링이 첫 시도에 ready → 100ms 안. 옛 15s sleep 이면 15000ms 걸렸을 것.
     expect(elapsed).toBeLessThan(200);
     expect(sessionFetchMock).toHaveBeenCalledTimes(1);
     expect(copyFileMock).toHaveBeenCalled();
     // mtime 동기화 검증 — copyFile 후 utimes 가 src mtime 으로 호출됨.
-    expect(utimesMock).toHaveBeenCalled();
+    expect(utimesMock).not.toHaveBeenCalled(); // 0.1.51 — OneDrive Sync 친화로 mtime 건드리지 않음
   });
 
   it('syncUploadAndUrl (legacy file picker) 도 폴링 사용 + mtime 동기화', async () => {
@@ -459,10 +514,10 @@ describe('SharePoint HEAD-poll — 25s sleep 대체', () => {
     expect(r.ok).toBe(true);
     if (r.ok) {
       expect(r.url).toContain('Klaud-temp');
-      expect(r.url).toContain('web=1');
+      expect(r.url).toContain('web=1'); // 0.1.51 v3 — view 강제는 renderer 의 redirect intercept 에서
     }
     expect(elapsed).toBeLessThan(200);
     expect(sessionFetchMock).toHaveBeenCalledTimes(1);
-    expect(utimesMock).toHaveBeenCalled();
+    expect(utimesMock).not.toHaveBeenCalled(); // 0.1.51 — OneDrive Sync 친화로 mtime 건드리지 않음
   });
 });

@@ -26,6 +26,7 @@ import { getConfluenceCreds } from './auth';
 import { initUpdater } from './updater';
 import { startMcpBridgeIfEnabled, stopMcpBridge } from './mcp-bridge';
 import { installLogPush } from './log-push';
+import { installDebugProbeServer } from './debug-probe';
 import { startDevBundleWatcher } from './dev-bundle-watcher';
 import { initThreadsDb, closeThreadsDb } from './db';
 import { REPO_ROOT, XLSX_OUTPUT_DIR, CONFLUENCE_OUTPUT_DIR, CONFLUENCE_MANIFEST } from './paths';
@@ -105,6 +106,45 @@ function installPartitions(): void {
     event.preventDefault();
     item.cancel();
   });
+
+  // 0.1.51 v4 — Excel-for-Web / SharePoint / WOPI 의 HTTP 실패를 main 콘솔에 직접 노출.
+  // 옛 진단 한계: webview 안 Excel iframe 의 console-message 는 잡혀도, 실제 fetch 가 어떤
+  // 응답 받았는지 (특히 WOPI 401/404/5xx) 는 안 잡힘. 사용자가 "빈 워크북" 보고할 때 진짜
+  // 이유가 'WOPI 가 401 던졌다' 인지 'iframe 이 ABORTED 됐다' 인지 구분 불가.
+  // → onCompleted 로 응답 status 로깅 + onErrorOccurred 로 network 실패 로깅. 시끄러움 회피
+  // 위해 status >= 400 또는 office/sharepoint host 만 (host 매치는 substring).
+  const interestingHosts = [
+    'sharepoint.com',
+    'officeapps.live.com',
+    'office.com',
+    'office.net',
+    'live.com',
+    'msftauth.net',
+  ];
+  const isInteresting = (url: string): boolean => interestingHosts.some((h) => url.includes(h));
+
+  onedriveSession.webRequest.onCompleted((details) => {
+    const u = details.url;
+    if (!isInteresting(u)) return;
+    if (details.statusCode < 400) return; // 4xx/5xx 만
+    const ct = details.responseHeaders?.['content-type']?.[0] ?? details.responseHeaders?.['Content-Type']?.[0] ?? '';
+    console.warn(
+      `[onedrive-session] http-fail ${details.statusCode} ${details.method} ` +
+      `url=${u.slice(0, 200)} type=${details.resourceType} content-type=${ct}`,
+    );
+  });
+
+  onedriveSession.webRequest.onErrorOccurred((details) => {
+    const u = details.url;
+    if (!isInteresting(u)) return;
+    // ERR_ABORTED 는 정상 redirect chain 에서도 발생 — 너무 시끄러움.
+    // 단 우리가 진짜 잡고 싶은 ERR_FAILED, ERR_TIMED_OUT 등은 통과.
+    if (details.error === 'net::ERR_ABORTED') return;
+    console.warn(
+      `[onedrive-session] net-error ${details.error} ${details.method} ` +
+      `url=${u.slice(0, 200)} type=${details.resourceType}`,
+    );
+  });
 }
 
 // webview 안에서 우리 앱 단축키 (Ctrl+P / Ctrl+1~5) 가 가로채이는 회귀 차단.
@@ -142,7 +182,18 @@ function installWebContentsTracing(): void {
   app.on('web-contents-created', (_event, contents) => {
     const type = contents.getType(); // 'window' | 'browserView' | 'webview' | 'remote' | 'backgroundPage' | 'offscreen'
     console.log(`[wc-created] type=${type} id=${contents.id} initial-url=${contents.getURL().slice(0, 80)}`);
-    if (type !== 'webview') return; // main window / sub-frame 는 너무 noise — webview 만.
+    // 0.1.51 hotfix — 옛 코드는 webview 만 trace. main window 의 renderer console 은 DevTools
+    // 에만 떴음 → log-push 로 가지 않아 디버깅 timeline 단절. window 도 console-message 만
+    // forward (navigation 이벤트는 webview 만 — main window 는 SPA 내부 nav 라 noise).
+    if (type === 'window') {
+      const tag = `[wc ${contents.id}/window]`;
+      contents.on('console-message', (_e, level, message, line, sourceId) => {
+        const lvlTag = ['verbose', 'info', 'warn', 'error'][level] ?? 'log';
+        console.log(`${tag} console.${lvlTag} ${message.slice(0, 500)} (${sourceId.slice(-40)}:${line})`);
+      });
+      return;
+    }
+    if (type !== 'webview') return; // sub-frame / offscreen 등은 noise.
 
     const tag = `[wv ${contents.id}]`;
     contents.on('did-start-loading', () => {
@@ -216,6 +267,7 @@ app.whenReady().then(async () => {
   installPartitions();
   installShortcutInterceptor();
   installWebContentsTracing();
+  installDebugProbeServer(); // dev only — bash 에서 curl 로 인증된 HEAD probe trigger.
   registerIpc(() => mainWindow);
   createWindow();
   startSidecar().catch((e) => console.error('[main] startSidecar failed', e));

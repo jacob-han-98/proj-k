@@ -521,17 +521,25 @@ function LocalSheetView(props: {
 }) {
   const { node, relPath, cachedUrl, onUpsertMapping, onRequestReview } = props;
   const [extractingReview, setExtractingReview] = useState(false);
-  const [url, setUrl] = useState<string | null>(cachedUrl);
-  const [bgSyncing, setBgSyncing] = useState(false);
+  // 0.1.51 v6 — url state 초기값 null (옛: cachedUrl). 매 클릭마다 ensureFresh 의 cloud
+  // verify-poll 통과 후에만 url 채움 → webview mount. cachedUrl 은 prop 으로 받지만 즉시
+  // mount 트리거 안 됨 (race condition 차단). cachedUrl prop 자체는 sheetMappings 영구화
+  // 호환을 위해 유지.
+  const [url, setUrl] = useState<string | null>(null);
+  // bgPhase: ensureFresh 진행 중 placeholder 텍스트 변경용. main 의 onProgress event 에 동기화.
+  const [bgPhase, setBgPhase] = useState<'idle' | 'starting' | 'uploading' | 'verifying'>('idle');
   const [fallback, setFallback] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // mount 시점의 cachedUrl 만 capture — onUpsertMapping 호출이 부모 sheetMappings 갱신해
-  // cachedUrl prop 이 즉시 채워지면 `bgSyncing && !cachedUrl` 분기 가 의도와 반대 동작.
-  // 첫 mount 시 진짜로 cached 였는지 (= 옛 본문이라도 즉시 보여줄지) 만 의미가 있음.
-  const [hadCachedUrlAtMount] = useState(() => Boolean(cachedUrl));
-  // Cache-bust nonce — completed event 마다 1↑. webview key 에 넣어 unmount/mount 강제,
-  // 같은 src 라도 SharePoint 304 cache 우회. wv.reload() 가 cache hit 받는 케이스 회피.
+  // ensureFresh 가 cloud-not-ready 반환 시 set. webview 마운트 차단 + inline 에러 카드 + 재시도 버튼.
+  const [cloudNotReady, setCloudNotReady] = useState<
+    | { reason: 'poll-timeout' | 'webview-nav' | 'webview-fail'; pollAttempts?: number; pollLastStatus?: number | null }
+    | null
+  >(null);
+  const [repolling, setRepolling] = useState(false);
+  // Cache-bust nonce — repoll 성공 시 1↑. webview key 에 넣어 unmount/mount 강제.
   const [reloadNonce, setReloadNonce] = useState(0);
+  // 옛 cachedUrl 무시 정책의 흔적 — sheetMappings prop 변경 무시 (logging 용).
+  void cachedUrl;
   const webviewRef = useRef<HTMLElement | null>(null);
   // 편집 모드 — 트리뷰의 ✏ 아이콘이 store 에 토글. true 면 ?action=edit 로 swap.
   const docKey = docKeyOfNode(node);
@@ -590,43 +598,181 @@ function LocalSheetView(props: {
     }
   };
 
-  // mount + relPath 변경 시 ensureFresh 호출.
+  // 0.1.51 v6 — mount + relPath 변경 시 ensureFresh await. main 이 모든 단계 (stat 비교 +
+  // writeViaTempCopy + cloud HEAD polling) 를 직렬로 처리 후 ready / cloud-not-ready / 운영실패
+  // 중 하나로 return. 결과에 따라 webview mount, 카드, 또는 fallback 분기.
   useEffect(() => {
     let cancelled = false;
+    setUrl(null);
+    setCloudNotReady(null);
+    setRepolling(false);
+    setBgPhase('starting');
+    console.log(`[LocalSheetView] mount/relPath relPath=${relPath}`);
     void (async () => {
+      const t0 = performance.now();
       const r = await window.projk.oneDriveSync.ensureFresh(relPath);
       if (cancelled) return;
+      const elapsed = (performance.now() - t0).toFixed(0);
       if (!r.ok) {
-        // sync 클라이언트 미설정 또는 sidecar 못 찾음 → manual fallback.
+        console.log(`[LocalSheetView] ensureFresh ${relPath} (${elapsed}ms) fail: ${r.error}`);
+        // sync 클라이언트 미설정 / sidecar 못 찾음 / sidecar fetch 실패 → manual fallback.
+        setBgPhase('idle');
         setFallback(true);
         setError(r.error);
         return;
       }
-      setUrl(r.url);
-      onUpsertMappingRef.current(relPath, r.url);
-      if (r.syncing) setBgSyncing(true);
+      console.log(
+        `[LocalSheetView] ensureFresh ${relPath} (${elapsed}ms) ${r.status} url=${r.url.slice(0, 80)}`,
+      );
+      setBgPhase('idle');
+      if (r.status === 'ready') {
+        setUrl(r.url);
+        onUpsertMappingRef.current(relPath, r.url);
+      } else {
+        // status === 'cloud-not-ready' — webview 마운트 차단, 카드 + 재시도 노출.
+        setCloudNotReady({
+          reason: 'poll-timeout',
+          pollAttempts: r.pollAttempts,
+          pollLastStatus: r.pollLastStatus,
+        });
+      }
     })();
     return () => { cancelled = true; };
   }, [relPath]);
 
-  // 백그라운드 sync progress 구독.
+  // operational progress 구독 — placeholder 텍스트 갱신 정도만. mount/unmount 결정 X.
   useEffect(() => {
     const off = window.projk.oneDriveSync.onProgress((ev) => {
       if (ev.relPath !== relPath) return;
-      if (ev.state === 'completed') {
-        setBgSyncing(false);
-        // webview key 변경 → unmount/mount 로 강제 reload. wv.reload() 만으로는 SharePoint 가
-        // 304 캐시 응답을 줘서 옛 본문 그대로인 케이스가 있어 nonce 로 cache-bust.
-        setReloadNonce((n) => n + 1);
-      } else if (ev.state === 'failed') {
-        setBgSyncing(false);
-        console.warn('[onedrive-sync] background sync failed:', ev.error);
-      } else if (ev.state === 'started') {
-        setBgSyncing(true);
-      }
+      console.log(
+        `[LocalSheetView] onProgress ${relPath}: state=${ev.state}` +
+        (ev.bytes != null ? ` bytes=${ev.bytes}` : '') +
+        (ev.error ? ` error=${ev.error}` : ''),
+      );
+      if (ev.state === 'uploading') setBgPhase('uploading');
+      else if (ev.state === 'verifying') setBgPhase('verifying');
+      else if (ev.state === 'failed') console.warn('[onedrive-sync] sync failed:', ev.error);
+      // 'completed' 는 ensureFresh 의 await 가 곧 return 으로 안내 — 별도 처리 X.
     });
     return off;
   }, [relPath]);
+
+  // 0.1.51 — webview navigation 감시. ensureFresh 가 alreadyFresh:true 로 webview 즉시
+  // 마운트했지만 cloud 가 실제로 file 없는 경우 (옛 mtime/size 매치는 보장 아님) → SP 가
+  // /_layouts/15/error.aspx 로 redirect → 사용자가 "이 파일은 없습니다" 페이지 봄. 이 path 에선
+  // poll 도 진행 안 했으니 'cloud-not-ready' progress 도 못 받음. webview navigation 직접 감시
+  // 로 cover.
+  //
+  // 추가로 모든 navigation/load event 를 console 로 dump — 사용자 환경에서 "왜 비어 보이는지"
+  // 진단할 때 SharePoint 가 어떤 URL chain 으로 redirect 했고 어디서 멈췄는지 timeline 확보.
+  useEffect(() => {
+    if (!url || cloudNotReady) return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const wv = webviewRef.current as any;
+    if (!wv || typeof wv.addEventListener !== 'function') return;
+
+    type NavEvent = {
+      url?: string;
+      validatedURL?: string;
+      errorCode?: number;
+      errorDescription?: string;
+      httpResponseCode?: number;
+      isMainFrame?: boolean;
+    };
+    const traceEvents = [
+      'did-start-loading',
+      'did-start-navigation',
+      'did-redirect-navigation',
+      'will-navigate',
+      'did-navigate',
+      'did-navigate-in-page',
+      'did-frame-navigate',
+      'dom-ready',
+      'did-stop-loading',
+      'did-finish-load',
+      'did-fail-load',
+      'page-title-updated',
+    ] as const;
+    const handlers: Array<[string, (ev: NavEvent) => void]> = [];
+    for (const eventName of traceEvents) {
+      const handler = (ev: NavEvent) => {
+        const u = ev?.url ?? ev?.validatedURL ?? '';
+        const code = ev?.errorCode ?? ev?.httpResponseCode ?? '';
+        const isMain = ev?.isMainFrame == null ? '-' : String(ev.isMainFrame);
+        const desc = ev?.errorDescription ?? '';
+        console.log(
+          `[onedrive-webview] ${eventName} url=${u.slice(0, 200)} ` +
+          `code=${code} mainFrame=${isMain}` +
+          (desc ? ` desc="${desc}"` : ''),
+        );
+        // SP 에러 페이지로 navigate 시 cloud-not-ready 카드로 swap.
+        if (eventName === 'did-fail-load' && ev.isMainFrame !== false) {
+          console.warn('[onedrive-webview] did-fail-load (mainFrame) → cloudNotReady', ev);
+          setCloudNotReady({ reason: 'webview-fail', pollLastStatus: ev.errorCode ?? null });
+        }
+        // 0.1.51 v6 — sub-frame fail 누적 카운트 / Excel content 로드 ref 같은 휴리스틱 모두
+        // 제거. v6 에선 ensureFresh 가 cloud HEAD probe 로 ready 확정한 뒤에만 webview mount
+        // 하므로, sub-frame ABORTED 가 누적되면 그건 우리가 책임 못 지는 영역 (Excel-for-Web /
+        // WOPI 내부 race) — 사용자가 새 창으로 열거나 새로고침으로 회복 가능. cloudNotReady 는
+        // mainFrame fail 또는 SP error.aspx 로 navigate 한 명확한 신호만 받음.
+        if ((eventName === 'did-navigate' || eventName === 'did-navigate-in-page') && u) {
+          if (
+            u.includes('/_layouts/15/error.aspx')
+            || u.includes('/_layouts/15/AccessDenied.aspx')
+          ) {
+            console.warn('[onedrive-webview] navigated to SP error page → cloudNotReady:', u);
+            setCloudNotReady({ reason: 'webview-nav', pollLastStatus: null });
+          }
+          // 0.1.51 v3 — Excel-for-Web view-only 강제. SP 가 `?web=1` redirect 시 자동으로
+          // `Doc.aspx?action=default` (edit mode) 로 보내는데, edit 모드는 auto-save 위험
+          // (cloud incomplete content 받으면 빈 워크북 PUT → 6KB stub 영구 corruption).
+          // 여기서 swap 해 view 모드로 재navigation. `?action=view` 직접 사용 시 bhunion tenant 가
+          // download 응답 주는 회귀를 회피하면서 동시에 view 모드 강제.
+          if (
+            u.includes('/Doc.aspx')
+            && /[?&]action=default(?:&|$)/.test(u)
+            && !u.includes('action=view')
+          ) {
+            const viewUrl = u.replace(/([?&])action=default(&|$)/, '$1action=view$2');
+            console.log('[onedrive-webview] action=default → action=view swap:', viewUrl);
+            (wv as { loadURL?: (u: string) => void }).loadURL?.(viewUrl);
+          }
+        }
+      };
+      wv.addEventListener(eventName, handler);
+      handlers.push([eventName, handler]);
+    }
+    return () => {
+      for (const [name, h] of handlers) {
+        wv.removeEventListener(name, h);
+      }
+    };
+  }, [url, cloudNotReady, reloadNonce]);
+
+  // 0.1.51 — 사용자가 inline 에러 카드의 "재시도" 누름. 재업로드 없이 SharePoint HEAD 폴링만
+  // 한 번 더. ready 면 cloudNotReady reset + reloadNonce++ → webview 마운트.
+  const handleRepoll = async () => {
+    setRepolling(true);
+    try {
+      const r = await window.projk.oneDriveSync.repoll(relPath);
+      if (r.ok && r.ready) {
+        setCloudNotReady(null);
+        setReloadNonce((n) => n + 1);
+      } else if (r.ok && !r.ready) {
+        // 여전히 cloud 가 file 못 찾음 — 카드 유지하면서 메타만 업데이트.
+        setCloudNotReady({
+          reason: 'poll-timeout',
+          pollAttempts: r.pollAttempts,
+          pollLastStatus: r.pollLastStatus,
+        });
+      } else if (!r.ok) {
+        setCloudNotReady({ reason: 'poll-timeout', pollLastStatus: null });
+        console.warn('[onedrive-sync] repoll fail:', r.error);
+      }
+    } finally {
+      setRepolling(false);
+    }
+  };
 
   // view 모드에서만 chrome (SuiteNav/검색바/프로필) 강제 제거. edit 모드는 그대로.
   // 🔥 Hooks 규칙: useEffect 는 반드시 unconditional 위치 — 아래 conditional return 들이
@@ -651,8 +797,17 @@ function LocalSheetView(props: {
     );
   }
 
-  // 매핑 정보 없고 첫 ensureFresh 응답 대기 중 → placeholder.
-  if (!url) {
+  // 0.1.51 — cloud-not-ready (poll timeout / webview SP 에러 페이지). webview 마운트 차단 +
+  // 재시도 버튼. 옛 동작은 이 분기가 없어서 webview 가 SP 404 페이지 직접 노출 — "랜덤하게 안
+  // 됨" 의 정체. 이제 명시적 에러 + 사용자 의지로 재시도.
+  if (cloudNotReady) {
+    const reasonText =
+      cloudNotReady.reason === 'poll-timeout' ? 'SharePoint 가 파일을 인식하지 못함'
+      : cloudNotReady.reason === 'webview-nav' ? 'SharePoint 가 에러 페이지를 반환'
+      : 'webview navigation 실패';
+    const meta: string[] = [];
+    if (cloudNotReady.pollAttempts != null) meta.push(`${cloudNotReady.pollAttempts}회 폴링`);
+    if (cloudNotReady.pollLastStatus != null) meta.push(`status=${cloudNotReady.pollLastStatus}`);
     return (
       <main className="center" data-testid="center-pane">
         <div className="doc-header">
@@ -661,21 +816,38 @@ function LocalSheetView(props: {
         </div>
         <div
           className="placeholder"
-          data-testid="onedrive-prep-placeholder"
-          style={{ padding: 24, color: 'var(--text-dim)' }}
+          data-testid="onedrive-cloud-not-ready"
+          style={{ padding: 24, color: 'var(--text-dim)', lineHeight: 1.6 }}
         >
-          🚀 OneDrive 자동 매핑 준비 중…
+          ⚠ OneDrive 동기화 미완료
+          <br />
+          <span style={{ fontSize: 11 }}>
+            {reasonText}
+            {meta.length > 0 && ` (${meta.join(', ')})`}
+            <br />
+            큰 파일이거나 cloud-side 처리 지연일 수 있습니다. 잠시 후 재시도하면 보통 해결됩니다.
+          </span>
+          <br />
+          <button
+            onClick={handleRepoll}
+            disabled={repolling}
+            data-testid="onedrive-retry"
+            style={{ marginTop: 12 }}
+          >
+            {repolling ? '재시도 중…' : '🔄 재시도'}
+          </button>
         </div>
       </main>
     );
   }
 
-  // bgSyncing 진행 중 + mount 시점에 cachedUrl 없는 경우 → webview mount 미루기. 사용자
-  // 화면 빈 페이지 (SharePoint 404 — cloud 도달 전) 차단. progress completed 후만 mount.
-  // hadCachedUrlAtMount 사용 이유: ensureFresh response 의 onUpsertMapping 이 부모 sheetMappings
-  // 즉시 갱신 → cachedUrl prop 이 r.url 로 채워져 `!cachedUrl` 가 false 로 뒤집힘. mount 시점의
-  // 값만 의미 있음.
-  if (bgSyncing && !hadCachedUrlAtMount) {
+  // 0.1.51 v6 — ensureFresh 진행 중 (또는 cloud-not-ready 도 fallback 도 아닌 초기 상태) →
+  // placeholder. bgPhase 에 따라 텍스트 변경. webview 는 ready 도달 후에만 마운트.
+  if (!url) {
+    const phaseText =
+      bgPhase === 'uploading' ? '📤 OneDrive 폴더에 업로드 중…'
+      : bgPhase === 'verifying' ? '☁ 클라우드 도달 검증 중…'
+      : '🔄 OneDrive 동기화 중…';
     return (
       <main className="center" data-testid="center-pane">
         <div className="doc-header">
@@ -687,10 +859,10 @@ function LocalSheetView(props: {
           data-testid="onedrive-syncing-placeholder"
           style={{ padding: 24, color: 'var(--text-dim)', lineHeight: 1.6 }}
         >
-          🔄 OneDrive 로 업로드 중… (~25초)
+          {phaseText}
           <br />
           <span style={{ fontSize: 11 }}>
-            클라우드 도달 후 Excel 본문이 자동으로 열립니다.
+            클라우드 도달 후 Excel 본문이 자동으로 열립니다 (큰 파일은 수 초~수십 초).
           </span>
         </div>
       </main>
@@ -712,15 +884,8 @@ function LocalSheetView(props: {
           )}
         </span>
         <span className="actions">
-          {bgSyncing && (
-            <span
-              data-testid="onedrive-bg-syncing"
-              style={{ fontSize: 10, color: 'var(--text-dim)', marginRight: 8 }}
-              title="P4 원본이 더 새로워서 OneDrive 로 백그라운드 업로드 중. 끝나면 자동 새로고침."
-            >
-              🔄 OneDrive 동기화 중…
-            </span>
-          )}
+          {/* 0.1.51 v6 — bgSyncing indicator 제거. 모든 sync 는 ensureFresh await 안에서
+            처리되고, webview 가 mount 된 시점엔 이미 cloud ready. 이후 BG 작업 없음. */}
           {onRequestReview && (
             <button
               onClick={requestSheetReview}

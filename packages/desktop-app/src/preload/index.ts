@@ -1,6 +1,8 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import {
   IPC,
+  type ActiveConfluenceResult,
+  type ActiveP4Result,
   type AppSettings,
   type ConfluenceCreds,
   type ConfluenceTreeResult,
@@ -91,6 +93,14 @@ const api = {
       ipcRenderer.invoke(IPC.P4_DEPOT_CACHE_LIST),
   },
 
+  // 액티비티 바 5번 ("내 작업 중 문서") — 30s 폴링 단발성 fetch.
+  // ActiveDocsPanel 의 visibility-aware setInterval 가 두 endpoint 를 호출.
+  activeDocs: {
+    p4: (): Promise<ActiveP4Result> => ipcRenderer.invoke(IPC.ACTIVE_DOCS_P4),
+    confluence: (): Promise<ActiveConfluenceResult> =>
+      ipcRenderer.invoke(IPC.ACTIVE_DOCS_CONFLUENCE),
+  },
+
   // ---------- frameless window 컨트롤 ----------
   // OS 기본 title bar 가 사라졌으므로 renderer 의 .topbar 우측 버튼이 호출.
   win: {
@@ -166,9 +176,31 @@ const api = {
       | { ok: true; url: string; alreadyFresh: boolean; syncing: boolean }
       | { ok: false; error: string }
     > => ipcRenderer.invoke(IPC.ONEDRIVE_SYNC_ENSURE_FRESH, { relPath }),
-    // main → renderer push. 백그라운드 sync 의 시작/완료/실패 통지.
-    onProgress: (cb: (ev: { relPath: string; state: 'started' | 'completed' | 'failed'; error?: string }) => void): (() => void) => {
-      const handler = (_e: unknown, ev: { relPath: string; state: 'started' | 'completed' | 'failed'; error?: string }) => cb(ev);
+    // 0.1.51 — cloud-not-ready 카드의 "재시도". 재업로드 없이 SharePoint HEAD 폴링만 한 번 더.
+    repoll: (relPath: string): Promise<
+      | { ok: true; ready: boolean; pollAttempts: number; pollLastStatus: number | null }
+      | { ok: false; error: string }
+    > => ipcRenderer.invoke(IPC.ONEDRIVE_SYNC_REPOLL, { relPath }),
+    // main → renderer push. 백그라운드 sync 의 시작/완료/실패/cloud-not-ready 통지.
+    onProgress: (
+      cb: (ev: {
+        relPath: string;
+        state: 'started' | 'completed' | 'failed' | 'cloud-not-ready';
+        error?: string;
+        pollAttempts?: number;
+        pollLastStatus?: number | null;
+      }) => void,
+    ): (() => void) => {
+      const handler = (
+        _e: unknown,
+        ev: {
+          relPath: string;
+          state: 'started' | 'completed' | 'failed' | 'cloud-not-ready';
+          error?: string;
+          pollAttempts?: number;
+          pollLastStatus?: number | null;
+        },
+      ) => cb(ev);
       ipcRenderer.on(IPC.ONEDRIVE_SYNC_PROGRESS, handler);
       return () => ipcRenderer.removeListener(IPC.ONEDRIVE_SYNC_PROGRESS, handler);
     },

@@ -357,9 +357,24 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
       }
     });
     if (r.ok) {
-      console.log(`[onedrive-sync] ensureFresh ok ${Date.now() - t0}ms alreadyFresh=${r.alreadyFresh} syncing=${r.syncing} url=${r.url.slice(0, 80)}...`);
+      const meta = r.status === 'ready' ? '' : ` attempts=${r.pollAttempts} lastStatus=${r.pollLastStatus}`;
+      console.log(`[onedrive-sync] ensureFresh ${r.status} ${Date.now() - t0}ms${meta} url=${r.url.slice(0, 80)}...`);
     } else {
       console.log(`[onedrive-sync] ensureFresh fail ${Date.now() - t0}ms: ${r.error}`);
+    }
+    return r;
+  });
+
+  // 0.1.51 — 사용자가 cloud-not-ready 카드의 "재시도" 누르면 호출. 재업로드 없이 SharePoint
+  // HEAD 폴링만 다시 한 번. ready:true 면 renderer 가 webview 마운트.
+  ipcMain.handle(IPC.ONEDRIVE_SYNC_REPOLL, async (_e, p: { relPath: string }) => {
+    const t0 = Date.now();
+    console.log(`[onedrive-sync] repoll request: ${p.relPath}`);
+    const r = await onedriveSync.repollCloudReady(p.relPath);
+    if (r.ok) {
+      console.log(`[onedrive-sync] repoll done ${Date.now() - t0}ms ready=${r.ready} attempts=${r.pollAttempts} status=${r.pollLastStatus}`);
+    } else {
+      console.log(`[onedrive-sync] repoll fail ${Date.now() - t0}ms: ${r.error}`);
     }
     return r;
   });

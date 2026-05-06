@@ -191,9 +191,12 @@ export const IPC = {
   // stale 이면 백그라운드 sync 시작 + 즉시 URL 반환. fresh 면 그냥 URL 반환. 사용자 체감
   // "두 번째부터는 즉시 webview 열림 + 자동 최신화". 진행상황은 ONEDRIVE_SYNC_PROGRESS 로 push.
   ONEDRIVE_SYNC_ENSURE_FRESH: 'onedrive-sync:ensure-fresh',
-  // main → renderer push. 백그라운드 sync 의 시작/완료/실패 통지. renderer 가 자기 webview
-  // 의 relPath 와 매칭되면 reload 수행.
+  // main → renderer push. 백그라운드 sync 의 시작/완료/실패/cloud-not-ready 통지.
+  // renderer 가 자기 webview 의 relPath 와 매칭되면 reload / 에러 카드 swap 수행.
   ONEDRIVE_SYNC_PROGRESS: 'onedrive-sync:progress',
+  // 0.1.51 — 사용자가 cloud-not-ready 카드의 "재시도" 누르면 호출. 재업로드 없이 SharePoint
+  // HEAD 폴링만 다시 한 번. cloud-side 처리가 끝났으면 ready:true → renderer 가 webview 마운트.
+  ONEDRIVE_SYNC_REPOLL: 'onedrive-sync:repoll',
   // Threads workspace (Phase 3 — 0.1.30+).
   THREADS_LIST: 'threads:list',
   THREADS_CREATE: 'threads:create',

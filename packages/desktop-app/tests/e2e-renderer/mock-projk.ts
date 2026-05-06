@@ -251,6 +251,10 @@ export const mockProjkInitScript = `
     (window.__syncProgressListeners ?? []).forEach((cb) => cb(ev));
   };
   window.__getLastEnsureFreshRelPath = () => window.__lastEnsureFreshRelPath ?? null;
+  // 0.1.51 — cloud-not-ready 재시도 mock. 기본은 ready:false (= 여전히 cloud 가 file 못 찾음).
+  // 테스트가 window.__setRepollResponse({ok:true, ready:true, ...}) 로 다음 재시도 응답 갈아끼움.
+  window.__setRepollResponse = (r) => { window.__repollResponse = r; };
+  window.__getRepollCallCount = () => window.__repollCallCount ?? 0;
 
   window.projk = {
     getP4Tree: () => Promise.resolve(fakeP4Tree),
@@ -342,6 +346,11 @@ export const mockProjkInitScript = `
           if (i >= 0) arr.splice(i, 1);
         };
       },
+      repoll: () => {
+        window.__repollCallCount = (window.__repollCallCount ?? 0) + 1;
+        const r = window.__repollResponse ?? { ok: true, ready: false, pollAttempts: 7, pollLastStatus: 404 };
+        return Promise.resolve(r);
+      },
     },
 
     // B2-3a: ChangesCard Apply 흐름 — 테스트에서 어떤 items 가 들어왔는지 검증할 수 있게
@@ -427,6 +436,18 @@ export const mockProjkInitScript = `
         upsertDoc: (d) => Promise.resolve({ ...d, added_at: 0 }),
         pinDoc: () => Promise.resolve({ ok: true }),
         _mem: mem,
+      };
+    })(),
+
+    // 액티비티 바 5번 ("내 작업 중 문서") — spec 별 page.evaluate 로 덮어쓸 수 있게
+    // window.__setActiveDocsP4 / __setActiveDocsConfluence hook 노출.
+    activeDocs: (() => {
+      const state = { p4: { ok: true, files: [] }, confluence: { ok: true, drafts: [] } };
+      window.__setActiveDocsP4 = (next) => { state.p4 = next; };
+      window.__setActiveDocsConfluence = (next) => { state.confluence = next; };
+      return {
+        p4: () => Promise.resolve(state.p4),
+        confluence: () => Promise.resolve(state.confluence),
       };
     })(),
   };

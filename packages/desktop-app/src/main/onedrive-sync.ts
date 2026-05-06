@@ -2,11 +2,45 @@
 // 0.1.46 (PoC 2C) — Graph API admin consent 우회. Sync 클라이언트는 Microsoft first-party
 // 라 회사 정책 통과. 사용자 본인용 SharePoint URL (?web=1) 로 webview 임베드하면 사내 SSO
 // 가 자동 통과 (Confluence webview 와 동일 패턴).
+//
+// 0.1.51 hotfix — content readiness 검증 강화.
+// 사용자 환경 실측: sidecar 가 local 에 write 한 직후 SP HEAD 가 status=200 을 1초 만에 응답
+// 하지만 cloud content/binary 는 아직 전송 안 됨. Excel for Web 의 WOPI fetch 가 empty 받아
+// 빈 워크북 렌더링. → HEAD 만으로는 ready 판정 부족. expectedSize 와 비교 + ZIP magic 검증 추가.
 
 import { execSync } from 'node:child_process';
-import { copyFile, mkdir, stat, utimes, writeFile } from 'node:fs/promises';
+import { copyFile, mkdir, stat, unlink, utimes, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
+import { randomBytes } from 'node:crypto';
+
+// 0.1.51 — buf → OneDrive 폴더 atomic 쓰기. fs.writeFile 로 OneDrive 폴더에 직접 쓰면
+// OneDrive Sync 엔진의 file watcher 가 파일 grow 도중에 여러 번 fire 해서 partial state
+// 로 인한 conflict resolution 위험. 임시 폴더(%TEMP%) 에 완성 → fs.copyFile (Windows
+// 내부적으로 CopyFileExW — Explorer 와 동일 API) 로 atomic copy → OneDrive Sync 가 한 번에
+// "complete file appeared" 로 인지 → 정상 업로드.
+//
+// 사용자 실측: manual 탐색기 복사는 1-2초만에 ✓. Klaud 의 직접 writeFile 은 stuck. 이 함수는
+// 두 흐름을 동등하게 맞춤.
+async function writeViaTempCopy(destPath: string, buf: Buffer): Promise<void> {
+  const tempPath = join(
+    tmpdir(),
+    `klaud-staging-${Date.now()}-${randomBytes(4).toString('hex')}.xlsx`,
+  );
+  try {
+    await writeFile(tempPath, buf);
+    await mkdir(dirname(destPath), { recursive: true });
+    await copyFile(tempPath, destPath);
+  } finally {
+    // 정리는 best-effort — 실패해도 흐름엔 영향 없음.
+    try {
+      await unlink(tempPath);
+    } catch {
+      /* ignore */
+    }
+  }
+}
 
 const KLAUD_TEMP_DIR = 'Klaud-temp';
 // P4 depot 보기용 별도 폴더 — 사용자가 P4 sync 한 local 파일 (`Klaud-temp`) 과 시각·구조적으로
@@ -86,11 +120,14 @@ function buildEmbedUrl(account: OneDriveSyncAccount, relPath: string): string {
     .map(encodeURIComponent)
     .join('/');
   // userUrl = https://bhunion-my.sharepoint.com/personal/jacob_hybecorp_com
-  // 결과: <userUrl>/Documents/Klaud-temp/<relPath>.xlsx?web=1
   //
-  // ?web=1 — SharePoint 가 사용자 본인 자격 SSO 로 Doc.aspx + sourcedoc GUID redirect.
-  // 0.1.49 까지 정상 동작했던 흐름. ?action=embedview 미니 임베드 시도가 사용자 환경에서
-  // file download 응답 받는 회귀 발생해 보류.
+  // 0.1.51 hotfix v3 — URL builder 는 `?web=1` 로 환원. bhunion tenant 가 file URL 의 직접
+  // `?action=view` 또는 `?action=embedview` 를 download 응답으로 처리하는 회귀 때문 (사용자
+  // 환경 실측: will-download blocked log). `?web=1` 은 SP 가 정상으로 Doc.aspx 로 redirect.
+  //
+  // view-only 강제는 renderer (CenterPane) 의 webview did-navigate 리스너에서 Doc.aspx URL 의
+  // `action=default` → `action=view` swap 으로 처리. 두 단계가 합쳐져 download 회귀 회피 +
+  // Excel-for-Web auto-save 차단 동시 달성.
   return `${account.userUrl}/Documents/${KLAUD_TEMP_DIR}/${encodedRelPath}.xlsx?web=1`;
 }
 
@@ -114,7 +151,11 @@ export interface PollSpReadyResult {
   elapsedMs: number;
   attempts: number;
   lastStatus: number | null;
-  reason: 'http-200' | 'sp-redirect' | 'timeout' | 'no-attempts';
+  // 'size-mismatch' = HEAD 200 인데 Content-Length 가 expectedSize 와 안 맞음 (stub 의심).
+  // 'magic-mismatch' = Range GET 으로 받은 첫 4바이트가 ZIP magic (PK\x03\x04) 아님 — content 미도착.
+  reason: 'http-200' | 'sp-redirect' | 'timeout' | 'no-attempts' | 'size-mismatch' | 'magic-mismatch';
+  // 0.1.51 — 진단용. 마지막 HEAD 응답의 Content-Length (없으면 null).
+  lastContentLength?: number | null;
 }
 
 export interface PollSpReadyOptions {
@@ -126,6 +167,12 @@ export interface PollSpReadyOptions {
   maxBackoffMs?: number;
   // 전체 최대 대기 시간. default 30000.
   maxMs?: number;
+  // 0.1.51 — 기대 파일 크기 (bytes). HEAD 응답의 Content-Length 와 비교해 stub 감지.
+  // 미설정이면 size 비교 skip (옛 동작).
+  expectedSize?: number;
+  // 0.1.51 — true 면 HEAD 통과 후 Range GET 으로 ZIP magic (`PK\x03\x04`) 도 검증.
+  // xlsx 는 ZIP container 라 첫 4바이트가 PK 시그니처. content 진짜 도착했는지 가장 확실한 검증.
+  verifyZipMagic?: boolean;
 }
 
 // 테스트가 주입하는 timing override. production 에서는 절대 set 안 함.
@@ -145,6 +192,8 @@ async function pollSharePointReady(
   const baseBackoffMs = merged.baseBackoffMs ?? 1000;
   const maxBackoffMs = merged.maxBackoffMs ?? 3000;
   const maxMs = merged.maxMs ?? 30_000;
+  const expectedSize = merged.expectedSize;
+  const verifyZipMagic = merged.verifyZipMagic ?? false;
 
   const { session } = await import('electron');
   const onedriveSession = session.fromPartition('persist:onedrive');
@@ -154,6 +203,8 @@ async function pollSharePointReady(
   const t0 = Date.now();
   let attempts = 0;
   let lastStatus: number | null = null;
+  let lastContentLength: number | null = null;
+  let lastInvalidReason: 'size-mismatch' | 'magic-mismatch' | null = null;
 
   // 초기 대기 — OneDrive Sync 가 새 파일 감지하고 upload 시작할 시간. 이거 없으면 첫 폴링이
   // 무조건 404 받고 backoff 시작 → 오히려 느려질 수 있음.
@@ -171,6 +222,12 @@ async function pollSharePointReady(
       });
       lastStatus = res.status;
       location = res.headers.get('location');
+      const clHeader = res.headers.get('content-length');
+      lastContentLength = clHeader != null ? Number(clHeader) : null;
+      console.log(
+        `[onedrive-sync] sp-poll-attempt ${relPath} #${attempts} status=${res.status} ` +
+        `content-length=${lastContentLength ?? '-'} location=${(location ?? '').slice(0, 80)}`,
+      );
 
       const isAuthRedirect = !!location && (
         location.includes('login.microsoftonline.com') ||
@@ -178,11 +235,101 @@ async function pollSharePointReady(
         location.includes('/_layouts/15/Authenticate')
       );
 
-      if (res.status === 200) {
-        return { ready: true, elapsedMs: Date.now() - t0, attempts, lastStatus, reason: 'http-200' };
+      const httpReady =
+        res.status === 200
+          ? 'http-200'
+          : (res.status >= 300 && res.status < 400 && !isAuthRedirect)
+            ? 'sp-redirect'
+            : null;
+
+      // 0.1.51 — content readiness 추가 검증은 status=200 (raw file 응답) 에만 적용.
+      // sp-redirect (302 → Doc.aspx) 는 SP metadata 레이어 응답이라 Range GET 으로 byte 검증
+      // 불가능 (Doc.aspx 는 HTML 페이지라 ZIP magic 안 나옴). 302 는 옛 동작대로 trust.
+      // 200 path 가 stub 응답을 줄 위험이 있는 케이스 (사용자 실측: 25MB 파일 cloud upload
+      // 진행 중에 SP HEAD 200 응답). expectedSize + ZIP magic 으로 진짜 content 도착 검증.
+      if (httpReady === 'sp-redirect') {
+        return {
+          ready: true,
+          elapsedMs: Date.now() - t0,
+          attempts,
+          lastStatus,
+          lastContentLength,
+          reason: 'sp-redirect',
+        };
       }
-      if (res.status >= 300 && res.status < 400 && !isAuthRedirect) {
-        return { ready: true, elapsedMs: Date.now() - t0, attempts, lastStatus, reason: 'sp-redirect' };
+
+      if (httpReady === 'http-200') {
+        // 검증 1: Content-Length 가 expectedSize 와 일치 (옛 stub 감지). HEAD 가 일반적으로
+        // CL 헤더 안 주는 경우도 있어 — null 이면 skip 하고 다음 단계로.
+        if (expectedSize != null && lastContentLength != null && lastContentLength > 0) {
+          const sizeRatio = lastContentLength / expectedSize;
+          // 99% 이상 매치면 ready 판정. 그 외엔 stub/incomplete 의심.
+          if (sizeRatio < 0.99 || sizeRatio > 1.01) {
+            console.log(
+              `[onedrive-sync] sp-poll-attempt ${relPath} #${attempts} size-mismatch ` +
+              `cloud=${lastContentLength} expected=${expectedSize} ratio=${sizeRatio.toFixed(3)} → not ready`,
+            );
+            lastInvalidReason = 'size-mismatch';
+            // 폴링 계속 (cloud upload 진행 중일 가능성).
+            const delay = Math.min(baseBackoffMs + (attempts - 1) * (baseBackoffMs / 2), maxBackoffMs);
+            if (Date.now() - t0 + delay > maxMs) break;
+            await new Promise((r) => setTimeout(r, delay));
+            continue;
+          }
+        }
+
+        // 검증 2: ZIP magic byte 확인. xlsx 는 ZIP container — 첫 4바이트가 `PK\x03\x04`.
+        // Range GET 으로 first 4 bytes 받아 검증. content 진짜 도착했는지 가장 직접적 증거.
+        if (verifyZipMagic) {
+          try {
+            const rangeRes = await onedriveSession.fetch(checkUrl, {
+              method: 'GET',
+              headers: { Range: 'bytes=0-3' },
+              redirect: 'manual',
+            });
+            if (rangeRes.status === 200 || rangeRes.status === 206) {
+              const buf = new Uint8Array(await rangeRes.arrayBuffer());
+              const isZip = buf.length >= 4 && buf[0] === 0x50 && buf[1] === 0x4b && buf[2] === 0x03 && buf[3] === 0x04;
+              console.log(
+                `[onedrive-sync] sp-poll-attempt ${relPath} #${attempts} zip-magic ` +
+                `bytes=${Array.from(buf.slice(0, 4)).map((b) => b.toString(16).padStart(2, '0')).join(' ')} isZip=${isZip}`,
+              );
+              if (!isZip) {
+                lastInvalidReason = 'magic-mismatch';
+                const delay = Math.min(baseBackoffMs + (attempts - 1) * (baseBackoffMs / 2), maxBackoffMs);
+                if (Date.now() - t0 + delay > maxMs) break;
+                await new Promise((r) => setTimeout(r, delay));
+                continue;
+              }
+            } else {
+              console.log(
+                `[onedrive-sync] sp-poll-attempt ${relPath} #${attempts} zip-magic ` +
+                `range-get status=${rangeRes.status} → continue polling`,
+              );
+              lastInvalidReason = 'magic-mismatch';
+              const delay = Math.min(baseBackoffMs + (attempts - 1) * (baseBackoffMs / 2), maxBackoffMs);
+              if (Date.now() - t0 + delay > maxMs) break;
+              await new Promise((r) => setTimeout(r, delay));
+              continue;
+            }
+          } catch (e) {
+            console.log(`[onedrive-sync] sp-poll-attempt ${relPath} #${attempts} zip-magic exception: ${(e as Error).message}`);
+            // 예외 시 보수적으로 계속 폴링.
+            const delay = Math.min(baseBackoffMs + (attempts - 1) * (baseBackoffMs / 2), maxBackoffMs);
+            if (Date.now() - t0 + delay > maxMs) break;
+            await new Promise((r) => setTimeout(r, delay));
+            continue;
+          }
+        }
+
+        return {
+          ready: true,
+          elapsedMs: Date.now() - t0,
+          attempts,
+          lastStatus,
+          lastContentLength,
+          reason: 'http-200',
+        };
       }
       // 404 / auth-redirect / 기타 — 폴링 계속.
     } catch {
@@ -199,7 +346,8 @@ async function pollSharePointReady(
     elapsedMs: Date.now() - t0,
     attempts,
     lastStatus,
-    reason: attempts === 0 ? 'no-attempts' : 'timeout',
+    lastContentLength,
+    reason: lastInvalidReason ?? (attempts === 0 ? 'no-attempts' : 'timeout'),
   };
 }
 
@@ -229,7 +377,15 @@ export async function syncUploadAndUrl(
     await copyFile(localXlsxPath, dest);
     // mtime 동기화 — copyFile 은 default 로 dest mtime 을 현재 시각으로 셋. 다음번 ensureFresh
     // 의 stale 판정 정확성 위해 src mtime 으로 맞춤.
-    if (srcMtimeMs != null) await setDestMtime(dest, srcMtimeMs);
+    // 0.1.51 hotfix — setDestMtime 제거. mtime 을 src(P4 commit time, 보통 과거) 로 되돌리면
+    // OneDrive Sync 엔진이 "local 이 cloud 보다 옛것" 이라고 판정해 cloud 의 stub (6148 byte
+    // 빈 xlsx) 을 local 로 다운로드해 우리 25MB 를 덮어씀. mtime=NOW (writeFile 기본값) 으로
+    // 두면 OneDrive Sync 가 local 을 cloud 로 정상 업로드. 사용자 manual 탐색기 복사가 즉시
+    // ✓ 되는 이유와 동일.
+    // 다음 ensureFresh 의 stale 판정은 size 비교만으로 충분 (xlsx 는 거의 항상 size 다름).
+    if (srcMtimeMs != null) {
+      // srcMtimeMs 는 무시 — OneDrive Sync 와 충돌. 변수 자체는 호환 위해 시그니처에 유지.
+    }
   } catch (e) {
     return { ok: false, error: `sync 폴더 복사 실패: ${(e as Error).message}` };
   }
@@ -270,9 +426,10 @@ export async function syncFromSidecarAndUrl(
   }
   const dest = join(account.userFolder, KLAUD_TEMP_DIR, `${relPath}.xlsx`);
   try {
-    await mkdir(dirname(dest), { recursive: true });
-    await writeFile(dest, buf);
-    if (srcMtimeMs != null) await setDestMtime(dest, srcMtimeMs);
+    // 0.1.51 hotfix — atomic temp+copyFile (CopyFileExW). 직접 writeFile 안 함.
+    // setDestMtime 도 제거 — mtime=NOW 로 두면 OneDrive Sync 가 local 을 cloud 로 정상 업로드.
+    void srcMtimeMs;
+    await writeViaTempCopy(dest, buf);
   } catch (e) {
     return { ok: false, error: `sync 폴더 write 실패: ${(e as Error).message}` };
   }
@@ -288,7 +445,8 @@ export async function syncFromSidecarAndUrl(
 // OneDrive 카피만 변경, P4 영향 없음 → 향후 P4 checkout 흐름 별도).
 function buildDepotEmbedUrl(account: OneDriveSyncAccount, depotRelPath: string): string {
   const encoded = depotRelPath.split('/').map(encodeURIComponent).join('/');
-  // ?web=1 — local sheet 와 동일. embedview 회귀 보류.
+  // 0.1.51 v3 — `?web=1` 환원 (bhunion download 회귀 회피). action=view 강제는 renderer 의
+  // Doc.aspx redirect intercept 에서 처리.
   return `${account.userUrl}/Documents/${KLAUD_DEPOT_DIR}/${encoded}.xlsx?web=1`;
 }
 
@@ -312,12 +470,29 @@ function depotPathToRel(depotPath: string): string {
 // 동시성: 같은 relPath 로 여러 번 빠르게 호출되는 케이스 (사용자가 다른 sheet 갔다가 다시 옴) 는
 // 한 번의 sync 만 진행하도록 inflight Set 으로 관리.
 
-const inflight = new Set<string>();
+// 0.1.51 v7 — Set<string> 에서 Map<relPath, Promise> 로 변경. 동일 relPath 동시 호출 (React
+// StrictMode dev double-fire / 사용자 rapid double-click) 시 두 번째 호출자가 짧은 verify-only
+// poll 을 별도 실행하던 것이 race condition 의 원인. 첫 번째 호출의 sidecar fetch + write +
+// poll 이 5s 안에 끝날 수 없는 큰 파일에서 두 번째 호출의 5s verify-only 가 false negative
+// (cloud-not-ready) 반환 → renderer 가 카드 노출 → 사용자 본 동작은 정상이었는데 카드만 떠 있음.
+// → 두 번째 호출자는 첫 번째의 *동일 Promise 를 await*. 같은 결과 받음.
+type EnsureFreshResult =
+  | { ok: true; url: string; status: 'ready' }
+  | { ok: true; url: string; status: 'cloud-not-ready'; pollAttempts: number; pollLastStatus: number | null }
+  | { ok: false; error: string };
+const inflight = new Map<string, Promise<EnsureFreshResult>>();
 
 export interface SyncProgressEvent {
   relPath: string;
-  state: 'started' | 'completed' | 'failed';
+  // 0.1.51 v6 — operational 신호 only. UX state 변경에 안 쓰임.
+  // 'uploading' = sidecar fetch + writeViaTempCopy 중
+  // 'verifying' = cloud HEAD polling 중
+  // 'completed' = 모든 단계 ready (== ensureFreshSync 가 status:'ready' 반환)
+  // 'failed'    = sidecar/write 등 운영 예외
+  // renderer 는 이 이벤트로 placeholder 텍스트 갱신 정도만 (mount/unmount 결정 X)
+  state: 'uploading' | 'verifying' | 'completed' | 'failed';
   error?: string;
+  bytes?: number;
 }
 
 interface SrcStat {
@@ -365,109 +540,178 @@ async function setDestMtime(destPath: string, srcMtimeMs: number): Promise<void>
   }
 }
 
-async function backgroundSync(
-  sidecarBaseUrl: string,
-  account: OneDriveSyncAccount,
-  relPath: string,
-  dest: string,
-  srcMtimeMs: number,
-  onProgress: (e: SyncProgressEvent) => void,
-): Promise<void> {
-  // inflight 는 ensureFreshSync 진입 시 이미 추가됨 (race 회피). 여기서 중복 add 안 함.
-  onProgress({ relPath, state: 'started' });
-  try {
-    const res = await fetch(`${sidecarBaseUrl}/xlsx_raw?relPath=${encodeURIComponent(relPath)}`);
-    if (!res.ok) throw new Error(`sidecar ${res.status}: ${await res.text()}`);
-    const buf = Buffer.from(await res.arrayBuffer());
-    await mkdir(dirname(dest), { recursive: true });
-    await writeFile(dest, buf);
-    // mtime 동기화 — src(P4 워크스페이스) 의 mtime 으로 dest 를 맞춤. 이게 없으면 다음번
-    // ensureFreshSync 가 항상 dest 가 더 새것이라 판정해서 stale=false → 잘못된 파일 영구.
-    await setDestMtime(dest, srcMtimeMs);
-    console.log(
-      `[onedrive-sync] write+mtime-sync ${relPath} bytes=${buf.length} mtime=${new Date(srcMtimeMs).toISOString()}`,
-    );
-    // SharePoint 능동 polling — 작은 파일은 수초 만에 ready, 큰 파일은 정확히 도달 시점.
-    // 옛 hardcoded 25s sleep 대체. timeout (30s) 시점엔 그냥 진행 — webview 는 어차피
-    // 사용자 SSO chain 이 끝나면 SharePoint 응답 받음.
-    const poll = await pollSharePointReady(account, KLAUD_TEMP_DIR, relPath);
-    console.log(
-      `[onedrive-sync] sp-poll ${relPath} ready=${poll.ready} ${poll.elapsedMs}ms ` +
-      `attempts=${poll.attempts} status=${poll.lastStatus} reason=${poll.reason}`,
-    );
-    onProgress({ relPath, state: 'completed' });
-  } catch (e) {
-    onProgress({ relPath, state: 'failed', error: (e as Error).message });
-  } finally {
-    inflight.delete(relPath);
-  }
-}
+// 0.1.51 v6 — backgroundSync 제거됨. ensureFreshSync 가 모든 작업 (writeViaTempCopy +
+// pollSharePointReady) 을 직렬로 await. fire-and-forget 흐름이 만들었던 race condition
+// (cachedUrl 즉시 mount → BG poll timeout → working webview 죽임) 을 구조적으로 차단.
 
-export async function ensureFreshSync(
-  sidecarBaseUrl: string,
+// 사용자가 inline 에러 카드의 "재시도" 버튼을 누르면 호출. 재업로드는 안 하고 SharePoint
+// HEAD 폴링만 다시 한 번. cloud-side 처리가 그 사이 끝났으면 ready:true 반환 → renderer 가
+// webview 마운트. 여전히 안 되면 ready:false 반환 → 카드 유지.
+export async function repollCloudReady(
   relPath: string,
-  onProgress: (e: SyncProgressEvent) => void,
 ): Promise<
-  | { ok: true; url: string; alreadyFresh: boolean; syncing: boolean }
+  | { ok: true; ready: boolean; pollAttempts: number; pollLastStatus: number | null }
   | { ok: false; error: string }
 > {
   const account = detectSyncAccount();
   if (!account) {
     return { ok: false, error: 'OneDrive Business sync 클라이언트 미설정' };
   }
+  const poll = await pollSharePointReady(account, KLAUD_TEMP_DIR, relPath);
+  console.log(
+    `[onedrive-sync] sp-repoll ${relPath} ready=${poll.ready} ${poll.elapsedMs}ms ` +
+    `attempts=${poll.attempts} status=${poll.lastStatus} reason=${poll.reason}`,
+  );
+  return {
+    ok: true,
+    ready: poll.ready,
+    pollAttempts: poll.attempts,
+    pollLastStatus: poll.lastStatus,
+  };
+}
+
+// 0.1.51 v6 — 단일 직렬 흐름. 모든 클릭이 동일 path:
+//   1. local mtime/size vs OneDrive 폴더 stat 비교 → stale 판정
+//   2. stale 이면 sidecar fetch + writeViaTempCopy (atomic)
+//   3. cloud HEAD polling (60s budget, expectedSize + ZIP magic)
+//   4. 결과 return:
+//      - poll.ready: { status: 'ready' } → renderer 가 webview mount
+//      - poll.timeout: { status: 'cloud-not-ready', pollAttempts, pollLastStatus } → renderer 가 카드
+//      - 운영 예외 (sidecar fail / write fail): { ok: false, error } → renderer 가 fallback prompt
+//
+// 옛 동작 (v5 까지) 은 stale 시 backgroundSync 를 fire-and-forget 으로 띄우고 즉시 return →
+// renderer 가 cachedUrl 로 webview 즉시 mount → BG poll timeout 시 cloud-not-ready event 가
+// working webview 를 죽임. v6 는 이 race 를 구조적으로 차단.
+export async function ensureFreshSync(
+  sidecarBaseUrl: string,
+  relPath: string,
+  onProgress: (e: SyncProgressEvent) => void,
+): Promise<EnsureFreshResult> {
+  const account = detectSyncAccount();
+  if (!account) {
+    return { ok: false, error: 'OneDrive Business sync 클라이언트 미설정' };
+  }
+
+  // 0.1.51 v7 — 동일 relPath 동시 호출 처리. 두 번째 호출자는 첫 번째의 promise 를 그대로 await.
+  // 옛 verify-only 5s poll 분기는 race 만들어서 false cloud-not-ready 발생 (StrictMode dev
+  // 더블파이어 + 큰 파일 cold-start). progress event 는 첫 호출자의 onProgress 로 main console
+  // 에 떨어지고, IPC handler 가 main window 에 broadcast — 두 번째 caller 도 동일 channel 에서
+  // 받음 (filter by relPath in renderer).
+  const existing = inflight.get(relPath);
+  if (existing) {
+    console.log(`[onedrive-sync] inflight ${relPath} — share existing promise`);
+    return existing;
+  }
+
+  const promise = doEnsureFreshSync(sidecarBaseUrl, relPath, account, onProgress);
+  inflight.set(relPath, promise);
+  try {
+    return await promise;
+  } finally {
+    inflight.delete(relPath);
+  }
+}
+
+async function doEnsureFreshSync(
+  sidecarBaseUrl: string,
+  relPath: string,
+  account: OneDriveSyncAccount,
+  onProgress: (e: SyncProgressEvent) => void,
+): Promise<EnsureFreshResult> {
   const dest = join(account.userFolder, KLAUD_TEMP_DIR, `${relPath}.xlsx`);
   const url = buildEmbedUrl(account, relPath);
 
-  // 이미 sync 중이면 재진입하지 않음. URL 만 반환하고 syncing: true 표시.
-  // 진입 즉시 inflight 추가 — React StrictMode (dev) 가 useEffect 를 2번 호출해서 ensureFresh
-  // 가 거의 동시에 두 번 들어와도 두 번째는 여기서 빠르게 early-return 한다. mtime 비교 await
-  // 이전에 add 해야 두 번째 호출이 비교 단계까지 가지 않음.
-  if (inflight.has(relPath)) {
-    return { ok: true, url, alreadyFresh: false, syncing: true };
-  }
-  inflight.add(relPath);
-  let releaseInflight = true;
-
-  try {
+    // Step 1: stat 비교 → stale 판정
     const [srcStat, destStat] = await Promise.all([
       readSrcStat(sidecarBaseUrl, relPath),
       readDestStat(dest),
     ]);
 
-    // src 를 못 찾으면 sync 가 의미 없음. 매핑된 옛 cloud 본문이라도 즉시 반환.
+    console.log(
+      `[onedrive-sync] ensureFresh ${relPath}: ` +
+      `src=${srcStat ? `mtime=${new Date(srcStat.mtimeMs).toISOString()},size=${srcStat.size}` : 'null'} ` +
+      `dest=${destStat ? `mtime=${new Date(destStat.mtimeMs).toISOString()},size=${destStat.size}` : 'null'}`,
+    );
+
+    // src 못 찾으면 (sidecar 404) — 옛 cloud 본문이라도 검증해서 ready 면 mount.
     if (srcStat == null) {
-      return { ok: true, url, alreadyFresh: true, syncing: false };
+      console.log(`[onedrive-sync] ${relPath}: srcStat=null → cloud verify-only`);
+      onProgress({ relPath, state: 'verifying' });
+      const poll = await pollSharePointReady(account, KLAUD_TEMP_DIR, relPath, {
+        initialDelayMs: 0,
+        baseBackoffMs: 500,
+        maxBackoffMs: 1500,
+        maxMs: 5000,
+      });
+      if (poll.ready) {
+        onProgress({ relPath, state: 'completed' });
+        return { ok: true, url, status: 'ready' };
+      }
+      return {
+        ok: true, url, status: 'cloud-not-ready',
+        pollAttempts: poll.attempts, pollLastStatus: poll.lastStatus,
+      };
     }
 
-    // stale 판정: dest 가 없거나, src 가 더 새것이거나, size 가 다르면.
-    // size 비교가 핵심 — 옛 backgroundSync 는 dest mtime 을 *write 시각* 으로 박아서
-    // 항상 dest 가 src 보다 새것 → stale=false → 옛 partial 파일 영구. 이번 fix 로 mtime 도
-    // src 와 동기화하지만, 기존 OneDrive 에 잘못 들어간 파일을 detect 하려면 size 도 봐야.
-    // tolerance 1초 (NTFS mtime 어긋남 회피).
+    // stale 판정 — size 매치가 핵심. mtime tolerance 1s (NTFS 어긋남).
     const stale =
       destStat == null
       || srcStat.mtimeMs > destStat.mtimeMs + 1000
       || (srcStat.size >= 0 && srcStat.size !== destStat.size);
-    if (!stale) {
-      return { ok: true, url, alreadyFresh: true, syncing: false };
-    }
 
-    if (destStat != null) {
+    let expectedSize = srcStat.size;
+
+    // Step 2: stale 이면 upload (writeViaTempCopy). 운영 예외 시 ok:false 반환.
+    if (stale) {
       const reason: string[] = [];
-      if (srcStat.mtimeMs > destStat.mtimeMs + 1000) reason.push('mtime');
-      if (srcStat.size >= 0 && srcStat.size !== destStat.size) reason.push(`size(src=${srcStat.size},dest=${destStat.size})`);
+      if (destStat == null) reason.push('dest=null');
+      if (destStat != null && srcStat.mtimeMs > destStat.mtimeMs + 1000) reason.push('mtime');
+      if (destStat != null && srcStat.size >= 0 && srcStat.size !== destStat.size) {
+        reason.push(`size(src=${srcStat.size},dest=${destStat.size})`);
+      }
       console.log(`[onedrive-sync] stale ${relPath} → ${reason.join(',')}`);
+      onProgress({ relPath, state: 'uploading' });
+      try {
+        const res = await fetch(`${sidecarBaseUrl}/xlsx_raw?relPath=${encodeURIComponent(relPath)}`);
+        if (!res.ok) {
+          const text = await res.text();
+          return { ok: false, error: `sidecar ${res.status}: ${text.slice(0, 200)}` };
+        }
+        const buf = Buffer.from(await res.arrayBuffer());
+        await writeViaTempCopy(dest, buf);
+        console.log(
+          `[onedrive-sync] write-via-temp ${relPath} bytes=${buf.length} (mtime=NOW, atomic copyFile)`,
+        );
+        expectedSize = buf.length;
+      } catch (e) {
+        const error = `upload 실패: ${(e as Error).message}`;
+        onProgress({ relPath, state: 'failed', error });
+        return { ok: false, error };
+      }
     }
 
-    // 백그라운드 sync 시작 — backgroundSync 가 finally 에서 inflight.delete.
-    releaseInflight = false;
-    void backgroundSync(sidecarBaseUrl, account, relPath, dest, srcStat.mtimeMs, onProgress).finally(() => {
-      inflight.delete(relPath);
+    // Step 3: cloud HEAD polling. 큰 파일 (236MB → 14초) 여유 있게 60s budget.
+    onProgress({ relPath, state: 'verifying' });
+    const poll = await pollSharePointReady(account, KLAUD_TEMP_DIR, relPath, {
+      expectedSize: expectedSize > 0 ? expectedSize : undefined,
+      verifyZipMagic: true,
+      initialDelayMs: stale ? 1000 : 0, // upload 직후엔 OneDrive Sync 가 인지할 시간 1s
+      maxMs: 60_000,
     });
-    return { ok: true, url, alreadyFresh: false, syncing: true };
-  } finally {
-    if (releaseInflight) inflight.delete(relPath);
-  }
+    console.log(
+      `[onedrive-sync] sp-poll ${relPath} ready=${poll.ready} ${poll.elapsedMs}ms ` +
+      `attempts=${poll.attempts} status=${poll.lastStatus} reason=${poll.reason} ` +
+      `cl=${poll.lastContentLength ?? '-'}`,
+    );
+
+    if (poll.ready) {
+      onProgress({ relPath, state: 'completed' });
+      return { ok: true, url, status: 'ready' };
+    }
+    return {
+      ok: true, url, status: 'cloud-not-ready',
+      pollAttempts: poll.attempts, pollLastStatus: poll.lastStatus,
+    };
 }
 
 // 한 depot 파일을 OneDrive depot 폴더에 업로드 + 읽기 전용 URL 반환.
@@ -498,7 +742,15 @@ export async function uploadDepotFileAndUrl(
     await copyFile(localXlsxPath, dest);
     // depot 흐름의 임시 파일 mtime 은 `p4 print -o` 의 다운로드 시각 — P4 commit 시각이 아님.
     // Phase 2 (다음 PR) 에서 p4 fstat headTime 으로 보강 예정. 현재는 일관성 차원에서만 utimes.
-    if (srcMtimeMs != null) await setDestMtime(dest, srcMtimeMs);
+    // 0.1.51 hotfix — setDestMtime 제거. mtime 을 src(P4 commit time, 보통 과거) 로 되돌리면
+    // OneDrive Sync 엔진이 "local 이 cloud 보다 옛것" 이라고 판정해 cloud 의 stub (6148 byte
+    // 빈 xlsx) 을 local 로 다운로드해 우리 25MB 를 덮어씀. mtime=NOW (writeFile 기본값) 으로
+    // 두면 OneDrive Sync 가 local 을 cloud 로 정상 업로드. 사용자 manual 탐색기 복사가 즉시
+    // ✓ 되는 이유와 동일.
+    // 다음 ensureFresh 의 stale 판정은 size 비교만으로 충분 (xlsx 는 거의 항상 size 다름).
+    if (srcMtimeMs != null) {
+      // srcMtimeMs 는 무시 — OneDrive Sync 와 충돌. 변수 자체는 호환 위해 시그니처에 유지.
+    }
   } catch (e) {
     return { ok: false, error: `OneDrive depot 폴더 복사 실패: ${(e as Error).message}` };
   }

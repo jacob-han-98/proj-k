@@ -336,7 +336,11 @@ export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Pr
               assembled += tok;
               setMessages((m) => {
                 const copy = [...m];
-                copy[copy.length - 1] = { role: 'assistant', content: assembled };
+                const last = copy[copy.length - 1];
+                // BUGFIX (2026-05-06): spread 로 progressEvents / sources / followUps 보존.
+                // 옛 코드는 매 token 마다 last 를 통째 갈아끼워서 progressEvents 가 누적
+                // 도중 날아가고, result 도착 시점에 last.progressEvents 가 빈 상태였음.
+                copy[copy.length - 1] = { ...last, role: 'assistant', content: assembled };
                 return copy;
               });
             }
@@ -354,6 +358,8 @@ export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Pr
             if (te) updateLastTool(te.id, te.summary);
           } else if (e.type === 'result') {
             // result 도착 — 최종 answer + sources + follow_ups 메시지에 영속.
+            // progressEvents 는 spread (...last) 로 보존 — 사용자가 결론 확인 후 진행 내역
+            // 펼치기로 어떤 도구를 몇 번 호출했는지 다시 볼 수 있게.
             const data = readResultData(e);
             const ans = data && typeof data.answer === 'string' ? data.answer : null;
             const sources = readSources(data) as QnASource[];
@@ -365,13 +371,12 @@ export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Pr
               const copy = [...m];
               const last = copy[copy.length - 1];
               copy[copy.length - 1] = {
+                ...last,
                 role: 'assistant',
                 content: assembled,
                 sources: sources.length > 0 ? sources : undefined,
                 followUps: followUps.length > 0 ? followUps : undefined,
-                // Phase E: progressEvents 보존 — streaming 끝나도 펼치기 토글로 다시 볼 수 있게.
-                progressEvents: last?.role === 'assistant' ? last.progressEvents : undefined,
-                progressExpanded: false, // streaming 끝 → 자동 collapse.
+                progressExpanded: false, // streaming 끝 → 자동 collapse, 토글로 펼침 가능.
               };
               return copy;
             });
@@ -397,7 +402,8 @@ export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Pr
       assembled = `[오류] ${msg}`;
       setMessages((m) => {
         const copy = [...m];
-        copy[copy.length - 1] = { role: 'assistant', content: assembled };
+        const last = copy[copy.length - 1];
+        copy[copy.length - 1] = { ...last, role: 'assistant', content: assembled };
         return copy;
       });
     } finally {

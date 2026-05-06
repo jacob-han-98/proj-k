@@ -549,48 +549,61 @@ html, body, #root { height: 100%; margin: 0; padding: 0; background: var(--bg); 
   color: var(--text);
 }
 
-/* Phase C: Markdown 렌더 — agent-sdk-poc 의 assistantRender 와 시각 일관성 (이식했지만
-   양쪽 분리 유지, 변경 시 cross-claude-bridge 로 통지). */
-.qna-md p { margin: 4px 0; }
-.qna-md h1, .qna-md h2, .qna-md h3, .qna-md h4 {
-  margin: 8px 0 4px;
-  font-weight: 600;
+/* Phase H (2026-05-06): typography 를 agent-sdk-poc 웹 .markdown-body 룰에 일치 — 헤더
+   스케일 / line-height / cell padding / code 박스 모두 동일 기준. 사용자 가독성 우선.
+   기준: font-size 14px 본문, line-height 1.7. 헤더는 em 단위로 스케일. */
+.qna-md {
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text);
 }
-.qna-md h1 { font-size: 16px; }
-.qna-md h2 { font-size: 14px; }
-.qna-md h3 { font-size: 13px; }
-.qna-md h4 { font-size: 12px; }
-.qna-md ul, .qna-md ol { margin: 4px 0; padding-left: 18px; }
-.qna-md li { margin: 2px 0; }
+.qna-md p { margin: 0 0 1em; }
+.qna-md p:last-child { margin-bottom: 0; }
+.qna-md h1, .qna-md h2, .qna-md h3, .qna-md h4 {
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  font-weight: 700;
+  line-height: 1.2;
+}
+.qna-md h1 { font-size: 1.5em; }
+.qna-md h2 { font-size: 1.25em; }
+.qna-md h3 { font-size: 1.1em; }
+.qna-md h4 { font-size: 1em; }
+.qna-md strong { font-weight: 600; }
+.qna-md ul, .qna-md ol { padding-left: 1.5em; margin: 0.5em 0; }
+.qna-md li { margin-bottom: 0.3em; }
+.qna-md li > ul, .qna-md li > ol { margin: 0.2em 0; }
 .qna-md code:not(pre code) {
   background: var(--hover);
-  padding: 1px 4px;
-  border-radius: 3px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
   font-size: 0.92em;
 }
 .qna-md pre {
   background: var(--hover);
-  padding: 8px;
-  border-radius: 4px;
+  padding: 16px;
+  border-radius: 8px;
   overflow-x: auto;
-  margin: 6px 0;
+  margin: 1em 0;
 }
-.qna-md pre code { background: transparent; padding: 0; }
+.qna-md pre code { background: transparent; padding: 0; font-size: 0.92em; }
 .qna-md table {
+  width: 100%;
   border-collapse: collapse;
-  margin: 6px 0;
-  font-size: 12px;
+  margin: 1em 0;
+  font-size: 0.95em;
 }
 .qna-md th, .qna-md td {
   border: 1px solid var(--border);
-  padding: 3px 6px;
+  padding: 8px 12px;
   text-align: left;
 }
-.qna-md th { background: var(--hover); font-weight: 600; }
+.qna-md th { background: var(--hover); font-weight: 700; }
 .qna-md blockquote {
   border-left: 3px solid var(--border);
-  padding-left: 8px;
-  margin: 4px 0;
+  padding-left: 12px;
+  margin: 0.5em 0;
   color: var(--text-dim);
 }
 
@@ -681,17 +694,20 @@ html, body, #root { height: 100%; margin: 0; padding: 0; background: var(--bg); 
 }
 .qna-followup-chip:hover { background: var(--hover); }
 
-/* Phase D: assistant 답변 카드 디자인 강화 — 회색 plain 에서 glass 스타일 카드로.
-   max-width 넓혀 표/긴 답변이 자연스럽게 흐르게. white-space: normal 로 override
-   (markdown 안에서 ReactMarkdown 이 줄바꿈 처리하므로 pre-wrap 불필요). */
+/* Phase D + H (2026-05-06): assistant 답변 카드 — agent-sdk-poc 웹 message 패딩/radius
+   와 같게. 글이 빽빽해 보이지 않도록 충분한 여백. font-size 14px 본문 (markdown-body 와
+   동등). max-width 넓혀 표/긴 답변이 자연스럽게 흐르게. white-space: normal 로 override
+   (ReactMarkdown 이 줄바꿈 처리). */
 .chat .msg.assistant {
   background: var(--bg-sidebar);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 14px 16px;
+  border-radius: 12px;
+  padding: 20px 24px;
   max-width: 100%;
   white-space: normal;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  font-size: 14px;
+  line-height: 1.7;
 }
 
 /* Phase D: 인라인 출처 chip 의 우선순위 강화. ReactMarkdown 의 a tag 기본 link 스타일을

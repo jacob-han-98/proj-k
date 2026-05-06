@@ -18,6 +18,7 @@ import type { SearchHit, ThreadDocRef } from '../../../shared/types';
 import { useWorkbenchStore } from '../store';
 import { AttachmentChips } from '../../qna/AttachmentChips';
 import { buildAttachmentPrompt, type QnAAttachment } from '../../qna/attachments';
+import { QnAWelcome } from '../../qna/Welcome';
 import {
   FollowUpCards,
   ProgressTimeline,
@@ -77,68 +78,9 @@ function genMsgId(): string {
   return `m-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-// A3-a: agent 의 큐레이션된 추천 prompt — 카테고리별로 grouping 후 chips. 사용자가 빈
-// 화면에서 "뭐부터 물어볼지" 가 어려운 진입 장벽을 제거. 클릭 → input 채움 (자동 send X
-// — 사용자가 추가 편집 가능).
-function PresetChips({
-  presets,
-  onPick,
-}: {
-  presets: PresetPrompt[];
-  onPick: (p: PresetPrompt) => void;
-}) {
-  // category 별 grouping. 정의된 순서 보존 (agent 의 PRESETS 정렬 의도 유지).
-  const grouped = useMemo(() => {
-    const order: string[] = [];
-    const map: Record<string, PresetPrompt[]> = {};
-    for (const p of presets) {
-      const cat = p.category ?? '기타';
-      if (!(cat in map)) {
-        order.push(cat);
-        map[cat] = [];
-      }
-      map[cat]!.push(p);
-    }
-    return order.map((cat) => ({ cat, items: map[cat]! }));
-  }, [presets]);
-
-  return (
-    <div className="preset-chips" data-testid="preset-chips">
-      <div className="preset-chips-hint">💡 추천 질문 — 클릭해서 시작하세요</div>
-      {grouped.map(({ cat, items }) => (
-        <div key={cat} className="preset-chips-group">
-          <div className="preset-chips-cat" data-testid={`preset-cat-${cat}`}>{categoryLabel(cat)}</div>
-          <div className="preset-chips-row">
-            {items.map((p, i) => (
-              <button
-                key={`${cat}-${i}`}
-                type="button"
-                className="preset-chip"
-                onClick={() => onPick(p)}
-                title={p.prompt}
-                data-testid={`preset-chip-${cat}-${i}`}
-              >{p.label}</button>
-            ))}
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function categoryLabel(cat: string): string {
-  // agent PRESETS 가 쓰는 category 키 → 한글 라벨. 모르는 키는 그대로.
-  const map: Record<string, string> = {
-    system: '시스템',
-    spec: '수치·공식',
-    cross: '크로스 시스템',
-    content: '컨텐츠',
-    overview: '개요',
-    datasheet: '데이터시트',
-    other: '기타',
-  };
-  return map[cat] ?? cat;
-}
+// Phase G: 옛 PresetChips / categoryLabel 제거 — Welcome.tsx 의 카드 그리드가 대체.
+// 새 디자인은 카테고리 라벨을 헤더로 분리하지 않고, 카드 자체에 아이콘 prefix (📊/📋/🔵)
+// 로 카테고리 신호 표현. agent-sdk-poc 웹 (사용자 스크린샷) 과 동일 패턴.
 
 export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Props) {
   const [input, setInput] = useState('');
@@ -568,10 +510,17 @@ export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Pr
       )}
 
       <div className="messages">
+        {/* Phase G: 빈 thread welcome 화면 — 큰 타이틀 + 부제 + preset 카드 그리드.
+            agent-sdk-poc 웹 (사용자 스크린샷) 과 동등한 look&feel. */}
         {messages.length === 0 && (
-          <div style={{ color: 'var(--text-dim)', fontSize: 12, padding: 4 }}>
-            질문을 입력하면 관련 문서가 먼저 표시되고 답변이 이어 스트림됩니다.
-          </div>
+          <QnAWelcome
+            presets={presets}
+            onPick={(p) => {
+              setInput(p.prompt);
+              if (p.compare_mode) setCompareMode(true);
+              setTimeout(() => taRef.current?.focus(), 0);
+            }}
+          />
         )}
         {messages.map((m, i) => {
           const isLast = i === messages.length - 1;
@@ -635,78 +584,79 @@ export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Pr
         })}
       </div>
 
-      {messages.length === 0 && presets.length > 0 && (
-        <PresetChips
-          presets={presets}
-          onPick={(p) => {
-            setInput(p.prompt);
-            // textarea focus — 사용자가 즉시 편집 또는 Enter 가능.
-            setTimeout(() => taRef.current?.focus(), 0);
-          }}
+      {/* Phase G: 옛 PresetChips (입력창 위 한 줄 wrap) 제거 — Welcome 의 카드 그리드가 대체. */}
+
+      {/* Phase G: 입력창 박스 통합 — 라운드 카드 안에 attachments + textarea + 옵션 라인.
+          agent-sdk-poc 웹 (사용자 스크린샷) 의 입력 박스 패턴 동일. 보내기는 ↑ 화살표 형태. */}
+      <div className="qna-input-box" data-testid="qna-input-box">
+        <AttachmentChips
+          attachments={pendingAttachments}
+          onDetach={(id) => detachFromQnA(threadId, id)}
         />
-      )}
-
-      <AttachmentChips
-        attachments={pendingAttachments}
-        onDetach={(id) => detachFromQnA(threadId, id)}
-      />
-
-      <div className="input-row">
         <textarea
           ref={taRef}
+          className="qna-input-ta"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={onKeyDown}
           placeholder={
             pendingAttachments.length > 0
-              ? '첨부 컨텍스트에 대해 질문하세요 (Ctrl+Enter)'
-              : '질문을 입력하세요 (Ctrl+Enter)'
+              ? '첨부 컨텍스트에 대해 질문하세요... (Ctrl+Enter로 전송)'
+              : '기획 질문을 입력하세요... (Ctrl+Enter로 전송)'
           }
           data-testid="chat-input"
         />
-        {busy ? (
-          <button
-            onClick={() => abortRef.current?.abort()}
-            data-testid="chat-stop"
-            title="응답 정지"
-            className="chat-stop"
-          >
-            ⏹ 정지
-          </button>
-        ) : (
-          <button onClick={() => void send()} data-testid="chat-send">
-            보내기
-          </button>
-        )}
-      </div>
-      {/* Phase F: 입력창 아래 옵션 라인 — 모델 / Deep Research. busy 중에도 다음 send 용으로
-          변경 가능. localStorage 영속. */}
-      <div className="qna-input-options" data-testid="qna-input-options">
-        <select
-          className="qna-model-select"
-          value={model}
-          onChange={(e) => setModel(e.target.value)}
-          disabled={busy}
-          data-testid="qna-model-select"
-          title="응답 생성 모델"
-        >
-          <option value="opus">Opus</option>
-          <option value="sonnet">Sonnet</option>
-          <option value="haiku">Haiku</option>
-        </select>
-        <label
-          className={`qna-compare-toggle${compareMode ? ' on' : ''}`}
-          title="Deep Research — oracle 큐레이트 타게임 + WebSearch fallback"
-          data-testid="qna-compare-toggle"
-        >
-          <input
-            type="checkbox"
-            checked={compareMode}
-            onChange={(e) => setCompareMode(e.target.checked)}
+        <div className="qna-input-bottom">
+          <select
+            className="qna-model-select"
+            value={model}
+            onChange={(e) => setModel(e.target.value)}
             disabled={busy}
-          />
-          <span>🌟 Deep Research</span>
-        </label>
+            data-testid="qna-model-select"
+            title="응답 생성 모델"
+          >
+            <option value="opus">Opus</option>
+            <option value="sonnet">Sonnet</option>
+            <option value="haiku">Haiku</option>
+          </select>
+          <label
+            className={`qna-compare-toggle${compareMode ? ' on' : ''}`}
+            title="Deep Research — oracle 큐레이트 타게임 + WebSearch fallback"
+            data-testid="qna-compare-toggle"
+          >
+            <input
+              type="checkbox"
+              checked={compareMode}
+              onChange={(e) => setCompareMode(e.target.checked)}
+              disabled={busy}
+            />
+            <span>🌟 Deep Research</span>
+          </label>
+          <span className="qna-input-spacer" aria-hidden="true" />
+          {busy ? (
+            <button
+              type="button"
+              onClick={() => abortRef.current?.abort()}
+              data-testid="chat-stop"
+              title="응답 정지"
+              className="qna-input-send qna-input-stop"
+              aria-label="정지"
+            >
+              ⏹
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={() => void send()}
+              data-testid="chat-send"
+              className="qna-input-send"
+              aria-label="보내기"
+              disabled={!input.trim()}
+            >
+              ↑
+            </button>
+          )}
+        </div>
       </div>
 
       {selectedCitation && (

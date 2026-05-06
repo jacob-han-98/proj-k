@@ -916,6 +916,136 @@ html, body, #root { height: 100%; margin: 0; padding: 0; background: var(--bg); 
 }
 .chat-stop:hover { background: #b91c1c; }
 
+/* Phase G: 빈 thread welcome 화면 — agent-sdk-poc 웹과 동등한 look&feel. 큰 타이틀 +
+   부제 + preset 카드 2컬럼 그리드. messages 영역 안에 중앙 정렬로. */
+.qna-welcome {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 32px 16px 24px;
+  gap: 24px;
+}
+.qna-welcome-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  text-align: center;
+}
+.qna-welcome-icon {
+  font-size: 32px;
+  line-height: 1;
+}
+.qna-welcome-title {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.3px;
+}
+.qna-welcome-sub {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.qna-preset-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 8px;
+  width: 100%;
+  max-width: 720px;
+}
+.qna-preset-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text);
+  text-align: left;
+  transition: background 0.1s ease, border-color 0.1s ease;
+}
+.qna-preset-card:hover {
+  background: var(--hover);
+  border-color: var(--accent);
+}
+.qna-preset-card-icon {
+  font-size: 13px;
+  flex-shrink: 0;
+}
+.qna-preset-card-label {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Phase G: 입력창 박스 통합 — 라운드 카드 안에 attachments + textarea + 옵션 라인.
+   agent-sdk-poc 웹 의 입력 박스와 동일 패턴. 옛 .input-row + .qna-input-options
+   분리된 흐름은 유지되나 시각적으론 하나의 박스. */
+.qna-input-box {
+  margin: 0 12px 12px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 8px 4px 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+.qna-input-box:focus-within {
+  border-color: var(--accent);
+}
+.qna-input-ta {
+  background: transparent;
+  border: 0;
+  outline: none;
+  resize: none;
+  width: 100%;
+  min-height: 36px;
+  max-height: 160px;
+  padding: 4px 10px;
+  font-family: inherit;
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.5;
+}
+.qna-input-ta::placeholder { color: var(--text-dim); }
+.qna-input-bottom {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 6px;
+}
+.qna-input-spacer { flex: 1; }
+.qna-input-send {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 0;
+  background: var(--accent);
+  color: var(--accent-fg);
+  font-size: 16px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: background 0.1s ease;
+}
+.qna-input-send:hover:not(:disabled) { background: color-mix(in srgb, var(--accent) 90%, black); }
+.qna-input-send:disabled { background: var(--border); color: var(--text-dim); cursor: default; }
+.qna-input-stop {
+  background: #dc2626;
+  color: white;
+}
+.qna-input-stop:hover { background: #b91c1c; }
+
 /* PR5: .chat 은 더 이상 grid 자식이 아니라 EditorHost > .tab-slot 안의 flex item (QnATab).
    border-left 도 제거 — 탭 split 안이라 좌측 경계가 의미 없음. 다른 .chat 하위 스타일
    (.messages, .msg, .input-row, .search-results 등) 은 그대로 재사용. */

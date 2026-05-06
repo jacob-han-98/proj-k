@@ -178,6 +178,9 @@ export interface PresetPrompt {
   label: string;
   prompt: string;
   category?: string;
+  // Phase G: backend 가 'compare/external/web' 카테고리 preset 에 true 표기. 클릭 시
+  // 자동으로 Deep Research 토글 ON — agent-sdk-poc 의 동일 동작과 매핑.
+  compare_mode?: boolean;
 }
 export async function getPresetPrompts(): Promise<PresetPrompt[]> {
   try {

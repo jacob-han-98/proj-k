@@ -1,6 +1,6 @@
 ---
 name: onedrive-sync-pitfalls
-description: Klaud 의 OneDrive 경유 Excel-for-Web 임베드 흐름에서 마주치는 함정 모음. 사용자가 "엑셀 본문 안 보여", "빈 워크북", "랜덤하게 보였다 안 보였다", "OneDrive 폴더에서 ✓ 였는데 Klaud 만 stuck", "🔄 영구 sync 상태", "save dialog 떠" 같은 증상을 보고할 때 트리거. `packages/desktop-app/src/main/onedrive-sync.ts` 또는 `src/renderer/panels/CenterPane.tsx` 의 webview/Excel-for-Web/`?action=` 매개변수/Doc.aspx 흐름을 수정할 때도 자동 트리거. 2026-05-04 사용자 환경 (BigHit Entertainment / bhunion tenant) 에서 실측 진단으로 도출된 노하우 — 다음 회귀 사이클 때 같은 길을 다시 걷지 않도록 즉시 참조.
+description: Klaud 의 OneDrive 경유 Excel-for-Web 임베드 흐름에서 마주치는 함정 모음. 사용자가 "엑셀 본문 안 보여", "빈 워크북", "랜덤하게 보였다 안 보였다", "OneDrive 폴더에서 ✓ 였는데 Klaud 만 stuck", "🔄 영구 sync 상태", "save dialog 떠", "동시 오픈하니 카드 떠" 같은 증상을 보고할 때 트리거. `packages/desktop-app/src/main/onedrive-sync.ts` 또는 `src/renderer/panels/CenterPane.tsx` 의 webview/Excel-for-Web/`?action=` 매개변수/Doc.aspx/`inflight`/concurrency 흐름을 수정할 때도 자동 트리거. 2026-05-04 ~ 2026-05-06 사용자 환경 (BigHit Entertainment / bhunion tenant) 에서 실측 진단으로 도출된 노하우 — 다음 회귀 사이클 때 같은 길을 다시 걷지 않도록 즉시 참조. v6 (단일 직렬 흐름) + v7 (Promise-keyed inflight) 적용 후 안정화.
 user-invocable: false
 allowed-tools:
   - Bash
@@ -116,6 +116,75 @@ const poll = await pollSharePointReady(account, KLAUD_TEMP_DIR, relPath, {
 ```
 
 **중요**: 이 검증은 **status=200 (raw file 응답) 에만** 적용. **`sp-redirect` (302 → Doc.aspx) 는 그대로 trust** — Doc.aspx 는 HTML 이라 ZIP magic 안 나오므로 검증 불가. 302 자체가 "SP metadata 정상" 의미라 신뢰 OK.
+
+## 함정 6 — Set-based inflight + verify-only 짧은 budget = false cloud-not-ready
+
+**증상**: 같은 sheet 두 번 빠르게 클릭 또는 React StrictMode dev 더블파이어 시, 정상 동작 중인 ensureFresh 가 진행 중인데 **별도 카드** 가 떠버림. 로그에 `cloud-not-ready 5651ms attempts=3 lastStatus=404` (5초 budget timeout, 3회 폴링 — 5s verify-only path 의 시그니처).
+
+**원인 chain** (v6 까지):
+1. 첫 호출: `inflight.add(relPath)` → 정상 full 흐름 (writeViaTempCopy + 60s poll budget) 시작
+2. 두 번째 호출 (StrictMode 또는 rapid double-click): `inflight.has(relPath)` true → "verify-only" 분기 진입 → 짧은 5s HEAD probe
+3. 첫 호출의 sidecar fetch + write 가 5s 안에 cloud 까지 못 도달 (대용량 파일 / 네트워크 latency 정상 케이스도 흔함)
+4. 두 번째 호출의 5s budget timeout → `status: 'cloud-not-ready'` 반환
+5. Renderer 의 cancelled 처리 시점 차이로 두 번째 응답이 active 로 → cloudNotReady 카드 노출
+6. 첫 호출은 결국 ready 로 끝나지만 cancelled=true 라 무시됨
+
+**Fix 패턴 (v7)** — `inflight: Set<string>` → `Map<relPath, Promise<EnsureFreshResult>>`:
+
+```typescript
+const inflight = new Map<string, Promise<EnsureFreshResult>>();
+
+export async function ensureFreshSync(...) {
+  const existing = inflight.get(relPath);
+  if (existing) return existing;  // 두 번째 호출자는 첫 번째 Promise 그대로 await
+
+  const promise = doEnsureFreshSync(...);
+  inflight.set(relPath, promise);
+  try { return await promise; }
+  finally { inflight.delete(relPath); }
+}
+```
+
+**왜 작동하나**: 두 호출자 모두 동일한 Promise 를 await → 동일한 결과 반환. 별도 verify-only path 자체가 없어짐 (race 도 없어짐). progress event 는 첫 호출자의 onProgress 로 main console 까지 흘러서 IPC handler 가 main window 에 broadcast — 두 번째 caller 도 same channel 에서 받음 (filter by relPath in renderer 가 처리).
+
+**다른 사이드 이슈 — 동시 cloud upload bandwidth 한계**: 3 파일 동시 클릭 시 각 ensureFresh 가 각자 writeViaTempCopy 를 마치고 OneDrive Sync 가 동시 업로드. 사용자 실측: 44 + 77 + 96 MB (= 217MB) 동시 업로드 시 96MB 가 60s timeout 안에 cloud 도달 못 함 (`attempts=21 status=200 size=6147` — 옛 stub 가 그대로 보임). 이건 Klaud 가 못 풀어주는 외부 한계. timeout 늘리거나 (`maxMs: 120000`) 사용자 retry 에 의존.
+
+## 함정 7 — 옛 fire-and-forget backgroundSync + cachedUrl 즉시 mount race
+
+**증상**: 작동 중인 webview 가 30초쯤 지나면 갑자기 "OneDrive 동기화 미완료" 카드로 교체됨. 사용자가 보던 본문이 의미 없이 죽음.
+
+**원인 chain** (v5 까지):
+1. cachedUrl (옛 매핑) 으로 webview 즉시 mount → SP 가 옛 cloud 본문 응답 → 사용자 본문 보임
+2. `backgroundSync` fire-and-forget 으로 새 local 쓰기 + cloud poll
+3. Cloud 의 옛 revision 은 **새 local size 와 다름** → poll 의 size-mismatch 검증 실패 → 30s timeout
+4. `state: 'cloud-not-ready'` event push → renderer 가 작동 중인 webview 죽이고 카드 노출
+5. (옛 v5 임기응변) `excelContentLoadedRef` ref 로 "이미 보고 있으면 무시" 처리 — but 이건 stub 봐도 무시하는 위험
+
+**Fix 패턴 (v6)** — `ensureFreshSync` 단일 직렬 흐름:
+
+```typescript
+// 옛 (v5)
+ensureFreshSync(...) {
+  if (stale) {
+    void backgroundSync(...);  // fire-and-forget — race 의 진원지
+    return { syncing: true, alreadyFresh: false };
+  }
+  return { alreadyFresh: true };
+}
+
+// 새 (v6)
+ensureFreshSync(...) {
+  // 모든 단계 await → return 시점엔 이미 결과 결정됨
+  if (stale) { await sidecarFetch(); await writeViaTempCopy(); }
+  const poll = await pollSharePointReady(...);  // 60s budget
+  if (poll.ready) return { status: 'ready' };
+  return { status: 'cloud-not-ready', pollAttempts, pollLastStatus };
+}
+```
+
+**Renderer 측 단순화**: cachedUrl 즉시 mount 흐름, `hadCachedUrlAtMount`, `excelContentLoadedRef`, sub-frame abort count 모두 제거. ensureFresh 결과 (`status` field) 만 보고 webview / 카드 / fallback prompt 분기.
+
+**Trade-off**: 옛 "두 번째 클릭부터 즉시 mount" 빠른 path 가 사라짐. 매 클릭마다 cloud verify-poll (안정 시 100~250ms). 사용자 환경 실측: 무시할 만한 latency.
 
 ## 함정 5 — WOPI 엔드포인트는 별도 propagation timing
 

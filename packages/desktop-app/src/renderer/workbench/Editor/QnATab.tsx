@@ -330,6 +330,11 @@ export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Pr
         questionForBackend,
         (event) => {
           const e = event as unknown as StreamEvent;
+          // DEBUG (2026-05-06): 사용자 보고 — 진행 내역 비어있음. backend 가 보내는데
+          // 도달 안 하는지, 또는 처리 안 되는지 한눈에 보이게 console 로그. F12 Console 확인.
+          // 안정 후 제거.
+          // eslint-disable-next-line no-console
+          console.log('[qna-event]', e.type, e);
           if (e.type === 'token') {
             const tok = readToken(e);
             if (tok) {
@@ -534,9 +539,10 @@ export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Pr
           const isLastAssistant = m.role === 'assistant' && isLast && !busy;
           return (
             <div key={i} className={`msg ${m.role}`} data-testid={`msg-${m.role}-${i}`}>
-              {/* Phase E: assistant 메시지의 진행 내역 — 본문 위에 토글 헤더. streaming
-                  중에는 자동 펼침, 끝나면 collapse 가 default. 사용자가 다시 펼치기 가능. */}
-              {m.role === 'assistant' && (m.progressEvents || isStreaming) && (
+              {/* Phase E + 2026-05-06 fix: assistant 메시지면 항상 토글 노출. backend 가
+                  progress 이벤트를 한 개도 안 흘리는 케이스에서도 "진행 내역 없음" 라벨을
+                  보여 사용자가 사라진 것으로 오해하지 않게. */}
+              {m.role === 'assistant' && (
                 <ProgressTimeline
                   events={m.progressEvents ?? []}
                   expanded={!!m.progressExpanded}

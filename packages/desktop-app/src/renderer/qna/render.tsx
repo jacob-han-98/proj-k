@@ -474,13 +474,20 @@ export interface ProgressTimelineProps {
 }
 
 export function ProgressTimeline({ events, expanded, onToggle, streaming }: ProgressTimelineProps) {
-  if (events.length === 0 && !streaming) return null;
+  // BUGFIX (2026-05-06): 옛 코드는 events.length === 0 && !streaming 이면 return null
+  // → backend 가 progress 이벤트를 한 개도 안 흘리는 케이스에서 사용자에겐 "진행 내역
+  // 자체가 사라진 것 처럼" 보임. 항상 토글을 노출하되 events 0 일 때는 별도 라벨 표시.
+  // 이러면 사용자가 "정말 backend 가 안 보낸 거구나" 즉시 인지 가능.
 
   const toolCount = events.filter((e) => e.kind === 'tool').length;
   const isOpen = streaming || expanded;
   const summaryLabel = streaming
-    ? `⏳ 진행 중 · 툴 ${toolCount}회`
-    : `✅ 진행 내역 ${expanded ? '접기' : '펼치기'} · 툴 ${toolCount}회`;
+    ? events.length === 0
+      ? '⏳ 응답 생성 중'
+      : `⏳ 진행 중 · 툴 ${toolCount}회`
+    : events.length === 0
+      ? '✅ 진행 내역 없음'
+      : `✅ 진행 내역 ${expanded ? '접기' : '펼치기'} · 툴 ${toolCount}회`;
 
   return (
     <div className="qna-progress-timeline" data-testid="qna-progress-timeline">

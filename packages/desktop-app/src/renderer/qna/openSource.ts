@@ -31,14 +31,12 @@ function parseConfluencePageId(url?: string): string | null {
   return null;
 }
 
-// xlsx-extractor output path → P4 트리 노드 relPath (sheet 또는 workbook 단위).
+// xlsx-extractor output path → OneDrive mirror 용 워크북 relPath (확장자 .xlsx 포함).
 // path 예: 'packages/xlsx-extractor/output/7_System/PK_변신/주요_정의/_final/content.md'
-//   → sheet relPath: '7_System/PK_변신/주요_정의'
-//   → workbook relPath: '7_System/PK_변신'
+//   → workbook relPath: '7_System/PK_변신.xlsx'
 //
-// 시트 단위가 더 정확하지만 P4 트리에서 sheet node 를 직접 열 수 있는지는 tree-core 의
-// id 패턴 ('sheet:<relPath>') 에 따라. 일단 workbook 단위로 열고 사용자가 트리에서
-// 시트 펼쳐 보는 흐름으로.
+// 사용자 보고 (2026-05-06): 시트 단위 path 그대로 쓰면 OneDrive 에 그 path 가 없어 404.
+// 워크북 .xlsx 단위로 변환 필수.
 function xlsxPathToRelPath(p: string | undefined): { workbook: string; sheet: string } | null {
   if (!p) return null;
   const m = p.match(/output\/([^/]+)\/([^/]+)(?:\/([^/]+))?/);
@@ -46,7 +44,7 @@ function xlsxPathToRelPath(p: string | undefined): { workbook: string; sheet: st
   const cat = m[1];
   const wb = m[2];
   const sh = m[3] ?? '';
-  return { workbook: `${cat}/${wb}`, sheet: sh ? `${cat}/${wb}/${sh}` : '' };
+  return { workbook: `${cat}/${wb}.xlsx`, sheet: sh ? `${cat}/${wb}/${sh}` : '' };
 }
 
 // DataSheet workbook 이름 정제 ('DataSheet / MonsterClass' / 'MonsterClass' / 'MonsterClass.xlsx').

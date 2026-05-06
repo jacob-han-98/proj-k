@@ -25,12 +25,31 @@ const initial: State = { query: '', hits: [], status: '', busy: false };
 //   xlsx::      doc_id = "xlsx::<workbook>::<sheet>", path 표시용. content_md_path 는 본문.
 //   conf::      doc_id = "conf::<path>",   confluencePageId 는 hit 에 직접 없음 (TODO: backend 가 제공해주면 정확).
 // 임시: workbook + path 로 가짜 TreeNode 만들고 selection 채우는 식 (QnATab 의 thread-doc 클릭과 같은 패턴).
+//
+// BUGFIX (2026-05-06): xlsx 시트 hit 클릭 시 OneDrive 동기화 404. backend 가 주는 hit.path
+// 가 시트 단위 ('<cat>/<workbook>/<sheet>') 인 케이스가 있는데 OneDrive mirror 는 워크북
+// 단위 '.xlsx' 파일 — 그대로 relPath 로 쓰면 cloud 에서 못 찾음. 워크북 path + '.xlsx'
+// 로 정규화. 같은 워크북의 다른 시트 클릭은 같은 탭으로 focus (id 워크북 단위로 통일).
+function normalizeXlsxPath(rawPath: string): string {
+  if (rawPath.endsWith('.xlsx')) return rawPath;
+  const parts = rawPath.split('/');
+  // 슬래시 ≥ 3 이면 마지막 segment 가 시트 — 제거 후 .xlsx.
+  // 슬래시 ≤ 2 면 워크북 폴더 path 자체 → .xlsx 만 추가.
+  if (parts.length >= 3) {
+    return parts.slice(0, -1).join('/') + '.xlsx';
+  }
+  return `${rawPath}.xlsx`;
+}
+
 function hitToTabSpec(hit: QuickFindHit) {
+  const relPath = hit.type === 'xlsx' ? normalizeXlsxPath(hit.path) : hit.path;
+  // id 도 워크북 단위로 통일 — 같은 워크북의 다른 시트 클릭 시 같은 탭 reuse.
+  const id = hit.type === 'xlsx' ? `xlsx:${relPath}` : `${hit.type}:${hit.doc_id}`;
   const node: TreeNode = {
-    id: `${hit.type}:${hit.doc_id}`,
+    id,
     type: hit.type === 'confluence' ? 'page' : 'sheet',
     title: hit.title,
-    relPath: hit.path,
+    relPath,
     // Confluence 페이지 ID 는 doc_id 끝부분 (있으면) — 정확한 form 은 backend 가 추후 hit 에 추가 예정.
     confluencePageId: hit.type === 'confluence' ? hit.doc_id : undefined,
   };

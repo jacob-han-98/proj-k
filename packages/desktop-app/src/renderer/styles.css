@@ -1065,17 +1065,114 @@ html, body, #root { height: 100%; margin: 0; padding: 0; background: var(--bg); 
 }
 .qna-input-stop:hover { background: #b91c1c; }
 
-/* PR5: .chat 은 더 이상 grid 자식이 아니라 EditorHost > .tab-slot 안의 flex item (QnATab).
-   border-left 도 제거 — 탭 split 안이라 좌측 경계가 의미 없음. 다른 .chat 하위 스타일
-   (.messages, .msg, .input-row, .search-results 등) 은 그대로 재사용. */
+/* Phase J (2026-05-06): 우측 split 패널 — 출처 클릭 시 본문 표시. agent-sdk-poc 웹의
+   SourceViewPanel 이식. flex-basis 460px 고정, 좁은 화면이면 dynamic. */
+.qna-source-view-panel {
+  flex: 0 0 460px;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--border);
+  background: var(--bg);
+  min-height: 0;
+  overflow: hidden;
+}
+.qna-source-view-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-sidebar);
+  flex-shrink: 0;
+}
+.qna-source-view-title {
+  flex: 1;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.qna-source-view-badge {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 8px;
+  background: #f59e0b22;
+  color: #b45309;
+  font-weight: 500;
+}
+.qna-source-view-ext, .qna-source-view-close {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  text-decoration: none;
+  flex-shrink: 0;
+}
+.qna-source-view-ext:hover, .qna-source-view-close:hover { background: var(--hover); }
+.qna-source-view-close { font-weight: 600; }
+.qna-source-view-notice {
+  background: #f59e0b11;
+  border-bottom: 1px solid #f59e0b44;
+  padding: 8px 12px;
+  font-size: 11px;
+  color: var(--text);
+  flex-shrink: 0;
+}
+.qna-source-view-loading, .qna-source-view-error {
+  padding: 16px 12px;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.qna-source-view-error { color: #dc2626; }
+.qna-source-view-section-badge {
+  font-size: 11px;
+  color: var(--text-dim);
+  padding: 6px 12px;
+  background: var(--hover);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.qna-source-view-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  font-size: 13px;
+  line-height: 1.7;
+}
+/* section_range 하이라이트 — 노란 톤 박스로 강조. */
+.qna-source-view-highlight {
+  background: #fef9c322;
+  border-left: 3px solid #facc15;
+  padding: 8px 12px;
+  margin: 8px -12px;
+  border-radius: 4px;
+}
+
+/* Phase J: chat 자체를 좌:우 split — chat-main (가운데 컬럼) + 우측 SourceViewPanel.
+   chat-main 안에서 messages 와 input 모두 가운데 정렬 (Phase I). */
 .chat {
   flex: 1 1 auto;
   width: 100%;
   height: 100%;
   background: var(--bg-elev);
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   overflow: hidden;
+  min-height: 0;
+}
+.chat-main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
   min-height: 0;
 }
 /* Phase I (2026-05-06): 채팅 영역 중앙 정렬 — agent-sdk-poc 웹과 동일 패턴.

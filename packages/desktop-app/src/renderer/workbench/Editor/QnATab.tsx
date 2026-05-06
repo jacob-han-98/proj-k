@@ -2,7 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { askStream, getPresetPrompts, searchDocs, setDocContext, type PresetPrompt } from '../../api';
 import { annotateCitedHits } from '../../citations';
 // citations.splitAnswerWithCitations 는 Phase C 부터 미사용 — RenderAssistantMarkdown 이 대체.
-import { SourceModal } from '../../panels/SourceModal';
+// Phase J: SourceModal (centered modal) → SourceViewPanel (right split). 우측 패널 형태로
+// 본문 전체 + section_range 하이라이트 + Esc 닫기.
+import { SourceViewPanel, useSourceView } from '../../qna/SourceViewPanel';
 import {
   readFollowUps,
   readResultData,
@@ -28,12 +30,7 @@ import {
   type QnASource,
 } from '../../qna/render';
 
-// A3-b: 답변 안 (출처: ...) 클릭 → modal. 클릭 시 selectedCitation 으로 modal 띄움.
-interface CitationTarget {
-  raw: string;
-  path: string;
-  section: string;
-}
+// Phase J: 옛 CitationTarget (modal 용) 제거 — useSourceView 훅이 path/section 직접 받음.
 
 // PR6: 사이드바 "+ 새" 가 만든 default 제목. 사용자가 직접 rename 하기 전엔 이 값이라
 // QnATab 의 첫 메시지가 도착하면 자동으로 그 메시지 30자로 갈아낀다.
@@ -95,8 +92,9 @@ export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Pr
   // A3-a: agent 의 큐레이션된 추천 prompt — empty 화면의 진입 장벽 제거. messages.length===0
   // 일 때만 노출. 클릭 시 input 자동 채움 (사용자가 추가 편집 후 보낼 수 있게 send 자동 X).
   const [presets, setPresets] = useState<PresetPrompt[]>([]);
-  // A3-b: citation 클릭 → /source_view modal. null 이면 닫힘.
-  const [selectedCitation, setSelectedCitation] = useState<CitationTarget | null>(null);
+  // Phase J: 출처 클릭 → 우측 split panel 로 본문 표시. useSourceView 훅이 fetch/loading/
+  // err/Esc 모두 관리. open(path, section) 호출 시 panel 열림 + backend 호출.
+  const sourceView = useSourceView();
   // Phase F: 입력창 옆 토글 — 모델 선택 / Deep Research / 정지 버튼.
   // localStorage 영속 — 사용자 선호 보존 (다음 thread 도 같은 default).
   const [model, setModel] = useState<string>(() => {
@@ -464,6 +462,9 @@ export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Pr
 
   return (
     <aside className="chat" data-testid="qna-tab">
+      {/* Phase J: 가운데 컬럼 (docs / hits / messages / input) + 우측 split panel
+          (SourceViewPanel, sourceView 열려있을 때만). chat-main 이 flex 1 차지. */}
+      <div className="chat-main">
       {docs.length > 0 && (
         <div className="thread-docs-row" data-testid="thread-docs">
           <span className="thread-docs-label">📚 누적 문서</span>
@@ -562,11 +563,7 @@ export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Pr
                 <RenderAssistantMarkdown
                   content={m.content}
                   sources={m.sources}
-                  onOpenSource={(path, section) => {
-                    // 인라인 출처 클릭 — SourceModal 열기. raw 라벨은 path § section 형태로 재조립.
-                    const raw = section ? `${path} § ${section}` : path;
-                    setSelectedCitation({ raw, path, section });
-                  }}
+                  onOpenSource={(path, section) => sourceView.open(path, section)}
                 />
               ) : (
                 m.content || '…'
@@ -575,10 +572,7 @@ export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Pr
               {m.role === 'assistant' && m.sources && (
                 <RenderSourceCards
                   sources={m.sources}
-                  onOpen={(path, section) => {
-                    const raw = section ? `${path} § ${section}` : path;
-                    setSelectedCitation({ raw, path, section });
-                  }}
+                  onOpen={(path, section) => sourceView.open(path, section)}
                 />
               )}
               {/* Phase C: 마지막 assistant 메시지 + 답변 완료 시 follow-ups. busy 중엔 숨김. */}
@@ -671,14 +665,13 @@ export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Pr
         </div>
       </div>
 
-      {selectedCitation && (
-        <SourceModal
-          raw={selectedCitation.raw}
-          path={selectedCitation.path}
-          section={selectedCitation.section}
-          onClose={() => setSelectedCitation(null)}
-        />
-      )}
+      </div>
+      <SourceViewPanel
+        sourceView={sourceView.sourceView}
+        loading={sourceView.loading}
+        err={sourceView.err}
+        onClose={sourceView.close}
+      />
     </aside>
   );
 }

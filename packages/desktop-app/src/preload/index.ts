@@ -85,12 +85,11 @@ const api = {
     depotRoots: (): Promise<P4DepotResult> => ipcRenderer.invoke(IPC.P4_DEPOT_LIST),
     depotDirs: (parentPath: string): Promise<P4DepotResult> =>
       ipcRenderer.invoke(IPC.P4_DEPOT_DIRS, parentPath),
-    // PR9c: depot 파일 보기 — head revision 캐시 키. fromCache 면 OneDrive 재업로드 skip.
+    // 0.1.52 — depot 파일 보기. p4 print → OneDrive 업로드 → cloud verify-poll → URL.
+    // 옛 manifest cache (revision 추적 + cachedPaths) 모두 제거 — 사내 P4 다운로드 sub-second
+    // 라 매번 재다운로드 비용 거의 없음.
     openDepotFile: (depotPath: string): Promise<P4DepotOpenResult> =>
       ipcRenderer.invoke(IPC.P4_DEPOT_OPEN, depotPath),
-    // 트리 표시용 — 캐시되어있는 depot 파일 목록 (manifest read only, p4 호출 없음).
-    cachedPaths: (): Promise<Array<{ path: string; revision: number }>> =>
-      ipcRenderer.invoke(IPC.P4_DEPOT_CACHE_LIST),
   },
 
   // 액티비티 바 5번 ("내 작업 중 문서") — 30s 폴링 단발성 fetch.

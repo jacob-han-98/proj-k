@@ -50,22 +50,12 @@ export function P4DepotTree() {
   // depot 파일 클릭 → openDepotFile 진행 중인 path. 같은 파일 다중 클릭 방지 + tree-row 에 "다운로드 중…" 표시.
   const [openingPath, setOpeningPath] = useState<string | null>(null);
   const [openErrorPath, setOpenErrorPath] = useState<{ path: string; msg: string } | null>(null);
-  // 캐시된 depot path 집합 — mount + refresh + 파일 open 후 갱신. 트리에 📥 아이콘 표시.
-  const [cachedPaths, setCachedPaths] = useState<Set<string>>(new Set());
   const editingDocs = useWorkbenchStore((s) => s.editingDocs);
   const setDocEditing = useWorkbenchStore((s) => s.setDocEditing);
 
-  const reloadCachedPaths = async () => {
-    try {
-      const list = await window.projk.p4.cachedPaths();
-      setCachedPaths(new Set(list.map((e) => e.path)));
-    } catch (e) {
-      console.warn('cachedPaths fetch failed', e);
-    }
-  };
-
-  // depot 파일 클릭 시: head revision 으로 캐시 lookup → cache miss 면 p4 print + OneDrive 업로드 →
-  // 결과 URL 로 새 excel 탭 open. CenterPane 의 sheet 분기에서 node.oneDriveUrl 을 우선 사용.
+  // 0.1.52 — depot 파일 클릭 시: p4 print → OneDrive 업로드 → cloud verify-poll → URL.
+  // 옛 manifest cache (revision 추적, 📥 아이콘) 모두 제거. 사내 P4 다운로드 sub-second 라
+  // 매번 다시 받아도 비용 거의 없음. 같은 content 는 OneDrive Sync 가 cloud upload skip.
   const openDepotFile = async (entry: P4DepotEntry) => {
     if (openingPath) return; // 이미 진행 중
     setOpeningPath(entry.path);
@@ -76,18 +66,15 @@ export function P4DepotTree() {
         setOpenErrorPath({ path: entry.path, msg: r.error ?? '실패' });
         return;
       }
-      // 임시 TreeNode — id 가 path + revision 으로 unique 하고, tabIdOf 가 oneDriveUrl 있을 때
-      // node.id 를 그대로 탭 id 로 사용 → 같은 파일의 다른 revision 은 별도 탭으로 유지.
+      // 임시 TreeNode — id 는 depotPath 로 unique (같은 파일 클릭은 같은 탭).
       const node: TreeNode = {
-        id: `depot:${entry.path}#rev${r.revision}`,
+        id: `depot:${entry.path}`,
         type: 'sheet',
         title: entry.name,
         relPath: entry.path.replace(/^\/\//, ''),
         oneDriveUrl: r.url,
       };
       useWorkbenchStore.getState().openTab({ kind: 'excel', node });
-      // 캐시 manifest 가 갱신됐으니 트리의 📥 아이콘도 즉시 반영.
-      void reloadCachedPaths();
     } catch (e) {
       setOpenErrorPath({ path: entry.path, msg: (e as Error).message });
     } finally {
@@ -207,7 +194,6 @@ export function P4DepotTree() {
       setExpanded(nextExpanded);
       saveExpanded(TREE_PERSIST_KEYS.P4_DEPOT_EXPANDED, nextExpanded);
     })();
-    void reloadCachedPaths();
     return () => {
       cancelled = true;
     };
@@ -274,14 +260,12 @@ export function P4DepotTree() {
     const docKey = isFile ? docKeyOfDepot(entry.path) : null;
     const isEditing = !!docKey && !!editingDocs[docKey];
 
-    // 편집 토글 — 파일이 아직 OneDrive 캐시에 없으면 openDepotFile 로 download + upload 부터.
-    // 그 다음 store 의 editingDocs 에 토글 → CenterPane 의 DepotSheetView 가 src 를 ?action=edit
-    // 으로 swap + reload.
+    // 편집 토글 — store 의 editingDocs 에 toggle → CenterPane 의 DepotSheetView 가
+    // ?action=view ↔ edit 으로 swap + reload. 탭이 없으면 openDepotFile 로 먼저 open.
     const onToggleEdit = (e: React.MouseEvent) => {
       e.stopPropagation();
       if (!docKey) return;
-      // 탭이 없으면 openDepotFile 로 다운로드 + 탭 open.
-      if (!cachedPaths.has(entry.path) && !isOpening) {
+      if (!isOpening) {
         void openDepotFile(entry);
       }
       setDocEditing(docKey, !isEditing);
@@ -298,13 +282,7 @@ export function P4DepotTree() {
         >
           <span className="caret">{entry.kind === 'file' ? '' : isOpen ? '▾' : '▸'}</span>
           <span className="icon">
-            {entry.kind === 'depot'
-              ? '🗄️'
-              : entry.kind === 'dir'
-              ? '📁'
-              : cachedPaths.has(entry.path)
-              ? '📥'
-              : '📄'}
+            {entry.kind === 'depot' ? '🗄️' : entry.kind === 'dir' ? '📁' : '📄'}
           </span>
           <span className="label">{entry.name}</span>
           {isOpening && (

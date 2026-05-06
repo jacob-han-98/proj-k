@@ -59,13 +59,11 @@ export interface P4DepotResult {
   diagnostics?: string;
 }
 
-// PR9c: depot 파일 한 개를 보기용으로 다운로드 + OneDrive 업로드 + 읽기 전용 URL 빌드.
-// fromCache 가 true 면 manifest 의 같은 revision 캐시 hit (재업로드 skip).
+// 0.1.52 — depot 파일 보기. p4 print → OneDrive 업로드 → cloud verify-poll → URL.
+// 옛 revision/fromCache 필드는 manifest cache 와 함께 제거.
 export interface P4DepotOpenResult {
   ok: boolean;
   url?: string;
-  revision?: number;
-  fromCache?: boolean;
   error?: string;
 }
 
@@ -168,7 +166,6 @@ export const IPC = {
   P4_DEPOT_LIST: 'p4:depot-list',
   P4_DEPOT_DIRS: 'p4:depot-dirs',
   P4_DEPOT_OPEN: 'p4:depot-open',
-  P4_DEPOT_CACHE_LIST: 'p4:depot-cache-list',
   UPDATER_STATE: 'updater:state',
   UPDATER_CHECK: 'updater:check',
   UPDATER_QUIT_AND_INSTALL: 'updater:quit-and-install',

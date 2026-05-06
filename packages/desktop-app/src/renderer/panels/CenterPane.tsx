@@ -453,6 +453,9 @@ function DepotSheetView({ node, directUrl }: { node: TreeNode; directUrl: string
   const editing = useWorkbenchStore((s) => (docKey ? !!s.editingDocs[docKey] : false));
   const url = applyAction(directUrl, editing ? 'edit' : 'view');
   const wvRef = useRef<HTMLElement | null>(null);
+  // 0.1.52 — local 흐름 (LocalSheetView v7) 과 평행. webview 자체 fail (mainFrame did-fail-load,
+  // SP error.aspx) 시 카드. + Doc.aspx?action=default → action=view swap (auto-save 차단).
+  const [webviewFailed, setWebviewFailed] = useState<{ code: number | null } | null>(null);
 
   // view 모드일 때만 chrome 숨김 — edit 모드는 사용자가 SuiteNav/리본 이 필요해서 켠 거니까 그대로.
   useEffect(() => {
@@ -461,6 +464,82 @@ function DepotSheetView({ node, directUrl }: { node: TreeNode; directUrl: string
     if (!wv) return;
     return attachChromeStripper(wv);
   }, [editing, url]);
+
+  // webview navigation 감시 — local v7 과 동일 패턴.
+  useEffect(() => {
+    if (webviewFailed) return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const wv = wvRef.current as any;
+    if (!wv || typeof wv.addEventListener !== 'function') return;
+
+    type NavEvent = {
+      url?: string;
+      validatedURL?: string;
+      errorCode?: number;
+      errorDescription?: string;
+      httpResponseCode?: number;
+      isMainFrame?: boolean;
+    };
+
+    const onFailLoad = (ev: NavEvent) => {
+      if (ev.isMainFrame === false) return;
+      console.warn('[depot-webview] did-fail-load (mainFrame) → fail card', ev);
+      setWebviewFailed({ code: ev.errorCode ?? null });
+    };
+    const onDidNavigate = (ev: NavEvent) => {
+      const u = ev?.url ?? '';
+      if (!u) return;
+      if (u.includes('/_layouts/15/error.aspx') || u.includes('/_layouts/15/AccessDenied.aspx')) {
+        console.warn('[depot-webview] SP error page → fail card:', u);
+        setWebviewFailed({ code: null });
+        return;
+      }
+      // edit 모드가 아닌데 SP 가 Doc.aspx?action=default 로 redirect 했으면 view 로 swap.
+      // local v7 과 동일 — bhunion tenant 의 download 회귀 회피 + auto-save 위험 제거.
+      if (
+        !editing
+        && u.includes('/Doc.aspx')
+        && /[?&]action=default(?:&|$)/.test(u)
+        && !u.includes('action=view')
+      ) {
+        const viewUrl = u.replace(/([?&])action=default(&|$)/, '$1action=view$2');
+        console.log('[depot-webview] action=default → action=view swap:', viewUrl);
+        (wv as { loadURL?: (u: string) => void }).loadURL?.(viewUrl);
+      }
+    };
+
+    wv.addEventListener('did-fail-load', onFailLoad);
+    wv.addEventListener('did-navigate', onDidNavigate);
+    wv.addEventListener('did-navigate-in-page', onDidNavigate);
+    return () => {
+      wv.removeEventListener('did-fail-load', onFailLoad);
+      wv.removeEventListener('did-navigate', onDidNavigate);
+      wv.removeEventListener('did-navigate-in-page', onDidNavigate);
+    };
+  }, [editing, url, webviewFailed]);
+
+  if (webviewFailed) {
+    return (
+      <main className="center" data-testid="center-pane">
+        <div className="doc-header">
+          <span>🗄️ {node.title}</span>
+          <span className="breadcrumb">{node.relPath ?? node.id}</span>
+        </div>
+        <div
+          className="placeholder"
+          data-testid="onedrive-cloud-not-ready"
+          style={{ padding: 24, color: 'var(--text-dim)', lineHeight: 1.6 }}
+        >
+          ⚠ webview 로드 실패
+          <br />
+          <span style={{ fontSize: 11 }}>
+            {webviewFailed.code != null ? `code=${webviewFailed.code}. ` : ''}
+            depot 파일을 다시 클릭해주세요.
+          </span>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="center" data-testid="center-pane">

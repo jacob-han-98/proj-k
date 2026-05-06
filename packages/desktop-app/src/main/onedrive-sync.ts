@@ -714,15 +714,28 @@ async function doEnsureFreshSync(
     };
 }
 
-// 한 depot 파일을 OneDrive depot 폴더에 업로드 + 읽기 전용 URL 반환.
-// localXlsxPath 는 호출자가 미리 `p4 print -q -o <localXlsxPath> <depotPath>` 로 받아둔 임시 파일.
+// 0.1.52 — depot 흐름이 local 의 v6/v7 robustness 와 동등해짐.
+//   - writeViaTempCopy: %TEMP% atomic copy (Explorer 와 동일 CopyFileExW). 옛 직접 copyFile 은
+//     OneDrive Sync 의 file watcher 가 grow 중 fire 해서 conflict 가능성.
+//   - pollSharePointReady 에 expectedSize + verifyZipMagic 옵션 + 60s budget. SP HEAD 200 +
+//     content-length=0 stub 응답을 ready 로 잘못 판정하던 옛 동작 차단.
+//   - Promise-keyed inflight: 동일 depotPath 동시 호출 시 두 번째는 첫 번째의 Promise 그대로
+//     await (StrictMode dev 더블파이어 / rapid double-click race 차단).
+//   - 반환 shape 통일: { status: 'ready' | 'cloud-not-ready' } | { ok: false }. local 의
+//     ensureFreshSync 와 동일 → renderer 에서 일관 처리 가능.
+const depotInflight = new Map<string, Promise<DepotUploadResult>>();
+
+export type DepotUploadResult =
+  | { ok: true; url: string; status: 'ready'; localPath: string; account: OneDriveSyncAccount }
+  | { ok: true; url: string; status: 'cloud-not-ready'; pollAttempts: number; pollLastStatus: number | null }
+  | { ok: false; error: string };
+
+// 한 depot 파일을 OneDrive depot 폴더에 업로드 + cloud 도달 검증 + 임베드 URL 반환.
+// `localXlsxPath` 는 호출자 (p4 print) 가 미리 받아둔 임시 파일.
 export async function uploadDepotFileAndUrl(
   depotPath: string,
   localXlsxPath: string,
-): Promise<
-  | { ok: true; url: string; localPath: string; account: OneDriveSyncAccount }
-  | { ok: false; error: string }
-> {
+): Promise<DepotUploadResult> {
   const account = detectSyncAccount();
   if (!account) {
     return { ok: false, error: 'OneDrive Business sync 클라이언트 미설정' };
@@ -730,31 +743,69 @@ export async function uploadDepotFileAndUrl(
   if (!existsSync(localXlsxPath)) {
     return { ok: false, error: `다운로드된 임시 파일 없음: ${localXlsxPath}` };
   }
+  // 동시 호출 — Promise 공유 (v7 패턴).
+  const existing = depotInflight.get(depotPath);
+  if (existing) {
+    console.log(`[onedrive-sync] depot inflight ${depotPath} — share existing promise`);
+    return existing;
+  }
+  const promise = doUploadDepot(account, depotPath, localXlsxPath);
+  depotInflight.set(depotPath, promise);
+  try {
+    return await promise;
+  } finally {
+    depotInflight.delete(depotPath);
+  }
+}
+
+async function doUploadDepot(
+  account: OneDriveSyncAccount,
+  depotPath: string,
+  localXlsxPath: string,
+): Promise<DepotUploadResult> {
   const rel = depotPathToRel(depotPath);
   const dest = join(account.userFolder, KLAUD_DEPOT_DIR, `${rel}.xlsx`);
-  let srcMtimeMs: number | null = null;
+  let bufLength = -1;
   try {
-    const s = await stat(localXlsxPath);
-    srcMtimeMs = s?.mtimeMs ?? null;
-  } catch { /* fallback */ }
-  try {
-    await mkdir(dirname(dest), { recursive: true });
-    await copyFile(localXlsxPath, dest);
-    // depot 흐름의 임시 파일 mtime 은 `p4 print -o` 의 다운로드 시각 — P4 commit 시각이 아님.
-    // Phase 2 (다음 PR) 에서 p4 fstat headTime 으로 보강 예정. 현재는 일관성 차원에서만 utimes.
-    // 0.1.51 hotfix — setDestMtime 제거. mtime 을 src(P4 commit time, 보통 과거) 로 되돌리면
-    // OneDrive Sync 엔진이 "local 이 cloud 보다 옛것" 이라고 판정해 cloud 의 stub (6148 byte
-    // 빈 xlsx) 을 local 로 다운로드해 우리 25MB 를 덮어씀. mtime=NOW (writeFile 기본값) 으로
-    // 두면 OneDrive Sync 가 local 을 cloud 로 정상 업로드. 사용자 manual 탐색기 복사가 즉시
-    // ✓ 되는 이유와 동일.
-    // 다음 ensureFresh 의 stale 판정은 size 비교만으로 충분 (xlsx 는 거의 항상 size 다름).
-    if (srcMtimeMs != null) {
-      // srcMtimeMs 는 무시 — OneDrive Sync 와 충돌. 변수 자체는 호환 위해 시그니처에 유지.
-    }
+    // 임시파일 → buf 로 읽고 writeViaTempCopy 로 OneDrive 폴더에 atomic copy.
+    // p4 print 의 임시파일을 직접 copyFile 해도 동작은 하지만, local v6 와 흐름 일치를 위해
+    // buf 거쳐 writeViaTempCopy 사용. 추가 비용은 disk → memory → disk 한 번 (소~중규모 xlsx
+    // 에서 무시 가능).
+    const { readFile } = await import('node:fs/promises');
+    const buf = await readFile(localXlsxPath);
+    bufLength = buf.length;
+    await writeViaTempCopy(dest, buf);
+    console.log(
+      `[onedrive-sync] depot write-via-temp ${rel} bytes=${buf.length} (atomic copyFile)`,
+    );
   } catch (e) {
     return { ok: false, error: `OneDrive depot 폴더 복사 실패: ${(e as Error).message}` };
   }
-  const poll = await pollSharePointReady(account, KLAUD_DEPOT_DIR, rel);
-  console.log(`[onedrive-sync] sp-poll(depot) ${rel} ready=${poll.ready} ${poll.elapsedMs}ms attempts=${poll.attempts} status=${poll.lastStatus} reason=${poll.reason}`);
-  return { ok: true, url: buildDepotEmbedUrl(account, rel), localPath: dest, account };
+  const poll = await pollSharePointReady(account, KLAUD_DEPOT_DIR, rel, {
+    expectedSize: bufLength > 0 ? bufLength : undefined,
+    verifyZipMagic: true,
+    initialDelayMs: 1000, // upload 직후 OneDrive Sync 인지 시간
+    maxMs: 60_000,
+  });
+  console.log(
+    `[onedrive-sync] sp-poll(depot) ${rel} ready=${poll.ready} ${poll.elapsedMs}ms ` +
+    `attempts=${poll.attempts} status=${poll.lastStatus} reason=${poll.reason} ` +
+    `cl=${poll.lastContentLength ?? '-'}`,
+  );
+  if (poll.ready) {
+    return {
+      ok: true,
+      url: buildDepotEmbedUrl(account, rel),
+      status: 'ready',
+      localPath: dest,
+      account,
+    };
+  }
+  return {
+    ok: true,
+    url: buildDepotEmbedUrl(account, rel),
+    status: 'cloud-not-ready',
+    pollAttempts: poll.attempts,
+    pollLastStatus: poll.lastStatus,
+  };
 }

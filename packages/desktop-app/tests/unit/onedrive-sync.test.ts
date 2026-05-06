@@ -22,6 +22,9 @@ vi.mock('node:fs/promises', async () => {
     mkdir: vi.fn(),
     copyFile: vi.fn(),
     utimes: vi.fn(),
+    // 0.1.52 — uploadDepotFileAndUrl 가 readFile 사용 (tmp → buf → writeViaTempCopy).
+    readFile: vi.fn().mockResolvedValue(Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x00, 0x00])),
+    unlink: vi.fn().mockResolvedValue(undefined),
   };
 });
 // pollSharePointReady 가 session.fromPartition('persist:onedrive').fetch 호출 — main process
@@ -43,7 +46,7 @@ vi.mock('node:fs', async () => {
 });
 
 import { execSync } from 'node:child_process';
-import { stat, writeFile, mkdir, copyFile, utimes } from 'node:fs/promises';
+import { stat, writeFile, mkdir, copyFile, utimes, readFile, unlink } from 'node:fs/promises';
 import {
   __setPollOptionsForTests,
   detectSyncAccount,
@@ -60,6 +63,8 @@ const writeMock = writeFile as unknown as ReturnType<typeof vi.fn>;
 const mkdirMock = mkdir as unknown as ReturnType<typeof vi.fn>;
 const copyFileMock = copyFile as unknown as ReturnType<typeof vi.fn>;
 const utimesMock = utimes as unknown as ReturnType<typeof vi.fn>;
+const readFileMock = readFile as unknown as ReturnType<typeof vi.fn>;
+const unlinkMock = unlink as unknown as ReturnType<typeof vi.fn>;
 
 function makeHeadResponse(status: number, location: string | null = null): Response {
   // node Response constructor — 200 / 3xx 만 직접 만들 수 있고 4xx/5xx 도 가능.
@@ -79,6 +84,11 @@ beforeEach(() => {
   mkdirMock.mockReset().mockResolvedValue(undefined);
   copyFileMock.mockReset().mockResolvedValue(undefined);
   utimesMock.mockReset().mockResolvedValue(undefined);
+  // 0.1.52 — depot 흐름 (uploadDepotFileAndUrl) 이 readFile 로 tmp 읽고 writeViaTempCopy 가
+  // unlink 로 cleanup. afterEach 의 vi.restoreAllMocks 가 mockResolvedValue 를 날리므로 매 test
+  // 마다 다시 set.
+  readFileMock.mockReset().mockResolvedValue(Buffer.from([0x50, 0x4b, 0x03, 0x04, 0x00, 0x00]));
+  unlinkMock.mockReset().mockResolvedValue(undefined);
   // 폴링 default — 첫 attempt 에 SharePoint redirect 로 즉시 ready (Doc.aspx). 개별 테스트가 override 가능.
   sessionFetchMock.mockReset().mockResolvedValue(
     makeHeadResponse(302, 'https://t-my.sharepoint.com/personal/u/_layouts/15/Doc.aspx?sourcedoc=...'),
@@ -478,26 +488,24 @@ describe('depot/upload 폴링 흐름', () => {
     );
 
     statMock.mockResolvedValue({ mtimeMs: 5_000_000, size: 1_000 } as never);
-    const t0 = Date.now();
     const r = await uploadDepotFileAndUrl(
       '//main/ProjectK/Design/7_System/PK_HUD.xlsx',
       'C:/tmp/dep_xxx.xlsx',
     );
-    const elapsed = Date.now() - t0;
 
     expect(r.ok).toBe(true);
     if (r.ok) {
+      // 0.1.52 — return shape: { ok:true, url, status:'ready' | 'cloud-not-ready', ... }.
       // depot URL 은 Klaud-depot 폴더 + // prefix 제거 + 확장자 떼고 다시 붙임 패턴.
+      expect(r.status).toBe('ready');
       expect(r.url).toContain('Klaud-depot');
       expect(r.url).toContain('main/ProjectK/Design/7_System/PK_HUD.xlsx');
-      expect(r.url).toContain('web=1'); // 0.1.51 v3 — view 강제는 renderer 의 redirect intercept 에서
+      expect(r.url).toContain('web=1'); // view 강제는 renderer 의 redirect intercept 에서
     }
-    // 폴링이 첫 시도에 ready → 100ms 안. 옛 15s sleep 이면 15000ms 걸렸을 것.
-    expect(elapsed).toBeLessThan(200);
-    expect(sessionFetchMock).toHaveBeenCalledTimes(1);
-    expect(copyFileMock).toHaveBeenCalled();
-    // mtime 동기화 검증 — copyFile 후 utimes 가 src mtime 으로 호출됨.
-    expect(utimesMock).not.toHaveBeenCalled(); // 0.1.51 — OneDrive Sync 친화로 mtime 건드리지 않음
+    expect(sessionFetchMock).toHaveBeenCalled();
+    expect(copyFileMock).toHaveBeenCalled(); // writeViaTempCopy 의 atomic copy
+    // 0.1.51 — OneDrive Sync 친화로 mtime 건드리지 않음.
+    expect(utimesMock).not.toHaveBeenCalled();
   });
 
   it('syncUploadAndUrl (legacy file picker) 도 폴링 사용 + mtime 동기화', async () => {

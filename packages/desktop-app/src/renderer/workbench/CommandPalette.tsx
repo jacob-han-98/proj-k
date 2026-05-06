@@ -5,10 +5,11 @@
 //   ESC: 닫기
 //   Enter / 클릭: 선택 → 기존 openTab 흐름으로 위임
 //
-// 데이터 source 3 개 통합:
+// 데이터 source 2 개 통합:
 //   1) P4 워크스페이스 local — sidecar /tree/p4 (이미 캐시된 트리 노드를 walk).
-//   2) P4 depot cache — main 의 P4_DEPOT_CACHE_LIST IPC (이미 보기 한 적 있는 depot 파일들).
-//   3) Confluence — sidecar /tree/confluence (page 노드들).
+//   2) Confluence — sidecar /tree/confluence (page 노드들).
+// 0.1.52 — depot recent (P4_DEPOT_CACHE_LIST) 제거. 사내 P4 다운로드 sub-second 라 manifest
+// 캐시 자체를 없앴음 — palette 에 depot 항목이 안 뜸. 사용자는 P4DepotTree 에서 직접 접근.
 //
 // 매칭은 fuzzy.ts 의 메모리 알고리즘 — 백엔드 호출 없음, 즉시 (수 ms).
 
@@ -79,16 +80,8 @@ function walkConfluence(nodes: TreeNode[] | undefined, out: SearchableItem[]): v
   }
 }
 
-function depotCacheToItems(list: Array<{ path: string; revision: number }>): SearchableItem[] {
-  return list.map(({ path }) => {
-    const name = path.split('/').filter(Boolean).pop() ?? path;
-    return { source: 'p4-depot', refId: path, title: name, path };
-  });
-}
-
 // 결과 행 아이콘 — 트리 아이콘과 같은 시각 언어. 사용자가 "엑셀이면 엑셀 아이콘, 컨플은
-// 컨플 아이콘" 으로 한눈에 구분. source 라벨 (P4 LOCAL / P4 DEPOT / CONFLUENCE) 은 우측에
-// 별도 표시되므로 좌측 아이콘은 *콘텐츠 종류* 만 표현 (depot 도 결국 .xlsx).
+// 컨플 아이콘" 으로 한눈에 구분. source 라벨 (P4 LOCAL / CONFLUENCE) 은 우측에 별도 표시.
 function renderRowIcon(source: SearchableItem['source']): ReactNode {
   if (source === 'confluence') return <ConfluenceIcon size={16} />;
   // p4-local / p4-depot 모두 .xlsx — Excel SVG.
@@ -140,15 +133,13 @@ export function CommandPalette() {
     void (async () => {
       const all: SearchableItem[] = [];
       try {
-        const [p4, conf, depot] = await Promise.all([
+        const [p4, conf] = await Promise.all([
           window.projk.getP4Tree() as Promise<P4TreeResult>,
           window.projk.getConfluenceTree() as Promise<ConfluenceTreeResult>,
-          window.projk.p4.cachedPaths().catch(() => [] as Array<{ path: string; revision: number }>),
         ]);
         if (cancelled) return;
         walkP4Local(p4?.nodes, all);
         walkConfluence(conf?.nodes, all);
-        all.push(...depotCacheToItems(depot ?? []));
       } catch (e) {
         console.warn('[CommandPalette] tree fetch 실패:', (e as Error).message);
       }

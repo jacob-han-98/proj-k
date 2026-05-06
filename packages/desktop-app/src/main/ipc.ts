@@ -14,10 +14,8 @@ import {
   discoverP4Info,
   listDepotRoots,
   listDepotChildren,
-  getDepotHeadRevision,
   printDepotFile,
 } from './p4-discovery';
-import { lookupDepotCache, setDepotCache, listCachedPaths } from './depot-cache';
 import { tmpdir } from 'node:os';
 import { mkdirSync } from 'node:fs';
 import { join as pathJoin } from 'node:path';
@@ -394,12 +392,10 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     return listDepotChildren(s.p4Host ?? '', s.p4User ?? '', s.p4Client ?? '', parentPath);
   });
 
-  // 트리 표시용 — 캐시되어있는 depot path 목록. 트리가 mount/refresh 시 1회 호출 + 파일 클릭 후
-  // 1회 (cache 갱신 반영). main 이 manifest 만 읽으므로 p4 호출 없음 → 비용 거의 0.
-  ipcMain.handle(IPC.P4_DEPOT_CACHE_LIST, async () => listCachedPaths());
-
-  // PR9c: depot 파일 보기 — `p4 print` 로 download → OneDrive depot 폴더에 upload →
-  // 읽기 전용 임베드 URL 반환. revision 캐시 hit 이면 재업로드 skip.
+  // 0.1.52 — depot 파일 보기. 옛 manifest 기반 cache (revision 추적 + listCachedPaths) 모두
+  // 제거. 사내 P4 다운로드는 sub-second 라 매번 다시 받아도 비용 거의 없음. OneDrive Sync 가
+  // 같은 content 재업로드 skip 처리 — cloud upload 도 첫 번째만 실제로 발생.
+  // 흐름: p4 print → 임시 파일 → uploadDepotFileAndUrl (writeViaTempCopy + 강화 poll) → URL.
   ipcMain.handle(IPC.P4_DEPOT_OPEN, async (_e, depotPath: string) => {
     const s = getSettings();
     const host = s.p4Host ?? '';
@@ -412,33 +408,18 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
       return { ok: false, error: 'depot path 누락' };
     }
 
-    // 1) head revision 조회 — 캐시 키.
-    const revision = getDepotHeadRevision(host, user, client, depotPath);
-    if (revision == null) {
-      return { ok: false, error: `head revision 조회 실패: ${depotPath}` };
-    }
-
-    // 2) cache lookup — 같은 (path, revision) 이면 OneDrive 재업로드 skip.
-    const cached = lookupDepotCache(depotPath, revision);
-    if (cached) {
-      return { ok: true, url: cached.url, revision, fromCache: true };
-    }
-
-    // 3) cache miss — `p4 print -q -o <tmp>` 로 다운로드 후 OneDrive 폴더 upload.
+    // 임시 파일명: ASCII-only — Korean/공백 chars 가 -o arg 에 들어가면 Windows spawn argv
+    // 처리에서 깨져서 p4 가 "Missing/wrong number of arguments" 로 reject. md5 hash 로
+    // deterministic ASCII 파일명 (같은 path → 같은 tmp 재사용 OK).
     const tmpDir = pathJoin(tmpdir(), 'klaud-depot-fetch');
     try {
       mkdirSync(tmpDir, { recursive: true });
     } catch {
       /* 이미 있으면 OK */
     }
-    // 임시 파일명: ASCII-only — Korean/공백 chars 가 -o arg 에 들어가면 Windows spawn argv
-    // 처리에서 깨져서 p4 가 "Missing/wrong number of arguments" 로 reject. md5 hash 로 deterministic
-    // ASCII 파일명 생성 (path → 동일 hash → 같은 tmp 재사용 가능).
     const hash = createHash('md5').update(depotPath).digest('hex').slice(0, 12);
-    const tmpLocal = pathJoin(tmpDir, `dep_${hash}_r${revision}.xlsx`);
-    console.log(
-      `[p4-depot-open] cache miss path=${depotPath} rev=${revision} → printing to ${tmpLocal}`,
-    );
+    const tmpLocal = pathJoin(tmpDir, `dep_${hash}.xlsx`);
+    console.log(`[p4-depot-open] path=${depotPath} → printing to ${tmpLocal}`);
     const printR = printDepotFile(host, user, client, depotPath, tmpLocal);
     if (!printR.ok) {
       console.error(`[p4-depot-open] p4 print 실패 path=${depotPath} dest=${tmpLocal}: ${printR.error}`);
@@ -451,15 +432,18 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
       console.error(`[p4-depot-open] OneDrive upload 실패 path=${depotPath}: ${upR.error}`);
       return { ok: false, error: `OneDrive 업로드 실패: ${upR.error}` };
     }
+    if (upR.status === 'cloud-not-ready') {
+      console.warn(
+        `[p4-depot-open] cloud-not-ready path=${depotPath} ` +
+        `attempts=${upR.pollAttempts} status=${upR.pollLastStatus}`,
+      );
+      return {
+        ok: false,
+        error: `OneDrive 클라우드 도달 실패 — ${upR.pollAttempts}회 폴링 (status=${upR.pollLastStatus}). 잠시 후 재시도.`,
+      };
+    }
     console.log(`[p4-depot-open] OK url=${upR.url}`);
-
-    setDepotCache(depotPath, {
-      revision,
-      url: upR.url,
-      localPath: upR.localPath,
-      uploadedAt: Date.now(),
-    });
-    return { ok: true, url: upR.url, revision, fromCache: false };
+    return { ok: true, url: upR.url };
   });
 
   ipcMain.handle(IPC.SETTINGS_GET, async () => getSettings());

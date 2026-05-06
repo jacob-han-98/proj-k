@@ -330,9 +330,12 @@ export function RenderAssistantMarkdown({
 //   타게임 (external — oracle 큐레이트 참고 자료)
 //   웹 (web — Deep Research)
 // 같은 path 의 sources 는 section 만 누적 (중복 카드 방지). path 없으면 workbook|sheet 키.
+//
+// Phase K (2026-05-06): onOpen 시그니처 확장 — source 객체 자체를 받아 호출자가 source.source
+// 분기로 새 탭 라우팅 (confluence / xlsx / datasheet) 또는 우측 패널 fallback 결정.
 export interface RenderSourceCardsProps {
   sources: QnASource[];
-  onOpen: (path: string, section: string) => void;
+  onOpen: (source: QnASource, section: string) => void;
 }
 
 export function RenderSourceCards({ sources, onOpen }: RenderSourceCardsProps) {
@@ -382,7 +385,7 @@ export function RenderSourceCards({ sources, onOpen }: RenderSourceCardsProps) {
 function renderSourceCard(
   { src, sections }: { src: QnASource; sections: string[] },
   i: number,
-  onOpen: (path: string, section: string) => void,
+  onOpen: (source: QnASource, section: string) => void,
 ) {
   const isConfluence =
     src.source === 'confluence' || (src.workbook ?? '').startsWith('Confluence');
@@ -408,7 +411,7 @@ function renderSourceCard(
           : ExcelIcon;
   const cardClass = `qna-source-card${isExternal ? ' qna-source-card-external' : ''}${isWeb ? ' qna-source-card-web' : ''}`;
   const onCardClick = () => {
-    if (canOpen) onOpen(src.path!, firstSection);
+    if (canOpen) onOpen(src, firstSection);
     else if (isWeb && extLink) window.open(extLink, '_blank', 'noopener,noreferrer');
   };
   const cardTitle = isWeb

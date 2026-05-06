@@ -4,7 +4,10 @@ import { annotateCitedHits } from '../../citations';
 // citations.splitAnswerWithCitations 는 Phase C 부터 미사용 — RenderAssistantMarkdown 이 대체.
 // Phase J: SourceModal (centered modal) → SourceViewPanel (right split). 우측 패널 형태로
 // 본문 전체 + section_range 하이라이트 + Esc 닫기.
+// Phase K: 출처 클릭 시 우선 새 탭 (Confluence/xlsx/datasheet) 시도, 매칭 안 되면
+// SourceViewPanel 로 fallback.
 import { SourceViewPanel, useSourceView } from '../../qna/SourceViewPanel';
+import { specForSource } from '../../qna/openSource';
 import {
   readFollowUps,
   readResultData,
@@ -563,16 +566,38 @@ export function QnATab({ threadId, onMessagesChanged, onOpenHit, onOpenDoc }: Pr
                 <RenderAssistantMarkdown
                   content={m.content}
                   sources={m.sources}
-                  onOpenSource={(path, section) => sourceView.open(path, section)}
+                  onOpenSource={(path, section) => {
+                    // Phase K: 인라인 출처 클릭 — sources list 에서 path/origin_label 매칭
+                    // 후 source 객체로 dispatch. 매칭 실패면 우측 panel.
+                    const matched =
+                      m.sources?.find((s) => s.path === path) ??
+                      m.sources?.find((s) => (s.origin_label ?? '').trim() === path.trim());
+                    if (matched) {
+                      const spec = specForSource(matched);
+                      if (spec) {
+                        useWorkbenchStore.getState().openTab(spec);
+                        return;
+                      }
+                    }
+                    sourceView.open(path, section);
+                  }}
                 />
               ) : (
                 m.content || '…'
               )}
-              {/* Phase D: assistant 메시지의 출처 카드 그룹 (PK / 타게임 / 웹). 본문 끝에. */}
+              {/* Phase D: assistant 메시지의 출처 카드 그룹 (PK / 타게임 / 웹). 본문 끝에.
+                  Phase K: 카드 클릭 → 새 탭 (Confluence/xlsx/datasheet 매칭 시) 또는 우측 panel. */}
               {m.role === 'assistant' && m.sources && (
                 <RenderSourceCards
                   sources={m.sources}
-                  onOpen={(path, section) => sourceView.open(path, section)}
+                  onOpen={(source, section) => {
+                    const spec = specForSource(source);
+                    if (spec) {
+                      useWorkbenchStore.getState().openTab(spec);
+                      return;
+                    }
+                    sourceView.open(source.path ?? source.origin_label ?? '', section);
+                  }}
                 />
               )}
               {/* Phase C: 마지막 assistant 메시지 + 답변 완료 시 follow-ups. busy 중엔 숨김. */}

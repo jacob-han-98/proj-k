@@ -311,6 +311,12 @@ export function App() {
         nth?: number;
         // type-and-send 일반화 — testid 지정 시 그 input 에 입력, press 로 키보드 이벤트.
         press?: 'Enter' | 'Tab' | 'Escape';
+        // press-shortcut — 글로벌 keydown 시뮬레이션 (Ctrl+P 등 자동 검증용).
+        key?: string;
+        ctrl?: boolean;
+        meta?: boolean;
+        shift?: boolean;
+        alt?: boolean;
       };
       try {
         if (c.kind === 'click-testid') {
@@ -449,6 +455,31 @@ export function App() {
             input.dispatchEvent(new Event('input', { bubbles: true }));
             setTimeout(() => button.click(), 100);
           }
+        } else if (c.kind === 'press-shortcut') {
+          // 글로벌 keydown 시뮬레이션 — Ctrl+P (CommandPalette toggle) 등 단축키 자동 검증용.
+          // dispatchEvent 만으로는 Chromium 의 isTrusted 정책상 listener 가 받지 않을 수 있어
+          // 알려진 단축키는 store 함수를 직접 호출하는 fast-path.
+          const isCtrlP =
+            (c.ctrl || c.meta) && !c.shift && !c.alt && c.key?.toLowerCase() === 'p';
+          if (isCtrlP) {
+            useWorkbenchStore.getState().togglePalette();
+            window.projk.mcpReply(replyChannel, { ok: true, kind: c.kind, key: c.key, fastPath: 'palette' });
+            return;
+          }
+          // 그 외는 dispatchEvent 시도 (best effort).
+          const ev = new KeyboardEvent('keydown', {
+            key: c.key,
+            code: c.key,
+            ctrlKey: c.ctrl ?? false,
+            metaKey: c.meta ?? false,
+            shiftKey: c.shift ?? false,
+            altKey: c.alt ?? false,
+            bubbles: true,
+            cancelable: true,
+          });
+          window.dispatchEvent(ev);
+          window.projk.mcpReply(replyChannel, { ok: true, kind: c.kind, key: c.key });
+          return;
         } else if (c.kind === 'click-update-indicator') {
           document.querySelector<HTMLButtonElement>('[data-testid="update-indicator"]')?.click();
         } else if (c.kind === 'assert-tree-non-empty') {

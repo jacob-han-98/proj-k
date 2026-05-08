@@ -66,12 +66,71 @@ const utimesMock = utimes as unknown as ReturnType<typeof vi.fn>;
 const readFileMock = readFile as unknown as ReturnType<typeof vi.fn>;
 const unlinkMock = unlink as unknown as ReturnType<typeof vi.fn>;
 
-function makeHeadResponse(status: number, location: string | null = null): Response {
-  // node Response constructor — 200 / 3xx 만 직접 만들 수 있고 4xx/5xx 도 가능.
-  // headers 는 Map-like — Location 만 셋.
-  return new Response(null, {
-    status,
-    headers: location ? { Location: location } : {},
+// 0.1.53 — pollSharePointReady 가 HEAD 대신 Range GET (bytes=0-3) 단일 probe 로 통일됐다.
+// 옛 동작 (HEAD → 조건부 Range GET) 의 결정적 결함: SP file URL HEAD 가 Doc.aspx (HTML viewer)
+// 로 redirect → "sp-redirect = ready" 로 trust → cloud 가 6148-byte stub 만 있어도 ready 응답
+// → 사용자 webview 빈 워크북. Range GET 은 Doc.aspx redirect 를 bypass 하고 status 206 +
+// Content-Range: `bytes 0-3/<total>` 로 cloud 의 진짜 binary size 노출.
+//
+// `makeRangeResponse` 는 production 의 Range GET probe 가 받는 응답 형태를 정확히 재현.
+//   - 정상 ready: status=206, Content-Range='bytes 0-3/<size>', body=ZIP magic (4 bytes)
+//   - cloud stub: status=206, Content-Range='bytes 0-3/6148', body=ZIP magic (stub 도 valid xlsx)
+//   - SP Range 무시: status=200, body=raw xlsx 또는 HTML
+//   - 미존재 / auth: status=4xx 또는 redirected 후 final url 이 login 페이지
+function makeRangeResponse(opts: {
+  status: number;
+  // Content-Range 헤더 — 'bytes 0-3/N' 형태. 206 일 때 production 이 파싱.
+  contentRange?: string;
+  // 응답 body 의 first 4 bytes. ZIP magic = [0x50,0x4b,0x03,0x04]. HTML start = [0x3c,...].
+  // 미지정 시 ZIP magic.
+  bodyBytes?: number[];
+  finalUrl?: string;
+  redirected?: boolean;
+}): Response {
+  const bytes = opts.bodyBytes ?? [0x50, 0x4b, 0x03, 0x04];
+  const headers: Record<string, string> = {};
+  if (opts.contentRange) headers['content-range'] = opts.contentRange;
+  const res = new Response(new Uint8Array(bytes), { status: opts.status, headers });
+  if (opts.finalUrl) {
+    Object.defineProperty(res, 'url', { value: opts.finalUrl, configurable: true });
+  }
+  if (opts.redirected) {
+    Object.defineProperty(res, 'redirected', { value: true, configurable: true });
+  }
+  return res;
+}
+
+// Backward-compat helper — 옛 HEAD 시그니처로 작성된 테스트 케이스를 Range GET 응답으로 매핑.
+// `status === 200 && finalUrl includes Doc.aspx`  → 기본 ready (206 + ZIP magic + size match)
+// `status === 404`                                 → not ready (406 또는 그대로 404)
+// `status === 200 && login.microsoftonline.com`    → auth-redirect (206 + redirected=true + login final url)
+function makeHeadResponse(
+  status: number,
+  finalUrl: string | null = null,
+  redirected = false,
+): Response {
+  // 옛 HEAD 의 의미를 새 Range GET 응답 형태로 매핑:
+  //   - 정상 ready (302/200 + Doc.aspx) → 206 + Content-Range='bytes 0-3/100' + ZIP magic
+  //   - 404                              → 404 그대로
+  //   - auth redirect                    → 206 + redirected=true + login.microsoftonline.com final url
+  if (finalUrl && finalUrl.includes('login.microsoftonline.com')) {
+    return makeRangeResponse({
+      status: 200,
+      finalUrl,
+      redirected: true,
+      bodyBytes: [0x3c, 0x68, 0x74, 0x6d], // '<htm' — HTML page from auth follow
+    });
+  }
+  if (status >= 400) {
+    return new Response(null, { status });
+  }
+  // ready 케이스 — Content-Range 헤더 omit 해서 production 의 size 비교 skip (각 테스트가
+  // expectedSize 를 다르게 set 해도 매번 stub 감지로 false-fail 안 나게). 명시적 stub 회귀
+  // 테스트는 makeRangeResponse() 직접 사용.
+  return makeRangeResponse({
+    status: 206,
+    finalUrl: finalUrl ?? undefined,
+    redirected,
   });
 }
 
@@ -91,7 +150,7 @@ beforeEach(() => {
   unlinkMock.mockReset().mockResolvedValue(undefined);
   // 폴링 default — 첫 attempt 에 SharePoint redirect 로 즉시 ready (Doc.aspx). 개별 테스트가 override 가능.
   sessionFetchMock.mockReset().mockResolvedValue(
-    makeHeadResponse(302, 'https://t-my.sharepoint.com/personal/u/_layouts/15/Doc.aspx?sourcedoc=...'),
+    makeHeadResponse(200, 'https://t-my.sharepoint.com/personal/u/_layouts/15/Doc.aspx?sourcedoc=...', true),
   );
   // 폴링 timing — 테스트 환경은 1ms / 1ms / 2ms / 100ms 같은 짧은 interval 로 실제 시간 거의
   // 안 걸림. fake-timer + microtask 충돌 회피 위해 real timer 사용 (advanceTimersByTimeAsync 가
@@ -254,6 +313,76 @@ describe('ensureFreshSync — mtime 비교 분기', () => {
     fetchSpy.mockRestore();
   });
 
+  it('sheetName 옵션 — URL 에 &activeCell=\'<sheet>\'!A1 부착 (Excel for the Web 시트 점프)', async () => {
+    setupAccount();
+    const fetchSpy = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ mtime_ms: 1, size: 3 }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(new Uint8Array([1, 2, 3]), { status: 200 }));
+    statMock.mockRejectedValue(new Error('ENOENT'));
+
+    const r = await ensureFreshSync(
+      'http://127.0.0.1:9999',
+      '7_System/PK_HUD',
+      () => {},
+      { sheetName: 'HUD_전투' },
+    );
+
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.status).toBe('ready');
+      // activeCell 파라미터 — encodeURIComponent("'HUD_전투'!A1")
+      expect(r.url).toContain('activeCell=');
+      // 한글 시트명은 percent-encoded — decode 해서 검증.
+      const m = r.url.match(/activeCell=([^&]+)/);
+      expect(m).toBeTruthy();
+      if (m) {
+        expect(decodeURIComponent(m[1])).toBe("'HUD_전투'!A1");
+      }
+    }
+    fetchSpy.mockRestore();
+  });
+
+  it('sheetName 미지정 — activeCell 부착 안 함 (workbook default 동작)', async () => {
+    setupAccount();
+    const fetchSpy = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ mtime_ms: 1, size: 3 }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(new Uint8Array([1, 2, 3]), { status: 200 }));
+    statMock.mockRejectedValue(new Error('ENOENT'));
+
+    const r = await ensureFreshSync('http://127.0.0.1:9999', '7_System/PK_HUD', () => {});
+
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.url).not.toContain('activeCell');
+    }
+    fetchSpy.mockRestore();
+  });
+
+  it("sheetName single-quote escape — `Bob's data` → `Bob''s data`", async () => {
+    setupAccount();
+    const fetchSpy = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ mtime_ms: 1, size: 3 }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(new Uint8Array([1]), { status: 200 }));
+    statMock.mockRejectedValue(new Error('ENOENT'));
+
+    const r = await ensureFreshSync(
+      'http://127.0.0.1:9999',
+      '7_System/PK_HUD',
+      () => {},
+      { sheetName: "Bob's data" },
+    );
+
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      const m = r.url.match(/activeCell=([^&]+)/);
+      expect(m).toBeTruthy();
+      if (m) {
+        expect(decodeURIComponent(m[1])).toBe("'Bob''s data'!A1");
+      }
+    }
+    fetchSpy.mockRestore();
+  });
+
   it('stale — src 가 dest 보다 새것이면 upload + verify 후 ready', async () => {
     setupAccount();
     const fetchSpy = vi.spyOn(globalThis, 'fetch')
@@ -343,7 +472,7 @@ describe('SharePoint HEAD-poll — 25s sleep 대체', () => {
       .mockResolvedValueOnce(new Response(new Uint8Array([1]), { status: 200 }));
     statMock.mockRejectedValue(new Error('ENOENT'));
     sessionFetchMock.mockReset().mockResolvedValue(
-      makeHeadResponse(302, 'https://t-my.sharepoint.com/personal/u_hybe_im/_layouts/15/Doc.aspx?sourcedoc=...'),
+      makeHeadResponse(200, 'https://t-my.sharepoint.com/personal/u_hybe_im/_layouts/15/Doc.aspx?sourcedoc=...', true),
     );
 
     const events: SyncProgressEvent[] = [];
@@ -365,7 +494,7 @@ describe('SharePoint HEAD-poll — 25s sleep 대체', () => {
     sessionFetchMock.mockReset()
       .mockResolvedValueOnce(makeHeadResponse(404))
       .mockResolvedValueOnce(makeHeadResponse(404))
-      .mockResolvedValueOnce(makeHeadResponse(302, 'https://t-my.sharepoint.com/personal/u/_layouts/15/Doc.aspx?sourcedoc=g'));
+      .mockResolvedValueOnce(makeHeadResponse(200, 'https://t-my.sharepoint.com/personal/u/_layouts/15/Doc.aspx?sourcedoc=g', true));
 
     const events: SyncProgressEvent[] = [];
     const r = await ensureFreshSync('http://127.0.0.1:9999', 'x', (e) => events.push(e));
@@ -384,8 +513,9 @@ describe('SharePoint HEAD-poll — 25s sleep 대체', () => {
       .mockResolvedValueOnce(new Response(new Uint8Array([1]), { status: 200 }));
     statMock.mockRejectedValue(new Error('ENOENT'));
     sessionFetchMock.mockReset()
-      .mockResolvedValueOnce(makeHeadResponse(302, 'https://login.microsoftonline.com/abc/oauth2/authorize?...'))
-      .mockResolvedValueOnce(makeHeadResponse(302, 'https://t-my.sharepoint.com/personal/u/_layouts/15/Doc.aspx'));
+      // redirect:'follow' 결과 — auth 페이지로 끝까지 따라간 케이스. status 는 200, final url 이 login.
+      .mockResolvedValueOnce(makeHeadResponse(200, 'https://login.microsoftonline.com/abc/oauth2/authorize?...', true))
+      .mockResolvedValueOnce(makeHeadResponse(200, 'https://t-my.sharepoint.com/personal/u/_layouts/15/Doc.aspx', true));
 
     const events: SyncProgressEvent[] = [];
     const r = await ensureFreshSync('http://127.0.0.1:9999', 'x', (e) => events.push(e));
@@ -424,6 +554,117 @@ describe('SharePoint HEAD-poll — 25s sleep 대체', () => {
     expect(sessionFetchMock.mock.calls.length).toBeGreaterThanOrEqual(2);
     fetchSpy.mockRestore();
   });
+
+  // 회귀 2026-05-08 — Electron 33 의 session.fetch 가 redirect:'manual' 일 때 302 응답 대신
+  // "Redirect was cancelled" 로 throw 하던 회귀. 옛 production 코드는 catch 가 silent 해서 21회
+  // timeout 후 사용자는 "왜 안 됐나" 못 봄. 사용자가 depot 파일 클릭 시에만 노출 (로컬 시트는
+  // url 즉시 반환되어 webview 자체로 동작했기 때문). 회귀 방지 의무.
+  it('fetch 가 매번 throw — pollLastFetchError 가 사용자에게 노출 (silent 회귀 방지)', async () => {
+    setupAccount();
+    const fetchSpy = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ mtime_ms: 1_000_000, size: 5 }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(new Uint8Array([1, 2, 3, 4, 5]), { status: 200 }));
+    statMock.mockRejectedValue(new Error('ENOENT'));
+    // 모든 attempt 가 throw — 옛 회귀 (Electron33 redirect:'manual') 시뮬.
+    sessionFetchMock.mockReset().mockRejectedValue(new Error('Redirect was cancelled'));
+
+    const r = await ensureFreshSync('http://127.0.0.1:9999', 'x', () => {});
+
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.status).toBe('cloud-not-ready');
+      if (r.status === 'cloud-not-ready') {
+        // 사용자에게 "왜 안 됐나" 정보 흘러감 — 다음 회귀 디버깅 시 즉시 좁힐 수 있음.
+        expect(r.pollLastStatus).toBe(-1);
+        expect(r.pollReason).toBe('fetch-error');
+        expect(r.pollLastFetchError).toContain('Redirect was cancelled');
+      }
+    }
+    fetchSpy.mockRestore();
+  });
+
+  it('redirect:\'follow\' 로 SP Doc.aspx 따라간 200 응답 → ready (sp-redirect 분기)', async () => {
+    setupAccount();
+    const fetchSpy = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ mtime_ms: 1_000_000, size: 5 }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(new Uint8Array([1, 2, 3, 4, 5]), { status: 200 }));
+    statMock.mockRejectedValue(new Error('ENOENT'));
+    sessionFetchMock.mockReset().mockResolvedValue(
+      makeHeadResponse(200, 'https://t-my.sharepoint.com/personal/u/_layouts/15/Doc.aspx?sourcedoc=z', true),
+    );
+
+    const r = await ensureFreshSync('http://127.0.0.1:9999', 'x', () => {});
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.status).toBe('ready');
+    fetchSpy.mockRestore();
+  });
+
+  // 회귀 2026-05-08 #2 — "webview 떴는데 빈 워크북". cloud 가 6148-byte stub (Excel-for-Web
+  // auto-save 손상 등 옛 corruption 의 잔존), local 진본은 25MB. 옛 동작은 SP HEAD 의 Doc.aspx
+  // redirect 만 보고 sp-redirect=ready 로 trust → cloud stub 임을 모르고 webview 마운트 →
+  // Excel-for-Web 이 stub WOPI fetch → 빈 워크북. 새 동작은 Range GET (bytes=0-3) 으로
+  // Content-Range: 'bytes 0-3/<total>' 파싱 → cloud 의 진짜 size 가 expectedSize 와 mismatch
+  // 시 stub 으로 판정 → cloud-not-ready 카드 노출.
+  it('cloud 가 stub (6148 bytes) — local 진본 25MB 와 size mismatch → not ready (빈 워크북 회귀 방지)', async () => {
+    setupAccount();
+    const fetchSpy = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ mtime_ms: 1_000_000, size: 25_000_000 }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(new Uint8Array(25), { status: 200 })); // 25 byte buf 라도 expectedSize 는 25_000_000 으로 전달됨
+    statMock.mockRejectedValue(new Error('ENOENT'));
+    // cloud Range GET 응답 — Content-Range: bytes 0-3/6148 (stub size!), body 는 valid ZIP magic.
+    // ZIP magic 만 보면 통과해버리지만 size mismatch 감지로 stub 으로 판정.
+    // mockImplementation 으로 매 attempt fresh Response (body 한 번만 consume 가능 회피).
+    sessionFetchMock.mockReset().mockImplementation(() =>
+      Promise.resolve(makeRangeResponse({
+        status: 206,
+        contentRange: 'bytes 0-3/6148',
+        bodyBytes: [0x50, 0x4b, 0x03, 0x04],
+      })),
+    );
+
+    const r = await ensureFreshSync('http://127.0.0.1:9999', 'x', () => {});
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.status).toBe('cloud-not-ready');
+      if (r.status === 'cloud-not-ready') {
+        // size-mismatch 가 사용자/Claude 에게 명확히 노출 — 다음 비슷한 보고에 즉시 진단.
+        expect(r.pollReason).toBe('size-mismatch');
+        // pollLastStatus 는 마지막 attempt 의 status (206)
+        expect(r.pollLastStatus).toBe(206);
+      }
+    }
+    fetchSpy.mockRestore();
+  });
+
+  it('Range GET status=200 + body=HTML (Doc.aspx fallback) → not ready', async () => {
+    // SP 가 Range 요청을 무시하고 Doc.aspx HTML 로 fallback 한 경우. 옛 코드는 이걸 ready 로
+    // 잘못 판정. 새 코드는 body head 가 ZIP magic 아니면 (HTML start `<`) not ready 처리.
+    setupAccount();
+    const fetchSpy = vi.spyOn(globalThis, 'fetch')
+      .mockResolvedValueOnce(new Response(JSON.stringify({ mtime_ms: 1_000_000, size: 100 }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(new Uint8Array(100), { status: 200 }));
+    statMock.mockRejectedValue(new Error('ENOENT'));
+    // mockImplementation — Response body 는 한 번만 consume 가능. 매 attempt 마다 fresh
+    // Response 객체 만들어 polling 루프에서 arrayBuffer() 가 throw 안 나게.
+    sessionFetchMock.mockReset().mockImplementation(() =>
+      Promise.resolve(makeRangeResponse({
+        status: 200,
+        bodyBytes: [0x3c, 0x21, 0x44, 0x4f], // '<!DO' — HTML start
+        finalUrl: 'https://t-my.sharepoint.com/personal/u/_layouts/15/Doc.aspx',
+        redirected: true,
+      })),
+    );
+
+    const r = await ensureFreshSync('http://127.0.0.1:9999', 'x', () => {});
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.status).toBe('cloud-not-ready');
+      if (r.status === 'cloud-not-ready') {
+        expect(r.pollReason).toBe('magic-mismatch');
+      }
+    }
+    fetchSpy.mockRestore();
+  });
 });
 
 describe('repollCloudReady — cloud-not-ready 재시도', () => {
@@ -440,7 +681,7 @@ describe('repollCloudReady — cloud-not-ready 재시도', () => {
   it('SharePoint 가 그 사이 ready 됐으면 ready:true 반환', async () => {
     setupAccount();
     sessionFetchMock.mockReset().mockResolvedValue(
-      makeHeadResponse(302, 'https://t-my.sharepoint.com/personal/u_hybe_im/_layouts/15/Doc.aspx?sourcedoc=g'),
+      makeHeadResponse(200, 'https://t-my.sharepoint.com/personal/u_hybe_im/_layouts/15/Doc.aspx?sourcedoc=g', true),
     );
 
     const r = await repollCloudReady('7_System/PK_HUD');
@@ -484,7 +725,7 @@ describe('depot/upload 폴링 흐름', () => {
   it('uploadDepotFileAndUrl 도 폴링 사용 — Klaud-depot 폴더 URL 검증', async () => {
     setupAccount();
     sessionFetchMock.mockReset().mockResolvedValue(
-      makeHeadResponse(302, 'https://t-my.sharepoint.com/personal/u/_layouts/15/Doc.aspx?sourcedoc=z'),
+      makeHeadResponse(200, 'https://t-my.sharepoint.com/personal/u/_layouts/15/Doc.aspx?sourcedoc=z', true),
     );
 
     statMock.mockResolvedValue({ mtimeMs: 5_000_000, size: 1_000 } as never);
@@ -511,7 +752,7 @@ describe('depot/upload 폴링 흐름', () => {
   it('syncUploadAndUrl (legacy file picker) 도 폴링 사용 + mtime 동기화', async () => {
     setupAccount();
     sessionFetchMock.mockReset().mockResolvedValue(
-      makeHeadResponse(302, 'https://t-my.sharepoint.com/personal/u/_layouts/15/Doc.aspx'),
+      makeHeadResponse(200, 'https://t-my.sharepoint.com/personal/u/_layouts/15/Doc.aspx', true),
     );
     statMock.mockResolvedValue({ mtimeMs: 7_000_000, size: 5_000 } as never);
 

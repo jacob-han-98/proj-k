@@ -117,6 +117,46 @@ const poll = await pollSharePointReady(account, KLAUD_TEMP_DIR, relPath, {
 
 **중요**: 이 검증은 **status=200 (raw file 응답) 에만** 적용. **`sp-redirect` (302 → Doc.aspx) 는 그대로 trust** — Doc.aspx 는 HTML 이라 ZIP magic 안 나오므로 검증 불가. 302 자체가 "SP metadata 정상" 의미라 신뢰 OK.
 
+### 함정 4 보강 (2026-05-08, v8) — sp-redirect path 도 stub 일 수 있음
+
+**위 "302 는 trust OK" 가정이 깨졌다.** 사용자 실측 (2026-05-08): cloud 가 6148-byte stub 만 갖고 있어도 SP 가 file URL → Doc.aspx 로 302 redirect 함. HTML viewer 페이지는 file 의 진짜 binary 와 무관하게 정상 200 응답. → 옛 코드는 "sp-redirect = ready" trust → webview 마운트 → Excel-for-Web 이 stub 받음 → 빈 워크북.
+
+**진짜 cloud size 를 노출하는 probe**: `Range GET bytes=0-3` 은 SP 가 raw byte stream 으로 처리해 Doc.aspx redirect 를 bypass 한다. Response shape:
+- `status: 206`
+- `Content-Range: bytes 0-3/<total>` ← cloud 의 진짜 file size!
+- body: first 4 bytes (ZIP magic 또는 stub)
+
+**사용자 실측 비교 (PK_몬스터_그림리퍼.xlsx, 24MB local)**:
+| Probe | result |
+|---|---|
+| HEAD `?web=1` (옛) | redirected → Doc.aspx, CL=8856 (HTML page) |
+| HEAD `?download=1` | same as web=1 — Doc.aspx fallback |
+| **Range GET bytes=0-3** | **206, Content-Range=`bytes 0-3/6148`, body=PK magic** ← stub 노출 |
+
+**v8 패턴** (`pollSharePointReady` in [onedrive-sync.ts](../../../packages/desktop-app/src/main/onedrive-sync.ts)) — HEAD 폐기, Range GET 단일 probe:
+
+```typescript
+const rangeRes = await onedriveSession.fetch(checkUrl, {
+  method: 'GET',
+  headers: { Range: 'bytes=0-3' },
+  redirect: 'follow',
+});
+if (rangeRes.status === 206) {
+  const cr = rangeRes.headers.get('content-range');
+  const totalSize = +cr.match(/\/(\d+)$/)[1];
+  const buf = await rangeRes.arrayBuffer();
+  const isZip = /* PK\x03\x04 */;
+  // expectedSize 와 totalSize 비교 — stub 즉시 탐지
+  if (isZip && (expectedSize == null || sizeRatio in [0.99, 1.01])) return ready;
+}
+```
+
+**status=200 fallback**: SP 가 Range 무시할 수 있음. body head 가 ZIP magic → ready (raw file). HTML 시작 (`<`) → Doc.aspx fallback, 폴링 계속.
+
+**검증 시나리오**: [scripts/verify-excel-content.mjs](../../../packages/desktop-app/scripts/verify-excel-content.mjs) — testid 클릭 → ensureFresh 결과 → webview content 검사를 한 번에. STUB DETECTED / CLOUD NOT READY / WEBVIEW READY 중 하나로 verdict 분류 + exit code.
+
+**Electron 33 추가 함정** (회귀 2026-05-08): `session.fetch` 의 `redirect: 'manual'` 은 Chromium net stack 에서 spec 외 throw ("Redirect was cancelled"). 옛 코드는 silent catch 였어 21회 timeout. **모든 SP probe 는 `redirect: 'follow'` 로 통일**. catch 에서 잡힌 fetch error 는 `pollLastFetchError` 로 IPC → renderer cloudNotReady 카드까지 propagate (silent 회귀 방지).
+
 ## 함정 6 — Set-based inflight + verify-only 짧은 budget = false cloud-not-ready
 
 **증상**: 같은 sheet 두 번 빠르게 클릭 또는 React StrictMode dev 더블파이어 시, 정상 동작 중인 ensureFresh 가 진행 중인데 **별도 카드** 가 떠버림. 로그에 `cloud-not-ready 5651ms attempts=3 lastStatus=404` (5초 budget timeout, 3회 폴링 — 5s verify-only path 의 시그니처).

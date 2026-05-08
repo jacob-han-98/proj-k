@@ -50,9 +50,12 @@ async function probeOne(folder: string, relPath: string): Promise<ProbeResult> {
   const url = `${account.userUrl}/Documents/${folder}/${encoded}.xlsx`;
   const t0 = Date.now();
   try {
-    const headRes = await onedriveSession.fetch(url, { method: 'HEAD', redirect: 'manual' });
+    // redirect:'follow' — Electron 33 의 session.fetch 가 'manual' 시 'Redirect was cancelled'
+    // 로 throw (회귀 2026-05-08, onedrive-sync.ts 와 같은 사유). follow 후 res.redirected /
+    // res.url 로 분기. Location 헤더는 follow 시 사라지므로 final url 로 진단정보 노출.
+    const headRes = await onedriveSession.fetch(url, { method: 'HEAD', redirect: 'follow' });
     const cl = headRes.headers.get('content-length');
-    const loc = headRes.headers.get('location');
+    const loc = headRes.redirected ? (headRes.url || null) : null;
 
     let rangeStatus: number | null = null;
     let zipBytes: string | null = null;
@@ -62,7 +65,7 @@ async function probeOne(folder: string, relPath: string): Promise<ProbeResult> {
         const rangeRes = await onedriveSession.fetch(url, {
           method: 'GET',
           headers: { Range: 'bytes=0-3' },
-          redirect: 'manual',
+          redirect: 'follow',
         });
         rangeStatus = rangeRes.status;
         if (rangeRes.status === 200 || rangeRes.status === 206) {

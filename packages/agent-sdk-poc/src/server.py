@@ -20,6 +20,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 from sse_starlette.sse import EventSourceResponse
@@ -45,12 +46,25 @@ except ImportError:
 from agent import run_query_with_session
 import storage
 import followups as followups_mod
+import doc_context as doc_ctx
 from preset_prompts import PRESETS
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 log = logging.getLogger("projk-agent-sdk")
 
 app = FastAPI(title="Project K Agent SDK", version="0.1.0")
+
+# Vite dev (frontend/ 의 npm run dev) 가 :5173 에서 떠서 :8090 직접 호출 시
+# CORS preflight 차단되므로 모두 허용. 0.0.0.0 listen 이라 외부 노출 위험 있지만
+# dev/internal 도구라 의도된 trade-off. production (nginx 같은 reverse proxy 뒤)
+# 에선 same-origin 이라 CORS 무관.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origin_regex=r".*",
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 STATIC_DIR = Path(__file__).parent.parent / "static"
 if STATIC_DIR.exists():
@@ -270,7 +284,14 @@ async def ask_stream(req: AskStreamRequest):
     sdk_sid = sdk_session_by_conv.get(conv_id)
     question = req.question
 
+    # Klaud 일반 Agent 모드 — doc_context 가 stash 된 conv 만 read_current_doc 가
+    # 실제로 본문 반환. system prompt 의 hint 도 이 case 에서만 추가.
+    doc_entry = doc_ctx.get(conv_id)
+    current_doc_title = doc_entry.get("title") if doc_entry else None
+
     async def event_gen():
+        # tool 안에서 contextvar.get() 으로 어떤 conv 의 doc 을 반환할지 알기 위해 set.
+        doc_ctx.current_conv_id.set(conv_id)
         start = time.time()
         log_event(conv_id, "ask_stream", question[:100])
 
@@ -306,6 +327,7 @@ async def ask_stream(req: AskStreamRequest):
                 session_id=nonlocal_sdk_sid,
                 model=req.model,
                 compare_mode=req.compare_mode,
+                current_doc_title=current_doc_title,
             ):
                 # ── Streaming: content_block_delta 토큰을 즉시 SSE 로 흘려보냄 ──
                 # include_partial_messages=True 일 때 SDK 가 raw Anthropic stream 이벤트를
@@ -555,6 +577,49 @@ async def fork_conversation(conv_id: str):
         "title": new["title"],
         "turn_count": len(new["turns"]),
     }
+
+
+class DocContextRequest(BaseModel):
+    """Klaud "일반 Agent 모드" — webview innerText stash."""
+    title: str | None = ""
+    page_id: str | None = None
+    doc_type: str | None = None
+    content: str
+
+
+@app.post("/conversations/{conv_id}/doc_context")
+async def stash_doc_context(conv_id: str, req: DocContextRequest):
+    """Klaud 일반 Agent 모드 — 사용자가 보고 있는 문서 본문을 conv 단위로 stash.
+
+    같은 conv_id 로 재호출되면 덮어씀. 이후 ask_stream 안에서 agent 가
+    read_current_doc tool 을 호출하면 이 본문을 반환.
+    """
+    if not req.content or not req.content.strip():
+        return {"ok": False, "error": "content is empty"}
+    entry = doc_ctx.stash(
+        conv_id,
+        content=req.content,
+        title=req.title or "",
+        page_id=req.page_id,
+        doc_type=req.doc_type,
+    )
+    log_event(
+        conv_id,
+        "doc_context_stash",
+        f"{(req.title or '')[:40]} ({len(req.content)}c, type={req.doc_type}, truncated={entry.get('truncated', False)})",
+    )
+    return {
+        "ok": True,
+        "conversation_id": conv_id,
+        "content_chars": len(entry.get("content", "")),
+        "truncated": entry.get("truncated", False),
+    }
+
+
+@app.delete("/conversations/{conv_id}/doc_context")
+async def clear_doc_context(conv_id: str):
+    cleared = doc_ctx.clear(conv_id)
+    return {"ok": True, "cleared": cleared}
 
 
 @app.get("/shared/{conv_id}")
@@ -1266,11 +1331,37 @@ CRITICAL RULES:
   ❌ WRONG: before="KeywordA || 텍스트A" (includes pipes)"""
 
 
+class ReviewOptions(BaseModel):
+    """리뷰 옵션 패널 입력 (모두 옵셔널 — 미지정 시 기존 동작 유지).
+
+    cap 필드: int (0/5/10) 또는 "all". 0 이면 해당 카테고리 생략.
+    categories: ["logic-flow", "qa-checklist", "readability"] 부분집합. 빈 배열/미지정이면 모든 관점.
+    reviewer_persona (호환): single. "planner-lead" (기본) | "programmer".
+    reviewer_personas: multi. ["planner-lead", "programmer"] 둘 다 동시 적용 가능.
+                       명시되면 reviewer_persona 보다 우선. 빈 배열 = default.
+    """
+    issue_cap: int | str | None = None
+    verification_cap: int | str | None = None
+    suggestion_cap: int | str | None = None
+    categories: list[str] | None = None
+    reviewer_persona: str | None = None
+    reviewer_personas: list[str] | None = None
+
+
 class ReviewStreamRequest(BaseModel):
     title: str
     text: str
     model: str | None = None
     review_instruction: str | None = None
+    review_options: ReviewOptions | None = None
+
+
+class SummaryStreamRequest(BaseModel):
+    title: str
+    text: str
+    model: str | None = None
+    summary_style: str | None = "default"
+    max_tokens: int | None = None
 
 
 class SuggestEditsRequest(BaseModel):
@@ -1319,6 +1410,135 @@ def _extract_json_array(s: str) -> list | None:
         return None
 
 
+_PERSONA_LINES = {
+    "planner-lead": (
+        "You write as a SENIOR GAME DESIGN LEAD. Prioritize: "
+        "타 시스템과의 충돌·정합성, 기획 컨벤션 일관성, 누락된 설계 의도, "
+        "기획서의 완결성·자기충족성. 구현 디테일보다 설계 일관성에 무게."
+    ),
+    "programmer": (
+        "You write as a SENIOR GAMEPLAY PROGRAMMER. Prioritize: "
+        "구현 가능성, 엣지 케이스, 동시성·타이밍, 데이터 타입/단위 정확성, "
+        "성능 함의, 서버/클라 처리 분담. 설계 의도보다 구현 명세의 부족함에 무게."
+    ),
+}
+
+_CATEGORY_FOCUS_LINES = {
+    "logic-flow": (
+        "**로직/플로우 일관성·완결성** — flow 필드를 가장 꼼꼼히 작성하고, "
+        "조건 분기·상태 전이·예외 처리에서 빠진 흐름을 issues 로 강하게 지적."
+    ),
+    "qa-checklist": (
+        "**QA 가 검증해야 할 시나리오** — qa_checklist 를 가장 꼼꼼히 작성하고, "
+        "기본 흐름 + 엣지 케이스 + 경계값 + 시스템 간 상호작용을 빠짐없이 커버."
+    ),
+    "readability": (
+        "**기획자/구현자가 읽기 좋은 문서 가독성** — readability 를 가장 꼼꼼히 평가하고, "
+        "용어 일관성·계층 구조·모호 표현·독립성을 issues/suggestions 로 적극 지적."
+    ),
+}
+
+
+def _format_cap(label: str, val: int | str | None) -> str | None:
+    """cap 값 → instruction 한 줄. None 이면 줄 자체 생략."""
+    if val is None or val == "all":
+        return None  # cap 없음 → 가이드 문구 X (기존 동작)
+    try:
+        n = int(val)
+    except (TypeError, ValueError):
+        return None
+    if n <= 0:
+        return f"- **{label}**: 0건 — 이 카테고리는 분석/도출 생략하고 빈 배열로 응답."
+    return f"- **{label}**: 최대 {n}건만 도출. 가장 중요한 것부터 우선 선별."
+
+
+def _build_review_options_block(opts: ReviewOptions | None) -> str:
+    """review_options → 사용자 prompt 에 끼울 추가 instruction 블록.
+
+    빈 옵션이면 빈 문자열 반환 → 기존 동작 동일 (backward compat).
+    """
+    if opts is None:
+        return ""
+
+    cap_lines = [
+        line for line in [
+            _format_cap("issues", opts.issue_cap),
+            _format_cap("verifications", opts.verification_cap),
+            _format_cap("suggestions", opts.suggestion_cap),
+        ] if line
+    ]
+
+    cats = [c for c in (opts.categories or []) if c in _CATEGORY_FOCUS_LINES]
+    if cats:
+        # 명시된 카테고리만 출력. 명시 안 된 것은 빈 배열로 응답.
+        focus_lines = [f"- {_CATEGORY_FOCUS_LINES[c]}" for c in cats]
+        omit_targets: list[str] = []
+        if "qa-checklist" not in cats:
+            omit_targets.append("`qa_checklist`")
+        if "readability" not in cats:
+            omit_targets.append("`readability.issues`")
+        if omit_targets:
+            focus_lines.append(
+                f"- 사용자가 선택하지 않은 카테고리는 응답에서 비워라: "
+                f"{', '.join(omit_targets)} 는 빈 배열 / `readability.score` 는 그대로 평가."
+            )
+    else:
+        focus_lines = []
+
+    parts: list[str] = []
+    if cap_lines:
+        parts.append("### 리뷰 결과 분량 가이드\n" + "\n".join(cap_lines))
+    if focus_lines:
+        parts.append("### 우선 관점\n" + "\n".join(focus_lines))
+
+    if not parts:
+        return ""
+    return "\n\n## 리뷰어 추가 지시 (사용자 옵션)\n\n" + "\n\n".join(parts)
+
+
+def _resolve_personas(opts: ReviewOptions | None) -> list[str]:
+    """우선순위: reviewer_personas (multi, 빈 배열 제외) > reviewer_persona (single, 호환) > default.
+
+    미지원 키는 필터링, 순서 보존하며 중복 제거.
+    """
+    raw: list[str] = []
+    if opts:
+        if opts.reviewer_personas:
+            raw = list(opts.reviewer_personas)
+        elif opts.reviewer_persona:
+            raw = [opts.reviewer_persona]
+    seen: set[str] = set()
+    out: list[str] = []
+    for p in raw:
+        if p in _PERSONA_LINES and p not in seen:
+            out.append(p)
+            seen.add(p)
+    return out or ["planner-lead"]
+
+
+def _build_review_system(opts: ReviewOptions | None) -> str:
+    """persona 변형 — 기본 _REVIEW_SYSTEM 에 첫 단락 톤 가이드 끼워 넣음.
+
+    single 이면 라인 하나, multi 면 라인 여러 개 + "두 관점 모두에서 검토" 안내 한 줄.
+    """
+    personas = _resolve_personas(opts)
+    persona_lines = [_PERSONA_LINES[p] for p in personas]
+    if len(persona_lines) > 1:
+        combined = (
+            "이번 리뷰는 다음 여러 페르소나의 관점을 **모두** 적용해 검토하세요. "
+            "각 issue/verification 의 perspective 필드는 그 항목이 가장 잘 들어맞는 페르소나로 표기.\n"
+            + "\n".join(f"- {line}" for line in persona_lines)
+        )
+    else:
+        combined = persona_lines[0]
+    # 기본 system prompt 의 두 번째 줄(Analyze...) 앞에 톤 가이드를 끼워 넣는다.
+    return _REVIEW_SYSTEM.replace(
+        "Analyze the document from multiple perspectives. Respond in Korean.",
+        f"{combined}\nAnalyze the document from multiple perspectives. Respond in Korean.",
+        1,
+    )
+
+
 @app.post("/review_stream")
 async def review_stream(req: ReviewStreamRequest):
     """Confluence 페이지 리뷰 — Bedrock 단일 호출, NDJSON 토큰 스트리밍.
@@ -1336,14 +1556,26 @@ async def review_stream(req: ReviewStreamRequest):
         if req.review_instruction
         else ""
     )
+    options_block = _build_review_options_block(req.review_options)
     user_msg = (
         f"Page Title: {title}\n\nPage Content:\n{text}"
-        f"{instruction_block}\n\nReview this document thoroughly and return the JSON result:"
+        f"{instruction_block}{options_block}"
+        f"\n\nReview this document thoroughly and return the JSON result:"
     )
+    system_prompt = _build_review_system(req.review_options)
     model = _bd_normalize_model(req.model)
 
     async def gen():
-        log_event("review", "review_stream", f"{title[:60]} ({len(text)}c, {model})")
+        opts_summary = ""
+        if req.review_options is not None:
+            o = req.review_options
+            personas_used = _resolve_personas(o)
+            opts_summary = (
+                f" opts(personas={personas_used},"
+                f"caps={o.issue_cap}/{o.verification_cap}/{o.suggestion_cap},"
+                f"cats={o.categories or 'all'})"
+            )
+        log_event("review", "review_stream", f"{title[:60]} ({len(text)}c, {model}){opts_summary}")
         yield _ndj({"type": "status", "message": f"🧠 문서 분석 중... ({model})"})
         yield _ndj({"type": "status", "message": f"📄 길이: {len(text):,}자"})
 
@@ -1352,7 +1584,7 @@ async def review_stream(req: ReviewStreamRequest):
         try:
             async for ev in _bd_stream(
                 messages=[{"role": "user", "content": user_msg}],
-                system=_REVIEW_SYSTEM,
+                system=system_prompt,
                 model=model,
                 max_tokens=8192,
                 temperature=0.0,
@@ -1527,6 +1759,136 @@ async def suggest_edits(req: SuggestEditsRequest):
 
 
 # ═══════════════════════════════════════════════════════════════════════════════
+# /summary_stream — Klaud Confluence 어시스턴트 "요약하기" 모드
+# ═══════════════════════════════════════════════════════════════════════════════
+# 단일 Bedrock 호출, NDJSON token 스트림. /review_stream 와 분리된 별도 endpoint —
+# 기존 /review_stream / /ask_stream 흐름에 영향 차단. RAG 미사용 (사용자가 보고
+# 있는 페이지 텍스트만 컨텍스트).
+
+_SUMMARY_SYSTEM_DEFAULT = """You are a senior planning assistant for Project K, a mobile MMORPG. Your job is to summarize a single Confluence wiki page so a designer can grasp it in under a minute. Respond in Korean.
+
+## 출력 구조 (markdown)
+
+1. **결론 먼저** — 페이지가 무엇을 다루는지 1~2문장. 용어/시스템 이름은 원문 그대로.
+2. **핵심 항목** — 불릿 5~10개. 각 불릿은 1문장. 수치·공식·규칙·Enum·식별자(`CamelCase`)는 원문 표기 유지.
+3. **관련 시스템** — 본문이 명시적으로 언급한 다른 시스템·문서·페이지가 있을 때만 불릿. 없으면 이 섹션 자체를 생략.
+
+## 규칙
+
+- **추측 금지** — 본문에 없는 내용은 추가하지 말 것. 모호하면 모호한 채로 인용.
+- **수치 보존** — 숫자/단위/공식은 원문 그대로. 임의 변환·반올림 X.
+- **용어 보존** — 기획자가 쓰는 한국어 용어 + 영문 식별자 모두 원문대로.
+- **분량** — 일반 페이지 800자 내, 큰 페이지(본문 5천자 초과)는 1500자 내. 그 이상은 잘라낼 것.
+- **장식 금지** — 자화자찬, 메타 코멘트("이 페이지는 잘 정리되어 있습니다" 류), 이모지, 수식어 X.
+- **문단 X, 불릿 O** — "핵심 항목"은 반드시 불릿 리스트로.
+- **markdown만** — 코드 펜스(```) 로 감싸지 말 것. 본문 자체가 markdown.
+
+## 형식 예시
+
+```
+## 결론
+<1~2문장>
+
+## 핵심 항목
+- <불릿 1>
+- <불릿 2>
+- ...
+
+## 관련 시스템
+- <본문 명시 시스템/문서>
+```
+
+위 구조 그대로 출력. 다른 헤더 추가 X."""
+
+
+@app.post("/summary_stream")
+async def summary_stream(req: SummaryStreamRequest):
+    """Confluence 페이지 요약 — Bedrock 단일 호출, NDJSON 토큰 스트리밍.
+
+    이벤트:
+        {"type":"status","message":"..."}
+        {"type":"token","text":"..."}            # text_delta 마다
+        {"type":"result","data":{"summary":"<markdown>","model":"...","usage":{...}}}
+        {"type":"error","message":"..."}
+    """
+    title = req.title or ""
+    text = (req.text or "")[:100000]
+    style = (req.summary_style or "default").lower()
+    # 향후 "bullet" / "executive" 분기 자리 — 지금은 default 만.
+    system_prompt = _SUMMARY_SYSTEM_DEFAULT
+    # 기본 모델 = opus (요약 품질 우선). req.model 명시되면 그대로.
+    model = _bd_normalize_model(req.model) if req.model else "opus"
+    max_tokens = req.max_tokens if req.max_tokens else 8194
+    user_msg = (
+        f"Page Title: {title}\n\nPage Content:\n{text}\n\n"
+        f"위 페이지를 시스템 메시지의 구조와 규칙에 따라 한국어로 요약해줘."
+    )
+
+    if not text.strip():
+        return StreamingResponse(
+            iter([_ndj({"type": "error", "message": "text is empty"})]),
+            media_type="application/x-ndjson",
+        )
+
+    async def gen():
+        log_event(
+            "summary",
+            "summary_stream",
+            f"{title[:60]} ({len(text)}c, {model}, max={max_tokens}, style={style})",
+        )
+        yield _ndj({"type": "status", "message": f"📖 본문 정독 중... ({model})"})
+        yield _ndj({"type": "status", "message": f"📄 길이: {len(text):,}자"})
+
+        acc: list[str] = []
+        usage: dict = {}
+        try:
+            async for ev in _bd_stream(
+                messages=[{"role": "user", "content": user_msg}],
+                system=system_prompt,
+                model=model,
+                max_tokens=max_tokens,
+                temperature=0.0,
+            ):
+                t = ev.get("type")
+                if t == "content_block_delta":
+                    d = ev.get("delta", {})
+                    if d.get("type") == "text_delta":
+                        chunk = d.get("text", "")
+                        if chunk:
+                            acc.append(chunk)
+                            yield _ndj({"type": "token", "text": chunk})
+                elif t == "message_delta":
+                    u = ev.get("usage")
+                    if u:
+                        usage.update(u)
+        except _BdStreamErr as e:
+            log_event("summary", "summary_error", str(e)[:200])
+            yield _ndj({"type": "error", "message": f"Bedrock stream error: {e}"})
+            return
+        except Exception as e:
+            log_event("summary", "summary_error", str(e)[:200])
+            yield _ndj({"type": "error", "message": f"unexpected: {e}"})
+            return
+
+        full = "".join(acc).strip()
+        log_event("summary", "summary_done", f"{len(full)} chars, usage={usage}")
+        yield _ndj({"type": "status", "message": "📋 요약 정리 중..."})
+        yield _ndj(
+            {
+                "type": "result",
+                "data": {
+                    "summary": full,
+                    "model": model,
+                    "usage": usage,
+                    "summary_style": style,
+                },
+            }
+        )
+
+    return StreamingResponse(gen(), media_type="application/x-ndjson")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
 # /quick_find — 빠른 메타 검색 (Klaud workbench Quick Find sidebar)
 # ═══════════════════════════════════════════════════════════════════════════════
 
@@ -1535,11 +1897,13 @@ class QuickFindRequest(BaseModel):
 
     fast=True 면 typing UX 용 빠른 모드 (L1 only, ~50ms, ~76% quality).
     fast=False 면 풀 quality 모드 (auto v2.1, p50 ~324ms, ~85% quality).
+    fuzzy=True (default) 면 한국어 separator/자모 bigram fuzzy 매칭 활성화.
     """
     query: str
     limit: int | None = 10
     kinds: list[str] | None = None      # ["xlsx", "confluence"] 또는 단일
     fast: bool | None = False           # typing UX 면 True
+    fuzzy: bool | None = True           # 한국어 fuzzy 매칭 (기본 ON)
 
 
 # 내부 dispatch (admin/debug 용 — query param `?_strategy=...` 로만 노출)
@@ -1581,8 +1945,9 @@ async def quick_find(req: QuickFindRequest, _strategy: str | None = None):
     else:
         strategy = "auto"
 
+    fuzzy = bool(req.fuzzy) if req.fuzzy is not None else True
     log_event("quick_find", "quick_find",
-              f"{q!r} fast={bool(req.fast)} strategy={strategy} limit={req.limit} kinds={req.kinds}")
+              f"{q!r} fast={bool(req.fast)} fuzzy={fuzzy} strategy={strategy} limit={req.limit} kinds={req.kinds}")
 
     async def gen():
         try:
@@ -1592,6 +1957,7 @@ async def quick_find(req: QuickFindRequest, _strategy: str | None = None):
                 kinds=req.kinds,
                 model="haiku",
                 strategy=strategy,
+                fuzzy=fuzzy,
             ):
                 yield _ndj(ev)
         except Exception as e:

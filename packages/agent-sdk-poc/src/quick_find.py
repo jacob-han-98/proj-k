@@ -17,11 +17,18 @@ import json
 import os
 import re
 import time
+from contextvars import ContextVar
 from dataclasses import dataclass, asdict, field
+from functools import lru_cache
 from pathlib import Path
 from typing import AsyncIterator
 
 import httpx
+
+# Fuzzy 매칭 toggle — query 진입점 (`quick_find_stream`) 에서 set, `_score_substring`
+# 안에서 get. ContextVar 라서 같은 asyncio task tree 안에서만 보이고 다른 query 와
+# 격리된다. 기본 True (사용자가 명시적으로 끄지 않으면 fuzzy on).
+_FUZZY: ContextVar[bool] = ContextVar("quick_find_fuzzy", default=True)
 
 from bedrock_stream import stream_messages, BedrockStreamError, normalize_model
 
@@ -44,6 +51,7 @@ class Doc:
     key_terms: list[str]      # 핵심 용어 리스트
     summary_md_path: str      # index/summaries/.../*.md 절대경로
     content_md_path: str      # 실제 content.md 절대경로 (frontend 가 열 때 사용)
+    confluence_page_id: str | None = None   # confluence only — manifest 의 numeric id
 
 
 # ── 인덱스 빌드 (모듈 로드 시 한 번) ───────────────────────────────────────
@@ -143,6 +151,83 @@ def _parse_summary_md(path: Path) -> Doc | None:
         )
 
 
+_CONF_PAGE_ID_BY_TITLE_PATH: dict[tuple[str, ...], str] = {}
+_CONF_PAGE_ID_LOADED = False
+
+
+def _load_confluence_page_id_map() -> dict[tuple[str, ...], str]:
+    """confluence-downloader 의 _manifest.json 을 로드해 (title-path tuple) → page_id 매핑.
+
+    manifest 의 트리를 재귀 traverse 하면서 노드별 (root...leaf) title path 를 키로 등록.
+    quick_find 의 Doc.path 는 file-safe form ('/' 대신 ' / ', ':' 대신 '_') 이므로
+    조회 시에도 동일 normalize 적용.
+    """
+    global _CONF_PAGE_ID_BY_TITLE_PATH, _CONF_PAGE_ID_LOADED
+    if _CONF_PAGE_ID_LOADED:
+        return _CONF_PAGE_ID_BY_TITLE_PATH
+    manifest_path = CONF_OUTPUT_DIR / "_manifest.json"
+    if not manifest_path.exists():
+        _CONF_PAGE_ID_LOADED = True
+        return _CONF_PAGE_ID_BY_TITLE_PATH
+
+    try:
+        import json as _json
+        manifest = _json.loads(manifest_path.read_text(encoding="utf-8"))
+    except Exception:
+        _CONF_PAGE_ID_LOADED = True
+        return _CONF_PAGE_ID_BY_TITLE_PATH
+
+    def _safe(s: str) -> str:
+        # quick_find Doc.path 와 동일 정규화 — file-safe form 으로
+        return (s or "").replace(":", "_").strip()
+
+    out: dict[tuple[str, ...], str] = {}
+    def _walk(node: dict, parents: list[str]):
+        title = node.get("title") or ""
+        page_id = node.get("id")
+        # root ("Design") 은 path 에 안 포함됨 — quick_find 인덱스의 path 와 맞춤.
+        # 또한 일반 페이지(type=page) 만 등록.
+        path_segments = parents + [_safe(title)]
+        if page_id is not None and len(path_segments) >= 1:
+            key = tuple(path_segments)
+            out[key] = str(page_id)
+            # title-only fallback: 같은 title 의 페이지가 유니크하면 title 만으로도 lookup
+            # (depth 정보가 안 맞을 수도 있어서)
+            single = (path_segments[-1],)
+            if single not in out:
+                out[single] = str(page_id)
+        children = node.get("children") or []
+        for c in children:
+            _walk(c, path_segments)
+
+    # root 의 children 부터 시작 (root title 자체 = "Design" 같은 컨테이너이므로 path 에 미포함)
+    for c in manifest.get("children") or []:
+        _walk(c, [])
+
+    _CONF_PAGE_ID_BY_TITLE_PATH = out
+    _CONF_PAGE_ID_LOADED = True
+    return out
+
+
+def _lookup_conf_page_id(doc: Doc) -> str | None:
+    """confluence Doc 의 path 로 manifest 의 page_id lookup."""
+    if doc.kind != "confluence":
+        return None
+    pmap = _load_confluence_page_id_map()
+    if not pmap:
+        return None
+    # Doc.path 는 " / " separator, file-safe form
+    segments = [s.strip() for s in doc.path.split(" / ") if s.strip()]
+    if not segments:
+        return pmap.get((doc.title,))
+    # full path 매칭 우선
+    full_key = tuple(segments)
+    if full_key in pmap:
+        return pmap[full_key]
+    # leaf title-only fallback
+    return pmap.get((doc.title,))
+
+
 def build_index() -> list[Doc]:
     """인덱스 빌드 (한 번만 실행, 이후 cache).
 
@@ -167,7 +252,12 @@ def build_index() -> list[Doc]:
             len(d.path) == len(existing.path) and len(d.summary) > len(existing.summary)
         ):
             seen[key] = d
-    _INDEX = list(seen.values())
+    docs = list(seen.values())
+    # confluence Doc 에 page_id 첨부 (manifest lookup)
+    for d in docs:
+        if d.kind == "confluence":
+            d.confluence_page_id = _lookup_conf_page_id(d)
+    _INDEX = docs
     _INDEX_BUILT = True
     _build_reverse_lookups(_INDEX)
     return _INDEX
@@ -217,6 +307,90 @@ class Candidate:
     matched_text: str = ""    # 디버그/배지용
 
 
+# 한국어/혼합 query 의 separator 변형 흡수용. 공백 (ASCII + 전각) 외에
+# underscore/hyphen/중간점/dot 도 제거 → "몬스터 왕" 사용자 query 가 "PK_몬스터_왕"
+# 워크북에 매칭. slash (`/`) 는 path 구조 의미가 있어 보존하지만, q 와 target
+# 양쪽 모두 같은 변환을 거치므로 substring 매칭 자체는 일관됨.
+_NS_SEP_RE = re.compile(r"[\s_\-·\.]+")
+
+
+def _ns(s: str) -> str:
+    """Separator-insensitive normalize — 한국어 query 의 띄어쓰기/구분자 변형 매칭용.
+
+    "가시나무숲" ↔ "가시나무 숲", "몬스터 왕" ↔ "PK_몬스터_왕" 같은 변형을 흡수.
+    """
+    return _NS_SEP_RE.sub("", s).replace("　", "")
+
+
+# ── Hangul Jamo decomposition + bigram fuzzy (한국어 음운 변형 매칭) ──────
+# "르바" ↔ "로바르스" 같이 substring 으로 잡히지 않는 음운 부분일치를
+# 자모 단위 bigram 교집합 비율로 매칭한다. False positive 위험 때문에
+# threshold 0.6 + query 자모 길이 ≥ 4 (음절 약 1.5개) 가드를 둔다.
+
+_HANGUL_SYLLABLE_START = 0xAC00
+_HANGUL_SYLLABLE_END = 0xD7A3
+_HANGUL_CHO_BASE = 0x1100
+_HANGUL_JUNG_BASE = 0x1161
+_HANGUL_JONG_BASE = 0x11A7  # jong index 0 = 종성 없음
+
+
+def _decompose_hangul(text: str) -> str:
+    """한글 음절을 초성/중성/종성 jamo sequence 로 분해. 비-한글 문자는 그대로."""
+    out: list[str] = []
+    for ch in text:
+        code = ord(ch)
+        if _HANGUL_SYLLABLE_START <= code <= _HANGUL_SYLLABLE_END:
+            n = code - _HANGUL_SYLLABLE_START
+            cho = n // (21 * 28)
+            jung = (n % (21 * 28)) // 28
+            jong = n % 28
+            out.append(chr(_HANGUL_CHO_BASE + cho))
+            out.append(chr(_HANGUL_JUNG_BASE + jung))
+            if jong:
+                out.append(chr(_HANGUL_JONG_BASE + jong))
+        else:
+            out.append(ch)
+    return "".join(out)
+
+
+@lru_cache(maxsize=20000)
+def _decompose_hangul_cached(text: str) -> str:
+    """index doc 의 title/workbook 은 매 query 마다 반복 분해되므로 cache.
+    maxsize 20000 = 6000+ docs × (title + workbook) 충분히 커버.
+    """
+    return _decompose_hangul(text)
+
+
+def _jamo_bigrams(decomposed: str) -> set[str]:
+    """자모 sequence → bigram 집합."""
+    if len(decomposed) < 2:
+        return set()
+    return {decomposed[i : i + 2] for i in range(len(decomposed) - 1)}
+
+
+def _jamo_overlap_ratio(q_decomp: str, t_decomp: str) -> float:
+    """0.0 ~ 1.0. query bigram 중 target bigram 에 들어있는 비율.
+
+    예: "르바"(자모 ㄹㅡㅂㅏ, bigram {ㄹㅡ, ㅡㅂ, ㅂㅏ}) vs
+        "로바르스"(자모 ㄹㅗㅂㅏㄹㅡㅅㅡ, bigram {ㄹㅗ, ㅗㅂ, ㅂㅏ, ㅏㄹ, ㄹㅡ, ㅡㅅ, ㅅㅡ})
+        교집합 {ㅂㅏ, ㄹㅡ} / |q| 3 = 0.667
+    """
+    qb = _jamo_bigrams(q_decomp)
+    if not qb:
+        return 0.0
+    tb = _jamo_bigrams(t_decomp)
+    if not tb:
+        return 0.0
+    return len(qb & tb) / len(qb)
+
+
+# fuzzy gate — 너무 짧은 query 는 false positive 폭발 방지로 skip
+_JAMO_MIN_LEN = 4         # 자모 4개 ≈ 음절 1.5개 (예: "르바" = 4 자모, OK)
+_JAMO_THRESHOLD = 0.6     # 60% 이상 bigram 일치
+_JAMO_SCORE_BASE = 0.45   # title fuzzy match base score (path/summary 보다 약간 낮음)
+_JAMO_SCORE_RANGE = 0.10  # 0.6 → 0.45, 1.0 → 0.55 선형 보간
+
+
 def _score_substring(query: str, doc: Doc) -> tuple[float, str, str]:
     """주어진 doc 에 대한 (score, matched_via, matched_text). 매칭 없으면 (0, '', '')."""
     q = query.lower().strip()
@@ -228,6 +402,13 @@ def _score_substring(query: str, doc: Doc) -> tuple[float, str, str]:
     path_l = doc.path.lower()
     summary_l = doc.summary.lower()
     key_terms_l = [t.lower() for t in doc.key_terms]
+
+    # 공백 제거 normalize 비교를 위한 폼 (한국어 띄어쓰기 변형 흡수)
+    q_ns = _ns(q)
+    title_ns = _ns(title_l)
+    path_ns = _ns(path_l)
+    summary_ns = _ns(summary_l)
+    workbook_ns = _ns(workbook_l)
 
     # 점수 우선순위 — 워크북/title (구조적 매칭) 가 key_term/path/summary 보다 높음.
     # workbook_substring 을 0.75 → 0.88 로 올려 key_term_exact (0.80) 보다 위에 둠.
@@ -246,9 +427,16 @@ def _score_substring(query: str, doc: Doc) -> tuple[float, str, str]:
     # 4. workbook substring (워크북 명에 query 가 들어감) — bumped from 0.75 → 0.88
     if workbook_l and q in workbook_l:
         return 0.88, "workbook_substring", doc.workbook or ""
+    # 4b. workbook substring — ns ("몬스터왕" ↔ "PK_몬스터_왕")
+    if q_ns and workbook_ns and q_ns in workbook_ns and (not workbook_l or q not in workbook_l):
+        return 0.86, "workbook_substring_ns", doc.workbook or ""
     # 5. title substring
     if q in title_l:
         return 0.85, "title_substring", doc.title
+    # 5b. title substring — 공백 제거 normalize ("가시나무숲" ↔ "가시나무 숲")
+    # 위 일반 substring 에서 매칭 안 됐을 때만 도달. q 또는 title 에 공백 변형이 있어야 매칭됨.
+    if q_ns and title_ns and q_ns in title_ns:
+        return 0.83, "title_substring_ns", doc.title
     # 6. space 정확/부분
     if space_l and q in space_l:
         return 0.82, "space_substring", doc.space or ""
@@ -263,21 +451,56 @@ def _score_substring(query: str, doc: Doc) -> tuple[float, str, str]:
     # 9. path substring (파일경로)
     if q in path_l:
         return 0.55, "path_substring", doc.path
+    # 9b. path substring — 공백 제거 normalize
+    if q_ns and path_ns and q_ns in path_ns and q not in path_l:
+        return 0.53, "path_substring_ns", doc.path
     # 10. summary substring
     if q in summary_l:
         return 0.40, "summary_substring", (doc.summary[:80] + "...") if len(doc.summary) > 80 else doc.summary
+    # 10b. summary substring — 공백 제거 normalize
+    if q_ns and summary_ns and q_ns in summary_ns and q not in summary_l:
+        text = (doc.summary[:80] + "...") if len(doc.summary) > 80 else doc.summary
+        return 0.38, "summary_substring_ns", text
+
+    # 11. Hangul Jamo bigram fuzzy — substring 모두 fail 했을 때만 fallback.
+    # 사용자가 끄면 (_FUZZY=False) 이 블록 skip → 기존 동작과 동일.
+    # path/summary 는 false positive 위험이 커서 title/workbook 만 적용.
+    if _FUZZY.get():
+        q_dec = _decompose_hangul_cached(q)
+        if len(q_dec) >= _JAMO_MIN_LEN:
+            t_dec = _decompose_hangul_cached(title_l)
+            ratio = _jamo_overlap_ratio(q_dec, t_dec)
+            if ratio >= _JAMO_THRESHOLD:
+                score = _JAMO_SCORE_BASE + _JAMO_SCORE_RANGE * (ratio - _JAMO_THRESHOLD) / (1.0 - _JAMO_THRESHOLD)
+                return score, "title_fuzzy_jamo", doc.title
+            if workbook_l:
+                wb_dec = _decompose_hangul_cached(workbook_l)
+                ratio_wb = _jamo_overlap_ratio(q_dec, wb_dec)
+                if ratio_wb >= _JAMO_THRESHOLD:
+                    score = (_JAMO_SCORE_BASE - 0.03) + _JAMO_SCORE_RANGE * (ratio_wb - _JAMO_THRESHOLD) / (1.0 - _JAMO_THRESHOLD)
+                    return score, "workbook_fuzzy_jamo", doc.workbook or ""
     return 0.0, "", ""
 
 
 def search_substring(query: str, docs: list[Doc], kinds: list[str] | None = None,
-                     limit: int = 50) -> list[Candidate]:
+                     limit: int = 50,
+                     balance_kinds: bool = False) -> list[Candidate]:
     """Phase 1 — substring/key_term 기반 후보 추출.
 
     한 query 가 여러 단어이면 단어별 점수 합산 (단순 OR).
+
+    balance_kinds=True 이고 kinds 미지정 시 kind 별 minimum quota 를 보장한다.
+    배경: xlsx 의 workbook_substring(0.88) 점수가 confluence 의 title_substring(0.85)
+    보다 강해서 도메인 용어 query (예: '셀레탄') 에서 xlsx 가 top-N 을 다 채우고
+    conf 가 cutoff 에서 밀려나는 케이스 다수. quota 로 conf 가 최소 N건 들어오도록.
     """
     tokens = [t for t in re.split(r"\s+", query.strip()) if t]
     if not tokens:
         return []
+    # multi-token 일 때 join 한 형태도 한 번 더 시도 — "몬스터 왕" 사용자 query 가
+    # "PK_몬스터_왕" 워크북에 잡히도록 ("몬스터왕" 형태로 _ns 매칭).
+    joined_q = "".join(tokens) if len(tokens) > 1 else None
+
     out: list[Candidate] = []
     for d in docs:
         if kinds and d.kind not in kinds:
@@ -291,6 +514,13 @@ def search_substring(query: str, docs: list[Doc], kinds: list[str] | None = None
                 best_score = s
                 best_via = via
                 best_text = txt
+        # joined query 매칭도 시도 — 띄어쓴 multi-token 이 합치면 매칭되는 케이스.
+        if joined_q:
+            s, via, txt = _score_substring(joined_q, d)
+            if s > best_score:
+                best_score = s
+                best_via = via + "_joined"
+                best_text = txt
         # 멀티 토큰 매칭 부스트 — 토큰 모두가 어딘가 매칭되면 +0.05
         if len(tokens) > 1:
             all_matched = all(_score_substring(t, d)[0] > 0 for t in tokens)
@@ -299,6 +529,33 @@ def search_substring(query: str, docs: list[Doc], kinds: list[str] | None = None
         if best_score > 0:
             out.append(Candidate(doc=d, score=best_score, matched_via=best_via, matched_text=best_text))
     out.sort(key=lambda c: -c.score)
+
+    if balance_kinds and not kinds:
+        kinds_in_out = list(dict.fromkeys(c.doc.kind for c in out))
+        if len(kinds_in_out) > 1:
+            # kind 별 minimum quota — 각 kind 최소 max(limit//5, 5) 건 보장.
+            # 강한 kind 가 약한 kind 를 cutoff 에서 밀어내지 않도록.
+            min_quota = max(limit // 5, 5)
+            picked_ids: set[int] = set()
+            balanced: list[Candidate] = []
+            # 1) kind 별 top min_quota 먼저 확보
+            for k in kinds_in_out:
+                kind_cands = [c for c in out if c.doc.kind == k]
+                for c in kind_cands[:min_quota]:
+                    if id(c) not in picked_ids:
+                        balanced.append(c)
+                        picked_ids.add(id(c))
+            # 2) 남은 자리는 score 순서대로 채움
+            for c in out:
+                if len(balanced) >= limit:
+                    break
+                if id(c) in picked_ids:
+                    continue
+                balanced.append(c)
+                picked_ids.add(id(c))
+            balanced.sort(key=lambda c: -c.score)
+            return balanced[:limit]
+
     return out[:limit]
 
 
@@ -406,7 +663,7 @@ async def strategy_l1(
     yield {"type": "status", "message": f"📚 인덱스 {len(docs):,}건"}
 
     t1 = time.time()
-    candidates = search_substring(query, docs, kinds=kinds, limit=50)
+    candidates = search_substring(query, docs, kinds=kinds, limit=50, balance_kinds=True)
     phase1_ms = int((time.time() - t1) * 1000)
 
     by_via: dict[str, int] = {}
@@ -451,7 +708,7 @@ async def strategy_haiku_rerank(
     yield {"type": "status", "message": f"📚 인덱스 {len(docs):,}건"}
 
     t1 = time.time()
-    candidates = search_substring(query, docs, kinds=kinds, limit=50)
+    candidates = search_substring(query, docs, kinds=kinds, limit=50, balance_kinds=True)
     phase1_ms = int((time.time() - t1) * 1000)
 
     by_via: dict[str, int] = {}
@@ -765,7 +1022,7 @@ async def strategy_parallel(
 
     # ── L1 (sync, 빠름) — Vector embed 와 병렬로 launch ──
     async def _l1():
-        return search_substring(query, docs, kinds=kinds, limit=limit)
+        return search_substring(query, docs, kinds=kinds, limit=limit, balance_kinds=True)
 
     async def _vector():
         coll = _get_chroma_collection()
@@ -1064,7 +1321,7 @@ async def strategy_auto(
 
     # ── Phase 1a: L1 + Vector 병렬 실행 ──
     async def _l1_run():
-        return search_substring(query, docs, kinds=kinds, limit=20)
+        return search_substring(query, docs, kinds=kinds, limit=20, balance_kinds=True)
 
     async def _vec_run():
         coll = _get_chroma_collection()
@@ -1293,6 +1550,67 @@ _STRATEGIES = {
 }
 
 
+def _strip_sheet_from_path(path: str, sheet: str) -> str:
+    """워크북 path 에서 마지막 시트 segment 제거.
+
+    sub-strategy 의 hit path 는 "7_System / PK_HUD / HUD_기본" 형식.
+    워크북 단위 hit 으로 fold 시 마지막 ` / <sheet>` 부분을 떼어 "7_System / PK_HUD" 만 남김.
+    """
+    if not path or not sheet:
+        return path
+    suffix = f" / {sheet}"
+    if path.endswith(suffix):
+        return path[: -len(suffix)]
+    return path
+
+
+def _make_workbook_hit(seed: dict, workbook: str) -> dict:
+    """xlsx 시트 hit 으로부터 워크북 fold hit 의 초기 state 생성.
+
+    seed 는 그 워크북의 첫 (가장 강한) 시트 hit. summary/matched_via/content_md_path/
+    rerank_source 모두 seed 기준 — 대표 시트의 정보를 워크북 hit 에 노출.
+    """
+    sheet = seed.get("title") or ""
+    seed_path = seed.get("path") or ""
+    return {
+        "doc_id": f"xlsx::{workbook}",
+        "type": "xlsx",
+        "title": workbook,
+        "path": _strip_sheet_from_path(seed_path, sheet),
+        "workbook": workbook,
+        "space": None,
+        "summary": seed.get("summary"),
+        "score": 0.0,                          # 누적 합산 (아래 fold 루프에서 +=)
+        "matched_via": seed.get("matched_via"),
+        "matched_text": seed.get("matched_text"),
+        "rerank_source": seed.get("rerank_source"),
+        "content_md_path": seed.get("content_md_path"),
+        "matched_sheets": [],                  # 신규 — UI 가 펼쳐서 시트 목록 노출
+    }
+
+
+def _sheet_entry(sheet_hit: dict) -> dict:
+    """워크북 hit 안의 matched_sheets 항목 (시트 단위 원본 정보 보존)."""
+    return {
+        "sheet": sheet_hit.get("title"),
+        "doc_id": sheet_hit.get("doc_id"),     # "xlsx::<workbook>::<sheet>" 그대로 유지
+        "title": sheet_hit.get("title"),
+        "summary": sheet_hit.get("summary"),
+        "score": sheet_hit.get("score"),
+        "matched_via": sheet_hit.get("matched_via"),
+        "matched_text": sheet_hit.get("matched_text"),
+        "source": sheet_hit.get("rerank_source"),
+        "content_md_path": sheet_hit.get("content_md_path"),
+    }
+
+
+# 워크북 fold 시 sub-strategy 가 시트 단위로 yield 한 hit 들이 1 워크북에 몰릴 수 있어
+# (예: PK_HUD 워크북의 시트 8개가 다 매칭) 외부 limit 보다 더 많은 sheet hit 을 받아야
+# 워크북 N개 채울 수 있다. internal_limit = max(limit * MULT, MIN_BUFFER).
+_FOLD_INTERNAL_LIMIT_MULT = 6
+_FOLD_INTERNAL_LIMIT_MIN = 30
+
+
 async def quick_find_stream(
     query: str,
     limit: int = 10,
@@ -1301,15 +1619,31 @@ async def quick_find_stream(
     *,
     strategy: str = "auto",
     skip_rerank: bool = False,
+    fuzzy: bool = True,
     # auto v2 thresholds (tuning)
     score_l1_high: float | None = None,
     score_vec_high: float | None = None,
     min_high_hits: int | None = None,
     overlap_threshold: int | None = None,
 ) -> AsyncIterator[dict]:
-    """Quick Find dispatcher."""
+    """Quick Find dispatcher.
+
+    Sub-strategy 는 시트 단위로 hit 을 yield 하지만 사용자 멘탈 모델은
+    "문서(워크북) / 페이지" 단위. 이 dispatcher 가 fold layer 로 동작해서
+    같은 워크북의 시트 hit 들을 합치고 (score sum), matched_sheets 로 시트 목록
+    노출. confluence hit 은 페이지=문서 자연 매핑이므로 변경 없이 통과.
+
+    fold 효과:
+    - limit 의 의미가 "10 워크북/페이지" 가 됨 (이전: "10 시트/페이지")
+    - score 가 합산되므로 시트 매칭이 풍부한 워크북이 confluence 페이지보다 상위
+    - frontend 의 client-side grouping 이 idempotent — 이미 fold 된 데이터는
+      single 분기로 빠짐
+    """
     if skip_rerank:
         strategy = "l1"
+    # ContextVar 로 fuzzy flag set — sub-strategy 들이 _score_substring 을 호출할 때
+    # 자동 propagate. asyncio task 가 ContextVar 를 복사하므로 내부 task 에도 전파됨.
+    _FUZZY.set(fuzzy)
     fn = _STRATEGIES.get(strategy)
     if fn is None:
         yield {"type": "error", "message": f"unknown strategy: {strategy}. Use one of {list(_STRATEGIES)}"}
@@ -1323,13 +1657,81 @@ async def quick_find_stream(
     }.items():
         if v is not None:
             extra[k] = v
-    async for ev in fn(query=query, limit=limit, kinds=kinds, model=model, **extra):
+
+    # Sub-strategy 에 internal limit 더 크게 — fold 후 워크북 수가 줄어들 buffer.
+    internal_limit = max(limit * _FOLD_INTERNAL_LIMIT_MULT, _FOLD_INTERNAL_LIMIT_MIN)
+
+    xlsx_groups: dict[str, dict] = {}     # workbook -> fold state
+    confluence_hits: list[dict] = []
+    sub_result: dict | None = None
+
+    async for ev in fn(query=query, limit=internal_limit, kinds=kinds, model=model, **extra):
+        t = ev.get("type")
+        if t == "status":
+            yield ev
+            continue
+        if t == "error":
+            yield ev
+            return
+        if t == "hit":
+            d = ev.get("data") or {}
+            kind = d.get("type")
+            if kind == "xlsx":
+                wb = d.get("workbook") or "?"
+                grp = xlsx_groups.get(wb)
+                if grp is None:
+                    grp = _make_workbook_hit(d, wb)
+                    xlsx_groups[wb] = grp
+                grp["score"] += float(d.get("score") or 0.0)
+                grp["matched_sheets"].append(_sheet_entry(d))
+            elif kind == "confluence":
+                confluence_hits.append(d)
+            # else: 미지원 type 은 drop
+            continue
+        if t == "result":
+            sub_result = ev.get("data") or {}
+            continue
+        # 그 외 이벤트는 그대로 forward
         yield ev
+
+    # fold 마무리: matched_sheets 정렬 (score desc), score round
+    folded_xlsx: list[dict] = []
+    for grp in xlsx_groups.values():
+        grp["matched_sheets"].sort(key=lambda s: s.get("score") or 0.0, reverse=True)
+        grp["score"] = round(grp["score"], 3)
+        folded_xlsx.append(grp)
+
+    # confluence hit 은 score round 만 (이미 sub-strategy 가 매김)
+    for c in confluence_hits:
+        if "score" in c:
+            try:
+                c["score"] = round(float(c["score"]), 3)
+            except Exception:
+                pass
+
+    all_hits = folded_xlsx + confluence_hits
+    all_hits.sort(key=lambda h: h.get("score") or 0.0, reverse=True)
+    final_hits = all_hits[:limit]
+
+    for i, h in enumerate(final_hits, start=1):
+        h["rank"] = i
+        yield {"type": "hit", "data": h}
+
+    # 최종 result 는 sub-strategy 의 result 가 있으면 이어받되 total/yielded 갱신.
+    final_result = dict(sub_result) if sub_result else {}
+    final_result["total"] = len(final_hits)
+    final_result.setdefault("strategy", strategy)
+    final_result["fold"] = {
+        "workbooks": len(folded_xlsx),
+        "confluence_pages": len(confluence_hits),
+        "internal_limit": internal_limit,
+    }
+    yield {"type": "result", "data": final_result}
 
 
 def _hit_payload(c: Candidate, *, source: str, rank: int = 0) -> dict:
     d = c.doc
-    return {
+    payload = {
         "doc_id": d.doc_id,
         "type": d.kind,
         "title": d.title,
@@ -1344,6 +1746,10 @@ def _hit_payload(c: Candidate, *, source: str, rank: int = 0) -> dict:
         "rank": rank,
         "content_md_path": d.content_md_path,
     }
+    if d.kind == "confluence" and d.confluence_page_id:
+        # frontend 가 ConfluencePage open URL (pageId={numeric}) 빌드 시 사용
+        payload["confluence_page_id"] = d.confluence_page_id
+    return payload
 
 
 # ── self-test (live Bedrock 필요) ────────────────────────────────────────

@@ -47,6 +47,9 @@ ALLOWED_TOOLS = [
     # 비교 모드 — 호출 게이팅은 system_prompt 의 compare_mode 블록이 담당
     "mcp__projk__compare_with_reference_games",
     "mcp__projk__search_external_game",
+    # Klaud 일반 Agent 모드 — doc_context.stash 된 conv 에서만 의미 있음.
+    # 미stash 면 status='no_doc' 반환 → 일반 QnA 와 동일 동작.
+    "mcp__projk__read_current_doc",
 ]
 
 # 명시적으로 금지 (서버 배포 시 보안: Bash/Write/Edit 실수 호출 차단)
@@ -151,6 +154,25 @@ Miss 보고 (4-tier 분리 — 정직성 핵심):
 
 
 # 비교 모드 OFF 라도, 사용자가 외부 게임을 명시적으로 거론하면 자동 발동.
+DOC_FOCUS_PROMPT_TEMPLATE = """
+[일반 Agent 모드 — Klaud 문서 포커스]
+사용자는 현재 "{title}" 문서를 Klaud 에서 열어 보면서 작업 중입니다.
+
+워크플로우:
+1. 먼저 mcp__projk__read_current_doc 을 호출해 현재 보고 있는 문서의 본문을 직접 읽으세요.
+2. 그 본문 내용을 1차 컨텍스트로 사용하고, 답변에 본문 정보를 인용할 때는
+   "(출처: {title})" 또는 본문에 명시된 시스템명/시트명을 인용합니다.
+3. 본문만으로 답이 부족하거나 다른 시스템과의 관계를 설명해야 하면, 평소처럼 KB 검색 도구
+   (Grep/Read/glossary_lookup/find_related_systems 등) 를 추가로 사용해 보강하세요.
+4. read_current_doc 가 status='no_doc' 을 반환하면 본문이 stash 안 된 것 — 그때는
+   "현재 열린 문서 본문을 가져오지 못했습니다" 한 줄 명시 후 일반 KB 검색만으로 답하세요.
+
+규칙:
+- 본문에 없는 내용은 본문 출처로 인용하지 말 것 (KB 검색 결과는 따로 인용).
+- 사용자 질문이 "이 문서", "여기", "지금 보는 페이지" 등을 가리키면 무조건 본문 컨텍스트.
+""".strip()
+
+
 EXTERNAL_GAME_AUTO_PROMPT = """
 [외부 게임 자동 조회 규칙]
 사용자 질문에 다음 게임 이름이 명시적으로 등장하면, 비교 모드 토글이 OFF여도
@@ -174,6 +196,7 @@ def _make_options(
     resume: str | None = None,
     model: str | None = None,
     compare_mode: bool = False,
+    current_doc_title: str | None = None,
 ) -> ClaudeAgentOptions:
     projk_server = create_projk_server()
 
@@ -186,6 +209,13 @@ def _make_options(
     ds_schema = get_datasheet_schema_summary()
     if ds_schema:
         base_prompt = base_prompt + "\n\n" + ds_schema
+
+    # Klaud 일반 Agent 모드 — doc_context.stash 된 conv 에서만 hint 추가.
+    # 미stash 면 hint 자체 없음 (기존 QnA 동작 그대로).
+    if current_doc_title:
+        base_prompt = base_prompt + "\n\n" + DOC_FOCUS_PROMPT_TEMPLATE.format(
+            title=current_doc_title
+        )
 
     if compare_mode:
         base_prompt = base_prompt + "\n\n" + COMPARE_MODE_PROMPT
@@ -240,10 +270,16 @@ async def run_query_with_session(
     session_id: str | None = None,
     model: str | None = None,
     compare_mode: bool = False,
+    current_doc_title: str | None = None,
 ):
     """세션 지원 질의."""
     async for message in query(
         prompt=prompt,
-        options=_make_options(resume=session_id, model=model, compare_mode=compare_mode),
+        options=_make_options(
+            resume=session_id,
+            model=model,
+            compare_mode=compare_mode,
+            current_doc_title=current_doc_title,
+        ),
     ):
         yield message

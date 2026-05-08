@@ -26,11 +26,14 @@ interface State {
   expandedGroups: Set<string>;
   // 결과 개수 옵션 — 사용자 선택, localStorage 에 영속.
   limit: number;
+  // 한국어 separator/자모 fuzzy 매칭 — 기본 ON. localStorage 영속.
+  fuzzy: boolean;
 }
 
 const LIMIT_OPTIONS = [10, 20, 50, 100] as const;
 const LIMIT_STORAGE_KEY = 'qf-limit';
 const DEFAULT_LIMIT = 20;
+const FUZZY_STORAGE_KEY = 'qf-fuzzy';
 
 function loadLimit(): number {
   try {
@@ -51,6 +54,25 @@ function saveLimit(limit: number): void {
   }
 }
 
+function loadFuzzy(): boolean {
+  try {
+    const raw = window.localStorage.getItem(FUZZY_STORAGE_KEY);
+    // 한 번도 저장한 적 없으면 default ON. "0" / "false" 만 OFF 로 해석.
+    if (raw === null) return true;
+    return !(raw === '0' || raw === 'false');
+  } catch {
+    return true;
+  }
+}
+
+function saveFuzzy(fuzzy: boolean): void {
+  try {
+    window.localStorage.setItem(FUZZY_STORAGE_KEY, fuzzy ? '1' : '0');
+  } catch {
+    /* localStorage unavailable — silently ignore. */
+  }
+}
+
 const initial: State = {
   query: '',
   hits: [],
@@ -58,6 +80,7 @@ const initial: State = {
   busy: false,
   expandedGroups: new Set(),
   limit: DEFAULT_LIMIT,
+  fuzzy: true,
 };
 
 // hit 의 doc_id / type 으로부터 store.openTab 의 spec 만들기. xlsx 와 confluence 가
@@ -175,7 +198,7 @@ function PageIcon() {
 }
 
 export function QuickFindPanel() {
-  const [state, setState] = useState<State>(() => ({ ...initial, limit: loadLimit() }));
+  const [state, setState] = useState<State>(() => ({ ...initial, limit: loadLimit(), fuzzy: loadFuzzy() }));
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   // Confluence 페이지 path → numeric pageId 매핑. mount 시 1회 fetch.
@@ -217,7 +240,7 @@ export function QuickFindPanel() {
     try {
       await quickFind(
         query,
-        { fast, limit: state.limit, signal: controller.signal },
+        { fast, limit: state.limit, fuzzy: state.fuzzy, signal: controller.signal },
         (event) => {
           if (controller.signal.aborted) return;
           if (event.type === 'status') {
@@ -251,7 +274,7 @@ export function QuickFindPanel() {
     }
   };
 
-  // input 변경 또는 limit 변경 → 200ms debounce → fast=true 재검색.
+  // input 변경 또는 limit/fuzzy 변경 → 200ms debounce → fast=true 재검색.
   useEffect(() => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
@@ -261,7 +284,7 @@ export function QuickFindPanel() {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [state.query, state.limit]);
+  }, [state.query, state.limit, state.fuzzy]);
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
@@ -300,6 +323,14 @@ export function QuickFindPanel() {
     setState((s) => ({ ...s, limit: next }));
   };
 
+  const onFuzzyToggle = () => {
+    setState((s) => {
+      const next = !s.fuzzy;
+      saveFuzzy(next);
+      return { ...s, fuzzy: next };
+    });
+  };
+
   return (
     <div className="quick-find-panel" data-testid="quick-find-panel">
       <div className="qf-input-row">
@@ -328,6 +359,21 @@ export function QuickFindPanel() {
             </option>
           ))}
         </select>
+      </div>
+      <div className="qf-options-row">
+        <label
+          className={`qf-fuzzy-toggle ${state.fuzzy ? 'on' : 'off'}`}
+          title="한국어 띄어쓰기/오타에 관대한 매칭 (예: '몬스터 왕'→'PK_몬스터_왕', '르바'→'로바르스')"
+          data-testid="qf-fuzzy-toggle"
+        >
+          <input
+            type="checkbox"
+            checked={state.fuzzy}
+            onChange={onFuzzyToggle}
+            data-testid="qf-fuzzy-checkbox"
+          />
+          <span className="qf-fuzzy-label">🪄 한글 fuzzy</span>
+        </label>
       </div>
       {state.busy && (
         <div className="qf-status" data-testid="qf-status">

@@ -2465,6 +2465,45 @@ html, body, #root { height: 100%; margin: 0; padding: 0; background: var(--bg); 
   cursor: not-allowed;
 }
 
+/* fuzzy 토글 row — 입력창 바로 아래 한 줄. 작은 체크박스 + 라벨. */
+.qf-options-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: -6px;
+  padding: 0 2px;
+}
+
+.qf-fuzzy-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  color: var(--text-dim);
+  cursor: pointer;
+  user-select: none;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+}
+
+.qf-fuzzy-toggle:hover {
+  border-color: var(--border);
+}
+
+.qf-fuzzy-toggle.on {
+  color: var(--text);
+}
+
+.qf-fuzzy-toggle input[type='checkbox'] {
+  margin: 0;
+  cursor: pointer;
+}
+
+.qf-fuzzy-label {
+  letter-spacing: 0.2px;
+}
+
 .qf-empty {
   font-size: 11px;
   color: var(--text-dim);

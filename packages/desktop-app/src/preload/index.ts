@@ -171,10 +171,12 @@ const api = {
     > => ipcRenderer.invoke(IPC.ONEDRIVE_SYNC_AUTO, { relPath }),
     // 0.1.50 (Step 1+2) — 매 sheet 클릭 시 호출. mtime 비교 → stale 이면 백그라운드 sync.
     // 즉시 URL 반환 + 백그라운드 진행은 onProgress 로 push.
-    ensureFresh: (relPath: string): Promise<
+    // 0.1.49 — sheetName 옵션 추가. Excel for the Web 이 워크북 열림 시 해당 시트 탭으로
+    // 자동 점프 (`&activeCell='<sheet>'!A1`). Quick Find 의 시트 child 클릭 시 흐름.
+    ensureFresh: (relPath: string, options?: { sheetName?: string }): Promise<
       | { ok: true; url: string; alreadyFresh: boolean; syncing: boolean }
       | { ok: false; error: string }
-    > => ipcRenderer.invoke(IPC.ONEDRIVE_SYNC_ENSURE_FRESH, { relPath }),
+    > => ipcRenderer.invoke(IPC.ONEDRIVE_SYNC_ENSURE_FRESH, { relPath, sheetName: options?.sheetName }),
     // 0.1.51 — cloud-not-ready 카드의 "재시도". 재업로드 없이 SharePoint HEAD 폴링만 한 번 더.
     repoll: (relPath: string): Promise<
       | { ok: true; ready: boolean; pollAttempts: number; pollLastStatus: number | null }

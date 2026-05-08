@@ -166,7 +166,7 @@ export function App() {
           '2': 'confluence',
           '3': 'find',
           '4': 'qna',
-          '5': 'recent',
+          '5': 'active',
         } as const;
         useWorkbenchStore.getState().setActiveIcon(map[ev.digit]);
       }
@@ -304,7 +304,14 @@ export function App() {
   //   mcp-state               → DOM 종합 상태 응답
   useEffect(() => {
     const off = window.projk.onMcpCommand(async ({ cmd, replyChannel }) => {
-      const c = cmd as { kind: string; text?: string; testid?: string; nth?: number };
+      const c = cmd as {
+        kind: string;
+        text?: string;
+        testid?: string;
+        nth?: number;
+        // type-and-send 일반화 — testid 지정 시 그 input 에 입력, press 로 키보드 이벤트.
+        press?: 'Enter' | 'Tab' | 'Escape';
+      };
       try {
         if (c.kind === 'click-testid') {
           // DOM primitive — Playwright locator(...).click() 등가.
@@ -391,16 +398,55 @@ export function App() {
           setShowCreds(true);
         } else if (c.kind === 'close-modal') {
           setShowCreds(false);
-        } else if (c.kind === 'type-and-send' && c.text) {
-          const input = document.querySelector<HTMLTextAreaElement>('[data-testid="chat-input"]');
-          const button = document.querySelector<HTMLButtonElement>('[data-testid="chat-send"]');
-          if (input && button) {
-            // Native setter — React controlled input 에 값을 넣고 input 이벤트 발화
+        } else if (c.kind === 'type-and-send' && c.text != null) {
+          // 일반화 (2026-05-06): c.testid 지정 시 그 input 에 직접 입력 + c.press 키보드 이벤트.
+          // c.testid 미지정 시 옛 동작 (chat-input / chat-send 페어).
+          const targetTestid = c.testid;
+          if (targetTestid) {
+            const input = document.querySelector<HTMLInputElement | HTMLTextAreaElement>(
+              `[data-testid="${CSS.escape(targetTestid)}"]`,
+            );
+            if (!input) {
+              window.projk.mcpReply(replyChannel, {
+                ok: false,
+                kind: c.kind,
+                error: `not found: testid=${targetTestid}`,
+              });
+              return;
+            }
+            // Native setter — React controlled input 에 값을 넣고 input 이벤트 발화 (한글 포함).
             const proto = Object.getPrototypeOf(input) as object;
             const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
             setter?.call(input, c.text);
             input.dispatchEvent(new Event('input', { bubbles: true }));
-            // 잠깐 후 버튼 클릭 (state update 반영)
+            // press 키 — Enter 등으로 form submit 또는 컴포넌트 keyDown 핸들러 발화.
+            if (c.press) {
+              setTimeout(() => {
+                const ev = new KeyboardEvent('keydown', {
+                  key: c.press,
+                  code: c.press,
+                  bubbles: true,
+                  cancelable: true,
+                });
+                input.dispatchEvent(ev);
+              }, 50);
+            }
+            window.projk.mcpReply(replyChannel, {
+              ok: true,
+              kind: c.kind,
+              testid: targetTestid,
+              value: input.value,
+            });
+            return;
+          }
+          // 호환 — testid 미지정 시 chat 페어.
+          const input = document.querySelector<HTMLTextAreaElement>('[data-testid="chat-input"]');
+          const button = document.querySelector<HTMLButtonElement>('[data-testid="chat-send"]');
+          if (input && button) {
+            const proto = Object.getPrototypeOf(input) as object;
+            const setter = Object.getOwnPropertyDescriptor(proto, 'value')?.set;
+            setter?.call(input, c.text);
+            input.dispatchEvent(new Event('input', { bubbles: true }));
             setTimeout(() => button.click(), 100);
           }
         } else if (c.kind === 'click-update-indicator') {

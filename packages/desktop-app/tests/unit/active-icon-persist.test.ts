@@ -74,7 +74,7 @@ describe('activeIcon persist (localStorage)', () => {
   });
 
   it('5 종 모든 SidebarKind round-trip', () => {
-    const kinds = ['p4', 'confluence', 'find', 'qna', 'recent'] as const;
+    const kinds = ['p4', 'confluence', 'find', 'qna', 'active'] as const;
     for (const k of kinds) {
       saveActiveIcon(k);
       expect(loadActiveIcon()).toBe(k);

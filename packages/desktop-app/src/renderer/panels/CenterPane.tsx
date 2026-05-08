@@ -610,8 +610,17 @@ function LocalSheetView(props: {
   const [fallback, setFallback] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // ensureFresh 가 cloud-not-ready 반환 시 set. webview 마운트 차단 + inline 에러 카드 + 재시도 버튼.
+  // pollLastFetchError: pollSharePointReady 의 catch 에서 잡힌 마지막 에러 (있으면) — 카드에 그대로
+  // 노출해 "왜 안 됐나" 사용자가 즉시 좁힐 수 있게. silent 회귀 (2026-05-08 Electron33 redirect:'manual')
+  // 방지 의무.
   const [cloudNotReady, setCloudNotReady] = useState<
-    | { reason: 'poll-timeout' | 'webview-nav' | 'webview-fail'; pollAttempts?: number; pollLastStatus?: number | null }
+    | {
+        reason: 'poll-timeout' | 'webview-nav' | 'webview-fail';
+        pollAttempts?: number;
+        pollLastStatus?: number | null;
+        pollReason?: string;
+        pollLastFetchError?: string;
+      }
     | null
   >(null);
   const [repolling, setRepolling] = useState(false);
@@ -680,16 +689,19 @@ function LocalSheetView(props: {
   // 0.1.51 v6 — mount + relPath 변경 시 ensureFresh await. main 이 모든 단계 (stat 비교 +
   // writeViaTempCopy + cloud HEAD polling) 를 직렬로 처리 후 ready / cloud-not-ready / 운영실패
   // 중 하나로 return. 결과에 따라 webview mount, 카드, 또는 fallback 분기.
+  //
+  // node.sheetName: Quick Find 의 시트 child 클릭 시 채워짐. main 의 buildEmbedUrl 에 흘려서
+  // SharePoint URL 에 `&activeCell='<sheet>'!A1` 부착 → Excel for the Web 이 그 시트 탭 활성화.
   useEffect(() => {
     let cancelled = false;
     setUrl(null);
     setCloudNotReady(null);
     setRepolling(false);
     setBgPhase('starting');
-    console.log(`[LocalSheetView] mount/relPath relPath=${relPath}`);
+    console.log(`[LocalSheetView] mount/relPath relPath=${relPath}${node.sheetName ? ` sheet="${node.sheetName}"` : ''}`);
     void (async () => {
       const t0 = performance.now();
-      const r = await window.projk.oneDriveSync.ensureFresh(relPath);
+      const r = await window.projk.oneDriveSync.ensureFresh(relPath, { sheetName: node.sheetName });
       if (cancelled) return;
       const elapsed = (performance.now() - t0).toFixed(0);
       if (!r.ok) {
@@ -713,11 +725,17 @@ function LocalSheetView(props: {
           reason: 'poll-timeout',
           pollAttempts: r.pollAttempts,
           pollLastStatus: r.pollLastStatus,
+          pollReason: r.pollReason,
+          pollLastFetchError: r.pollLastFetchError,
         });
       }
     })();
     return () => { cancelled = true; };
-  }, [relPath]);
+    // node.sheetName 변경 — 같은 워크북의 다른 시트 클릭 시 (id 가 워크북 단위로 통일되어
+    // tab reuse 됨) re-run 해서 새 activeCell 이 박힌 URL 을 받음. relPath 는 그대로지만
+    // URL 만 달라지므로 이게 자연스러움.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [relPath, node.sheetName]);
 
   // operational progress 구독 — placeholder 텍스트 갱신 정도만. mount/unmount 결정 X.
   useEffect(() => {
@@ -812,7 +830,16 @@ function LocalSheetView(props: {
             && /[?&]action=default(?:&|$)/.test(u)
             && !u.includes('action=view')
           ) {
-            const viewUrl = u.replace(/([?&])action=default(&|$)/, '$1action=view$2');
+            let viewUrl = u.replace(/([?&])action=default(&|$)/, '$1action=view$2');
+            // activeCell 보존 안전망 — 첫 진입 URL 에 박은 `&activeCell='<sheet>'!A1` 가
+            // SP redirect 결과에 살아있지 않을 수 있음. 원본에 있었는데 redirect 후 사라졌으면
+            // swap URL 에 다시 부착해 시트 점프 보장.
+            const origMatch = (url ?? '').match(/[?&](activeCell=[^&]+)/);
+            if (origMatch && !/[?&]activeCell=/.test(viewUrl)) {
+              const sep = viewUrl.includes('?') ? '&' : '?';
+              viewUrl = `${viewUrl}${sep}${origMatch[1]}`;
+              console.log('[onedrive-webview] preserve activeCell after redirect:', origMatch[1]);
+            }
             console.log('[onedrive-webview] action=default → action=view swap:', viewUrl);
             (wv as { loadURL?: (u: string) => void }).loadURL?.(viewUrl);
           }
@@ -887,6 +914,7 @@ function LocalSheetView(props: {
     const meta: string[] = [];
     if (cloudNotReady.pollAttempts != null) meta.push(`${cloudNotReady.pollAttempts}회 폴링`);
     if (cloudNotReady.pollLastStatus != null) meta.push(`status=${cloudNotReady.pollLastStatus}`);
+    if (cloudNotReady.pollReason) meta.push(`reason=${cloudNotReady.pollReason}`);
     return (
       <main className="center" data-testid="center-pane">
         <div className="doc-header">
@@ -905,6 +933,24 @@ function LocalSheetView(props: {
             {meta.length > 0 && ` (${meta.join(', ')})`}
             <br />
             큰 파일이거나 cloud-side 처리 지연일 수 있습니다. 잠시 후 재시도하면 보통 해결됩니다.
+            {cloudNotReady.pollLastFetchError && (
+              <>
+                <br />
+                <code
+                  style={{
+                    display: 'inline-block',
+                    marginTop: 6,
+                    padding: '2px 6px',
+                    fontSize: 10,
+                    background: 'var(--panel-bg)',
+                    color: 'var(--text)',
+                    borderRadius: 3,
+                  }}
+                >
+                  fetch err: {cloudNotReady.pollLastFetchError}
+                </code>
+              </>
+            )}
           </span>
           <br />
           <button

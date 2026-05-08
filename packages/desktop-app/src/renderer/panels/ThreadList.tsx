@@ -1,5 +1,9 @@
 // 좌측 사이드바 위쪽의 스레드 list. Phase 3.3.
 // 한 thread = (Q&A + 누적 doc + Confluence 편집 ←Phase 4) 의 워크스페이스.
+//
+// Look & feel: agent-sdk-poc 의 web frontend "Project K QnA" 와 비슷하게 ―
+// 상단에 큰 "+ 새 대화" CTA, 그 아래 "히스토리" 라벨, 행은 제목만 보여주고
+// hover 시 ✎ 이름 변경 / × 삭제 액션을 노출.
 
 import { useEffect, useState } from 'react';
 import type { ThreadSummary } from '../../shared/types';
@@ -51,7 +55,7 @@ export function ThreadList({ selectedId, onSelect, refreshKey, onOpenInEditor }:
 
   const onCreate = async () => {
     try {
-      const t = await window.projk.threads.create({ id: genId(), title: '새 스레드' });
+      const t = await window.projk.threads.create({ id: genId(), title: '새 대화' });
       await refresh();
       onSelect(t.id);
       // PR5: 새 thread 만들면 자동으로 editor 탭도 open. 기존엔 우측 ChatPanel 이 즉시 활성됐지만
@@ -62,18 +66,46 @@ export function ThreadList({ selectedId, onSelect, refreshKey, onOpenInEditor }:
     }
   };
 
+  const onRename = async (e: React.MouseEvent, t: ThreadSummary) => {
+    e.stopPropagation();
+    const next = window.prompt('스레드 이름', t.title || '새 대화');
+    if (next == null) return;
+    const trimmed = next.trim();
+    if (!trimmed || trimmed === t.title) return;
+    try {
+      await window.projk.threads.rename({ id: t.id, title: trimmed });
+      await refresh();
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  };
+
+  const onDelete = async (e: React.MouseEvent, t: ThreadSummary) => {
+    e.stopPropagation();
+    const ok = window.confirm(`"${t.title || '(제목 없음)'}" 스레드를 삭제할까요?`);
+    if (!ok) return;
+    try {
+      await window.projk.threads.delete(t.id);
+      if (selectedId === t.id) onSelect(null);
+      await refresh();
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  };
+
   return (
     <div className="thread-list" data-testid="thread-list">
+      <button
+        className="thread-new-cta"
+        onClick={onCreate}
+        data-testid="thread-new"
+        aria-label="새 대화 추가"
+      >
+        <span className="thread-new-cta-plus" aria-hidden>+</span>
+        <span>새 대화</span>
+      </button>
       <div className="section-header">
-        <span>스레드</span>
-        <button
-          className="thread-new-btn"
-          onClick={onCreate}
-          data-testid="thread-new"
-          aria-label="새 스레드 추가"
-        >
-          + 새
-        </button>
+        <span>히스토리</span>
       </div>
       {error && (
         <div className="thread-error" data-testid="thread-error">
@@ -82,12 +114,12 @@ export function ThreadList({ selectedId, onSelect, refreshKey, onOpenInEditor }:
       )}
       {threads && threads.length === 0 && !error && (
         <div className="thread-empty" data-testid="thread-empty">
-          스레드 없음. <strong>+ 새</strong> 클릭.
+          아직 스레드가 없어요. 위의 <strong>+ 새 대화</strong> 를 눌러 시작하세요.
         </div>
       )}
       {threads &&
         threads.map((t) => (
-          <button
+          <div
             key={t.id}
             className={`thread-row${selectedId === t.id ? ' active' : ''}`}
             onClick={() => {
@@ -95,10 +127,41 @@ export function ThreadList({ selectedId, onSelect, refreshKey, onOpenInEditor }:
               onOpenInEditor?.(t);
             }}
             data-testid={`thread-row-${t.id}`}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onSelect(t.id);
+                onOpenInEditor?.(t);
+              }
+            }}
+            title={`${t.title || '(제목 없음)'} · ${relativeTime(t.updated_at)}`}
           >
             <div className="thread-row-title">{t.title || '(제목 없음)'}</div>
-            <div className="thread-row-meta">{relativeTime(t.updated_at)}</div>
-          </button>
+            <div className="thread-row-actions" onClick={(e) => e.stopPropagation()}>
+              <button
+                type="button"
+                className="thread-row-action"
+                onClick={(e) => onRename(e, t)}
+                data-testid={`thread-rename-${t.id}`}
+                aria-label="이름 변경"
+                title="이름 변경"
+              >
+                <span aria-hidden>✎</span>
+              </button>
+              <button
+                type="button"
+                className="thread-row-action thread-row-action-danger"
+                onClick={(e) => onDelete(e, t)}
+                data-testid={`thread-delete-${t.id}`}
+                aria-label="삭제"
+                title="삭제"
+              >
+                <span aria-hidden>×</span>
+              </button>
+            </div>
+          </div>
         ))}
     </div>
   );

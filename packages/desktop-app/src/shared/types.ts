@@ -18,6 +18,10 @@ export interface TreeNode {
   // PR9c: depot 파일을 webview 로 열 때 직접 사용하는 OneDrive 임베드 URL.
   // 일반 sheet 노드는 비어있고 sheetMappings 룩업으로 처리. depot 임시 노드는 fetch 후 채워짐.
   oneDriveUrl?: string;
+  // Quick Find 시트 클릭 흐름에서 사용 — 워크북 안의 특정 시트로 점프할 시트명.
+  // 빌더가 SharePoint URL 에 `&activeCell='<sheetName>'!A1` 부착해서 Excel for the Web 이
+  // 그 시트 탭으로 자동 활성화하게 함. 비어있으면 워크북 첫 시트 (default 동작).
+  sheetName?: string;
 }
 
 export interface P4TreeResult {
@@ -102,8 +106,23 @@ export type UpdaterState =
 //   - "l1": ⚡ 키워드 매칭 (가장 정확)
 //   - "vector": 🧬 의미 검색
 //   - "expand": 🔮 동의어 확장 (Phase 3 발동 시)
+// 백엔드 fold (2026-05-06, commit c3cbb23) 이후 xlsx 워크북 hit 안에 매칭된 시트들.
+// score desc 정렬. 시트 doc_id 는 원형 "xlsx::<workbook>::<sheet>" 보존.
+export interface MatchedSheet {
+  sheet: string;
+  doc_id: string;
+  title?: string;
+  summary?: string;
+  score?: number;
+  matched_via?: string;
+  source?: 'l1' | 'vector' | 'expand';
+  content_md_path?: string;
+}
+
 export interface QuickFindHit {
-  doc_id: string; // "xlsx::<workbook>::<sheet>" or "conf::<path>"
+  // 백엔드 fold 이후 xlsx 는 "xlsx::<workbook>" (시트 부분 빠짐), confluence 는 "conf::<path>".
+  // 시트 단위 doc_id 는 matched_sheets[] 안에서 보존됨.
+  doc_id: string;
   type: 'xlsx' | 'confluence';
   title: string;
   path: string; // 표시용 경로
@@ -115,6 +134,12 @@ export interface QuickFindHit {
   rank: number;
   content_md_path: string; // 본문 경로
   source: 'l1' | 'vector' | 'expand';
+  // 백엔드가 워크북 단위로 fold 한 hit 에 한해 등장. 워크북 안에서 매칭된 시트들.
+  matched_sheets?: MatchedSheet[];
+  // backend (commit f991367) 가 confluence hit 에 numeric Confluence pageId 직접 부착.
+  // ConfluencePage open URL (`viewpage.action?pageId=<numeric>`) 빌드용. xlsx hit 엔 없음.
+  // 일부 manifest 매칭 실패 시 None — frontend 는 그 경우 sidecar tree lookup fallback.
+  confluence_page_id?: string | null;
 }
 
 export interface QuickFindResult {
@@ -166,6 +191,9 @@ export const IPC = {
   P4_DEPOT_LIST: 'p4:depot-list',
   P4_DEPOT_DIRS: 'p4:depot-dirs',
   P4_DEPOT_OPEN: 'p4:depot-open',
+  // 액티비티 바 5번 ("내 작업 중 문서") — 30s 폴링.
+  ACTIVE_DOCS_P4: 'active-docs:p4',
+  ACTIVE_DOCS_CONFLUENCE: 'active-docs:confluence',
   UPDATER_STATE: 'updater:state',
   UPDATER_CHECK: 'updater:check',
   UPDATER_QUIT_AND_INSTALL: 'updater:quit-and-install',
@@ -320,6 +348,43 @@ export interface AppSettings {
   confluenceTestSpaceKey?: string;
   // 선택. 채우면 그 페이지의 자식으로 복사, 비우면 스페이스 root.
   confluenceTestParentPageId?: string;
+
+  // 액티비티 바 5번 ("내 작업 중 문서") 의 Confluence draft polling 대상 space key 목록.
+  // 비어있으면 ['PK'] 로 fallback. 임시/개발용 space 추가 시 여기에.
+  confluenceDraftSpaceKeys?: string[];
+}
+
+// 액티비티 바 5번 ("내 작업 중 문서") — P4 체크아웃 한 항목.
+// `p4 -ztag opened -u <user> -c <client>` 결과를 parse 한 것.
+export interface ActiveP4File {
+  depotPath: string;   // 예: '//main/ProjectK/Design/HUD.xlsx'
+  clientPath?: string; // 예: '//jacob-D/Design/HUD.xlsx' — 클라이언트 path (참고용)
+  action: string;      // 'edit' | 'add' | 'delete' | 'branch' | 'integrate' ...
+  revision: number;    // open 된 시점의 revision (head 가 아닐 수 있음)
+  type?: string;       // 'binary+l' | 'text' 등
+}
+
+export interface ActiveP4Result {
+  ok: boolean;
+  files: ActiveP4File[];
+  // 좌표 미설정 / p4 호출 실패 시 한 줄 안내.
+  diagnostics?: string;
+}
+
+// Confluence draft (status=draft) — 사용자가 편집 중이거나 새로 만들고 아직 publish 안 한 문서.
+export interface ActiveConfluenceDraft {
+  pageId: string;
+  title: string;
+  spaceKey: string;
+  // ISO 8601 — version.createdAt. 사람-가독 상대 시간 표시용.
+  lastModified?: string;
+}
+
+export interface ActiveConfluenceResult {
+  ok: boolean;
+  drafts: ActiveConfluenceDraft[];
+  // 자격 미설정 / 4xx / 5xx 시 한 줄.
+  diagnostics?: string;
 }
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC];

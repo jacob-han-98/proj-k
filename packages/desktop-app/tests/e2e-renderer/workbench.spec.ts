@@ -175,15 +175,19 @@ test('Quick Find — 입력 시 debounce 후 hits 표시 + 클릭 시 editor 탭
   const input = page.getByTestId('qf-input');
   await input.fill('HUD');
   // 200ms debounce + mock NDJSON yield. 점진 hit 가 등장.
-  const xlsxHit = page.getByTestId('qf-hit-xlsx::PK_HUD::HUD_기본');
+  // xlsx hit 은 워크북 그룹으로 묶여 기본 접힘 — 헤더만 먼저 등장.
+  const xlsxGroupHeader = page.getByTestId('qf-group-header-xlsx::PK_HUD');
   const confHit = page.getByTestId('qf-hit-conf::Design/HUD-개편');
-  await expect(xlsxHit).toBeVisible();
+  await expect(xlsxGroupHeader).toBeVisible();
   await expect(confHit).toBeVisible();
 
   // fast=true (typing) 라 두 번째 hit 도 source=l1.
   await expect(page.getByTestId('qf-meta')).toContainText('48ms');
 
-  // hit 클릭 → editor 탭 추가.
+  // 그룹 헤더 클릭 → 펼침 → 자식 시트 button 등장 → 클릭 → editor 탭 추가.
+  await xlsxGroupHeader.click();
+  const xlsxHit = page.getByTestId('qf-hit-xlsx::PK_HUD::HUD_기본');
+  await expect(xlsxHit).toBeVisible();
   await xlsxHit.click();
   await expect(page.getByTestId('tab-bar').getByTestId(/^tab-(?!close-).+/)).toHaveCount(1);
 });
@@ -198,6 +202,59 @@ test('Quick Find — Enter 시 fast=false (auto v2.1) 로 즉시 풀 검색', as
   await expect(page.getByTestId('qf-meta')).toContainText('312ms');
   // 두 번째 hit 의 source 는 vector (mock 분기).
   await expect(page.getByTestId('qf-hit-conf::Design/HUD-개편')).toBeVisible();
+});
+
+test('Quick Find — 결과 개수 select 가 변경 시 즉시 재검색 + localStorage 영속', async ({ page }) => {
+  // localStorage 초기화 — 이전 spec 의 영향 차단.
+  await page.evaluate(() => window.localStorage.removeItem('qf-limit'));
+  await page.reload();
+  await page.getByTestId('activity-find').click();
+
+  const select = page.getByTestId('qf-limit-select');
+  // 기본 default = 20.
+  await expect(select).toHaveValue('20');
+
+  // 검색 시작 → mock 이 2개 hit 만 yield 하지만 limit 자체는 request 에 들어감.
+  await page.getByTestId('qf-input').fill('HUD');
+  await expect(page.getByTestId('qf-meta')).toBeVisible();
+
+  // limit 변경 → 재검색 트리거 (200ms debounce 거침). select 자체는 즉시 변경.
+  await select.selectOption('50');
+  await expect(select).toHaveValue('50');
+  // 재검색 완료 후 meta 다시 보임 (mock latency 가 짧아 즉시 끝남).
+  await expect(page.getByTestId('qf-meta')).toBeVisible();
+
+  // localStorage 영속 — reload 후에도 유지.
+  await page.reload();
+  await page.getByTestId('activity-find').click();
+  await expect(page.getByTestId('qf-limit-select')).toHaveValue('50');
+});
+
+test('Quick Find — 워크북 그룹은 기본 접힘, 헤더 클릭으로 펼침 토글', async ({ page }) => {
+  await page.getByTestId('activity-find').click();
+  const input = page.getByTestId('qf-input');
+  await input.fill('HUD');
+
+  const groupContainer = page.getByTestId('qf-group-xlsx::PK_HUD');
+  const groupHeader = page.getByTestId('qf-group-header-xlsx::PK_HUD');
+  const childSheet = page.getByTestId('qf-hit-xlsx::PK_HUD::HUD_기본');
+
+  // 기본 접힘 — 헤더는 보이지만 자식 시트는 DOM 에 없음.
+  await expect(groupHeader).toBeVisible();
+  await expect(groupContainer).toHaveClass(/collapsed/);
+  await expect(childSheet).toHaveCount(0);
+  await expect(groupHeader).toHaveAttribute('aria-expanded', 'false');
+
+  // 헤더 클릭 → 펼침.
+  await groupHeader.click();
+  await expect(groupContainer).toHaveClass(/expanded/);
+  await expect(childSheet).toBeVisible();
+  await expect(groupHeader).toHaveAttribute('aria-expanded', 'true');
+
+  // 다시 클릭 → 접힘.
+  await groupHeader.click();
+  await expect(groupContainer).toHaveClass(/collapsed/);
+  await expect(childSheet).toHaveCount(0);
 });
 
 // ---------- PR9b: P4 depot 탭 ----------

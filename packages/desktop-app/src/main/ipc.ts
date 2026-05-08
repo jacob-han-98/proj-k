@@ -15,7 +15,9 @@ import {
   listDepotRoots,
   listDepotChildren,
   printDepotFile,
+  listMyOpenedFiles,
 } from './p4-discovery';
+import { listMyConfluenceDrafts, invalidateConfluenceDraftsCache } from './confluence-drafts';
 import { tmpdir } from 'node:os';
 import { mkdirSync } from 'node:fs';
 import { join as pathJoin } from 'node:path';
@@ -90,6 +92,8 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
 
   ipcMain.handle(IPC.CONFLUENCE_CREDS_SET, async (_e, creds: ConfluenceCreds) => {
     await setConfluenceCreds(creds);
+    // 자격이 바뀌면 accountId/space-id 캐시 무효화 — 다음 폴링에 새 자격으로 재조회.
+    invalidateConfluenceDraftsCache();
     return { ok: true };
   });
 
@@ -338,22 +342,27 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
   // 0.1.50 (Step 1+2) — 매 sheet 클릭 시 호출. mtime 비교 → stale 이면 백그라운드 sync 시작 +
   // 즉시 URL 반환. fresh 면 그냥 URL 반환. 백그라운드 진행상황은 ONEDRIVE_SYNC_PROGRESS 채널로
   // renderer 에 push → renderer 가 자기 webview 에 reload.
-  ipcMain.handle(IPC.ONEDRIVE_SYNC_ENSURE_FRESH, async (_e, p: { relPath: string }) => {
+  ipcMain.handle(IPC.ONEDRIVE_SYNC_ENSURE_FRESH, async (_e, p: { relPath: string; sheetName?: string }) => {
     const t0 = Date.now();
-    console.log(`[onedrive-sync] ensureFresh request: ${p.relPath}`);
+    console.log(`[onedrive-sync] ensureFresh request: ${p.relPath}${p.sheetName ? ` sheet="${p.sheetName}"` : ''}`);
     const sc = getSidecarStatus();
     if (sc.state !== 'ready' || sc.port == null) {
       console.log(`[onedrive-sync] ensureFresh fail: sidecar not ready (state=${sc.state})`);
       return { ok: false, error: `sidecar not ready (state=${sc.state})` };
     }
     const sidecarBase = `http://127.0.0.1:${sc.port}`;
-    const r = await onedriveSync.ensureFreshSync(sidecarBase, p.relPath, (ev) => {
-      console.log(`[onedrive-sync] progress ${ev.relPath} state=${ev.state}${ev.error ? ' err=' + ev.error : ''}`);
-      const win = getWindow();
-      if (win && !win.isDestroyed()) {
-        win.webContents.send(IPC.ONEDRIVE_SYNC_PROGRESS, ev);
-      }
-    });
+    const r = await onedriveSync.ensureFreshSync(
+      sidecarBase,
+      p.relPath,
+      (ev) => {
+        console.log(`[onedrive-sync] progress ${ev.relPath} state=${ev.state}${ev.error ? ' err=' + ev.error : ''}`);
+        const win = getWindow();
+        if (win && !win.isDestroyed()) {
+          win.webContents.send(IPC.ONEDRIVE_SYNC_PROGRESS, ev);
+        }
+      },
+      { sheetName: p.sheetName },
+    );
     if (r.ok) {
       const meta = r.status === 'ready' ? '' : ` attempts=${r.pollAttempts} lastStatus=${r.pollLastStatus}`;
       console.log(`[onedrive-sync] ensureFresh ${r.status} ${Date.now() - t0}ms${meta} url=${r.url.slice(0, 80)}...`);
@@ -435,15 +444,35 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     if (upR.status === 'cloud-not-ready') {
       console.warn(
         `[p4-depot-open] cloud-not-ready path=${depotPath} ` +
-        `attempts=${upR.pollAttempts} status=${upR.pollLastStatus}`,
+        `attempts=${upR.pollAttempts} status=${upR.pollLastStatus} reason=${upR.pollReason ?? '?'}` +
+        (upR.pollLastFetchError ? ` lastErr="${upR.pollLastFetchError}"` : ''),
       );
+      // 사용자 UI 카드용 메시지에 진단정보 포함 — silent 회귀 방지. attempts/status/reason 모두
+      // 한 줄에 노출해 "왜 안 됐나" 즉시 좁힐 수 있게.
+      const diag = [
+        `${upR.pollAttempts}회 폴링`,
+        `status=${upR.pollLastStatus}`,
+        `reason=${upR.pollReason ?? '?'}`,
+      ];
+      if (upR.pollLastFetchError) diag.push(`err=${upR.pollLastFetchError}`);
       return {
         ok: false,
-        error: `OneDrive 클라우드 도달 실패 — ${upR.pollAttempts}회 폴링 (status=${upR.pollLastStatus}). 잠시 후 재시도.`,
+        error: `OneDrive 클라우드 도달 실패 — ${diag.join(', ')}. 잠시 후 재시도.`,
       };
     }
     console.log(`[p4-depot-open] OK url=${upR.url}`);
     return { ok: true, url: upR.url };
+  });
+
+  // 액티비티 바 5번 ("내 작업 중 문서") — P4 체크아웃 / Confluence draft.
+  // 패널이 보일 때 30s 마다 폴링. 자격이 없으면 ok:false + diagnostics 반환 (UI 안내).
+  ipcMain.handle(IPC.ACTIVE_DOCS_P4, async () => {
+    const s = getSettings();
+    return listMyOpenedFiles(s.p4Host ?? '', s.p4User ?? '', s.p4Client ?? '');
+  });
+  ipcMain.handle(IPC.ACTIVE_DOCS_CONFLUENCE, async () => {
+    const s = getSettings();
+    return listMyConfluenceDrafts(s.confluenceDraftSpaceKeys);
   });
 
   ipcMain.handle(IPC.SETTINGS_GET, async () => getSettings());

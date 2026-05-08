@@ -7,6 +7,7 @@ import {
   loadExpanded,
   saveExpanded,
 } from './tree-state-persist';
+import { ExcelFileIcon } from './tree-icons';
 
 // PR9b: depot 트리 — lazy expand. mount 시 root depot list, 폴더 expand 시 자식 fetch.
 // 보기 전용. 파일 클릭 시 안내만 (편집은 별도 P4 checkout 흐름).
@@ -282,7 +283,7 @@ export function P4DepotTree() {
         >
           <span className="caret">{entry.kind === 'file' ? '' : isOpen ? '▾' : '▸'}</span>
           <span className="icon">
-            {entry.kind === 'depot' ? '🗄️' : entry.kind === 'dir' ? '📁' : '📄'}
+            {entry.kind === 'depot' ? '🗄️' : entry.kind === 'dir' ? '📁' : <ExcelFileIcon />}
           </span>
           <span className="label">{entry.name}</span>
           {isOpening && (

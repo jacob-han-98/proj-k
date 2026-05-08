@@ -40,6 +40,10 @@ export interface Settings {
   confluenceTestSpaceKey?: string;
   // 선택. 채우면 그 페이지의 자식으로 복사, 비우면 스페이스 root.
   confluenceTestParentPageId?: string;
+
+  // 액티비티 바 5번 ("내 작업 중 문서") 의 Confluence draft polling 대상 space key 목록.
+  // 비어있으면 ['PK'] 로 fallback. 임시/개발용 space 추가 시 여기에.
+  confluenceDraftSpaceKeys?: string[];
 }
 
 function settingsFile(): string {

@@ -73,7 +73,9 @@ const ITEMS: ActivityItem[] = [
   { kind: 'confluence', icon: { type: 'svg', render: () => <ConfluenceIcon /> }, title: 'Confluence', shortcutDigit: '2' },
   { kind: 'find', icon: { type: 'codicon', name: 'search' }, title: '빠른 검색', shortcutDigit: '3' },
   { kind: 'qna', icon: { type: 'codicon', name: 'comment-discussion' }, title: 'QnA', shortcutDigit: '4' },
-  { kind: 'recent', icon: { type: 'codicon', name: 'history' }, title: '최근 작업 문서', shortcutDigit: '5' },
+  // 5번 = "내 작업 중 문서" — P4 체크아웃 + Confluence draft 의 합집합.
+  // ActiveDocsPanel 이 30s 폴링으로 갱신.
+  { kind: 'active', icon: { type: 'codicon', name: 'edit' }, title: '내 작업 중 문서', shortcutDigit: '5' },
 ];
 
 // Ctrl/Cmd+숫자 → 해당 activity 패널로 전환. VS Code 의 Ctrl+Shift+E/F 등가물 — 4 개라

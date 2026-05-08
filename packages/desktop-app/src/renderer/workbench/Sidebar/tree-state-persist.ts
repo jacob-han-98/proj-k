@@ -9,7 +9,7 @@
 // 포커스하려고 하지 않음." → 트리 데이터가 도착한 시점에 walk 해서 valid id 만 유지하고
 // orphaned id 는 silently 제거. focus 도 valid 일 때만 복원.
 //
-// recent-docs.ts 와 같은 가벼운 localStorage 패턴.
+// 가벼운 localStorage 패턴 — 인스톨/계정 무관, 부팅 직후 즉시 복원.
 
 const SCHEMA_VERSION = 1;
 

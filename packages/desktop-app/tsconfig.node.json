@@ -17,6 +17,8 @@
     "src/shared/**/*.ts",
     "electron.vite.config.ts",
     "tests/unit/threads-db.test.ts",
-    "tests/unit/onedrive-sync.test.ts"
+    "tests/unit/onedrive-sync.test.ts",
+    "tests/unit/confluence-drafts.test.ts",
+    "tests/unit/p4-opened-parser.test.ts"
   ]
 }

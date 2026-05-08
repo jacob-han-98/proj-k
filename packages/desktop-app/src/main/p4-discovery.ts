@@ -575,3 +575,87 @@ export function printDepotFile(
   }
   return { ok: true };
 }
+
+// ---------- 액티비티 바 5번 ("내 작업 중 문서") — P4 체크아웃 목록 ----------
+//
+// `p4 -ztag opened -u <user>` 의 출력을 parse. -ztag 는 각 필드를 `... fieldname value`
+// 형식으로 노출하고 record 들은 빈 줄로 구분된다. 예:
+//   ... depotFile //main/ProjectK/Design/HUD.xlsx
+//   ... clientFile //jacob-D/Design/HUD.xlsx
+//   ... rev 3
+//   ... action edit
+//   ... change default
+//   ... type binary+l
+//   ... user jacob
+//   ... client jacob-D
+//
+// 필드 누락에 관대 — depotFile 만 있으면 한 record 로 처리. 빈 record 는 skip.
+// .xlsx 만 노출 — Klaud 가 열 수 있는 파일만 보여줌 (다른 파일은 "작업 중 문서" 의미 X).
+import type { ActiveP4File } from '../shared/types';
+
+export function parseP4OpenedZTag(stdout: string): ActiveP4File[] {
+  const out: ActiveP4File[] = [];
+  // record 분리 — 빈 줄 또는 EOF.
+  const records = stdout.split(/\r?\n\r?\n/);
+  for (const rec of records) {
+    if (!rec.trim()) continue;
+    const fields: Record<string, string> = {};
+    for (const line of rec.split(/\r?\n/)) {
+      // `... fieldname value` — value 안에 공백 가능.
+      const m = line.match(/^\.\.\.\s+(\S+)\s+(.*)$/);
+      if (!m) continue;
+      const [, key, val] = m;
+      if (key && val !== undefined) fields[key] = val.trim();
+    }
+    const depotPath = fields.depotFile;
+    if (!depotPath) continue;
+    if (!depotPath.toLowerCase().endsWith('.xlsx')) continue;
+    const revRaw = fields.rev ?? fields.haveRev ?? '0';
+    const rev = parseInt(revRaw, 10);
+    out.push({
+      depotPath,
+      clientPath: fields.clientFile,
+      action: fields.action ?? 'edit',
+      revision: Number.isFinite(rev) ? rev : 0,
+      type: fields.type,
+    });
+  }
+  return out;
+}
+
+export function listMyOpenedFiles(
+  host: string,
+  user: string,
+  client: string,
+): { ok: boolean; files: ActiveP4File[]; diagnostics?: string } {
+  if (!host || !user || !client) {
+    return {
+      ok: false,
+      files: [],
+      diagnostics: 'P4 좌표 미설정 — ⚙ 에서 host/user/client 입력 또는 자동 발견.',
+    };
+  }
+  // -u <user> 두 번 — 첫 번째는 글로벌 auth, 두 번째는 opened 의 filter (본인만).
+  // -c <client> 는 글로벌만, 그러면 opened 가 그 client 의 opened 만 보여준다.
+  const r = runP4([
+    '-p', host,
+    '-u', user,
+    '-c', client,
+    '-ztag',
+    'opened',
+    '-u', user,
+  ]);
+  if (!r.ok) {
+    const stderr = (r.stderr || '').trim();
+    // "File(s) not opened on this client." — 정상 빈 결과로 간주 (exit code 1).
+    if (/not opened/i.test(stderr)) {
+      return { ok: true, files: [] };
+    }
+    return {
+      ok: false,
+      files: [],
+      diagnostics: stderr.split('\n').slice(0, 2).join(' | ') || 'p4 opened 실패',
+    };
+  }
+  return { ok: true, files: parseP4OpenedZTag(r.stdout) };
+}

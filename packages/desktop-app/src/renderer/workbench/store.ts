@@ -1,15 +1,14 @@
 import { create } from 'zustand';
 import type { DocTab, OpenTabSpec, SidebarKind } from './types';
 import { tabIdOf, docKeyOfNode } from './types';
-import { touchRecentDoc } from '../recent-docs';
 import type { ReviewOptions } from '../panels/review-options-mapping';
 import type { QnAAttachment } from '../qna/attachments';
 
 // 마지막으로 선택했던 액티비티바 아이콘을 localStorage 에 영속.
-// recent-docs.ts / App.tsx 의 sidebar width 와 같은 패턴 — 인스톨/계정 무관, 부팅 직후 즉시 복원.
+// App.tsx 의 sidebar width 와 같은 패턴 — 인스톨/계정 무관, 부팅 직후 즉시 복원.
 // export 는 vitest 단위 테스트용 (jsdom 환경 없이도 mock localStorage 로 분기 검증 가능).
 export const ACTIVE_ICON_STORAGE_KEY = 'klaud.activeIcon';
-const VALID_ICONS: ReadonlySet<SidebarKind> = new Set(['p4', 'confluence', 'find', 'qna', 'recent']);
+const VALID_ICONS: ReadonlySet<SidebarKind> = new Set(['p4', 'confluence', 'find', 'qna', 'active']);
 
 export function loadActiveIcon(): SidebarKind {
   if (typeof localStorage === 'undefined') return 'confluence';
@@ -132,9 +131,6 @@ export const useWorkbenchStore = create<WorkbenchState>((set) => ({
 
   openTab: (spec) => set((state) => {
     const id = tabIdOf(spec);
-    // A4: 최근 작업 문서 history 갱신 — open 시점마다 touch (lastVisitedAt 갱신, openCount++).
-    // 같은 탭을 focus 만 하는 경우도 "다시 봤다" = 작업중 신호로 카운트.
-    touchRecentDocFromSpec(spec, id);
     const existing = state.openTabs.find((t) => t.id === id);
     if (existing) {
       // qna-thread title 이 RENAME 등으로 바뀐 경우 기존 탭의 title 도 갱신해줌.
@@ -311,28 +307,3 @@ export const useWorkbenchStore = create<WorkbenchState>((set) => ({
   activityIconPulse: null,
   pulseActivityIcon: (kind) => set({ activityIconPulse: { kind, ts: Date.now() } }),
 }));
-
-// A4: OpenTabSpec → RecentDocEntry 변환. payload 는 RecentDocsPanel 이 reopen 시 그대로
-// onOpenSheet/onOpenConfluencePage/onOpenThreadInEditor 에 넘기는 데 쓴다.
-// agent-web 은 기록 안 함 — 단일 글로벌 탭이라 history 가치 없음.
-function touchRecentDocFromSpec(spec: OpenTabSpec, id: string): void {
-  if (spec.kind === 'excel' || spec.kind === 'confluence') {
-    const node = spec.node;
-    touchRecentDoc({
-      kind: spec.kind,
-      id,
-      title: node.title,
-      subtitle: node.relPath ?? undefined,
-      payload: { ...node },
-    });
-    return;
-  }
-  if (spec.kind === 'qna-thread') {
-    touchRecentDoc({
-      kind: 'qna-thread',
-      id,
-      title: spec.title,
-      payload: { threadId: spec.threadId, title: spec.title },
-    });
-  }
-}

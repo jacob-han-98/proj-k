@@ -287,13 +287,13 @@ function tryConnect(url: string, getWindow: () => BrowserWindow | null): void {
   sock.on('open', () => {
     reconnectAttempts = 0;
     lastActivity = Date.now();
-    console.log('[mcp-bridge] connected');
+    console.log(`[mcp-bridge] connected at ${new Date().toISOString()}`);
     // 서버 측이 ping 을 보내지만, 우리도 보내면서 양방향 살아있는지 검증.
     heartbeat = setInterval(() => {
       const idleMs = Date.now() - lastActivity;
       if (idleMs > 30_000) {
         console.warn(`[mcp-bridge] idle ${idleMs}ms — force reconnect`);
-        try { sock.close(); } catch { /* ignore */ }
+        try { sock.close(1000, `client-idle-${idleMs}ms`); } catch { /* ignore */ }
       }
     }, 5_000);
   });

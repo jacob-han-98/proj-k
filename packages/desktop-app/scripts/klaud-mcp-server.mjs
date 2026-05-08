@@ -52,23 +52,40 @@ wss.on('connection', (ws, req) => {
 
   // 한 번에 하나의 Klaud 만 가정 (multi 는 추후).
   if (klaudWs && klaudWs.readyState === klaudWs.OPEN) {
-    log('Klaud 가 이미 연결되어 있음 — 기존 연결을 끊고 새 연결로 교체');
-    try { klaudWs.close(); } catch {}
+    log('Klaud 가 이미 연결되어 있음 — 기존 연결을 끊고 새 연결로 교체 (옛 ws.close)');
+    try { klaudWs.close(1000, 'replaced-by-new-klaud'); } catch {}
   }
   klaudWs = ws;
-  log(`Klaud connected from ${ws._socket.remoteAddress}`);
+  log(`Klaud connected from ${ws._socket.remoteAddress} at ${new Date().toISOString()}`);
 
   // 5초마다 ping. 응답 없으면 stuck 으로 판정 + 강제 disconnect.
+  // 진단 보강 (2026-05-06):
+  //   - ping 자체 timeout 을 5s → 15s 로 확장. main process 가 검색 NDJSON 스트림 처리 중에
+  //     event loop 가 잠시 막히면 5s 안 응답 못 해 false-positive disconnect 발생.
+  //   - heartbeat 실패 누적 횟수와 마지막 성공/실패 latency 추적해 close 시점 진단 정보 출력.
   let lastPongAt = Date.now();
+  let lastPingLatency = 0;
+  let pingFailures = 0;
+  let pingSuccesses = 0;
   const heartbeat = setInterval(() => {
-    if (Date.now() - lastPongAt > 30_000) {
-      log(`heartbeat: 30s 응답 없음 — 연결 끊고 재연결 대기`);
-      try { ws.close(); } catch {}
+    const idle = Date.now() - lastPongAt;
+    if (idle > 30_000) {
+      log(`heartbeat: 30s 응답 없음 (idle=${idle}ms, fails=${pingFailures}, succ=${pingSuccesses}, lastLat=${lastPingLatency}ms) — 연결 끊고 재연결 대기`);
+      try { ws.close(1000, 'heartbeat-timeout'); } catch {}
       return;
     }
-    callKlaudRaw(ws, 'ping', {})
-      .then(() => { lastPongAt = Date.now(); })
-      .catch((e) => log(`heartbeat ping 실패: ${e.message}`));
+    const t0 = Date.now();
+    callKlaudRawWithTimeout(ws, 'ping', {}, 15_000)
+      .then(() => {
+        lastPongAt = Date.now();
+        lastPingLatency = Date.now() - t0;
+        pingSuccesses++;
+        if (lastPingLatency > 3_000) log(`heartbeat: pong slow ${lastPingLatency}ms (Klaud main busy)`);
+      })
+      .catch((e) => {
+        pingFailures++;
+        log(`heartbeat ping 실패 #${pingFailures}: ${e.message} (idle=${idle}ms)`);
+      });
   }, 5_000);
 
   ws.on('message', (raw) => {
@@ -89,9 +106,15 @@ wss.on('connection', (ws, req) => {
     }
   });
 
-  ws.on('close', () => {
+  ws.on('close', (code, reason) => {
     clearInterval(heartbeat);
-    log('Klaud disconnected');
+    const idle = Date.now() - lastPongAt;
+    const reasonStr = reason ? reason.toString() : '';
+    log(
+      `Klaud disconnected code=${code} reason="${reasonStr}" idle=${idle}ms ` +
+      `pingFails=${pingFailures} pingSucc=${pingSuccesses} lastLat=${lastPingLatency}ms ` +
+      `pendingRpcs=${pendingRpcs.size}`,
+    );
     if (klaudWs === ws) klaudWs = null;
     // 진행중 RPC 모두 reject
     for (const [, p] of pendingRpcs) {
@@ -130,6 +153,10 @@ function handleDiagClient(ws) {
 
 // 특정 ws 에 대해 직접 RPC (heartbeat 용 — klaudWs 가 바뀌어도 검증 중인 sock 으로만 호출).
 function callKlaudRaw(sock, method, params = {}) {
+  return callKlaudRawWithTimeout(sock, method, params, 5_000);
+}
+
+function callKlaudRawWithTimeout(sock, method, params, timeoutMs) {
   return new Promise((resolve, reject) => {
     if (!sock || sock.readyState !== sock.OPEN) {
       reject(new Error('socket not open'));
@@ -138,8 +165,8 @@ function callKlaudRaw(sock, method, params = {}) {
     const id = nextRpcId++;
     const timer = setTimeout(() => {
       pendingRpcs.delete(id);
-      reject(new Error(`timeout (5000ms heartbeat)`));
-    }, 5_000);
+      reject(new Error(`timeout (${timeoutMs}ms ${method})`));
+    }, timeoutMs);
     pendingRpcs.set(id, { resolve, reject, timer });
     try {
       sock.send(JSON.stringify({ id, method, params }));
@@ -153,7 +180,8 @@ function callKlaudRaw(sock, method, params = {}) {
 
 function log(msg) {
   // stdio 는 MCP protocol 전용이라 stderr 에 로그.
-  process.stderr.write(`[klaud-mcp] ${msg}\n`);
+  const ts = new Date().toISOString().slice(11, 23); // HH:MM:SS.sss
+  process.stderr.write(`[klaud-mcp ${ts}] ${msg}\n`);
 }
 
 function callKlaud(method, params = {}) {

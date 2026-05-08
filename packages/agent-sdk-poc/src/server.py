@@ -1897,11 +1897,13 @@ class QuickFindRequest(BaseModel):
 
     fast=True 면 typing UX 용 빠른 모드 (L1 only, ~50ms, ~76% quality).
     fast=False 면 풀 quality 모드 (auto v2.1, p50 ~324ms, ~85% quality).
+    fuzzy=True (default) 면 한국어 separator/자모 bigram fuzzy 매칭 활성화.
     """
     query: str
     limit: int | None = 10
     kinds: list[str] | None = None      # ["xlsx", "confluence"] 또는 단일
     fast: bool | None = False           # typing UX 면 True
+    fuzzy: bool | None = True           # 한국어 fuzzy 매칭 (기본 ON)
 
 
 # 내부 dispatch (admin/debug 용 — query param `?_strategy=...` 로만 노출)
@@ -1943,8 +1945,9 @@ async def quick_find(req: QuickFindRequest, _strategy: str | None = None):
     else:
         strategy = "auto"
 
+    fuzzy = bool(req.fuzzy) if req.fuzzy is not None else True
     log_event("quick_find", "quick_find",
-              f"{q!r} fast={bool(req.fast)} strategy={strategy} limit={req.limit} kinds={req.kinds}")
+              f"{q!r} fast={bool(req.fast)} fuzzy={fuzzy} strategy={strategy} limit={req.limit} kinds={req.kinds}")
 
     async def gen():
         try:
@@ -1954,6 +1957,7 @@ async def quick_find(req: QuickFindRequest, _strategy: str | None = None):
                 kinds=req.kinds,
                 model="haiku",
                 strategy=strategy,
+                fuzzy=fuzzy,
             ):
                 yield _ndj(ev)
         except Exception as e:

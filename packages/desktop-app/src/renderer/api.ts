@@ -349,7 +349,13 @@ export async function suggestEditsStream(
 // AbortSignal 받음 — 사용자가 빠르게 다음 query 입력하면 이전 stream cancel.
 export async function quickFind(
   query: string,
-  opts: { limit?: number; kinds?: ('xlsx' | 'confluence')[]; fast?: boolean; signal?: AbortSignal } = {},
+  opts: {
+    limit?: number;
+    kinds?: ('xlsx' | 'confluence')[];
+    fast?: boolean;
+    fuzzy?: boolean; // 한국어 separator/자모 fuzzy 매칭 toggle. 미지정 = backend default (true).
+    signal?: AbortSignal;
+  } = {},
   onEvent: (event: { type: string; [k: string]: unknown }) => void,
 ): Promise<void> {
   const port = await ensurePort();
@@ -357,6 +363,7 @@ export async function quickFind(
   if (opts.limit != null) body.limit = opts.limit;
   if (opts.kinds && opts.kinds.length > 0) body.kinds = opts.kinds;
   if (opts.fast) body.fast = true;
+  if (opts.fuzzy === false) body.fuzzy = false; // backend default true → off 일 때만 명시.
   const res = await fetch(`http://127.0.0.1:${port}/quick_find`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

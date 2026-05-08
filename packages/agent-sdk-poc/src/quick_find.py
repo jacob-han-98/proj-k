@@ -17,11 +17,18 @@ import json
 import os
 import re
 import time
+from contextvars import ContextVar
 from dataclasses import dataclass, asdict, field
+from functools import lru_cache
 from pathlib import Path
 from typing import AsyncIterator
 
 import httpx
+
+# Fuzzy 매칭 toggle — query 진입점 (`quick_find_stream`) 에서 set, `_score_substring`
+# 안에서 get. ContextVar 라서 같은 asyncio task tree 안에서만 보이고 다른 query 와
+# 격리된다. 기본 True (사용자가 명시적으로 끄지 않으면 fuzzy on).
+_FUZZY: ContextVar[bool] = ContextVar("quick_find_fuzzy", default=True)
 
 from bedrock_stream import stream_messages, BedrockStreamError, normalize_model
 
@@ -300,11 +307,88 @@ class Candidate:
     matched_text: str = ""    # 디버그/배지용
 
 
+# 한국어/혼합 query 의 separator 변형 흡수용. 공백 (ASCII + 전각) 외에
+# underscore/hyphen/중간점/dot 도 제거 → "몬스터 왕" 사용자 query 가 "PK_몬스터_왕"
+# 워크북에 매칭. slash (`/`) 는 path 구조 의미가 있어 보존하지만, q 와 target
+# 양쪽 모두 같은 변환을 거치므로 substring 매칭 자체는 일관됨.
+_NS_SEP_RE = re.compile(r"[\s_\-·\.]+")
+
+
 def _ns(s: str) -> str:
-    """공백 제거 normalize — 한국어 query 의 띄어쓰기 변형 매칭용.
-    "가시나무숲" 사용자 query 가 "가시나무 숲" 페이지 제목에 매칭되도록.
+    """Separator-insensitive normalize — 한국어 query 의 띄어쓰기/구분자 변형 매칭용.
+
+    "가시나무숲" ↔ "가시나무 숲", "몬스터 왕" ↔ "PK_몬스터_왕" 같은 변형을 흡수.
     """
-    return s.replace(" ", "").replace("　", "")
+    return _NS_SEP_RE.sub("", s).replace("　", "")
+
+
+# ── Hangul Jamo decomposition + bigram fuzzy (한국어 음운 변형 매칭) ──────
+# "르바" ↔ "로바르스" 같이 substring 으로 잡히지 않는 음운 부분일치를
+# 자모 단위 bigram 교집합 비율로 매칭한다. False positive 위험 때문에
+# threshold 0.6 + query 자모 길이 ≥ 4 (음절 약 1.5개) 가드를 둔다.
+
+_HANGUL_SYLLABLE_START = 0xAC00
+_HANGUL_SYLLABLE_END = 0xD7A3
+_HANGUL_CHO_BASE = 0x1100
+_HANGUL_JUNG_BASE = 0x1161
+_HANGUL_JONG_BASE = 0x11A7  # jong index 0 = 종성 없음
+
+
+def _decompose_hangul(text: str) -> str:
+    """한글 음절을 초성/중성/종성 jamo sequence 로 분해. 비-한글 문자는 그대로."""
+    out: list[str] = []
+    for ch in text:
+        code = ord(ch)
+        if _HANGUL_SYLLABLE_START <= code <= _HANGUL_SYLLABLE_END:
+            n = code - _HANGUL_SYLLABLE_START
+            cho = n // (21 * 28)
+            jung = (n % (21 * 28)) // 28
+            jong = n % 28
+            out.append(chr(_HANGUL_CHO_BASE + cho))
+            out.append(chr(_HANGUL_JUNG_BASE + jung))
+            if jong:
+                out.append(chr(_HANGUL_JONG_BASE + jong))
+        else:
+            out.append(ch)
+    return "".join(out)
+
+
+@lru_cache(maxsize=20000)
+def _decompose_hangul_cached(text: str) -> str:
+    """index doc 의 title/workbook 은 매 query 마다 반복 분해되므로 cache.
+    maxsize 20000 = 6000+ docs × (title + workbook) 충분히 커버.
+    """
+    return _decompose_hangul(text)
+
+
+def _jamo_bigrams(decomposed: str) -> set[str]:
+    """자모 sequence → bigram 집합."""
+    if len(decomposed) < 2:
+        return set()
+    return {decomposed[i : i + 2] for i in range(len(decomposed) - 1)}
+
+
+def _jamo_overlap_ratio(q_decomp: str, t_decomp: str) -> float:
+    """0.0 ~ 1.0. query bigram 중 target bigram 에 들어있는 비율.
+
+    예: "르바"(자모 ㄹㅡㅂㅏ, bigram {ㄹㅡ, ㅡㅂ, ㅂㅏ}) vs
+        "로바르스"(자모 ㄹㅗㅂㅏㄹㅡㅅㅡ, bigram {ㄹㅗ, ㅗㅂ, ㅂㅏ, ㅏㄹ, ㄹㅡ, ㅡㅅ, ㅅㅡ})
+        교집합 {ㅂㅏ, ㄹㅡ} / |q| 3 = 0.667
+    """
+    qb = _jamo_bigrams(q_decomp)
+    if not qb:
+        return 0.0
+    tb = _jamo_bigrams(t_decomp)
+    if not tb:
+        return 0.0
+    return len(qb & tb) / len(qb)
+
+
+# fuzzy gate — 너무 짧은 query 는 false positive 폭발 방지로 skip
+_JAMO_MIN_LEN = 4         # 자모 4개 ≈ 음절 1.5개 (예: "르바" = 4 자모, OK)
+_JAMO_THRESHOLD = 0.6     # 60% 이상 bigram 일치
+_JAMO_SCORE_BASE = 0.45   # title fuzzy match base score (path/summary 보다 약간 낮음)
+_JAMO_SCORE_RANGE = 0.10  # 0.6 → 0.45, 1.0 → 0.55 선형 보간
 
 
 def _score_substring(query: str, doc: Doc) -> tuple[float, str, str]:
@@ -324,6 +408,7 @@ def _score_substring(query: str, doc: Doc) -> tuple[float, str, str]:
     title_ns = _ns(title_l)
     path_ns = _ns(path_l)
     summary_ns = _ns(summary_l)
+    workbook_ns = _ns(workbook_l)
 
     # 점수 우선순위 — 워크북/title (구조적 매칭) 가 key_term/path/summary 보다 높음.
     # workbook_substring 을 0.75 → 0.88 로 올려 key_term_exact (0.80) 보다 위에 둠.
@@ -342,6 +427,9 @@ def _score_substring(query: str, doc: Doc) -> tuple[float, str, str]:
     # 4. workbook substring (워크북 명에 query 가 들어감) — bumped from 0.75 → 0.88
     if workbook_l and q in workbook_l:
         return 0.88, "workbook_substring", doc.workbook or ""
+    # 4b. workbook substring — ns ("몬스터왕" ↔ "PK_몬스터_왕")
+    if q_ns and workbook_ns and q_ns in workbook_ns and (not workbook_l or q not in workbook_l):
+        return 0.86, "workbook_substring_ns", doc.workbook or ""
     # 5. title substring
     if q in title_l:
         return 0.85, "title_substring", doc.title
@@ -373,6 +461,24 @@ def _score_substring(query: str, doc: Doc) -> tuple[float, str, str]:
     if q_ns and summary_ns and q_ns in summary_ns and q not in summary_l:
         text = (doc.summary[:80] + "...") if len(doc.summary) > 80 else doc.summary
         return 0.38, "summary_substring_ns", text
+
+    # 11. Hangul Jamo bigram fuzzy — substring 모두 fail 했을 때만 fallback.
+    # 사용자가 끄면 (_FUZZY=False) 이 블록 skip → 기존 동작과 동일.
+    # path/summary 는 false positive 위험이 커서 title/workbook 만 적용.
+    if _FUZZY.get():
+        q_dec = _decompose_hangul_cached(q)
+        if len(q_dec) >= _JAMO_MIN_LEN:
+            t_dec = _decompose_hangul_cached(title_l)
+            ratio = _jamo_overlap_ratio(q_dec, t_dec)
+            if ratio >= _JAMO_THRESHOLD:
+                score = _JAMO_SCORE_BASE + _JAMO_SCORE_RANGE * (ratio - _JAMO_THRESHOLD) / (1.0 - _JAMO_THRESHOLD)
+                return score, "title_fuzzy_jamo", doc.title
+            if workbook_l:
+                wb_dec = _decompose_hangul_cached(workbook_l)
+                ratio_wb = _jamo_overlap_ratio(q_dec, wb_dec)
+                if ratio_wb >= _JAMO_THRESHOLD:
+                    score = (_JAMO_SCORE_BASE - 0.03) + _JAMO_SCORE_RANGE * (ratio_wb - _JAMO_THRESHOLD) / (1.0 - _JAMO_THRESHOLD)
+                    return score, "workbook_fuzzy_jamo", doc.workbook or ""
     return 0.0, "", ""
 
 
@@ -391,6 +497,10 @@ def search_substring(query: str, docs: list[Doc], kinds: list[str] | None = None
     tokens = [t for t in re.split(r"\s+", query.strip()) if t]
     if not tokens:
         return []
+    # multi-token 일 때 join 한 형태도 한 번 더 시도 — "몬스터 왕" 사용자 query 가
+    # "PK_몬스터_왕" 워크북에 잡히도록 ("몬스터왕" 형태로 _ns 매칭).
+    joined_q = "".join(tokens) if len(tokens) > 1 else None
+
     out: list[Candidate] = []
     for d in docs:
         if kinds and d.kind not in kinds:
@@ -403,6 +513,13 @@ def search_substring(query: str, docs: list[Doc], kinds: list[str] | None = None
             if s > best_score:
                 best_score = s
                 best_via = via
+                best_text = txt
+        # joined query 매칭도 시도 — 띄어쓴 multi-token 이 합치면 매칭되는 케이스.
+        if joined_q:
+            s, via, txt = _score_substring(joined_q, d)
+            if s > best_score:
+                best_score = s
+                best_via = via + "_joined"
                 best_text = txt
         # 멀티 토큰 매칭 부스트 — 토큰 모두가 어딘가 매칭되면 +0.05
         if len(tokens) > 1:
@@ -1502,6 +1619,7 @@ async def quick_find_stream(
     *,
     strategy: str = "auto",
     skip_rerank: bool = False,
+    fuzzy: bool = True,
     # auto v2 thresholds (tuning)
     score_l1_high: float | None = None,
     score_vec_high: float | None = None,
@@ -1523,6 +1641,9 @@ async def quick_find_stream(
     """
     if skip_rerank:
         strategy = "l1"
+    # ContextVar 로 fuzzy flag set — sub-strategy 들이 _score_substring 을 호출할 때
+    # 자동 propagate. asyncio task 가 ContextVar 를 복사하므로 내부 task 에도 전파됨.
+    _FUZZY.set(fuzzy)
     fn = _STRATEGIES.get(strategy)
     if fn is None:
         yield {"type": "error", "message": f"unknown strategy: {strategy}. Use one of {list(_STRATEGIES)}"}

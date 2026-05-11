@@ -100,3 +100,6 @@ packages/desktop-app/.tmp-*
 
 # Playwright 테스트 산출물 (실패 trace/screenshot)
 test-results/
+
+# OnlyOffice PoC viewer 스크린샷 출력 (verify.mjs / runner.mjs 가 생성, 재생성 가능)
+packages/excel-viewer-poc/screenshots/

@@ -20,6 +20,9 @@ const DEFAULT_AGENT_URL_HINT = 'http://localhost:8090';
 const DEFAULT_MCP_BRIDGE_URL_HINT = 'ws://localhost:8769';
 const DEFAULT_LOG_COLLECTOR_URL_HINT = 'http://localhost:8772';
 const DEFAULT_DEV_BUNDLE_URL_HINT = 'http://localhost:8773';
+// PoC 0.1.53+: jacob WSL 의 OnlyOffice DS CE PoC 컨테이너 (excel-viewer-poc/docker-compose.yml).
+// WSL2 IP 가 재부팅마다 바뀌면 사용자가 SettingsModal 에서 수동 갱신 필요 (현재 PoC scope).
+const DEFAULT_ONLYOFFICE_URL_HINT = 'http://172.20.105.147:8080';
 
 export function SettingsModal({ initialEmail, initialBaseUrl, onClose, onSaved }: Props) {
   const [repoRoot, setRepoRoot] = useState('');
@@ -51,6 +54,12 @@ export function SettingsModal({ initialEmail, initialBaseUrl, onClose, onSaved }
   const [confluenceTestSpaceKey, setConfluenceTestSpaceKey] = useState('');
   const [confluenceTestParentPageId, setConfluenceTestParentPageId] = useState('');
 
+  // PoC 0.1.53+: Excel viewer 분기. 'sp' (default, OneDrive Sync 흐름) 또는 'onlyoffice'
+  // (자체 호스팅 OnlyOffice DS CE 임베드 — sync 함정 우회용 대안). onlyOfficeUrl 비어있으면
+  // 'onlyoffice' 선택해도 prepare() fail 후 SP 로 자동 fallback.
+  const [viewerMode, setViewerMode] = useState<'sp' | 'onlyoffice'>('sp');
+  const [onlyOfficeUrl, setOnlyOfficeUrl] = useState('');
+
   useEffect(() => {
     window.projk.getSettings().then((s) => {
       setSavedSettings(s);
@@ -71,6 +80,8 @@ export function SettingsModal({ initialEmail, initialBaseUrl, onClose, onSaved }
       setP4WorkspaceRoot(s.p4WorkspaceRoot ?? '');
       setConfluenceTestSpaceKey(s.confluenceTestSpaceKey ?? '');
       setConfluenceTestParentPageId(s.confluenceTestParentPageId ?? '');
+      setViewerMode(s.viewerMode ?? 'onlyoffice');
+      setOnlyOfficeUrl(s.onlyOfficeUrl ?? DEFAULT_ONLYOFFICE_URL_HINT);
     });
   }, []);
 
@@ -125,6 +136,8 @@ export function SettingsModal({ initialEmail, initialBaseUrl, onClose, onSaved }
         p4WorkspaceRoot: p4WorkspaceRoot.trim() || undefined,
         confluenceTestSpaceKey: confluenceTestSpaceKey.trim() || undefined,
         confluenceTestParentPageId: confluenceTestParentPageId.trim() || undefined,
+        viewerMode,
+        onlyOfficeUrl: onlyOfficeUrl.trim() || undefined,
       });
 
       // 2) Confluence 자격증명 (비밀 — safeStorage 암호화)
@@ -417,6 +430,37 @@ export function SettingsModal({ initialEmail, initialBaseUrl, onClose, onSaved }
           채워두면 운영 페이지의 doc-header 에 "📋 테스트로 복사" 버튼 노출. 클릭 →
           이 스페이스에 사본 생성 (제목에 timestamp 자동 추가) → 새 페이지 자동 탭 open. <br />
           본인 personal space (<code>~userid</code>) 또는 회사가 만든 sandbox (예: <code>PKTEST</code>) 권장.
+        </div>
+
+        <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 12, marginBottom: 4 }}>
+          Excel viewer (PoC — 0.1.53+)
+        </div>
+        <label htmlFor="settings-viewer-mode">시트 렌더링 방식</label>
+        <select
+          id="settings-viewer-mode"
+          aria-label="Excel viewer mode"
+          data-testid="settings-viewer-mode"
+          value={viewerMode}
+          onChange={(e) => setViewerMode(e.target.value as 'sp' | 'onlyoffice')}
+        >
+          <option value="onlyoffice">OnlyOffice DS CE (자체 호스팅) — 기본</option>
+          <option value="sp">SharePoint (Excel for the Web)</option>
+        </select>
+        <label htmlFor="settings-onlyoffice-url">OnlyOffice URL (viewerMode=onlyoffice 시 필수)</label>
+        <input
+          id="settings-onlyoffice-url"
+          aria-label="OnlyOffice Document Server URL"
+          data-testid="settings-onlyoffice-url"
+          value={onlyOfficeUrl}
+          onChange={(e) => setOnlyOfficeUrl(e.target.value)}
+          placeholder="예: http://172.20.105.147:8080"
+          spellCheck={false}
+        />
+        <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: -4 }}>
+          OneDrive 동기화 통제가 어려운 경우 OnlyOffice 로 전환 — sync 함정 0. WSL Docker 에 띄운
+          DS CE 또는 사내 호스팅 서버 endpoint 입력. 비어있으면 'onlyoffice' 선택해도 prepare 실패
+          후 SP 로 자동 fallback. 매 시트 클릭 시 main 이 WSL 의 viewer 호스트(serve.py)를 restart
+          → 첫 표시까지 ~3-5초.
         </div>
 
         <div className="row">

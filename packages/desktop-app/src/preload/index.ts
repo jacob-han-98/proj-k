@@ -207,6 +207,17 @@ const api = {
     },
   },
 
+  // ---------- OnlyOffice viewer (PoC 0.1.53+) ----------
+  // settings.viewerMode === 'onlyoffice' 일 때 CenterPane 의 OnlyOfficeSheetView 가 호출.
+  // main 이 WSL serve.py 를 spawn/restart 후 webview 에 띄울 임베드 URL 반환.
+  onlyOffice: {
+    prepare: (
+      relPath: string,
+      options?: { sheetName?: string },
+    ): Promise<{ ok: true; viewerUrl: string } | { ok: false; error: string }> =>
+      ipcRenderer.invoke(IPC.ONLYOFFICE_PREPARE, { relPath, sheetName: options?.sheetName }),
+  },
+
   // ---------- Threads workspace (Phase 3) ----------
   threads: {
     list: (opts?: { includeArchived?: boolean; limit?: number }): Promise<ThreadSummary[]> =>

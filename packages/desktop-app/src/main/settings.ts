@@ -44,6 +44,12 @@ export interface Settings {
   // 액티비티 바 5번 ("내 작업 중 문서") 의 Confluence draft polling 대상 space key 목록.
   // 비어있으면 ['PK'] 로 fallback. 임시/개발용 space 추가 시 여기에.
   confluenceDraftSpaceKeys?: string[];
+
+  // PoC 0.1.53+: Excel viewer 분기. 미설정/`onlyoffice` (default) 또는 명시적 `sp`.
+  // 기본을 OnlyOffice 자체 호스팅으로 — OneDrive 동기화 함정 우회.
+  viewerMode?: 'sp' | 'onlyoffice';
+  // OnlyOffice Document Server endpoint. 예: http://172.20.105.147:8080
+  onlyOfficeUrl?: string;
 }
 
 function settingsFile(): string {

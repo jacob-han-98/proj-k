@@ -243,6 +243,9 @@ export const IPC = {
   // main → renderer broadcast: 창이 maximize 됐는지. 아이콘 swap 용.
   WINDOW_MAXIMIZED: 'window:maximized',
   WINDOW_IS_MAXIMIZED: 'window:is-maximized',
+  // PoC 0.1.53 — OnlyOffice 임베드 viewer 준비. main 이 WSL 의 serve.py 를 spawn/restart 후
+  // 임베드 HTML URL 반환. 매 sheet 클릭 시 호출 (현재는 동시 1 sheet 만 지원 — serve.py 단일 인스턴스).
+  ONLYOFFICE_PREPARE: 'onlyoffice:prepare',
 } as const;
 
 // main → renderer 단축키 forward payload. webview 안에서 발생한 키도 우리 앱 단축키면
@@ -352,6 +355,17 @@ export interface AppSettings {
   // 액티비티 바 5번 ("내 작업 중 문서") 의 Confluence draft polling 대상 space key 목록.
   // 비어있으면 ['PK'] 로 fallback. 임시/개발용 space 추가 시 여기에.
   confluenceDraftSpaceKeys?: string[];
+
+  // Excel viewer 분기 (PoC — 0.1.53+).
+  //  'onlyoffice' : 자체 호스팅 OnlyOffice Document Server CE 임베드 — **default** (sync 함정 0).
+  //  'sp'         : 기존 SharePoint webview (OneDrive Sync 흐름) — 사용자가 명시적 선택 시.
+  // 미설정 (undefined) 은 onlyoffice 로 취급. onlyOfficeUrl 이 채워져 있어야 정상 동작 —
+  // 비어있거나 서버 down 이면 prepare 가 actionable 에러 반환 (사용자가 Settings 에서 URL 확인 또는
+  // SP 로 전환 가능).
+  viewerMode?: 'sp' | 'onlyoffice';
+  // OnlyOffice Document Server endpoint. 예: 'http://172.20.105.147:8080' (jacob WSL Docker)
+  // 또는 사내 VM 에 띄운 서버 도메인. 주소 변경 시 사용자가 SettingsModal 에서 입력.
+  onlyOfficeUrl?: string;
 }
 
 // 액티비티 바 5번 ("내 작업 중 문서") — P4 체크아웃 한 항목.

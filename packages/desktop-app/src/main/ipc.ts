@@ -32,6 +32,7 @@ import { tryDb } from './db';
 import * as threads from './db/threads-db';
 import * as onedrive from './onedrive';
 import * as onedriveSync from './onedrive-sync';
+import { prepareOnlyOfficeViewer } from './onlyoffice-host';
 import { dialog } from 'electron';
 import { readFileSync } from 'node:fs';
 import { basename } from 'node:path';
@@ -473,6 +474,36 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
   ipcMain.handle(IPC.ACTIVE_DOCS_CONFLUENCE, async () => {
     const s = getSettings();
     return listMyConfluenceDrafts(s.confluenceDraftSpaceKeys);
+  });
+
+  // PoC 0.1.53+ — OnlyOffice viewer prepare. main 이 WSL serve.py 를 spawn/restart 후
+  // 임베드 HTML URL 반환 (renderer 가 webview src 에 사용). settings 의 viewerMode='onlyoffice'
+  // 일 때만 호출됨. relPath 가 바뀌면 매번 restart (serve.py 단일 인스턴스 — PoC scope).
+  ipcMain.handle(IPC.ONLYOFFICE_PREPARE, async (_e, p: { relPath: string; sheetName?: string }) => {
+    const t0 = Date.now();
+    console.log(`[onlyoffice] prepare request: ${p.relPath}${p.sheetName ? ` sheet="${p.sheetName}"` : ''}`);
+    // 사용자가 직접 고칠 수 있는 settings 결함을 먼저 알려준 다음 sidecar 상태 검사.
+    const settings = getSettings();
+    const onlyOfficeUrl = (settings.onlyOfficeUrl ?? '').trim();
+    if (!onlyOfficeUrl) {
+      return { ok: false, error: 'onlyOfficeUrl 설정이 비어있음 — Settings 에서 입력' };
+    }
+    const sc = getSidecarStatus();
+    if (sc.state !== 'ready' || sc.port == null) {
+      return { ok: false, error: `sidecar not ready (state=${sc.state})` };
+    }
+    const r = await prepareOnlyOfficeViewer({
+      sidecarBaseUrl: `http://127.0.0.1:${sc.port}`,
+      relPath: p.relPath,
+      sheetName: p.sheetName,
+      onlyOfficeUrl,
+    });
+    if (r.ok) {
+      console.log(`[onlyoffice] prepare ok ${Date.now() - t0}ms url=${r.viewerUrl}`);
+    } else {
+      console.warn(`[onlyoffice] prepare fail ${Date.now() - t0}ms: ${r.error}`);
+    }
+    return r;
   });
 
   ipcMain.handle(IPC.SETTINGS_GET, async () => getSettings());

@@ -197,6 +197,23 @@ export function CenterPane({
   onUpsertSheetMapping,
   onRequestReview,
 }: Props) {
+  // PoC 0.1.53+ — viewer mode (sp / onlyoffice). 매 selection 변경 시 settings 재조회.
+  // 사용자가 SettingsModal 에서 토글 후 바로 다음 시트 클릭에 반영되게 함. depot 파일은
+  // 영향 없음 (depot 흐름은 그대로 SP 임베드 URL 사용).
+  // Hooks rule (CLAUDE.md): conditional return 전에 unconditional 위치.
+  const [viewerMode, setViewerMode] = useState<'sp' | 'onlyoffice'>('onlyoffice');
+  useEffect(() => {
+    if (!selection || selection.kind !== 'sheet') return;
+    let cancelled = false;
+    window.projk.getSettings().then((s) => {
+      if (cancelled) return;
+      // 미설정 → onlyoffice (default). 명시적으로 'sp' 인 경우만 SharePoint 흐름.
+      setViewerMode(s.viewerMode === 'sp' ? 'sp' : 'onlyoffice');
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [selection?.node?.id, selection?.kind]);
 
   if (!selection) {
     return (
@@ -210,10 +227,21 @@ export function CenterPane({
 
   if (selection.kind === 'sheet') {
     const relPath = selection.node.relPath ?? selection.node.id;
-    // depot 파일은 node.oneDriveUrl 에 임베드 URL 이 직접 박혀있음 — 별도 처리.
+    // depot 파일은 node.oneDriveUrl 에 임베드 URL 이 직접 박혀있음 — 별도 처리. viewerMode 무관.
     const directUrl = selection.node.oneDriveUrl;
     if (directUrl) {
       return <DepotSheetView key={selection.node.id} node={selection.node} directUrl={directUrl} />;
+    }
+    // PoC 0.1.53+ — viewerMode='onlyoffice' 면 OnlyOffice 임베드. 실패하면 사용자에게 안내 후
+    // settings 에서 SP 로 전환 권장. SP 코드 경로는 건드리지 않음.
+    if (viewerMode === 'onlyoffice') {
+      return (
+        <OnlyOfficeSheetView
+          key={`oo:${selection.node.id}`}
+          node={selection.node}
+          relPath={relPath}
+        />
+      );
     }
     // 일반 P4 local 시트 — 0.1.50 (Step 1+2): ensureFresh 가 매번 mtime 비교 + 백그라운드 sync.
     // cachedUrl 있으면 즉시 webview 표시(이전 본문). 백그라운드에서 stale 감지 시 자동 reload.
@@ -440,6 +468,112 @@ function ConfluencePane({
         partition="persist:confluence"
         {...({ allowpopups: 'true' } as any)}
         style={{ width: '100%', height: 'calc(100% - 44px)' }}
+      />
+    </main>
+  );
+}
+
+// PoC 0.1.53+ — viewerMode='onlyoffice' 일 때 LocalSheetView 대체. main 이 WSL 의 serve.py 를
+// spawn/restart 후 webview 임베드 URL 반환 → 그대로 webview 에 마운트. SP 흐름 (OneDrive Sync
+// + ensureFresh + cloud-not-ready 카드)을 전혀 거치지 않으므로 sync 함정에서 자유.
+//
+// 한계 (PoC scope):
+//  - 한 번에 한 시트만 (serve.py 단일 인스턴스). 다른 시트 클릭 → 약 3-5초 swap.
+//  - 편집 / "리뷰" / "Agent에 질문" 같은 부가 액션은 미구현 — 우선 "보기" 만 지원.
+//  - prepare 실패 시 사용자에게 안내 후 settings 에서 SP 로 전환 권장 (자동 fallback X — 의도 명시).
+function OnlyOfficeSheetView(props: { node: TreeNode; relPath: string }) {
+  const { node, relPath } = props;
+  const [viewerUrl, setViewerUrl] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [preparing, setPreparing] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setViewerUrl(null);
+    setError(null);
+    setPreparing(true);
+    console.log(
+      `[OnlyOfficeSheetView] mount/relPath relPath=${relPath}${node.sheetName ? ` sheet="${node.sheetName}"` : ''}`,
+    );
+    const t0 = Date.now();
+    window.projk.onlyOffice
+      .prepare(relPath, { sheetName: node.sheetName })
+      .then((r) => {
+        if (cancelled) return;
+        const elapsed = Date.now() - t0;
+        if (r.ok) {
+          console.log(`[OnlyOfficeSheetView] prepare ok ${elapsed}ms url=${r.viewerUrl}`);
+          setViewerUrl(r.viewerUrl);
+        } else {
+          console.warn(`[OnlyOfficeSheetView] prepare fail ${elapsed}ms: ${r.error}`);
+          setError(r.error);
+        }
+      })
+      .catch((e: unknown) => {
+        if (cancelled) return;
+        const msg = e instanceof Error ? e.message : String(e);
+        console.warn(`[OnlyOfficeSheetView] prepare threw: ${msg}`);
+        setError(msg);
+      })
+      .finally(() => {
+        if (!cancelled) setPreparing(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [relPath, node.sheetName]);
+
+  if (error) {
+    return (
+      <main className="center" data-testid="center-pane">
+        <div
+          className="placeholder"
+          data-testid="onlyoffice-error"
+          style={{ color: 'var(--text-error, #c33)', whiteSpace: 'pre-wrap' }}
+        >
+          OnlyOffice 준비 실패{'\n'}
+          {error}
+          {'\n\n'}
+          <small style={{ color: 'var(--text-dim)' }}>
+            Settings 에서 viewer mode 를 SharePoint 로 바꾸면 기존 흐름 사용 가능. OnlyOffice 는
+            현재 WSL Docker 의 DS CE 가 떠있고 onlyOfficeUrl 설정이 채워져 있어야 동작합니다.
+          </small>
+        </div>
+      </main>
+    );
+  }
+
+  if (!viewerUrl) {
+    return (
+      <main className="center" data-testid="center-pane">
+        <div className="placeholder" data-testid="onlyoffice-preparing">
+          OnlyOffice 준비 중… {preparing ? '(serve.py spawn → DocsAPI 로드)' : ''}
+        </div>
+      </main>
+    );
+  }
+
+  return (
+    <main className="center" data-testid="center-pane">
+      <div
+        className="sheet-topbar"
+        style={{ display: 'flex', alignItems: 'center', padding: '4px 8px', height: 36 }}
+      >
+        <span style={{ fontWeight: 600, fontSize: 13 }}>{node.title}</span>
+        <span style={{ flex: 1 }} />
+        <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>
+          OnlyOffice DS CE — {relPath}
+          {node.sheetName ? ` › ${node.sheetName}` : ''}
+        </span>
+      </div>
+      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+      <webview
+        key={`oo::${relPath}::${node.sheetName ?? ''}`}
+        src={viewerUrl}
+        partition="persist:onlyoffice"
+        data-testid="onlyoffice-webview"
+        {...({ allowpopups: 'true' } as any)}
+        style={{ width: '100%', height: 'calc(100% - 36px)' }}
       />
     </main>
   );

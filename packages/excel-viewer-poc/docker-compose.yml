@@ -1,0 +1,28 @@
+services:
+  documentserver:
+    image: onlyoffice/documentserver:latest
+    container_name: onlyoffice-ds-poc
+    restart: unless-stopped
+    environment:
+      # JWT 비활성 — PoC 는 localhost 격리. production 도입 시 활성 + 강한 secret 필수.
+      - JWT_ENABLED=false
+      - JWT_SECRET=change-me-when-jwt-enabled
+      - JWT_HEADER=Authorization
+      - JWT_IN_BODY=true
+      - WOPI_ENABLED=false
+    ports:
+      - "8080:80"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ds-data:/var/www/onlyoffice/Data
+      - ds-log:/var/log/onlyoffice
+      - ds-lib:/var/lib/onlyoffice
+      - ds-db:/var/lib/postgresql
+    stop_grace_period: 60s
+
+volumes:
+  ds-data:
+  ds-log:
+  ds-lib:
+  ds-db:

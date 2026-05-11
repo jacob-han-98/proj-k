@@ -90,6 +90,19 @@ function installPartitions(): void {
   session.fromPartition('persist:agent');      // agent-sdk-poc 웹 임베드 (회사 SSO 쿠키 영속)
   const onedriveSession = session.fromPartition('persist:onedrive'); // OneDrive / SharePoint / Office for the Web
 
+  // PoC 0.1.53+ — OnlyOffice 임베드용 별도 파티션. 자체 호스팅 서버라 SSO 쿠키 불필요하지만
+  // OneDrive 세션과 분리해 will-download 차단 정책만 동일하게 적용 (view-only 모드라도 OnlyOffice
+  // 가 download 요청을 발생시키면 webview 가 OS save dialog 띄우는 것 방지).
+  const onlyOfficeSession = session.fromPartition('persist:onlyoffice');
+  onlyOfficeSession.on('will-download', (event, item) => {
+    console.warn(
+      `[onlyoffice-session] will-download blocked — url=${item.getURL().slice(0, 120)} ` +
+      `file=${item.getFilename()} mime=${item.getMimeType()}`,
+    );
+    event.preventDefault();
+    item.cancel();
+  });
+
   // SharePoint 가 webview embed 거부 또는 redirect 끝에 file download 응답 (Content-Disposition:
   // attachment) 주는 케이스가 사용자 환경 시나리오. Electron default 가 OS native save dialog
   // 띄움 → 사용자가 "저장 위치 물어봄" 보고. 우리는 webview 안에서 .xlsx 본문이 *view* 되어야

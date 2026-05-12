@@ -7,6 +7,7 @@ Usage:
     uvicorn src.server:app --host 0.0.0.0 --port 8090
 """
 
+import hashlib
 import json
 import logging
 import sys
@@ -1354,6 +1355,7 @@ class ReviewStreamRequest(BaseModel):
     model: str | None = None
     review_instruction: str | None = None
     review_options: ReviewOptions | None = None
+    prompt_override: str | None = None  # 사용자가 ⚙ 설정에서 수정한 system prompt 풀텍스트. 비어있거나 None 이면 preset 사용.
 
 
 class SummaryStreamRequest(BaseModel):
@@ -1362,6 +1364,7 @@ class SummaryStreamRequest(BaseModel):
     model: str | None = None
     summary_style: str | None = "default"
     max_tokens: int | None = None
+    prompt_override: str | None = None  # ⚙ 설정에서 수정한 system prompt 풀텍스트. 비어있거나 None 이면 preset 사용.
 
 
 class SuggestEditsRequest(BaseModel):
@@ -1455,7 +1458,10 @@ def _format_cap(label: str, val: int | str | None) -> str | None:
 def _build_review_options_block(opts: ReviewOptions | None) -> str:
     """review_options → 사용자 prompt 에 끼울 추가 instruction 블록.
 
-    빈 옵션이면 빈 문자열 반환 → 기존 동작 동일 (backward compat).
+    categories 시맨틱:
+      - None (필드 자체 미존재) → 전체 생성. P0/chrome-extension 등 review_options 없는 흐름 back-compat.
+      - []   (빈 배열)          → flow / qa_checklist / readability.issues 모두 생략 지시 (output token 절약).
+      - 부분 배열               → 명시된 것만 출력, 나머지는 omit.
     """
     if opts is None:
         return ""
@@ -1468,22 +1474,32 @@ def _build_review_options_block(opts: ReviewOptions | None) -> str:
         ] if line
     ]
 
-    cats = [c for c in (opts.categories or []) if c in _CATEGORY_FOCUS_LINES]
-    if cats:
-        # 명시된 카테고리만 출력. 명시 안 된 것은 빈 배열로 응답.
-        focus_lines = [f"- {_CATEGORY_FOCUS_LINES[c]}" for c in cats]
-        omit_targets: list[str] = []
+    focus_lines: list[str] = []
+    if opts.categories is not None:
+        cats = [c for c in opts.categories if c in _CATEGORY_FOCUS_LINES]
+        if cats:
+            focus_lines.extend(f"- {_CATEGORY_FOCUS_LINES[c]}" for c in cats)
+
+        omit_parts: list[str] = []
+        if "logic-flow" not in cats:
+            omit_parts.append("`flow` 는 빈 문자열 `\"\"`")
         if "qa-checklist" not in cats:
-            omit_targets.append("`qa_checklist`")
+            omit_parts.append("`qa_checklist` 는 빈 배열 `[]`")
         if "readability" not in cats:
-            omit_targets.append("`readability.issues`")
-        if omit_targets:
-            focus_lines.append(
-                f"- 사용자가 선택하지 않은 카테고리는 응답에서 비워라: "
-                f"{', '.join(omit_targets)} 는 빈 배열 / `readability.score` 는 그대로 평가."
-            )
-    else:
-        focus_lines = []
+            omit_parts.append("`readability.issues` 는 빈 배열 `[]`")
+
+        if omit_parts:
+            if not cats:
+                focus_lines.append(
+                    "- 사용자가 추가 분석 카테고리를 모두 OFF 했음 — 다음 키들은 분석/생성 자체를 생략:\n"
+                    f"  {', '.join(omit_parts)}. "
+                    "분석 시간·토큰을 그만큼 줄일 것. `readability.score` 도 생성 생략 가능."
+                )
+            else:
+                focus_lines.append(
+                    "- 사용자가 선택하지 않은 카테고리는 응답에서 비워라: "
+                    f"{', '.join(omit_parts)}. `readability.score` 는 그대로 평가."
+                )
 
     parts: list[str] = []
     if cap_lines:
@@ -1539,6 +1555,58 @@ def _build_review_system(opts: ReviewOptions | None) -> str:
     )
 
 
+def _resolve_review_system_prompt(
+    prompt_override: str | None,
+    opts: ReviewOptions | None,
+) -> tuple[str, bool]:
+    """리뷰용 system_prompt 선택.
+
+    prompt_override 가 trim 후 비어있지 않으면 그대로 사용 (persona injection 도 생략 — 사용자가 모든 책임).
+    그렇지 않으면 _build_review_system(opts) 로 persona-modified preset 사용.
+
+    Returns: (system_prompt, used_override).
+    """
+    if prompt_override and prompt_override.strip():
+        return prompt_override, True
+    return _build_review_system(opts), False
+
+
+def _resolve_summary_system_prompt(prompt_override: str | None) -> tuple[str, bool]:
+    """요약용 system_prompt 선택. trim 후 비어있지 않으면 override, 아니면 preset."""
+    if prompt_override and prompt_override.strip():
+        return prompt_override, True
+    return _SUMMARY_SYSTEM_DEFAULT, False
+
+
+def _preset_version(prompt: str) -> str:
+    """프롬프트 텍스트 변경 자동 감지용 짧은 hash. preset 바뀌면 자동 변경."""
+    return hashlib.sha256(prompt.encode("utf-8")).hexdigest()[:8]
+
+
+@app.get("/presets/summary")
+async def presets_summary():
+    """ModePickerEmpty ⚙ 설정 — Summary preset 노출. 사용자 textarea prefill 용."""
+    return {
+        "prompt": _SUMMARY_SYSTEM_DEFAULT,
+        "model": "claude-opus-4-7",
+        "version": _preset_version(_SUMMARY_SYSTEM_DEFAULT),
+    }
+
+
+@app.get("/presets/review")
+async def presets_review():
+    """ModePickerEmpty ⚙ 설정 — Review preset 노출.
+
+    persona/categories 같은 per-request 옵션은 포함하지 않은 base prompt 를 노출.
+    사용자가 textarea 에서 수정한 텍스트는 system_prompt 자리에 그대로 들어감.
+    """
+    return {
+        "prompt": _REVIEW_SYSTEM,
+        "model": "claude-opus-4-7",
+        "version": _preset_version(_REVIEW_SYSTEM),
+    }
+
+
 @app.post("/review_stream")
 async def review_stream(req: ReviewStreamRequest):
     """Confluence 페이지 리뷰 — Bedrock 단일 호출, NDJSON 토큰 스트리밍.
@@ -1562,20 +1630,27 @@ async def review_stream(req: ReviewStreamRequest):
         f"{instruction_block}{options_block}"
         f"\n\nReview this document thoroughly and return the JSON result:"
     )
-    system_prompt = _build_review_system(req.review_options)
+    system_prompt, used_override = _resolve_review_system_prompt(
+        req.prompt_override, req.review_options
+    )
     model = _bd_normalize_model(req.model)
 
     async def gen():
         opts_summary = ""
         if req.review_options is not None:
             o = req.review_options
-            personas_used = _resolve_personas(o)
+            personas_used = _resolve_personas(o) if not used_override else ["override"]
             opts_summary = (
                 f" opts(personas={personas_used},"
                 f"caps={o.issue_cap}/{o.verification_cap}/{o.suggestion_cap},"
-                f"cats={o.categories or 'all'})"
+                f"cats={o.categories if o.categories is not None else 'all'})"
             )
-        log_event("review", "review_stream", f"{title[:60]} ({len(text)}c, {model}){opts_summary}")
+        override_tag = " [prompt_override]" if used_override else ""
+        log_event(
+            "review",
+            "review_stream",
+            f"{title[:60]} ({len(text)}c, {model}){opts_summary}{override_tag}",
+        )
         yield _ndj({"type": "status", "message": f"🧠 문서 분석 중... ({model})"})
         yield _ndj({"type": "status", "message": f"📄 길이: {len(text):,}자"})
 
@@ -1815,7 +1890,7 @@ async def summary_stream(req: SummaryStreamRequest):
     text = (req.text or "")[:100000]
     style = (req.summary_style or "default").lower()
     # 향후 "bullet" / "executive" 분기 자리 — 지금은 default 만.
-    system_prompt = _SUMMARY_SYSTEM_DEFAULT
+    system_prompt, used_override = _resolve_summary_system_prompt(req.prompt_override)
     # 기본 모델 = opus (요약 품질 우선). req.model 명시되면 그대로.
     model = _bd_normalize_model(req.model) if req.model else "opus"
     max_tokens = req.max_tokens if req.max_tokens else 8194
@@ -1831,10 +1906,11 @@ async def summary_stream(req: SummaryStreamRequest):
         )
 
     async def gen():
+        override_tag = " [prompt_override]" if used_override else ""
         log_event(
             "summary",
             "summary_stream",
-            f"{title[:60]} ({len(text)}c, {model}, max={max_tokens}, style={style})",
+            f"{title[:60]} ({len(text)}c, {model}, max={max_tokens}, style={style}){override_tag}",
         )
         yield _ndj({"type": "status", "message": f"📖 본문 정독 중... ({model})"})
         yield _ndj({"type": "status", "message": f"📄 길이: {len(text):,}자"})

@@ -5,6 +5,10 @@ import {
   fetchKlaudReports,
   fetchKlaudReport,
   fetchKlaudStats,
+  fetchKlaudCrawlResources,
+  fetchKlaudCrawlStats,
+  purgeKlaudCrawl,
+  reindexKlaudCrawl,
   getKlaudAdminToken,
   setKlaudAdminToken,
   clearKlaudAdminToken,
@@ -15,6 +19,8 @@ import {
   type KlaudReportSummary,
   type KlaudReportDetail,
   type KlaudStats,
+  type KlaudCrawlResource,
+  type KlaudCrawlStats,
 } from './api'
 
 // ── Theme (App/AdminPage 와 동일) ──
@@ -24,7 +30,20 @@ function applyTheme(mode: ThemeMode) {
   document.documentElement.setAttribute('data-theme', mode)
 }
 
-type KlaudTab = 'logs' | 'reports'
+type KlaudTab = 'logs' | 'reports' | 'crawl'
+
+const CRAWL_STATUS_COLOR: Record<string, string> = {
+  fresh: '#34d399',
+  stale: '#f59e0b',
+  failed: '#ef4444',
+  purged: '#6b7280',
+}
+
+const CRAWL_SOURCE_LABEL: Record<string, string> = {
+  'p4-xlsx': 'P4 / XLSX',
+  'confluence-projk': 'Confluence / Project K',
+  'confluence-art': 'Confluence / Art',
+}
 
 const LEVEL_BG: Record<string, string> = {
   error: 'rgba(239, 68, 68, 0.12)',
@@ -640,9 +659,11 @@ function KlaudAdminPage() {
   }
 
   // tab
-  const [tab, setTab] = useState<KlaudTab>(() =>
-    (localStorage.getItem('klaud-admin-tab') as KlaudTab | null) === 'reports' ? 'reports' : 'logs'
-  )
+  const [tab, setTab] = useState<KlaudTab>(() => {
+    const saved = localStorage.getItem('klaud-admin-tab')
+    if (saved === 'reports' || saved === 'crawl') return saved
+    return 'logs'
+  })
   const switchTab = (t: KlaudTab) => {
     setTab(t)
     localStorage.setItem('klaud-admin-tab', t)
@@ -790,6 +811,15 @@ function KlaudAdminPage() {
             fontWeight: tab === 'reports' ? 700 : 500, fontSize: '0.92rem',
           }}
         >🚩 제보</button>
+        <button
+          type="button" onClick={() => switchTab('crawl')}
+          style={{
+            padding: '8px 16px', background: 'transparent', border: 'none', cursor: 'pointer',
+            borderBottom: tab === 'crawl' ? '2px solid var(--accent, #7aa2ff)' : '2px solid transparent',
+            color: tab === 'crawl' ? 'var(--accent, #7aa2ff)' : 'var(--text-secondary)',
+            fontWeight: tab === 'crawl' ? 700 : 500, fontSize: '0.92rem',
+          }}
+        >📦 크롤</button>
         <div style={{ flex: 1 }} />
         <button
           type="button" onClick={presetLastHour}
@@ -802,17 +832,23 @@ function KlaudAdminPage() {
         >최근 1시간</button>
       </div>
 
-      <FilterBar
-        filter={draftFilter} onChange={setDraftFilter}
-        onApply={apply} onReset={reset} loading={false} tab={tab}
-      />
+      {tab !== 'crawl' && (
+        <FilterBar
+          filter={draftFilter} onChange={setDraftFilter}
+          onApply={apply} onReset={reset} loading={false} tab={tab}
+        />
+      )}
 
-      <KlaudTabContent
-        tab={tab}
-        filter={appliedFilter}
-        refreshTick={refreshTick}
-        onAuthError={handleAuthError}
-      />
+      {tab === 'crawl' ? (
+        <CrawlTab refreshTick={refreshTick} onAuthError={handleAuthError} />
+      ) : (
+        <KlaudTabContent
+          tab={tab}
+          filter={appliedFilter}
+          refreshTick={refreshTick}
+          onAuthError={handleAuthError}
+        />
+      )}
     </div>
   )
 }
@@ -820,14 +856,250 @@ function KlaudAdminPage() {
 function KlaudTabContent({
   tab, filter, refreshTick, onAuthError,
 }: {
-  tab: KlaudTab; filter: FilterState; refreshTick: number; onAuthError: (e: KlaudAuthError) => void
+  tab: 'logs' | 'reports'; filter: FilterState; refreshTick: number; onAuthError: (e: KlaudAuthError) => void
 }) {
-  // Logs 탭 — 인증 에러 catch 도 여기서
+  // 인증 에러 catch 도 여기서
   const filterMemo = useMemo(() => filter, [filter])
   if (tab === 'logs') {
     return <LogsBoundary filter={filterMemo} refreshTick={refreshTick} onAuthError={onAuthError} />
   }
   return <ReportsTab filter={filterMemo} refreshTick={refreshTick} onAuthError={onAuthError} />
+}
+
+// ── Crawl Tab ──
+
+function CrawlTab({ refreshTick, onAuthError }: {
+  refreshTick: number; onAuthError: (e: KlaudAuthError) => void
+}) {
+  const [resources, setResources] = useState<KlaudCrawlResource[]>([])
+  const [stats, setStats] = useState<KlaudCrawlStats | null>(null)
+  const [nextCursor, setNextCursor] = useState<number | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+  const [selected, setSelected] = useState<Set<number>>(new Set())
+
+  // filter (입력 즉시 적용 — crawl 은 가볍게)
+  const [filterSource, setFilterSource] = useState('')
+  const [filterStatus, setFilterStatus] = useState('')
+  const [filterQ, setFilterQ] = useState('')
+
+  const load = useCallback(async (append = false, cursor?: number | null) => {
+    setLoading(true); setErr(null)
+    try {
+      const r = await fetchKlaudCrawlResources({
+        source: filterSource || undefined,
+        status: filterStatus || undefined,
+        q: filterQ || undefined,
+        cursor: cursor ?? undefined,
+        limit: 100,
+      })
+      setResources(prev => append ? [...prev, ...r.resources] : r.resources)
+      setNextCursor(r.next_cursor)
+      if (!append) setSelected(new Set())
+    } catch (e) {
+      if (e instanceof KlaudAuthError) onAuthError(e)
+      else setErr(e instanceof Error ? e.message : String(e))
+    } finally {
+      setLoading(false)
+    }
+  }, [filterSource, filterStatus, filterQ, onAuthError])
+
+  const loadStats = useCallback(async () => {
+    try {
+      const s = await fetchKlaudCrawlStats()
+      setStats(s)
+    } catch (e) {
+      if (e instanceof KlaudAuthError) onAuthError(e)
+    }
+  }, [onAuthError])
+
+  useEffect(() => { load(false) }, [load, refreshTick])
+  useEffect(() => { loadStats() }, [loadStats, refreshTick])
+
+  const toggleSelect = (id: number) => {
+    setSelected(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const selectedRows = resources.filter(r => selected.has(r.id))
+
+  // 선택된 행이 모두 같은 source 일 때만 액션 가능
+  const selectedSource = useMemo(() => {
+    if (selectedRows.length === 0) return null
+    const s0 = selectedRows[0].source
+    return selectedRows.every(r => r.source === s0) ? s0 : null
+  }, [selectedRows])
+
+  const doPurge = async () => {
+    if (!selectedSource || selectedRows.length === 0) return
+    if (!confirm(`${selectedRows.length}개 리소스 purge? ChromaDB chunk 제거는 Phase B 에서.`)) return
+    try {
+      await purgeKlaudCrawl(selectedSource, selectedRows.map(r => r.resource_path))
+      load(false)
+      loadStats()
+    } catch (e) {
+      if (e instanceof KlaudAuthError) onAuthError(e)
+      else setErr(e instanceof Error ? e.message : String(e))
+    }
+  }
+
+  const doReindex = async () => {
+    if (!selectedSource || selectedRows.length === 0) return
+    try {
+      await reindexKlaudCrawl(selectedSource, selectedRows.map(r => r.resource_path), false)
+      load(false)
+      loadStats()
+    } catch (e) {
+      if (e instanceof KlaudAuthError) onAuthError(e)
+      else setErr(e instanceof Error ? e.message : String(e))
+    }
+  }
+
+  const inputStyle: React.CSSProperties = {
+    padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border-color)',
+    background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '0.85rem',
+  }
+
+  return (
+    <div>
+      {/* Stats 헤더 */}
+      {stats && (
+        <div className="glass" style={{ padding: '10px 14px', borderRadius: 10, marginBottom: 12, display: 'flex', gap: 18, fontSize: '0.85rem', flexWrap: 'wrap' }}>
+          <span>📊 총 <strong>{stats.total}</strong></span>
+          <span style={{ color: '#34d399' }}>fresh: {stats.fresh}</span>
+          <span style={{ color: '#f59e0b' }}>stale: {stats.stale}</span>
+          <span style={{ color: '#ef4444' }}>failed: {stats.failed}</span>
+          <span style={{ color: '#6b7280' }}>purged: {stats.purged}</span>
+          <span style={{ flex: 1 }} />
+          <span style={{ color: 'var(--text-secondary)' }}>
+            last cron-tick: {stats.last_cron_tick_at ? fmtTime(stats.last_cron_tick_at) : '—'}
+          </span>
+        </div>
+      )}
+
+      {/* Filter bar */}
+      <div className="glass" style={{ padding: 12, borderRadius: 10, marginBottom: 12, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <select value={filterSource} onChange={e => setFilterSource(e.target.value)} style={inputStyle}>
+          <option value="">source: all</option>
+          <option value="p4-xlsx">P4 / XLSX</option>
+          <option value="confluence-projk">Confluence / Project K</option>
+          <option value="confluence-art">Confluence / Art</option>
+        </select>
+        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} style={inputStyle}>
+          <option value="">status: all</option>
+          <option value="fresh">fresh</option>
+          <option value="stale">stale</option>
+          <option value="failed">failed</option>
+          <option value="purged">purged</option>
+        </select>
+        <input
+          type="text" placeholder="path 검색 (LIKE)"
+          value={filterQ} onChange={e => setFilterQ(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') load(false) }}
+          style={{ ...inputStyle, minWidth: 240 }}
+        />
+        <div style={{ flex: 1 }} />
+        {selectedRows.length > 0 && (
+          <>
+            <span style={{ alignSelf: 'center', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+              {selectedRows.length}개 선택 {selectedSource ? `(${selectedSource})` : '(서로 다른 source — 액션 불가)'}
+            </span>
+            <button
+              type="button" onClick={doReindex} disabled={!selectedSource}
+              style={{
+                padding: '6px 12px', borderRadius: 6, background: selectedSource ? 'var(--accent, #7aa2ff)' : 'transparent',
+                color: selectedSource ? '#fff' : 'var(--text-secondary)',
+                border: 'none', cursor: selectedSource ? 'pointer' : 'not-allowed', fontSize: '0.82rem',
+              }}
+            >🔄 Reindex (stale)</button>
+            <button
+              type="button" onClick={doPurge} disabled={!selectedSource}
+              style={{
+                padding: '6px 12px', borderRadius: 6, background: selectedSource ? '#ef4444' : 'transparent',
+                color: selectedSource ? '#fff' : 'var(--text-secondary)',
+                border: 'none', cursor: selectedSource ? 'pointer' : 'not-allowed', fontSize: '0.82rem',
+              }}
+            >🗑 Purge</button>
+          </>
+        )}
+      </div>
+
+      {err && <div style={{ color: '#ef4444', fontSize: '0.85rem', marginBottom: 8 }}>오류: {err}</div>}
+
+      {/* Resources table */}
+      <div className="glass" style={{ borderRadius: 10, overflow: 'auto', maxHeight: '60vh' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+          <thead style={{ position: 'sticky', top: 0, background: 'var(--bg-secondary)', zIndex: 1 }}>
+            <tr>
+              <th style={{ padding: '8px 10px', width: 28 }}>
+                <input
+                  type="checkbox"
+                  checked={resources.length > 0 && selected.size === resources.length}
+                  onChange={e => setSelected(e.target.checked ? new Set(resources.map(r => r.id)) : new Set())}
+                />
+              </th>
+              <th style={{ padding: '8px 10px', textAlign: 'left', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>source</th>
+              <th style={{ padding: '8px 10px', textAlign: 'left', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>path</th>
+              <th style={{ padding: '8px 10px', textAlign: 'left', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>status</th>
+              <th style={{ padding: '8px 10px', textAlign: 'left', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>last indexed</th>
+              <th style={{ padding: '8px 10px', textAlign: 'right', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>chunks</th>
+            </tr>
+          </thead>
+          <tbody>
+            {resources.map(r => (
+              <tr key={r.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                <td style={{ padding: '6px 10px' }}>
+                  <input type="checkbox" checked={selected.has(r.id)} onChange={() => toggleSelect(r.id)} />
+                </td>
+                <td style={{ padding: '6px 10px', whiteSpace: 'nowrap', fontSize: '0.78rem' }}>
+                  {CRAWL_SOURCE_LABEL[r.source] ?? r.source}
+                </td>
+                <td style={{ padding: '6px 10px', wordBreak: 'break-all', fontSize: '0.82rem' }}>
+                  {r.resource_path}
+                  {r.error_msg && (
+                    <div style={{ marginTop: 2, fontSize: '0.72rem', color: '#ef4444' }}>⚠ {r.error_msg}</div>
+                  )}
+                </td>
+                <td style={{ padding: '6px 10px', whiteSpace: 'nowrap', fontSize: '0.78rem' }}>
+                  <span style={{ color: CRAWL_STATUS_COLOR[r.status], fontWeight: 600 }}>{r.status}</span>
+                </td>
+                <td style={{ padding: '6px 10px', whiteSpace: 'nowrap', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                  {r.last_indexed_at ? fmtTime(r.last_indexed_at) : '—'}
+                </td>
+                <td style={{ padding: '6px 10px', textAlign: 'right', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                  {r.chunk_count}
+                </td>
+              </tr>
+            ))}
+            {resources.length === 0 && !loading && (
+              <tr>
+                <td colSpan={6} style={{ padding: 30, textAlign: 'center', color: 'var(--text-secondary)' }}>
+                  {filterSource || filterStatus || filterQ ? '조건에 맞는 리소스가 없습니다.' : '아직 크롤된 리소스가 없습니다. cron-tick 또는 klaud-crawl CLI 실행 후 표시됩니다.'}
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {nextCursor !== null && (
+        <div style={{ marginTop: 10, textAlign: 'center' }}>
+          <button
+            type="button" onClick={() => load(true, nextCursor)} disabled={loading}
+            style={{
+              padding: '8px 18px', borderRadius: 6, background: 'transparent',
+              color: 'var(--text-primary)', border: '1px solid var(--border-color)',
+              cursor: loading ? 'wait' : 'pointer', fontSize: '0.85rem',
+            }}
+          >{loading ? '로딩…' : '더 보기 (Next)'}</button>
+        </div>
+      )}
+    </div>
+  )
 }
 
 function LogsBoundary({

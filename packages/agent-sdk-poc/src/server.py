@@ -49,6 +49,7 @@ import storage
 import followups as followups_mod
 import doc_context as doc_ctx
 import klaud_sink
+import klaud_crawl_state
 import google_id_token
 from preset_prompts import PRESETS
 
@@ -99,11 +100,15 @@ def log_event(sid: str, event_type: str, detail: str = ""):
 
 @app.on_event("startup")
 async def _klaud_sink_startup():
-    """Klaud 통합 로그 sink 초기화 — SQLite open + writer thread + root logger handler."""
+    """Klaud 통합 로그 sink + 크롤 state store 초기화."""
     try:
         klaud_sink.init()
     except Exception as e:  # sink 가 죽어도 server 는 계속
         log.warning(f"klaud_sink init failed: {e}")
+    try:
+        klaud_crawl_state.init()
+    except Exception as e:
+        log.warning(f"klaud_crawl_state init failed: {e}")
 
 
 def _sse(event_type: str, data: dict) -> dict:
@@ -2274,6 +2279,95 @@ async def klaud_stats(authorization: str | None = Header(default=None)):
     out = klaud_sink.stats()
     out["sso"] = google_id_token.stats()
     return out
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# /klaud/crawl/* — 릴리스-C: P4/Confluence 크롤 상태 관리 (web admin + CLI 공유 store)
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class KlaudCrawlPurgeRequest(BaseModel):
+    source: str
+    resource_paths: list[str]
+
+
+class KlaudCrawlReindexRequest(BaseModel):
+    source: str
+    resource_paths: list[str] | None = None
+    all_in_source: bool = False
+
+
+@app.get("/klaud/crawl/resources")
+async def klaud_crawl_resources(
+    source: str | None = None,
+    status: str | None = None,
+    q: str | None = None,
+    cursor: int | None = None,
+    limit: int = 500,
+    authorization: str | None = Header(default=None),
+):
+    """크롤 리소스 목록 — admin web UI 의 크롤 탭이 호출. id-cursor pagination."""
+    _require_admin(authorization)
+    rows = klaud_crawl_state.list_resources(
+        source=source, status=status, q=q, cursor=cursor, limit=limit,
+    )
+    next_cursor = rows[-1]["id"] if rows and len(rows) == min(limit, 5000) else None
+    return {"resources": rows, "next_cursor": next_cursor, "count": len(rows)}
+
+
+@app.get("/klaud/crawl/recent-changes")
+async def klaud_crawl_recent_changes(
+    since: str | None = None,
+    source: str | None = None,
+    limit: int = 500,
+    authorization: str | None = Header(default=None),
+):
+    """최근 변화 이벤트 — added / stale / purged / failed timeline."""
+    _require_admin(authorization)
+    events = klaud_crawl_state.recent_changes(since_iso=since, source=source, limit=limit)
+    return {"changes": events, "count": len(events)}
+
+
+@app.get("/klaud/crawl/stats")
+async def klaud_crawl_stats(authorization: str | None = Header(default=None)):
+    """전체 통계 — total / per_status / per_source / last_cron_tick_at."""
+    _require_admin(authorization)
+    return klaud_crawl_state.stats()
+
+
+@app.post("/klaud/crawl/purge")
+async def klaud_crawl_purge(
+    req: KlaudCrawlPurgeRequest,
+    authorization: str | None = Header(default=None),
+):
+    """purge — status='purged' + chunk_count=0. ChromaDB chunk 실 삭제는 Phase B."""
+    _require_admin(authorization)
+    if req.source not in klaud_crawl_state.VALID_SOURCES:
+        raise HTTPException(status_code=400, detail=f"invalid source: {req.source}")
+    if not req.resource_paths:
+        raise HTTPException(status_code=400, detail="resource_paths empty")
+    n = klaud_crawl_state.mark_purged(req.source, req.resource_paths)
+    log_event("klaud_crawl", "purge", f"{req.source}: {n} purged")
+    return {"purged": n}
+
+
+@app.post("/klaud/crawl/reindex")
+async def klaud_crawl_reindex(
+    req: KlaudCrawlReindexRequest,
+    authorization: str | None = Header(default=None),
+):
+    """reindex — status='stale'. 다음 cron-tick 에 재처리."""
+    _require_admin(authorization)
+    if req.source not in klaud_crawl_state.VALID_SOURCES:
+        raise HTTPException(status_code=400, detail=f"invalid source: {req.source}")
+    if not req.all_in_source and not req.resource_paths:
+        raise HTTPException(status_code=400, detail="either resource_paths or all_in_source required")
+    n = klaud_crawl_state.mark_stale(
+        req.source,
+        resource_paths=req.resource_paths,
+        all_in_source=req.all_in_source,
+    )
+    log_event("klaud_crawl", "reindex", f"{req.source}: {n} stale queued")
+    return {"queued": n}
 
 
 if __name__ == "__main__":

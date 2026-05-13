@@ -1008,3 +1008,114 @@ export const fetchKlaudStats = async (): Promise<KlaudStats> => {
   const r = await klaudFetch('/klaud/stats')
   return r.json()
 }
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// /klaud/crawl/* — 릴리스-C 크롤 상태 admin client
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export interface KlaudCrawlResource {
+  id: number
+  source: string
+  resource_path: string
+  resource_id: string | null
+  last_modified_upstream: string | null
+  last_indexed_at: string | null
+  content_hash: string | null
+  chunk_count: number
+  status: 'fresh' | 'stale' | 'failed' | 'purged'
+  error_msg: string | null
+}
+
+export interface KlaudCrawlResourcesResponse {
+  resources: KlaudCrawlResource[]
+  next_cursor: number | null
+  count: number
+}
+
+export interface KlaudCrawlEvent {
+  ts: string
+  source: string
+  resource_path: string
+  action: string
+  detail: string | null
+}
+
+export interface KlaudCrawlStats {
+  total: number
+  per_status: Record<string, number>
+  per_source: Record<string, number>
+  stale: number
+  failed: number
+  fresh: number
+  purged: number
+  last_cron_tick_at: string | null
+  db_path: string
+}
+
+export interface KlaudCrawlFilter {
+  source?: string
+  status?: string
+  q?: string
+  cursor?: number
+  limit?: number
+}
+
+export const fetchKlaudCrawlResources = async (
+  filter: KlaudCrawlFilter = {},
+): Promise<KlaudCrawlResourcesResponse> => {
+  const r = await klaudFetch(`/klaud/crawl/resources${buildQs(filter as Record<string, unknown>)}`)
+  return r.json()
+}
+
+export const fetchKlaudCrawlRecentChanges = async (
+  since?: string, source?: string, limit = 500,
+): Promise<{ changes: KlaudCrawlEvent[]; count: number }> => {
+  const r = await klaudFetch(
+    `/klaud/crawl/recent-changes${buildQs({ since, source, limit })}`,
+  )
+  return r.json()
+}
+
+export const fetchKlaudCrawlStats = async (): Promise<KlaudCrawlStats> => {
+  const r = await klaudFetch('/klaud/crawl/stats')
+  return r.json()
+}
+
+export const purgeKlaudCrawl = async (
+  source: string, resource_paths: string[],
+): Promise<{ purged: number }> => {
+  const token = getKlaudAdminToken()
+  const r = await fetch(`${API_BASE_URL}/klaud/crawl/purge`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ source, resource_paths }),
+  })
+  if (r.status === 401 || r.status === 503) {
+    throw new KlaudAuthError(r.status, await r.text().catch(() => ''))
+  }
+  if (!r.ok) throw new Error(`HTTP ${r.status}: ${await r.text().catch(() => '')}`)
+  return r.json()
+}
+
+export const reindexKlaudCrawl = async (
+  source: string, resource_paths?: string[], all_in_source = false,
+): Promise<{ queued: number }> => {
+  const token = getKlaudAdminToken()
+  const r = await fetch(`${API_BASE_URL}/klaud/crawl/reindex`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify({ source, resource_paths, all_in_source }),
+  })
+  if (r.status === 401 || r.status === 503) {
+    throw new KlaudAuthError(r.status, await r.text().catch(() => ''))
+  }
+  if (!r.ok) throw new Error(`HTTP ${r.status}: ${await r.text().catch(() => '')}`)
+  return r.json()
+}

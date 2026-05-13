@@ -7,10 +7,12 @@ import {
   type AssistantPromptMode,
 } from '../../panels/assistant-prompt-overrides';
 
-// 2026-05-12: ModePickerEmpty ⚙ 토글이 열어주는 설정 뷰. 어시스턴트 패널 안에서
-// 같은 자리에 swap (mode='settings').
+// 2026-05-12: ⚙ 토글이 여는 prompt override 뷰.
+// 2026-05-13: modal + 탭 (요약/리뷰) 으로 전면 리팩터. 사용자 피드백 — 어시스턴트
+// 패널 안에 있어서 textarea 가 너무 좁음. modal backdrop + 큰 컨테이너 + 한 번에 한
+// 모드만 노출 → textarea 가 화면 가용 영역 대부분 차지.
 //
-// 동작:
+// 동작은 동일:
 // 1. mount 시 summary/review preset 을 백엔드에서 병렬 fetch.
 // 2. 저장된 override 가 있으면 textarea 의 default = override, 없으면 = preset.
 // 3. 사용자가 수정 후 "저장" 누르면 localStorage 에 저장. textarea 가 preset 과
@@ -48,6 +50,7 @@ export function AssistantPromptSettings({ onBack, onClose }: Props) {
     summary: emptyState(),
     review: emptyState(),
   });
+  const [activeMode, setActiveMode] = useState<AssistantPromptMode>('summary');
   const [savingMode, setSavingMode] = useState<AssistantPromptMode | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
 
@@ -88,6 +91,15 @@ export function AssistantPromptSettings({ onBack, onClose }: Props) {
       cancelled = true;
     };
   }, []);
+
+  // ESC 로 닫기.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [onClose]);
 
   const updateDraft = (mode: AssistantPromptMode, value: string) => {
     setStates((cur) => ({ ...cur, [mode]: { ...cur[mode], draft: value } }));
@@ -131,112 +143,148 @@ export function AssistantPromptSettings({ onBack, onClose }: Props) {
     window.setTimeout(() => setFlash(null), 2500);
   };
 
+  const cur = states[activeMode];
+  const overridden = cur.saved !== null;
+  const presetVersion = cur.preset?.version;
+  const presetMatchesDraft =
+    cur.preset != null && cur.draft.trim() === cur.preset.prompt.trim();
+
   return (
     <div
-      className="assistant-prompt-settings"
-      data-testid="assistant-prompt-settings"
+      className="assistant-prompt-settings-backdrop"
+      data-testid="assistant-prompt-settings-backdrop"
+      onClick={onClose}
     >
-      <header className="assistant-prompt-settings-header">
-        <button
-          type="button"
-          className="doc-assistant-back"
-          onClick={onBack}
-          aria-label="모드 다시 선택"
-          title="모드 다시 선택"
-          data-testid="assistant-prompt-settings-back"
-        >
-          ←
-        </button>
-        <span className="assistant-prompt-settings-title">
-          <i className="codicon codicon-settings-gear" aria-hidden="true" /> 어시스턴트 프롬프트 설정
-        </span>
-        <button
-          type="button"
-          className="doc-assistant-close"
-          onClick={onClose}
-          aria-label="설정 닫기"
-          title="설정 닫기"
-          data-testid="assistant-prompt-settings-close"
-        >
-          <i className="codicon codicon-close" aria-hidden="true" />
-        </button>
-      </header>
+      <div
+        className="assistant-prompt-settings"
+        data-testid="assistant-prompt-settings"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <header className="assistant-prompt-settings-header">
+          <button
+            type="button"
+            className="doc-assistant-back"
+            onClick={onBack}
+            aria-label="모드 다시 선택"
+            title="모드 다시 선택"
+            data-testid="assistant-prompt-settings-back"
+          >
+            ←
+          </button>
+          <span className="assistant-prompt-settings-title">
+            <i className="codicon codicon-settings-gear" aria-hidden="true" /> 어시스턴트 프롬프트 설정
+          </span>
+          <button
+            type="button"
+            className="doc-assistant-close"
+            onClick={onClose}
+            aria-label="설정 닫기"
+            title="설정 닫기"
+            data-testid="assistant-prompt-settings-close"
+          >
+            <i className="codicon codicon-close" aria-hidden="true" />
+          </button>
+        </header>
 
-      <div className="assistant-prompt-settings-intro" data-testid="assistant-prompt-settings-intro">
-        요약 / 리뷰에 사용되는 기본 prompt 가 textarea 에 채워져 있습니다. 자유롭게
-        수정해서 저장하면 다음 호출부터 그 텍스트가 그대로 사용됩니다. 저장된 값은
-        이 PC 에만 보관됩니다 (localStorage).
-      </div>
-
-      {flash && (
-        <div className="assistant-prompt-settings-flash" data-testid="assistant-prompt-settings-flash">
-          {flash}
+        <div className="assistant-prompt-settings-intro" data-testid="assistant-prompt-settings-intro">
+          요약 / 리뷰에 사용되는 기본 prompt 가 textarea 에 채워져 있습니다. 자유롭게
+          수정해서 저장하면 다음 호출부터 그 텍스트가 그대로 사용됩니다. 저장된 값은
+          이 PC 에만 보관됩니다 (localStorage).
         </div>
-      )}
 
-      <div className="assistant-prompt-settings-body">
-        {MODES.map((m) => {
-          const s = states[m.key];
-          const overridden = s.saved !== null;
-          const presetVersion = s.preset?.version;
-          const presetMatchesDraft =
-            s.preset != null && s.draft.trim() === s.preset.prompt.trim();
-          return (
-            <section
-              key={m.key}
-              className="assistant-prompt-mode"
-              data-testid={`assistant-prompt-mode-${m.key}`}
+        {/* 2026-05-13: 모드 탭 — 한 번에 한 모드만 노출해 textarea 공간 최대 확보. */}
+        <div
+          className="assistant-prompt-settings-tabs"
+          data-testid="assistant-prompt-settings-tabs"
+          role="tablist"
+        >
+          {MODES.map((m) => {
+            const s = states[m.key];
+            const isActive = activeMode === m.key;
+            const hasOverride = s.saved !== null;
+            return (
+              <button
+                key={m.key}
+                type="button"
+                role="tab"
+                aria-selected={isActive}
+                className={`assistant-prompt-settings-tab${isActive ? ' active' : ''}`}
+                onClick={() => setActiveMode(m.key)}
+                data-testid={`assistant-prompt-settings-tab-${m.key}`}
+              >
+                <span aria-hidden="true">{m.icon}</span> {m.label}
+                {hasOverride && (
+                  <span
+                    className="assistant-prompt-settings-tab-dot"
+                    aria-label="사용자 override 사용 중"
+                    title="사용자 override 사용 중"
+                  />
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {flash && (
+          <div className="assistant-prompt-settings-flash" data-testid="assistant-prompt-settings-flash">
+            {flash}
+          </div>
+        )}
+
+        <section
+          className="assistant-prompt-mode"
+          data-testid={`assistant-prompt-mode-${activeMode}`}
+        >
+          <div className="assistant-prompt-mode-head">
+            <span
+              className="assistant-prompt-mode-meta"
+              data-testid={`assistant-prompt-mode-meta-${activeMode}`}
             >
-              <div className="assistant-prompt-mode-head">
-                <span className="assistant-prompt-mode-label">
-                  <span aria-hidden="true">{m.icon}</span> {m.label}
-                </span>
-                <span className="assistant-prompt-mode-meta" data-testid={`assistant-prompt-mode-meta-${m.key}`}>
-                  {s.loading
-                    ? 'preset 불러오는 중…'
-                    : overridden
-                      ? `사용자 override 사용 중${presetVersion ? ` · preset ${presetVersion}` : ''}`
-                      : `preset 사용 중${presetVersion ? ` (${presetVersion})` : ''}`}
-                </span>
-              </div>
-              {s.error && (
-                <div className="assistant-prompt-mode-error" data-testid={`assistant-prompt-mode-error-${m.key}`}>
-                  ⚠️ {s.error}
-                </div>
-              )}
-              <textarea
-                className="assistant-prompt-mode-textarea"
-                value={s.draft}
-                onChange={(e) => updateDraft(m.key, e.target.value)}
-                spellCheck={false}
-                rows={14}
-                placeholder={s.loading ? '불러오는 중…' : 'prompt 가 비어있습니다 — preset 을 받아오지 못했습니다.'}
-                data-testid={`assistant-prompt-mode-textarea-${m.key}`}
-                disabled={s.loading}
-              />
-              <div className="assistant-prompt-mode-actions">
-                <button
-                  type="button"
-                  className="assistant-prompt-mode-save"
-                  onClick={() => handleSave(m.key)}
-                  disabled={s.loading || !s.preset || savingMode === m.key}
-                  data-testid={`assistant-prompt-mode-save-${m.key}`}
-                >
-                  {presetMatchesDraft && overridden ? 'preset 으로 저장' : '저장'}
-                </button>
-                <button
-                  type="button"
-                  className="assistant-prompt-mode-reset"
-                  onClick={() => handleReset(m.key)}
-                  disabled={s.loading || !s.preset || !overridden}
-                  data-testid={`assistant-prompt-mode-reset-${m.key}`}
-                >
-                  preset 으로 되돌리기
-                </button>
-              </div>
-            </section>
-          );
-        })}
+              {cur.loading
+                ? 'preset 불러오는 중…'
+                : overridden
+                  ? `사용자 override 사용 중${presetVersion ? ` · preset ${presetVersion}` : ''}`
+                  : `preset 사용 중${presetVersion ? ` (${presetVersion})` : ''}`}
+            </span>
+          </div>
+          {cur.error && (
+            <div
+              className="assistant-prompt-mode-error"
+              data-testid={`assistant-prompt-mode-error-${activeMode}`}
+            >
+              ⚠️ {cur.error}
+            </div>
+          )}
+          <textarea
+            className="assistant-prompt-mode-textarea"
+            value={cur.draft}
+            onChange={(e) => updateDraft(activeMode, e.target.value)}
+            spellCheck={false}
+            placeholder={cur.loading ? '불러오는 중…' : 'prompt 가 비어있습니다 — preset 을 받아오지 못했습니다.'}
+            data-testid={`assistant-prompt-mode-textarea-${activeMode}`}
+            disabled={cur.loading}
+          />
+          <div className="assistant-prompt-mode-actions">
+            <button
+              type="button"
+              className="assistant-prompt-mode-save"
+              onClick={() => handleSave(activeMode)}
+              disabled={cur.loading || !cur.preset || savingMode === activeMode}
+              data-testid={`assistant-prompt-mode-save-${activeMode}`}
+            >
+              {presetMatchesDraft && overridden ? 'preset 으로 저장' : '저장'}
+            </button>
+            <button
+              type="button"
+              className="assistant-prompt-mode-reset"
+              onClick={() => handleReset(activeMode)}
+              disabled={cur.loading || !cur.preset || !overridden}
+              data-testid={`assistant-prompt-mode-reset-${activeMode}`}
+            >
+              preset 으로 되돌리기
+            </button>
+          </div>
+        </section>
       </div>
     </div>
   );

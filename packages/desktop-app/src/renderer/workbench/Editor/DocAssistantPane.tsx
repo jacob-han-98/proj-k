@@ -57,13 +57,39 @@ export function DocAssistantPane({
 
   if (mode === 'pick') {
     if (settingsOpen) {
+      // 2026-05-13: modal 로 전환 — AssistantPromptSettings 가 자체 backdrop 으로 띄움.
+      // mode-picker 는 그대로 두고 그 위에 modal overlay. 닫으면 settings 만 사라짐.
       return (
-        <aside className="doc-assistant-pane" data-testid="doc-assistant-pane" data-mode="settings">
+        <>
+          <aside className="doc-assistant-pane" data-testid="doc-assistant-pane" data-mode="pick">
+            <header className="doc-assistant-header">
+              <span className="doc-assistant-title">
+                <i className="codicon codicon-sparkle" aria-hidden="true" /> 어시스턴트 — {title}
+              </span>
+              <button
+                type="button"
+                className="doc-assistant-close"
+                onClick={onClose}
+                aria-label="어시스턴트 닫기"
+                title="어시스턴트 닫기"
+                data-testid="doc-assistant-close"
+              >
+                <i className="codicon codicon-close" aria-hidden="true" />
+              </button>
+            </header>
+            <div className="doc-assistant-body">
+              <ModePickerEmpty
+                title={title}
+                onOpenSettings={() => setSettingsOpen(true)}
+                onPickMode={() => undefined}
+              />
+            </div>
+          </aside>
           <AssistantPromptSettings
             onBack={() => setSettingsOpen(false)}
-            onClose={onClose}
+            onClose={() => setSettingsOpen(false)}
           />
-        </aside>
+        </>
       );
     }
     return (

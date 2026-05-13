@@ -3040,12 +3040,67 @@ html, body, #root { height: 100%; margin: 0; padding: 0; background: var(--bg); 
   color: var(--text);
 }
 
-/* 2026-05-12: AssistantPromptSettings — ⚙ 토글이 여는 prompt override 뷰. */
+/* 2026-05-12: AssistantPromptSettings — ⚙ 토글이 여는 prompt override 뷰.
+   2026-05-13: modal + 탭 (요약/리뷰) 로 리팩터. 패널 안에 좁게 stack 되던 것을
+   화면 가운데 큰 modal 로 띄움 + 한 모드만 노출. textarea 가 화면 가용 영역 차지. */
+.assistant-prompt-settings-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
 .assistant-prompt-settings {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  width: min(960px, 92vw);
+  height: min(720px, 88vh);
   display: flex;
   flex-direction: column;
-  height: 100%;
   min-height: 0;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+}
+
+.assistant-prompt-settings-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 0 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--tab-inactiveBackground, var(--bg));
+}
+
+.assistant-prompt-settings-tab {
+  all: unset;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  font-size: 12px;
+  color: var(--text-dim);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: color 0.08s ease, border-color 0.08s ease;
+}
+.assistant-prompt-settings-tab:hover {
+  color: var(--text);
+}
+.assistant-prompt-settings-tab.active {
+  color: var(--text);
+  border-bottom-color: var(--accent);
+  font-weight: 600;
+}
+.assistant-prompt-settings-tab-dot {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  margin-left: 4px;
 }
 
 .assistant-prompt-settings-header {
@@ -3094,13 +3149,12 @@ html, body, #root { height: 100%; margin: 0; padding: 0; background: var(--bg); 
 }
 
 .assistant-prompt-mode {
+  flex: 1 1 auto;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--bg-elev);
+  gap: 8px;
+  padding: 12px 14px;
+  min-height: 0;
 }
 
 .assistant-prompt-mode-head {
@@ -3130,16 +3184,17 @@ html, body, #root { height: 100%; margin: 0; padding: 0; background: var(--bg); 
 }
 
 .assistant-prompt-mode-textarea {
+  flex: 1 1 auto;
   width: 100%;
   box-sizing: border-box;
-  resize: vertical;
-  min-height: 160px;
-  padding: 8px 10px;
+  resize: none;
+  min-height: 240px;
+  padding: 10px 12px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 12px;
   line-height: 1.5;
   color: var(--text);
-  background: var(--bg);
+  background: var(--bg-elev);
   border: 1px solid var(--border);
   border-radius: 4px;
 }

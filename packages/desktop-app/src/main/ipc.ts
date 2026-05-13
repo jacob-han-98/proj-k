@@ -37,6 +37,8 @@ import { recordLog, submitReport } from './klaud-log-sink';
 import type { KlaudLogEntry, KlaudReportPayload } from '../shared/types';
 import { getCredsInfo as getGoogleCredsInfo, clearGoogleCreds } from './google-auth';
 import { interactiveLogin as interactiveGoogleLogin } from './google-oauth';
+import { getCredsInfo as getAtlassianCredsInfo, clearAtlassianCreds } from './atlassian-auth';
+import { interactiveLogin as interactiveAtlassianLogin } from './atlassian-oauth';
 import { dialog } from 'electron';
 import { readFileSync } from 'node:fs';
 import { basename } from 'node:path';
@@ -568,6 +570,18 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
   });
   ipcMain.handle(IPC.GOOGLE_SIGN_OUT, async () => {
     await clearGoogleCreds();
+    return { ok: true };
+  });
+  // 2026-05-13 Final-3: Atlassian OAuth 3LO.
+  ipcMain.handle(IPC.ATLASSIAN_AUTH_START, async () => {
+    const w = getWindow();
+    return interactiveAtlassianLogin(w);
+  });
+  ipcMain.handle(IPC.ATLASSIAN_CREDS_GET, async () => {
+    return getAtlassianCredsInfo();
+  });
+  ipcMain.handle(IPC.ATLASSIAN_SIGN_OUT, async () => {
+    await clearAtlassianCreds();
     return { ok: true };
   });
 

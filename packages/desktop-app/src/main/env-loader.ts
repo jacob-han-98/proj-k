@@ -44,25 +44,52 @@ export function loadDevEnvFromFiles(): void {
   const envDir = findEnvDir();
   if (!envDir) return;
 
-  let injected = 0;
+  let injected: string[] = [];
   for (const name of readdirSync(envDir)) {
-    if (!name.endsWith('.json')) continue;
-    // Google Cloud Console 이 다운받게 하는 파일명 패턴.
-    if (!name.startsWith('client_secret_') || !name.includes('.apps.googleusercontent.com')) continue;
-    try {
-      const raw = readFileSync(join(envDir, name), 'utf-8');
-      const data = JSON.parse(raw) as GcpInstalledCreds;
-      const clientId = data.installed?.client_id ?? data.web?.client_id;
-      if (clientId && !process.env.PROJK_GOOGLE_CLIENT_ID) {
-        process.env.PROJK_GOOGLE_CLIENT_ID = clientId;
-        injected += 1;
-        // client_secret 은 의도적으로 무시 — Desktop app PKCE 흐름은 secret 미사용.
+    // 1. Google Cloud Console GCP OAuth credentials JSON.
+    if (name.endsWith('.json') && name.startsWith('client_secret_') && name.includes('.apps.googleusercontent.com')) {
+      try {
+        const raw = readFileSync(join(envDir, name), 'utf-8');
+        const data = JSON.parse(raw) as GcpInstalledCreds;
+        const clientId = data.installed?.client_id ?? data.web?.client_id;
+        if (clientId && !process.env.PROJK_GOOGLE_CLIENT_ID) {
+          process.env.PROJK_GOOGLE_CLIENT_ID = clientId;
+          injected.push('PROJK_GOOGLE_CLIENT_ID');
+          // client_secret 은 의도적으로 무시 — Desktop app PKCE 흐름은 secret 미사용.
+        }
+      } catch (e) {
+        console.warn(`[env-loader] failed to parse env/${name}:`, (e as Error).message);
       }
-    } catch (e) {
-      console.warn(`[env-loader] failed to parse env/${name}:`, (e as Error).message);
+      continue;
+    }
+    // 2. Atlassian OAuth credentials (수동 파일 — Atlassian Console 에는 JSON 다운로드 없음).
+    //    형식: 단순 KEY=VALUE 텍스트. atlassian.env 라는 이름 권장.
+    //    파일 안의 PROJK_ATLASSIAN_CLIENT_ID + PROJK_ATLASSIAN_CLIENT_SECRET 줄을 env 로 inject.
+    if (name === 'atlassian.env' || name === '.atlassian.env') {
+      try {
+        const raw = readFileSync(join(envDir, name), 'utf-8');
+        for (const line of raw.split(/\r?\n/)) {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed.startsWith('#')) continue;
+          const eq = trimmed.indexOf('=');
+          if (eq <= 0) continue;
+          const key = trimmed.slice(0, eq).trim();
+          const value = trimmed.slice(eq + 1).trim();
+          if (
+            (key === 'PROJK_ATLASSIAN_CLIENT_ID' || key === 'PROJK_ATLASSIAN_CLIENT_SECRET') &&
+            !process.env[key] &&
+            value
+          ) {
+            process.env[key] = value;
+            injected.push(key);
+          }
+        }
+      } catch (e) {
+        console.warn(`[env-loader] failed to parse env/${name}:`, (e as Error).message);
+      }
     }
   }
-  if (injected > 0) {
-    console.log(`[env-loader] dev env loaded — PROJK_GOOGLE_CLIENT_ID injected from env/`);
+  if (injected.length > 0) {
+    console.log(`[env-loader] dev env loaded — injected: ${injected.join(', ')}`);
   }
 }

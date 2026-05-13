@@ -263,6 +263,10 @@ export const IPC = {
   GOOGLE_AUTH_START: 'google:auth:start',
   GOOGLE_CREDS_GET: 'google:creds:get',
   GOOGLE_SIGN_OUT: 'google:sign-out',
+  // 2026-05-13 Final-3: Atlassian OAuth 3LO.
+  ATLASSIAN_AUTH_START: 'atlassian:auth:start',
+  ATLASSIAN_CREDS_GET: 'atlassian:creds:get',
+  ATLASSIAN_SIGN_OUT: 'atlassian:sign-out',
 } as const;
 
 // 2026-05-13 릴리스-B: renderer 에 노출되는 Google 자격 메타. 토큰 자체는 main 전용.
@@ -442,6 +446,9 @@ export interface AppSettings {
 
   // 2026-05-13: 리뷰 모드 진입 시 그 탭 자동 고정. default ON. false 만 명시 저장.
   autoPinOnReview?: boolean;
+
+  // 2026-05-13 Final-3: Atlassian OAuth (Confluence apiToken 수동 입력 대체).
+  atlassianOAuthClientId?: string;
 }
 
 // 액티비티 바 5번 ("내 작업 중 문서") — P4 체크아웃 한 항목.

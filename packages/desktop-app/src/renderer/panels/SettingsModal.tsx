@@ -91,6 +91,8 @@ const FIELD_META: FieldMeta[] = [
   { category: 'auth', testid: 'settings-conf-email', label: 'Confluence Email', hint: 'Atlassian API token 발급 계정', keywords: ['confluence'] },
   { category: 'auth', testid: 'settings-conf-token', label: 'Confluence API Token', hint: 'safeStorage 로 암호화 저장', keywords: ['confluence'] },
   { category: 'auth', testid: 'settings-conf-base-url', label: 'Confluence Base URL', keywords: ['confluence'] },
+  { category: 'auth', testid: 'settings-atlassian-client-id', label: 'Atlassian OAuth Client ID', hint: 'developer.atlassian.com/console — OAuth 2.0 (3LO)', keywords: ['atlassian', 'oauth', '3lo', 'confluence'] },
+  { category: 'auth', testid: 'settings-atlassian-status', label: 'Atlassian 로그인 상태', keywords: ['atlassian', 'sso'] },
   { category: 'appearance', testid: 'settings-viewer-mode', label: 'Excel Viewer 모드', hint: 'onlyoffice (default) / sp', keywords: ['excel'] },
   { category: 'appearance', testid: 'settings-onlyoffice-url', label: 'OnlyOffice Document Server URL', keywords: ['excel'] },
   { category: 'appearance', testid: 'settings-auto-pin-on-review', label: '리뷰 모드 진입 시 자동 탭 고정', hint: '좌측 정렬 + 하이라이트', keywords: ['tab', 'pin'] },
@@ -153,6 +155,19 @@ export function SettingsModal({ initialEmail, initialBaseUrl, onClose, onSaved }
   const [googleAuthing, setGoogleAuthing] = useState(false);
   const [googleAuthMsg, setGoogleAuthMsg] = useState<string | null>(null);
 
+  // 2026-05-13 Final-3: Atlassian OAuth 3LO.
+  const [atlassianOAuthClientId, setAtlassianOAuthClientId] = useState('');
+  const [atlassianCreds, setAtlassianCreds] = useState<{
+    site_url: string;
+    site_name: string;
+    display_name?: string;
+    email?: string;
+    hasToken: boolean;
+    expiresInSeconds: number;
+  } | null>(null);
+  const [atlassianAuthing, setAtlassianAuthing] = useState(false);
+  const [atlassianAuthMsg, setAtlassianAuthMsg] = useState<string | null>(null);
+
   // ---- VSCode 스타일 nav state ----
   const [activeCategory, setActiveCategory] = useState<CategoryId>('general');
   const [query, setQuery] = useState('');
@@ -179,6 +194,36 @@ export function SettingsModal({ initialEmail, initialBaseUrl, onClose, onSaved }
     } catch {
       setGoogleCreds(null);
     }
+  };
+  const refreshAtlassianCreds = async () => {
+    try {
+      const c = await window.projk.atlassian.getCreds();
+      setAtlassianCreds(c);
+    } catch {
+      setAtlassianCreds(null);
+    }
+  };
+  const runAtlassianAuth = async () => {
+    setAtlassianAuthing(true);
+    setAtlassianAuthMsg(null);
+    try {
+      const r = await window.projk.atlassian.authStart();
+      if (r.ok) {
+        setAtlassianAuthMsg(`✓ 로그인 완료 — ${r.site_url}`);
+        await refreshAtlassianCreds();
+      } else {
+        setAtlassianAuthMsg(`✗ ${r.reason ?? '실패'}`);
+      }
+    } catch (e) {
+      setAtlassianAuthMsg(`✗ ${(e as Error).message}`);
+    } finally {
+      setAtlassianAuthing(false);
+    }
+  };
+  const runAtlassianSignOut = async () => {
+    await window.projk.atlassian.signOut();
+    setAtlassianAuthMsg('로그아웃 됨.');
+    await refreshAtlassianCreds();
   };
   const runGoogleAuth = async () => {
     setGoogleAuthing(true);
@@ -227,8 +272,10 @@ export function SettingsModal({ initialEmail, initialBaseUrl, onClose, onSaved }
       setOnlyOfficeUrl(s.onlyOfficeUrl ?? DEFAULT_ONLYOFFICE_URL_HINT);
       setGoogleOAuthClientId(s.googleOAuthClientId ?? '');
       setAutoPinOnReview(s.autoPinOnReview !== false);
+      setAtlassianOAuthClientId(s.atlassianOAuthClientId ?? '');
     });
     void refreshGoogleCreds();
+    void refreshAtlassianCreds();
   }, []);
 
   const runP4Discover = async () => {
@@ -287,6 +334,7 @@ export function SettingsModal({ initialEmail, initialBaseUrl, onClose, onSaved }
         googleOAuthClientId: googleOAuthClientId.trim() || undefined,
         googleWorkspaceDomain: undefined,
         autoPinOnReview: autoPinOnReview ? undefined : false,
+        atlassianOAuthClientId: atlassianOAuthClientId.trim() || undefined,
       });
       // store 동기화 (autoPinOnReview)
       useWorkbenchStore.getState().setAutoPinOnReview(autoPinOnReview);
@@ -572,6 +620,55 @@ export function SettingsModal({ initialEmail, initialBaseUrl, onClose, onSaved }
           <div className={fieldClass('settings-conf-base-url')}>
             <label htmlFor="settings-conf-base-url">Base URL</label>
             <input id="settings-conf-base-url" data-testid="settings-conf-base-url" value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder={DEFAULT_BASE_URL} spellCheck={false} />
+          </div>
+        )}
+
+        {/* 2026-05-13 Final-3: Atlassian OAuth 3LO — apiToken 대체 (Confluence 자동 인증). */}
+        <div className="settings-subsection" style={{ marginTop: 16 }}>Atlassian OAuth (Confluence 자동 인증, apiToken 대체)</div>
+        {shouldShowField('settings-atlassian-client-id') && (
+          <div className={fieldClass('settings-atlassian-client-id')}>
+            <label htmlFor="settings-atlassian-client-id">OAuth Client ID</label>
+            <input
+              id="settings-atlassian-client-id"
+              data-testid="settings-atlassian-client-id"
+              value={atlassianOAuthClientId}
+              onChange={(e) => setAtlassianOAuthClientId(e.target.value)}
+              placeholder="developer.atlassian.com/console — OAuth 2.0 (3LO) integration"
+              spellCheck={false}
+            />
+            <div className="settings-hint">
+              비우면 <code>PROJK_ATLASSIAN_CLIENT_ID</code> env (예: <code>env/atlassian.env</code>). Client Secret 은 env 만 (보안). 미설정 시 Atlassian SSO 비활성 — 기존 email + apiToken 흐름 fallback.
+            </div>
+          </div>
+        )}
+        {shouldShowField('settings-atlassian-status') && (
+          <div className={fieldClass('settings-atlassian-status')}>
+            <div className="settings-row-inline" data-testid="settings-atlassian-auth-row">
+              {atlassianCreds && atlassianCreds.hasToken ? (
+                <>
+                  <span className="settings-hint" data-testid="settings-atlassian-status" style={{ fontSize: 12 }}>
+                    ✓ <strong>{atlassianCreds.display_name ?? atlassianCreds.email ?? atlassianCreds.site_name}</strong>
+                    <span style={{ color: 'var(--text-dim)', marginLeft: 6 }}>({atlassianCreds.site_url})</span>
+                    {atlassianCreds.expiresInSeconds < 0 ? ' — 토큰 만료됨, 다시 로그인' : ''}
+                  </span>
+                  <button type="button" onClick={() => void runAtlassianSignOut()} data-testid="settings-atlassian-signout" className="settings-btn-secondary">
+                    로그아웃
+                  </button>
+                </>
+              ) : (
+                <>
+                  <span className="settings-hint" data-testid="settings-atlassian-status" style={{ fontSize: 12 }}>
+                    로그인 안 됨 — Confluence 접근은 위 email + apiToken 사용
+                  </span>
+                  <button type="button" onClick={() => void runAtlassianAuth()} disabled={atlassianAuthing} data-testid="settings-atlassian-signin" className="settings-btn-secondary">
+                    {atlassianAuthing ? '로그인 중…' : 'Atlassian 로그인'}
+                  </button>
+                </>
+              )}
+            </div>
+            {atlassianAuthMsg && (
+              <div className="settings-hint" data-testid="settings-atlassian-auth-msg">{atlassianAuthMsg}</div>
+            )}
           </div>
         )}
       </>

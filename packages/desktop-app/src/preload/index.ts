@@ -243,6 +243,21 @@ const api = {
     signOut: (): Promise<{ ok: boolean }> => ipcRenderer.invoke(IPC.GOOGLE_SIGN_OUT),
   },
 
+  // 2026-05-13 Final-3: Atlassian OAuth 3LO (Confluence apiToken 대체).
+  atlassian: {
+    authStart: (): Promise<{ ok: boolean; reason?: string; site_url?: string; display_name?: string; email?: string }> =>
+      ipcRenderer.invoke(IPC.ATLASSIAN_AUTH_START),
+    getCreds: (): Promise<{
+      site_url: string;
+      site_name: string;
+      display_name?: string;
+      email?: string;
+      hasToken: boolean;
+      expiresInSeconds: number;
+    } | null> => ipcRenderer.invoke(IPC.ATLASSIAN_CREDS_GET),
+    signOut: (): Promise<{ ok: boolean }> => ipcRenderer.invoke(IPC.ATLASSIAN_SIGN_OUT),
+  },
+
   // ---------- OnlyOffice viewer (PoC 0.1.53+) ----------
   // settings.viewerMode === 'onlyoffice' 일 때 CenterPane 의 OnlyOfficeSheetView 가 호출.
   // main 이 WSL serve.py 를 spawn/restart 후 webview 에 띄울 임베드 URL 반환.

@@ -19,12 +19,18 @@ test.beforeEach(async ({ page }) => {
         const real = window.projk;
         window.__klaudReportLastPayload = null;
         window.__klaudReportNextResponse = { ok: true };
+        window.__klaudCaptureNextResponse = { ok: true, screenshotB64: 'iVBORw0KGgoAAAANSUhEUg==', bytes: 18, skipped: false };
+        window.__klaudCaptureCallCount = 0;
         if (real) {
           real.klaudLog = {
             push: async () => ({ ok: true }),
             submitReport: async (payload) => {
               window.__klaudReportLastPayload = payload;
               return window.__klaudReportNextResponse;
+            },
+            captureScreenshot: async () => {
+              window.__klaudCaptureCallCount += 1;
+              return window.__klaudCaptureNextResponse;
             },
           };
         }
@@ -88,6 +94,63 @@ test('전송 실패 시 — 실패 안내 + 모달 유지', async ({ page }) => 
   await expect(page.getByTestId('report-modal-result')).toContainText('klaudLogSinkUrl unset');
   // 모달은 유지 — 사용자가 재시도 or 취소 결정.
   await expect(page.getByTestId('report-modal')).toBeVisible();
+});
+
+test('screenshot 토글 OFF (default) → captureScreenshot 호출 X, payload 에 screenshotB64 미포함', async ({ page }) => {
+  await page.evaluate(() => {
+    (window as unknown as { __klaudCaptureCallCount: number }).__klaudCaptureCallCount = 0;
+  });
+  await page.getByTestId('topbar-report').click();
+  await page.getByTestId('report-modal-note').fill('screenshot 없이 전송');
+  await page.getByTestId('report-modal-submit').click();
+  await expect(page.getByTestId('report-modal-result')).toContainText('전송되었습니다');
+
+  const cap = await page.evaluate(() => (window as unknown as { __klaudCaptureCallCount: number }).__klaudCaptureCallCount);
+  expect(cap).toBe(0);
+  const payload = (await page.evaluate(() =>
+    (window as unknown as { __klaudReportLastPayload: { screenshotB64?: string } | null }).__klaudReportLastPayload,
+  )) as { screenshotB64?: string };
+  expect(payload.screenshotB64).toBeUndefined();
+});
+
+test('screenshot 토글 ON → captureScreenshot 호출 + payload 에 b64 첨부', async ({ page }) => {
+  await page.evaluate(() => {
+    (window as unknown as { __klaudCaptureCallCount: number }).__klaudCaptureCallCount = 0;
+  });
+  await page.getByTestId('topbar-report').click();
+  await page.getByTestId('report-modal-note').fill('스크린샷 첨부 테스트');
+  await page.getByTestId('report-modal-screenshot-toggle').check();
+  await page.getByTestId('report-modal-submit').click();
+  await expect(page.getByTestId('report-modal-result')).toContainText('전송되었습니다');
+
+  const cap = await page.evaluate(() => (window as unknown as { __klaudCaptureCallCount: number }).__klaudCaptureCallCount);
+  expect(cap).toBe(1);
+  const payload = (await page.evaluate(() =>
+    (window as unknown as { __klaudReportLastPayload: { screenshotB64?: string } | null }).__klaudReportLastPayload,
+  )) as { screenshotB64?: string };
+  expect(payload.screenshotB64).toBe('iVBORw0KGgoAAAANSUhEUg==');
+});
+
+test('screenshot 1MB 초과 시 (skipped:true, b64 빈 문자열) → payload 에 b64 미포함, 전송은 진행', async ({ page }) => {
+  await page.evaluate(() => {
+    (window as unknown as { __klaudCaptureNextResponse: unknown }).__klaudCaptureNextResponse = {
+      ok: true,
+      screenshotB64: '',
+      bytes: 2_000_000,
+      skipped: true,
+    };
+  });
+  await page.getByTestId('topbar-report').click();
+  await page.getByTestId('report-modal-note').fill('큰 스크린샷');
+  await page.getByTestId('report-modal-screenshot-toggle').check();
+  await page.getByTestId('report-modal-submit').click();
+  await expect(page.getByTestId('report-modal-result')).toContainText('전송되었습니다');
+
+  const payload = (await page.evaluate(() =>
+    (window as unknown as { __klaudReportLastPayload: { screenshotB64?: string } | null }).__klaudReportLastPayload,
+  )) as { screenshotB64?: string };
+  // 빈 문자열은 frontend 가 silent skip — payload 의 screenshotB64 는 undefined.
+  expect(payload.screenshotB64).toBeUndefined();
 });
 
 test('ESC / 취소 → 모달 닫힘 + submitReport 호출 X', async ({ page }) => {

@@ -252,6 +252,9 @@ export const IPC = {
   // - KLAUD_REPORT_SUBMIT: 제보 버튼 클릭 시 사용자 노트 + 현재 컨텍스트 → main → backend.
   KLAUD_LOG_PUSH: 'klaud:log:push',
   KLAUD_REPORT_SUBMIT: 'klaud:report:submit',
+  // 제보 모달에서 첨부 체크 시 main 이 mainWindow.webContents.capturePage() 로 PNG 캡처
+  // → 1MB 이하면 base64 반환, 초과면 빈 문자열 반환 (frontend 가 silent skip).
+  KLAUD_CAPTURE_SCREENSHOT: 'klaud:capture-screenshot',
 } as const;
 
 // main → renderer 단축키 forward payload. webview 안에서 발생한 키도 우리 앱 단축키면

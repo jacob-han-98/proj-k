@@ -224,6 +224,8 @@ const api = {
       screenshotB64?: string;
     }): Promise<{ ok: boolean; reason?: string }> =>
       ipcRenderer.invoke(IPC.KLAUD_REPORT_SUBMIT, payload),
+    captureScreenshot: (): Promise<{ ok: boolean; reason?: string; screenshotB64?: string; bytes?: number; skipped?: boolean }> =>
+      ipcRenderer.invoke(IPC.KLAUD_CAPTURE_SCREENSHOT),
   },
 
   // ---------- OnlyOffice viewer (PoC 0.1.53+) ----------

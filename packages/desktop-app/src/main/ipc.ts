@@ -556,6 +556,23 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     const screenshot = typeof payload.screenshotB64 === 'string' ? payload.screenshotB64 : undefined;
     return submitReport({ note, context, screenshotB64: screenshot });
   });
+  // 제보 모달이 첨부 체크 시 호출. 1MB 초과 PNG 는 backend storage 부담 + b64 인플레이션
+  // 고려해 빈 문자열로 응답 (frontend 가 silent skip — 사용자에게 별도 알림 X).
+  ipcMain.handle(IPC.KLAUD_CAPTURE_SCREENSHOT, async () => {
+    const w = getWindow();
+    if (!w) return { ok: false, reason: 'window unavailable' };
+    try {
+      const image = await w.webContents.capturePage();
+      const png = image.toPNG();
+      if (png.length > 1024 * 1024) {
+        // 1MB 이상 — backend 권장 한도 초과. 빈 문자열로 반환 (silent skip).
+        return { ok: true, screenshotB64: '', bytes: png.length, skipped: true };
+      }
+      return { ok: true, screenshotB64: png.toString('base64'), bytes: png.length, skipped: false };
+    } catch (e) {
+      return { ok: false, reason: (e as Error).message };
+    }
+  });
 
   ipcMain.handle(IPC.SETTINGS_GET, async () => getSettings());
   ipcMain.handle(IPC.SETTINGS_SET, async (_e, patch: Partial<AppSettings>) => {

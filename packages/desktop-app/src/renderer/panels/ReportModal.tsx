@@ -19,6 +19,9 @@ export function ReportModal({ onClose }: Props) {
   const [note, setNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; reason?: string } | null>(null);
+  // 2026-05-13: backend (b0157ad) 가 screenshot_b64 별도 column 으로 저장. 1MB 이하 권장.
+  // main webContents.capturePage 가 main process 에서만 가능 → IPC 로 호출.
+  const [attachScreenshot, setAttachScreenshot] = useState(false);
 
   const activeTabId = useWorkbenchStore((s) => s.activeTabId);
   const openTabs = useWorkbenchStore((s) => s.openTabs);
@@ -64,9 +67,20 @@ export function ReportModal({ onClose }: Props) {
     setSubmitting(true);
     setResult(null);
     try {
+      let screenshotB64: string | undefined;
+      if (attachScreenshot) {
+        // 모달 자체가 화면 위에 있어서 캡처에 모달이 같이 찍히지만, PoC 단계는 OK.
+        // 필요해지면 모달을 잠깐 숨긴 뒤 캡처하는 흐름 추가.
+        const cap = await window.projk.klaudLog.captureScreenshot();
+        if (cap.ok && cap.screenshotB64) {
+          screenshotB64 = cap.screenshotB64;
+        }
+        // skipped (1MB 초과) 거나 실패 → screenshot 없이 전송. 사용자 흐름 막지 않음.
+      }
       const r = await window.projk.klaudLog.submitReport({
         note: trimmed,
         context: buildContext(),
+        screenshotB64,
       });
       setResult(r);
       if (r.ok) {
@@ -141,6 +155,20 @@ export function ReportModal({ onClose }: Props) {
               </li>
             </ul>
           </div>
+
+          <label
+            className="report-modal-screenshot-toggle"
+            data-testid="report-modal-screenshot-toggle-label"
+          >
+            <input
+              type="checkbox"
+              data-testid="report-modal-screenshot-toggle"
+              checked={attachScreenshot}
+              onChange={(e) => setAttachScreenshot(e.target.checked)}
+              disabled={submitting}
+            />
+            <span>현재 화면 스크린샷도 첨부 (1MB 초과 시 자동 생략)</span>
+          </label>
 
           {result && (
             <div

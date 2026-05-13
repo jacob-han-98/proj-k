@@ -37,7 +37,8 @@ export function SettingsModal({ initialEmail, initialBaseUrl, onClose, onSaved }
   // 2026-05-13 릴리스-A2: 통합 로그 sink + 제보 channel.
   const [klaudLogSinkUrl, setKlaudLogSinkUrl] = useState('');
   // default true — settings 미설정 사용자는 자동 활성. opt-out 만 명시 저장.
-  const [reportingEnabled, setReportingEnabled] = useState(true);
+  // backend (agent-sdk-poc 2026-05-13 b0157ad) 의 권장 필드명과 정렬.
+  const [klaudTelemetryEnabled, setKlaudTelemetryEnabled] = useState(true);
   const [email, setEmail] = useState(initialEmail ?? '');
   const [apiToken, setApiToken] = useState('');
   const [baseUrl, setBaseUrl] = useState(initialBaseUrl ?? DEFAULT_BASE_URL);
@@ -79,7 +80,7 @@ export function SettingsModal({ initialEmail, initialBaseUrl, onClose, onSaved }
       setLogCollectorUrl(s.logCollectorUrl ?? DEFAULT_LOG_COLLECTOR_URL_HINT);
       setDevBundleUrl(s.devBundleUrl ?? DEFAULT_DEV_BUNDLE_URL_HINT);
       setKlaudLogSinkUrl(s.klaudLogSinkUrl ?? '');
-      setReportingEnabled(s.reportingEnabled !== false);
+      setKlaudTelemetryEnabled(s.klaudTelemetryEnabled !== false);
       setP4Host(s.p4Host ?? '');
       setP4User(s.p4User ?? '');
       setP4Client(s.p4Client ?? '');
@@ -137,7 +138,7 @@ export function SettingsModal({ initialEmail, initialBaseUrl, onClose, onSaved }
         logCollectorUrl: logCollectorUrl.trim() || undefined,
         devBundleUrl: devBundleUrl.trim() || undefined,
         klaudLogSinkUrl: klaudLogSinkUrl.trim() || undefined,
-        reportingEnabled,
+        klaudTelemetryEnabled,
         p4Host: p4Host.trim() || undefined,
         p4User: p4User.trim() || undefined,
         p4Client: p4Client.trim() || undefined,
@@ -319,15 +320,15 @@ export function SettingsModal({ initialEmail, initialBaseUrl, onClose, onSaved }
         </div>
 
         <label
-          htmlFor="settings-reporting-enabled"
+          htmlFor="settings-klaud-telemetry-enabled"
           style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}
         >
           <input
-            id="settings-reporting-enabled"
+            id="settings-klaud-telemetry-enabled"
             type="checkbox"
-            data-testid="settings-reporting-enabled"
-            checked={reportingEnabled}
-            onChange={(e) => setReportingEnabled(e.target.checked)}
+            data-testid="settings-klaud-telemetry-enabled"
+            checked={klaudTelemetryEnabled}
+            onChange={(e) => setKlaudTelemetryEnabled(e.target.checked)}
           />
           <span>로그/제보 전송 활성</span>
         </label>

@@ -9,7 +9,7 @@
 // stdout 을 같이 받음. 처리:
 //   1. 항상 in-memory ring buffer (max 5000) 에 저장. 마지막 N분 빠른 lookup 용.
 //   2. 항상 userData/klaud-logs.jsonl 에 append. 세션 영속 + 한 줄 = 한 entry.
-//   3. settings.klaudLogSinkUrl 가 채워져 있고 reportingEnabled !== false 면 batch POST
+//   3. settings.klaudLogSinkUrl 가 채워져 있고 klaudTelemetryEnabled !== false 면 batch POST
 //      (5s 또는 100개 — 둘 중 먼저). fire-and-forget — 실패 silent drop.
 //
 // 기존 src/main/log-push.ts 와 공존. log-push 는 WSL 8772 collector (dev 전용) 로
@@ -104,7 +104,7 @@ async function flushQueue(): Promise<void> {
   flushTimer = null;
   if (queueForSink.length === 0) return;
   const s = getSettings();
-  if (s.reportingEnabled === false) {
+  if (s.klaudTelemetryEnabled === false) {
     // opt-out: 큐 자체를 drop. 메모리 유지 안 함.
     queueForSink = [];
     return;
@@ -215,7 +215,7 @@ export function installKlaudLogSink(opts: InstallOptions): void {
 // store 와 cross-reference 가능. opt-out 켜져 있으면 송신 자체 안 함 (사용자 의도 존중).
 export async function submitReport(payload: KlaudReportPayload): Promise<{ ok: boolean; reason?: string }> {
   const s = getSettings();
-  if (s.reportingEnabled === false) return { ok: false, reason: 'reporting disabled' };
+  if (s.klaudTelemetryEnabled === false) return { ok: false, reason: 'telemetry disabled' };
   const url = (s.klaudLogSinkUrl ?? '').replace(/\/+$/, '');
   // url 미설정도 정상 — 큐가 비어있게만. 다만 제보는 url 없으면 의미가 없으므로 false 리턴.
   if (!url) return { ok: false, reason: 'klaudLogSinkUrl unset' };

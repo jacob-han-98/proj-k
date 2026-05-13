@@ -3272,6 +3272,35 @@ html, body, #root { height: 100%; margin: 0; padding: 0; background: var(--bg); 
   border-color: var(--accent);
 }
 
+/* 2026-05-12: cap textbox (PD 피드백). chip 4개 → 자유 입력 number input. */
+.review-options-cap-input-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 auto;
+}
+
+.review-options-cap-input {
+  width: 64px;
+  padding: 3px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--text);
+  background: var(--bg-elev);
+  font-variant-numeric: tabular-nums;
+}
+
+.review-options-cap-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.review-options-cap-unit {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
 /* P2 보강: persona 체크박스 (다중 선택 가능). chip 톤 유지하되 input[type=checkbox] 노출. */
 .review-options-checkbox {
   display: inline-flex;

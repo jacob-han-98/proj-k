@@ -44,9 +44,9 @@ export function hashContent(text: string): string {
 // 회귀: 이전엔 contentHash 만으로 키 잡아 옵션 변경해도 cache hit → 같은 결과 표시.
 // 사용자 보고 "카테고리/persona 옵션이 무효" 의 root cause 였음.
 export function hashReviewOptions(opts: {
-  issueCap: number | string;
-  verificationCap: number | string;
-  suggestionCap: number | string;
+  issueCap: number;
+  verificationCap: number;
+  suggestionCap: number;
   categories: string[];
   reviewerPersonas: string[];
 }): string {

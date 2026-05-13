@@ -33,14 +33,14 @@ describe('review-options-mapping', () => {
       const opts: ReviewOptions = {
         issueCap: 10,
         verificationCap: 0,
-        suggestionCap: 'all',
+        suggestionCap: 7,
         categories: ['logic-flow', 'qa-checklist'],
         reviewerPersonas: ['programmer'],
       };
       const out = toBackendPayload(opts);
       expect(out.issue_cap).toBe(10);
       expect(out.verification_cap).toBe(0);
-      expect(out.suggestion_cap).toBe('all');
+      expect(out.suggestion_cap).toBe(7);
       expect(out.categories).toEqual(['logic-flow', 'qa-checklist']);
       expect(out.reviewer_personas).toEqual(['programmer']);
       // back-compat: 첫 persona 가 single 필드에도.
@@ -56,10 +56,10 @@ describe('review-options-mapping', () => {
       expect(out.reviewer_persona).toBe('planner-lead');
     });
 
-    it("'all' literal 그대로 직렬화 — number 로 안 변환", () => {
-      const out = toBackendPayload({ ...DEFAULT_REVIEW_OPTIONS, issueCap: 'all' });
-      expect(out.issue_cap).toBe('all');
-      expect(typeof out.issue_cap).toBe('string');
+    it('cap 은 number 로만 직렬화 — backend 가 받은 그대로 int', () => {
+      const out = toBackendPayload({ ...DEFAULT_REVIEW_OPTIONS, issueCap: 12 });
+      expect(out.issue_cap).toBe(12);
+      expect(typeof out.issue_cap).toBe('number');
     });
 
     it('categories 빈 배열도 그대로 전송 (omit 안 함) — backend 가 빈 배열을 신호로 해석', () => {
@@ -113,9 +113,15 @@ describe('review-options-mapping', () => {
       expect(out).toBe(DEFAULT_REVIEW_OPTIONS);
     });
 
-    it("0 / 5 / 10 / 'all' 모두 허용", () => {
+    it('정수 cap 허용 — 0, 임의 양수', () => {
       expect(setCap(DEFAULT_REVIEW_OPTIONS, 'issueCap', 0).issueCap).toBe(0);
-      expect(setCap(DEFAULT_REVIEW_OPTIONS, 'issueCap', 'all').issueCap).toBe('all');
+      expect(setCap(DEFAULT_REVIEW_OPTIONS, 'issueCap', 42).issueCap).toBe(42);
+    });
+
+    it('음수/소수/NaN sanitize — 0 으로 클램프, 정수로 floor', () => {
+      expect(setCap(DEFAULT_REVIEW_OPTIONS, 'issueCap', -3).issueCap).toBe(0);
+      expect(setCap(DEFAULT_REVIEW_OPTIONS, 'issueCap', 4.7).issueCap).toBe(4);
+      expect(setCap(DEFAULT_REVIEW_OPTIONS, 'issueCap', Number.NaN).issueCap).toBe(0);
     });
   });
 

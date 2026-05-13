@@ -5,7 +5,6 @@ import {
   toggleCategory,
   togglePersona,
   type ReviewCategory,
-  type ReviewIssueCap,
   type ReviewOptions,
   type ReviewerPersona,
 } from '../../panels/review-options-mapping';
@@ -15,18 +14,9 @@ import {
 //
 // 옵션은 패널 내부 state — 탭별 휘발 (영속 X). 사용자가 자주 같은 옵션 쓴다면 향후
 // localStorage 영속 가능하지만 일단 단순.
-
-interface CapOption {
-  value: ReviewIssueCap;
-  label: string;
-}
-
-const CAP_OPTIONS: CapOption[] = [
-  { value: 0, label: '없음' },
-  { value: 5, label: '5개' },
-  { value: 10, label: '10개' },
-  { value: 'all', label: '전체' },
-];
+//
+// 2026-05-12 PD 피드백: cap 은 4-chip 에서 자유 입력 textbox 로 전환. default 5,
+// 0 = 없음, '전체' 의미는 제거 (사용자가 큰 수 입력하면 사실상 동일 효과).
 
 interface CategoryOption {
   value: ReviewCategory;
@@ -67,18 +57,24 @@ export function ReviewOptionsPanel({ onStart, onBack }: Props) {
       <span className="review-options-row-label">
         <span aria-hidden="true">{icon}</span> {label}
       </span>
-      <div className="review-options-chips">
-        {CAP_OPTIONS.map((opt) => (
-          <button
-            key={String(opt.value)}
-            type="button"
-            className={`review-options-chip${options[field] === opt.value ? ' on' : ''}`}
-            onClick={() => setOptions((cur) => setCap(cur, field, opt.value))}
-            data-testid={`review-options-${field}-${opt.value}`}
-          >
-            {opt.label}
-          </button>
-        ))}
+      <div className="review-options-cap-input-wrap">
+        <input
+          type="number"
+          min={0}
+          step={1}
+          inputMode="numeric"
+          className="review-options-cap-input"
+          value={options[field]}
+          onChange={(e) => {
+            const raw = e.target.value;
+            // 빈 문자열은 사용자 편집 중 — 0 으로 간주 (setCap 가 sanitize).
+            const parsed = raw === '' ? 0 : Number.parseInt(raw, 10);
+            setOptions((cur) => setCap(cur, field, parsed));
+          }}
+          data-testid={`review-options-${field}-input`}
+          aria-label={`${label} 최대 갯수`}
+        />
+        <span className="review-options-cap-unit">개 이하 (0 = 없음)</span>
       </div>
     </div>
   );
@@ -105,7 +101,7 @@ export function ReviewOptionsPanel({ onStart, onBack }: Props) {
         {renderCapRow('suggestionCap', '💡', '제안')}
 
         <div className="review-options-row" data-testid="review-options-categories">
-          <span className="review-options-row-label">관점</span>
+          <span className="review-options-row-label">추가 분석</span>
           <div className="review-options-chips">
             {CATEGORY_OPTIONS.map((opt) => {
               const on = options.categories.includes(opt.value);

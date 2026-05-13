@@ -58,9 +58,9 @@ describe('hashContent + fixtureKey', () => {
 // `${hashContent(text)}-${hashReviewOptions(opts)}` 라 옵션 토글마다 새 키.
 describe('hashReviewOptions', () => {
   const baseOpts = {
-    issueCap: 5 as number | string,
-    verificationCap: 5 as number | string,
-    suggestionCap: 5 as number | string,
+    issueCap: 5,
+    verificationCap: 5,
+    suggestionCap: 5,
     categories: ['logic-flow', 'qa-checklist', 'readability'],
     reviewerPersonas: ['planner-lead'],
   };
@@ -93,9 +93,9 @@ describe('hashReviewOptions', () => {
     expect(a).not.toBe(b);
   });
 
-  it("'all' literal cap 도 stable (string vs number 차이 반영)", () => {
-    const a = hashReviewOptions({ ...baseOpts, issueCap: 'all' });
-    const b = hashReviewOptions({ ...baseOpts, issueCap: 0 });
+  it('cap 0 과 5 는 별개 hash — 사용자가 빈 cap 으로 전환 시 cache miss 보장', () => {
+    const a = hashReviewOptions({ ...baseOpts, issueCap: 0 });
+    const b = hashReviewOptions({ ...baseOpts, issueCap: 5 });
     expect(a).not.toBe(b);
   });
 });

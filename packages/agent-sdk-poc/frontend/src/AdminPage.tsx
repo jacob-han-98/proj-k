@@ -251,6 +251,24 @@ function AdminPage() {
               whiteSpace: 'nowrap',
             }}
           >🛠 기획서 정리</button>
+          <a
+            href={`${import.meta.env.BASE_URL}admin/klaud`}
+            title="Klaud 통합 로그 + 제보 모니터링"
+            style={{
+              flex: 1,
+              padding: '10px 8px',
+              borderRadius: 8,
+              background: 'transparent',
+              color: 'var(--text-primary)',
+              border: '1px solid var(--border-color)',
+              cursor: 'pointer',
+              fontSize: '0.88rem',
+              fontWeight: 500,
+              textAlign: 'center',
+              whiteSpace: 'nowrap',
+              textDecoration: 'none',
+            }}
+          >📊 모니터링</a>
         </div>
 
         {section === 'conversations' ? (

@@ -867,3 +867,144 @@ export const askQuestionStream = async (
     reader.releaseLock();
   }
 };
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// /klaud/* — Klaud 통합 로그 sink + 제보 admin client (2026-05-13)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+const KLAUD_TOKEN_KEY = 'klaud-admin-token'
+
+export const getKlaudAdminToken = (): string | null =>
+  localStorage.getItem(KLAUD_TOKEN_KEY)
+
+export const setKlaudAdminToken = (token: string): void => {
+  if (token) localStorage.setItem(KLAUD_TOKEN_KEY, token)
+  else localStorage.removeItem(KLAUD_TOKEN_KEY)
+}
+
+export const clearKlaudAdminToken = (): void => {
+  localStorage.removeItem(KLAUD_TOKEN_KEY)
+}
+
+export class KlaudAuthError extends Error {
+  status: number
+  constructor(status: number, message: string) {
+    super(message)
+    this.status = status
+    this.name = 'KlaudAuthError'
+  }
+}
+
+const klaudFetch = async (path: string): Promise<Response> => {
+  const token = getKlaudAdminToken()
+  const r = await fetch(`${API_BASE_URL}${path}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  })
+  if (r.status === 401 || r.status === 503) {
+    // token 잘못됨 (401) 또는 서버 env 미설정 (503) — 양쪽 다 UI 에서 token 재입력 유도
+    const body = await r.text().catch(() => '')
+    throw new KlaudAuthError(r.status, body || `HTTP ${r.status}`)
+  }
+  if (!r.ok) {
+    throw new Error(`HTTP ${r.status}: ${await r.text().catch(() => '')}`)
+  }
+  return r
+}
+
+export interface KlaudLogEntry {
+  id: number
+  ts: string
+  ingest_ts: string
+  source: 'renderer' | 'main' | 'sidecar' | 'agent'
+  level: 'log' | 'info' | 'warn' | 'error'
+  message: string
+  machine_id: string | null
+  user_email: string | null
+  klaud_version: string | null
+  session_id: string | null
+  extra: Record<string, unknown> | null
+}
+
+export interface KlaudLogsResponse {
+  logs: KlaudLogEntry[]
+  next_cursor: number | null
+  count: number
+}
+
+export interface KlaudReportSummary {
+  id: number
+  report_uuid: string
+  ts: string
+  ingest_ts: string
+  machine_id: string
+  user_email: string | null
+  klaud_version: string | null
+  session_id: string | null
+  note: string | null
+  context: Record<string, unknown> | null
+  log_window_minutes?: number
+}
+
+export interface KlaudReportsResponse {
+  reports: KlaudReportSummary[]
+  next_cursor: number | null
+  count: number
+}
+
+export interface KlaudReportDetail {
+  report: KlaudReportSummary & { screenshot_b64?: string | null }
+  logs: KlaudLogEntry[]
+  log_window_minutes: number
+}
+
+export interface KlaudStats {
+  initialized: boolean
+  db_path?: string
+  log_count?: number
+  report_count?: number
+  queue_size?: number
+  dropped_count?: number
+}
+
+export interface KlaudLogsFilter {
+  user_email?: string
+  machine_id?: string
+  session_id?: string
+  source?: string
+  level?: string
+  ts_from?: string
+  ts_to?: string
+  cursor?: number
+  limit?: number
+}
+
+const buildQs = (params: Record<string, unknown>): string => {
+  const qs = new URLSearchParams()
+  for (const [k, v] of Object.entries(params)) {
+    if (v === undefined || v === null || v === '') continue
+    qs.set(k, String(v))
+  }
+  const s = qs.toString()
+  return s ? `?${s}` : ''
+}
+
+export const fetchKlaudLogs = async (filter: KlaudLogsFilter = {}): Promise<KlaudLogsResponse> => {
+  const r = await klaudFetch(`/klaud/logs${buildQs(filter as Record<string, unknown>)}`)
+  return r.json()
+}
+
+export const fetchKlaudReports = async (filter: KlaudLogsFilter = {}): Promise<KlaudReportsResponse> => {
+  const r = await klaudFetch(`/klaud/reports${buildQs(filter as Record<string, unknown>)}`)
+  return r.json()
+}
+
+export const fetchKlaudReport = async (reportUuid: string): Promise<KlaudReportDetail> => {
+  const r = await klaudFetch(`/klaud/reports/${encodeURIComponent(reportUuid)}`)
+  return r.json()
+}
+
+export const fetchKlaudStats = async (): Promise<KlaudStats> => {
+  const r = await klaudFetch('/klaud/stats')
+  return r.json()
+}

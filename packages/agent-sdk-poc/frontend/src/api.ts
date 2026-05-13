@@ -1119,3 +1119,92 @@ export const reindexKlaudCrawl = async (
   if (!r.ok) throw new Error(`HTTP ${r.status}: ${await r.text().catch(() => '')}`)
   return r.json()
 }
+
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// /klaud/admin/users — 사용자 관리 (2026-05-13)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+export type KlaudUserRole = 'admin' | 'regular' | 'disabled'
+
+export interface KlaudUser {
+  email: string
+  first_seen: string
+  last_seen: string | null
+  role: KlaudUserRole
+  display_name: string | null
+  picture_url: string | null
+  machine_ids: string[]
+  klaud_version: string | null
+  note: string | null
+  updated_at: string | null
+  log_count: number
+  report_count: number
+}
+
+export interface KlaudUsersResponse {
+  users: KlaudUser[]
+  count: number
+  env_admin_emails: string[]
+  next_cursor: number | null
+}
+
+const authJsonFetch = async (
+  path: string, method: string, body?: unknown,
+): Promise<Response> => {
+  const token = getKlaudAdminToken()
+  const r = await fetch(`${API_BASE_URL}${path}`, {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: body !== undefined ? JSON.stringify(body) : undefined,
+  })
+  if (r.status === 401 || r.status === 503) {
+    throw new KlaudAuthError(r.status, await r.text().catch(() => ''))
+  }
+  if (!r.ok) throw new Error(`HTTP ${r.status}: ${await r.text().catch(() => '')}`)
+  return r
+}
+
+export const fetchKlaudUsers = async (
+  filter: { role?: string; q?: string; cursor?: number; limit?: number } = {},
+): Promise<KlaudUsersResponse> => {
+  const r = await klaudFetch(`/klaud/admin/users${buildQs(filter as Record<string, unknown>)}`)
+  return r.json()
+}
+
+export const createKlaudUser = async (
+  email: string, role: KlaudUserRole = 'regular', note?: string, display_name?: string,
+): Promise<{ created: boolean; email: string }> => {
+  const r = await authJsonFetch('/klaud/admin/users', 'POST', {
+    email, role, note, display_name,
+  })
+  return r.json()
+}
+
+export const setKlaudUserRole = async (
+  email: string, role: KlaudUserRole, note?: string,
+): Promise<{ updated: boolean; email: string; role: string }> => {
+  const r = await authJsonFetch(
+    `/klaud/admin/users/${encodeURIComponent(email)}/role`,
+    'POST', { role, note },
+  )
+  return r.json()
+}
+
+export const setKlaudUserNote = async (
+  email: string, note: string,
+): Promise<{ updated: boolean; email: string }> => {
+  const r = await authJsonFetch(
+    `/klaud/admin/users/${encodeURIComponent(email)}/note`,
+    'POST', { note },
+  )
+  return r.json()
+}
+
+export const deleteKlaudUser = async (email: string): Promise<{ deleted: boolean; email: string }> => {
+  const r = await authJsonFetch(`/klaud/admin/users/${encodeURIComponent(email)}`, 'DELETE')
+  return r.json()
+}

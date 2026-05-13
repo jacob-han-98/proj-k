@@ -10,6 +10,7 @@ Usage:
 import hashlib
 import json
 import logging
+import os
 import sys
 import time
 import uuid
@@ -2104,30 +2105,64 @@ class KlaudReportRequest(BaseModel):
     context: KlaudReportContext | None = None
 
 
-def _resolve_user_email(id_token_str: str | None, claimed_email: str | None) -> str | None:
+def _resolve_user_email(
+    id_token_str: str | None,
+    claimed_email: str | None,
+    machine_id: str | None = None,
+    klaud_version: str | None = None,
+) -> str | None:
     """id_token verify → 성공 시 그 email, 실패 시 None.
     id_token 미포함 → frontend 가 보낸 user_email 그대로 (PoC, SSO 미로그인 흐름).
     SSO 비활성 (env 미설정) → id_token 무시, claimed_email 그대로.
+
+    verify 성공 + email 있으면 자동으로 klaud_users 에 upsert (last_seen 갱신,
+    name/picture/machine_id 동기화).
     """
     if not id_token_str:
         return claimed_email
     if not google_id_token.sso_enabled():
-        # SSO 비활성 — id_token 검증 자체 안 함. trust 없는 채로 claimed 사용.
         return claimed_email
     claims = google_id_token.verify(id_token_str)
-    if claims:
-        return claims.get("email")
-    return None  # verify 실패 → silent fallback to null
+    if not claims:
+        return None
+    email = claims.get("email")
+    if email:
+        try:
+            klaud_sink.upsert_user(
+                email=email,
+                machine_id=machine_id,
+                display_name=claims.get("name"),
+                picture_url=claims.get("picture"),
+                klaud_version=klaud_version,
+            )
+        except Exception as e:
+            log.warning(f"upsert_user failed for {email}: {e}")
+    return email
+
+
+def _dev_bypass_active() -> bool:
+    """개발 모드 인증 우회. env KLAUD_DEV_BYPASS_AUTH=1 일 때만 활성.
+
+    절대 production 에서 켜지 말 것. 사내 서버 배포 시 env 미설정 권장.
+    dev/test 에서 web admin 빠르게 진입할 때만 사용.
+    """
+    v = os.environ.get("KLAUD_DEV_BYPASS_AUTH", "").strip().lower()
+    return v in ("1", "true", "yes", "on")
 
 
 def _require_admin(authorization: str | None) -> None:
-    """GET endpoint dual auth.
+    """admin endpoint 인증.
 
-    Authorization: Bearer <X> — X 가 KLAUD_ADMIN_TOKEN 와 동일 또는 Google id_token +
-    email-in-KLAUD_ADMIN_EMAILS 면 통과. 둘 다 실패면 401.
+    1) KLAUD_DEV_BYPASS_AUTH=1 → 무조건 통과 (개발 전용)
+    2) Authorization: Bearer <KLAUD_ADMIN_TOKEN> → 통과 (static admin)
+    3) Authorization: Bearer <Google id_token> + email-in-{env whitelist OR DB role='admin'} → 통과
+    4) 그 외 → 401
 
-    KLAUD_ADMIN_TOKEN 도 KLAUD_GOOGLE_CLIENT_ID 도 미설정이면 503 (운영 안전).
+    env (KLAUD_ADMIN_TOKEN, KLAUD_GOOGLE_CLIENT_ID) 둘 다 미설정이면 503 (운영 안전).
     """
+    if _dev_bypass_active():
+        return
+
     admin_token = klaud_sink.admin_token()
     sso_on = google_id_token.sso_enabled()
 
@@ -2141,17 +2176,18 @@ def _require_admin(authorization: str | None) -> None:
         raise HTTPException(status_code=401, detail="missing Bearer authorization")
     token = authorization[7:]
 
-    # 1) static admin token 경로 (기존)
+    # 1) static admin token 경로
     if admin_token and token == admin_token:
         return
 
-    # 2) Google id_token + email whitelist 경로 (SSO 합류)
+    # 2) Google id_token + admin 권한
     if sso_on:
         claims = google_id_token.verify(token)
-        if claims and google_id_token.is_admin_email(claims.get("email")):
+        email = claims.get("email") if claims else None
+        if email and (google_id_token.is_admin_email(email) or klaud_sink.is_db_admin(email)):
             return
 
-    raise HTTPException(status_code=401, detail="invalid admin token")
+    raise HTTPException(status_code=401, detail="invalid admin credentials")
 
 
 @app.post("/klaud/log/batch")
@@ -2162,7 +2198,10 @@ async def klaud_log_batch(req: KlaudLogBatchRequest):
     # entries 개수 sanity 체크는 여기서.
     if len(req.entries) > 1000:
         raise HTTPException(status_code=413, detail="batch too large (max 1000 entries)")
-    resolved_email = _resolve_user_email(req.id_token, req.user_email)
+    resolved_email = _resolve_user_email(
+        req.id_token, req.user_email,
+        machine_id=req.machine_id, klaud_version=req.klaud_version,
+    )
     n = klaud_sink.ingest_batch(
         entries=req.entries,
         machine_id=req.machine_id,
@@ -2185,7 +2224,10 @@ async def klaud_report(req: KlaudReportRequest):
         # context_json 에는 screenshot 제외 (별도 column)
         ctx_dict = {k: v for k, v in ctx_dict.items() if k != "screenshot_b64"}
 
-    resolved_email = _resolve_user_email(req.id_token, req.user_email)
+    resolved_email = _resolve_user_email(
+        req.id_token, req.user_email,
+        machine_id=req.machine_id, klaud_version=req.klaud_version,
+    )
     try:
         report_uuid = klaud_sink.insert_report(
             machine_id=req.machine_id,
@@ -2369,6 +2411,117 @@ async def klaud_crawl_reindex(
     )
     log_event("klaud_crawl", "reindex", f"{req.source}: {n} stale queued")
     return {"queued": n}
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# /klaud/admin/users — 사용자 관리 (등록/삭제/role 토글/활동 내역)
+# 2026-05-13 사용자 요청: "관리자 페이지에서 관리자는 사용자를 등록, 삭제할 수 있어야해.
+# 활동 내역도 볼 수 있고, 구글 email 을 통해 관리할 거야."
+# ═══════════════════════════════════════════════════════════════════════════════
+
+
+class KlaudUserCreateRequest(BaseModel):
+    email: str
+    role: str = "regular"  # admin | regular | disabled
+    note: str | None = None
+    display_name: str | None = None
+
+
+class KlaudUserRoleRequest(BaseModel):
+    role: str  # admin | regular | disabled
+    note: str | None = None
+
+
+class KlaudUserNoteRequest(BaseModel):
+    note: str
+
+
+@app.get("/klaud/admin/users")
+async def klaud_admin_users(
+    role: str | None = None,
+    q: str | None = None,
+    cursor: int = 0,
+    limit: int = 200,
+    authorization: str | None = Header(default=None),
+):
+    """사용자 목록 + log/report count. last_seen DESC 정렬."""
+    _require_admin(authorization)
+    users = klaud_sink.list_users_with_stats(role=role, q=q, cursor=cursor, limit=limit)
+    # env whitelist 정보도 함께 (UI 가 표시할 수 있게)
+    env_admins = list(google_id_token.admin_emails())
+    return {
+        "users": users,
+        "count": len(users),
+        "env_admin_emails": env_admins,
+        "next_cursor": (cursor + len(users)) if len(users) == limit else None,
+    }
+
+
+@app.post("/klaud/admin/users")
+async def klaud_admin_users_create(
+    req: KlaudUserCreateRequest,
+    authorization: str | None = Header(default=None),
+):
+    """admin 가 미리 사용자 등록 (아직 로그인 안 한 email 도 등록 가능)."""
+    _require_admin(authorization)
+    if req.role not in klaud_sink.VALID_USER_ROLES:
+        raise HTTPException(status_code=400, detail=f"invalid role: {req.role}")
+    try:
+        created = klaud_sink.create_user(
+            email=req.email, role=req.role,
+            note=req.note, display_name=req.display_name,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e)) from e
+    if not created:
+        raise HTTPException(status_code=409, detail=f"user already exists: {req.email}")
+    log_event("klaud_users", "create", f"{req.email} role={req.role}")
+    return {"created": True, "email": req.email.strip().lower()}
+
+
+@app.post("/klaud/admin/users/{email}/role")
+async def klaud_admin_users_set_role(
+    email: str,
+    req: KlaudUserRoleRequest,
+    authorization: str | None = Header(default=None),
+):
+    """role 변경 (admin/regular/disabled)."""
+    _require_admin(authorization)
+    if req.role not in klaud_sink.VALID_USER_ROLES:
+        raise HTTPException(status_code=400, detail=f"invalid role: {req.role}")
+    ok = klaud_sink.set_user_role(email, req.role, note=req.note)
+    if not ok:
+        raise HTTPException(status_code=404, detail=f"user not found: {email}")
+    log_event("klaud_users", "set_role", f"{email} → {req.role}")
+    return {"updated": True, "email": email.strip().lower(), "role": req.role}
+
+
+@app.post("/klaud/admin/users/{email}/note")
+async def klaud_admin_users_set_note(
+    email: str,
+    req: KlaudUserNoteRequest,
+    authorization: str | None = Header(default=None),
+):
+    _require_admin(authorization)
+    ok = klaud_sink.set_user_note(email, req.note)
+    if not ok:
+        raise HTTPException(status_code=404, detail=f"user not found: {email}")
+    return {"updated": True, "email": email.strip().lower()}
+
+
+@app.delete("/klaud/admin/users/{email}")
+async def klaud_admin_users_delete(
+    email: str,
+    authorization: str | None = Header(default=None),
+):
+    """사용자 레코드 삭제. log/report 의 user_email column 은 보존 (히스토리).
+    완전 차단은 role='disabled' 권장."""
+    _require_admin(authorization)
+    ok = klaud_sink.delete_user(email)
+    if not ok:
+        raise HTTPException(status_code=404, detail=f"user not found: {email}")
+    log_event("klaud_users", "delete", email)
+    return {"deleted": True, "email": email.strip().lower()}
 
 
 if __name__ == "__main__":

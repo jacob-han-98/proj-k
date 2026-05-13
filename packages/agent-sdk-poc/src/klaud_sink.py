@@ -96,6 +96,24 @@ CREATE TABLE IF NOT EXISTS klaud_reports (
 );
 CREATE INDEX IF NOT EXISTS idx_reports_ts ON klaud_reports(ts);
 CREATE INDEX IF NOT EXISTS idx_reports_user_ts ON klaud_reports(user_email, ts);
+
+-- 사용자 관리 (릴리스-C 후속, 2026-05-13)
+-- env KLAUD_ADMIN_EMAILS 는 bootstrap. 이 테이블이 실 source of truth.
+-- id_token verify 성공 시 자동 upsert. admin role 은 web UI 에서 토글.
+CREATE TABLE IF NOT EXISTS klaud_users (
+  email TEXT PRIMARY KEY,
+  first_seen TEXT NOT NULL,
+  last_seen TEXT,
+  role TEXT NOT NULL DEFAULT 'regular',  -- 'admin' | 'regular' | 'disabled'
+  display_name TEXT,
+  picture_url TEXT,
+  machine_ids TEXT,                       -- 콤마 구분 machine_id list (다중 PC)
+  klaud_version TEXT,                     -- 마지막 본 버전
+  note TEXT,                              -- admin 가 남기는 메모
+  updated_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_users_role ON klaud_users(role);
+CREATE INDEX IF NOT EXISTS idx_users_last_seen ON klaud_users(last_seen);
 """
 
 
@@ -505,6 +523,203 @@ def get_report_with_logs(report_uuid: str) -> dict | None:
         "logs": [_row_to_log(r) for r in log_rows],
         "log_window_minutes": window,
     }
+
+
+# ── 사용자 관리 (릴리스-C 후속) ───────────────────────────────────────────────
+
+
+VALID_USER_ROLES = {"admin", "regular", "disabled"}
+
+
+def upsert_user(
+    email: str,
+    machine_id: str | None = None,
+    display_name: str | None = None,
+    picture_url: str | None = None,
+    klaud_version: str | None = None,
+) -> None:
+    """id_token verify 성공 시 호출. last_seen + machine_ids 갱신.
+
+    role 은 신규 row 만 'regular' default. 기존 row 의 role 은 보존 (web UI 토글로만).
+    """
+    if _WRITE_CONN is None:
+        raise RuntimeError("klaud_sink not initialized")
+    if not email:
+        return
+    email_norm = email.strip().lower()
+    now = _now_iso()
+    with _WRITER_LOCK:
+        row = _WRITE_CONN.execute(
+            "SELECT machine_ids, role FROM klaud_users WHERE email = ?", (email_norm,)
+        ).fetchone()
+        if row:
+            existing_machines = set(filter(None, (row[0] or "").split(",")))
+            if machine_id and machine_id not in existing_machines:
+                existing_machines.add(machine_id)
+            machine_ids_str = ",".join(sorted(existing_machines)) or None
+            _WRITE_CONN.execute(
+                "UPDATE klaud_users SET last_seen=?, display_name=COALESCE(?, display_name), "
+                "picture_url=COALESCE(?, picture_url), machine_ids=?, klaud_version=COALESCE(?, klaud_version), "
+                "updated_at=? WHERE email=?",
+                (now, display_name, picture_url, machine_ids_str, klaud_version, now, email_norm),
+            )
+        else:
+            _WRITE_CONN.execute(
+                "INSERT INTO klaud_users "
+                "(email, first_seen, last_seen, role, display_name, picture_url, "
+                " machine_ids, klaud_version, updated_at) "
+                "VALUES (?, ?, ?, 'regular', ?, ?, ?, ?, ?)",
+                (email_norm, now, now, display_name, picture_url,
+                 machine_id or None, klaud_version, now),
+            )
+
+
+def set_user_role(email: str, role: str, note: str | None = None) -> bool:
+    """role 변경. admin web UI 에서 호출."""
+    if _WRITE_CONN is None:
+        raise RuntimeError("klaud_sink not initialized")
+    if role not in VALID_USER_ROLES:
+        raise ValueError(f"invalid role: {role}")
+    email_norm = email.strip().lower()
+    now = _now_iso()
+    with _WRITER_LOCK:
+        cur = _WRITE_CONN.execute(
+            "UPDATE klaud_users SET role=?, note=COALESCE(?, note), updated_at=? WHERE email=?",
+            (role, note, now, email_norm),
+        )
+        return cur.rowcount > 0
+
+
+def create_user(email: str, role: str = "regular", note: str | None = None,
+                display_name: str | None = None) -> bool:
+    """admin web UI 에서 등록. 이미 있으면 False (호출자가 기존 user 갱신).
+    아직 로그인 안 한 사용자도 미리 등록 가능 (admin role 사전 부여 등).
+    """
+    if _WRITE_CONN is None:
+        raise RuntimeError("klaud_sink not initialized")
+    if role not in VALID_USER_ROLES:
+        raise ValueError(f"invalid role: {role}")
+    email_norm = email.strip().lower()
+    if not email_norm or "@" not in email_norm:
+        raise ValueError(f"invalid email: {email!r}")
+    now = _now_iso()
+    with _WRITER_LOCK:
+        cur = _WRITE_CONN.execute(
+            "INSERT OR IGNORE INTO klaud_users "
+            "(email, first_seen, last_seen, role, display_name, note, updated_at) "
+            "VALUES (?, ?, NULL, ?, ?, ?, ?)",
+            (email_norm, now, role, display_name, note, now),
+        )
+        return cur.rowcount > 0
+
+
+def delete_user(email: str) -> bool:
+    """admin web UI 에서 삭제. log/report 의 user_email column 은 그대로 (히스토리 보존).
+    사용자 자체만 users 테이블에서 제거. 다음 로그인 시 자동 재등록될 수 있음.
+    완전 차단은 set_user_role(email, 'disabled') 사용.
+    """
+    if _WRITE_CONN is None:
+        raise RuntimeError("klaud_sink not initialized")
+    email_norm = email.strip().lower()
+    with _WRITER_LOCK:
+        cur = _WRITE_CONN.execute("DELETE FROM klaud_users WHERE email=?", (email_norm,))
+        return cur.rowcount > 0
+
+
+def set_user_note(email: str, note: str) -> bool:
+    if _WRITE_CONN is None:
+        raise RuntimeError("klaud_sink not initialized")
+    email_norm = email.strip().lower()
+    now = _now_iso()
+    with _WRITER_LOCK:
+        cur = _WRITE_CONN.execute(
+            "UPDATE klaud_users SET note=?, updated_at=? WHERE email=?",
+            (note, now, email_norm),
+        )
+        return cur.rowcount > 0
+
+
+def get_user(email: str) -> dict | None:
+    if _WRITE_CONN is None:
+        return None
+    email_norm = email.strip().lower()
+    row = _WRITE_CONN.execute(
+        "SELECT email, first_seen, last_seen, role, display_name, picture_url, "
+        "machine_ids, klaud_version, note, updated_at FROM klaud_users WHERE email=?",
+        (email_norm,),
+    ).fetchone()
+    return _row_to_user(row) if row else None
+
+
+def is_db_admin(email: str | None) -> bool:
+    """DB 의 role='admin' 또는 'regular' 체크 (disabled 는 제외)."""
+    if not email:
+        return False
+    user = get_user(email)
+    return bool(user and user["role"] == "admin")
+
+
+def list_users_with_stats(
+    role: str | None = None,
+    q: str | None = None,
+    cursor: int = 0,
+    limit: int = 200,
+) -> list[dict]:
+    """사용자 목록 + log/report count (실시간 query, denormalized X).
+
+    cursor 는 alphabetical email index. 단순 offset 으로 충분 (작은 사용자 base).
+    """
+    if _WRITE_CONN is None:
+        raise RuntimeError("klaud_sink not initialized")
+    limit = max(1, min(int(limit or 200), 1000))
+
+    where: list[str] = []
+    params: list = []
+    if role:
+        where.append("role = ?")
+        params.append(role)
+    if q:
+        where.append("(email LIKE ? OR display_name LIKE ?)")
+        params.extend([f"%{q}%", f"%{q}%"])
+
+    sql = "SELECT email, first_seen, last_seen, role, display_name, picture_url, " \
+          "machine_ids, klaud_version, note, updated_at FROM klaud_users"
+    if where:
+        sql += " WHERE " + " AND ".join(where)
+    sql += " ORDER BY last_seen DESC, email ASC LIMIT ? OFFSET ?"
+    params.extend([limit, int(cursor or 0)])
+
+    rows = _WRITE_CONN.execute(sql, params).fetchall()
+    users = [_row_to_user(r) for r in rows]
+
+    # log/report count 실시간 join
+    for u in users:
+        e = u["email"]
+        u["log_count"] = _WRITE_CONN.execute(
+            "SELECT COUNT(*) FROM klaud_logs WHERE user_email = ?", (e,)
+        ).fetchone()[0]
+        u["report_count"] = _WRITE_CONN.execute(
+            "SELECT COUNT(*) FROM klaud_reports WHERE user_email = ?", (e,)
+        ).fetchone()[0]
+    return users
+
+
+def _row_to_user(r: tuple) -> dict:
+    return {
+        "email": r[0],
+        "first_seen": r[1],
+        "last_seen": r[2],
+        "role": r[3],
+        "display_name": r[4],
+        "picture_url": r[5],
+        "machine_ids": [m for m in (r[6] or "").split(",") if m],
+        "klaud_version": r[7],
+        "note": r[8],
+        "updated_at": r[9],
+    }
+
+
+# ── stats ─────────────────────────────────────────────────────────────────────
 
 
 def stats() -> dict:

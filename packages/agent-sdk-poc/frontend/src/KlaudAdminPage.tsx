@@ -9,6 +9,10 @@ import {
   fetchKlaudCrawlStats,
   purgeKlaudCrawl,
   reindexKlaudCrawl,
+  fetchKlaudUsers,
+  createKlaudUser,
+  setKlaudUserRole,
+  deleteKlaudUser,
   getKlaudAdminToken,
   setKlaudAdminToken,
   clearKlaudAdminToken,
@@ -21,6 +25,8 @@ import {
   type KlaudStats,
   type KlaudCrawlResource,
   type KlaudCrawlStats,
+  type KlaudUser,
+  type KlaudUserRole,
 } from './api'
 
 // ── Theme (App/AdminPage 와 동일) ──
@@ -30,7 +36,13 @@ function applyTheme(mode: ThemeMode) {
   document.documentElement.setAttribute('data-theme', mode)
 }
 
-type KlaudTab = 'logs' | 'reports' | 'crawl'
+type KlaudTab = 'logs' | 'reports' | 'crawl' | 'users'
+
+const USER_ROLE_COLOR: Record<string, string> = {
+  admin: '#7aa2ff',
+  regular: 'var(--text-secondary)',
+  disabled: '#6b7280',
+}
 
 const CRAWL_STATUS_COLOR: Record<string, string> = {
   fresh: '#34d399',
@@ -661,7 +673,7 @@ function KlaudAdminPage() {
   // tab
   const [tab, setTab] = useState<KlaudTab>(() => {
     const saved = localStorage.getItem('klaud-admin-tab')
-    if (saved === 'reports' || saved === 'crawl') return saved
+    if (saved === 'reports' || saved === 'crawl' || saved === 'users') return saved
     return 'logs'
   })
   const switchTab = (t: KlaudTab) => {
@@ -820,6 +832,15 @@ function KlaudAdminPage() {
             fontWeight: tab === 'crawl' ? 700 : 500, fontSize: '0.92rem',
           }}
         >📦 크롤</button>
+        <button
+          type="button" onClick={() => switchTab('users')}
+          style={{
+            padding: '8px 16px', background: 'transparent', border: 'none', cursor: 'pointer',
+            borderBottom: tab === 'users' ? '2px solid var(--accent, #7aa2ff)' : '2px solid transparent',
+            color: tab === 'users' ? 'var(--accent, #7aa2ff)' : 'var(--text-secondary)',
+            fontWeight: tab === 'users' ? 700 : 500, fontSize: '0.92rem',
+          }}
+        >👥 사용자</button>
         <div style={{ flex: 1 }} />
         <button
           type="button" onClick={presetLastHour}
@@ -832,15 +853,22 @@ function KlaudAdminPage() {
         >최근 1시간</button>
       </div>
 
-      {tab !== 'crawl' && (
+      {tab === 'logs' || tab === 'reports' ? (
         <FilterBar
           filter={draftFilter} onChange={setDraftFilter}
           onApply={apply} onReset={reset} loading={false} tab={tab}
         />
-      )}
+      ) : null}
 
       {tab === 'crawl' ? (
         <CrawlTab refreshTick={refreshTick} onAuthError={handleAuthError} />
+      ) : tab === 'users' ? (
+        <UsersTab refreshTick={refreshTick} onAuthError={handleAuthError} onJumpToUserLogs={(email) => {
+          setDraftFilter({ ...EMPTY_FILTER, user_email: email })
+          setAppliedFilter({ ...EMPTY_FILTER, user_email: email })
+          switchTab('logs')
+          setRefreshTick(x => x + 1)
+        }} />
       ) : (
         <KlaudTabContent
           tab={tab}
@@ -1121,6 +1149,279 @@ function LogsBoundary({
     return () => window.removeEventListener('unhandledrejection', handler)
   }, [onAuthError])
   return <LogsTab key={errKey} filter={filter} refreshTick={refreshTick} />
+}
+
+// ── Users Tab ──
+
+function UsersTab({
+  refreshTick, onAuthError, onJumpToUserLogs,
+}: {
+  refreshTick: number
+  onAuthError: (e: KlaudAuthError) => void
+  onJumpToUserLogs: (email: string) => void
+}) {
+  const [users, setUsers] = useState<KlaudUser[]>([])
+  const [envAdmins, setEnvAdmins] = useState<string[]>([])
+  const [filterRole, setFilterRole] = useState('')
+  const [filterQ, setFilterQ] = useState('')
+  const [err, setErr] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+
+  // 등록 form
+  const [showCreate, setShowCreate] = useState(false)
+  const [createEmail, setCreateEmail] = useState('')
+  const [createRole, setCreateRole] = useState<KlaudUserRole>('regular')
+  const [createNote, setCreateNote] = useState('')
+
+  const load = useCallback(async () => {
+    setLoading(true); setErr(null)
+    try {
+      const r = await fetchKlaudUsers({
+        role: filterRole || undefined,
+        q: filterQ || undefined,
+        limit: 200,
+      })
+      setUsers(r.users)
+      setEnvAdmins(r.env_admin_emails)
+    } catch (e) {
+      if (e instanceof KlaudAuthError) onAuthError(e)
+      else setErr(e instanceof Error ? e.message : String(e))
+    } finally {
+      setLoading(false)
+    }
+  }, [filterRole, filterQ, onAuthError])
+
+  useEffect(() => { load() }, [load, refreshTick])
+
+  const doCreate = async () => {
+    if (!createEmail.trim()) return
+    try {
+      await createKlaudUser(createEmail.trim(), createRole, createNote.trim() || undefined)
+      setCreateEmail(''); setCreateNote(''); setCreateRole('regular'); setShowCreate(false)
+      load()
+    } catch (e) {
+      if (e instanceof KlaudAuthError) onAuthError(e)
+      else alert(e instanceof Error ? e.message : String(e))
+    }
+  }
+
+  const doRoleChange = async (u: KlaudUser, newRole: KlaudUserRole) => {
+    if (newRole === u.role) return
+    try {
+      await setKlaudUserRole(u.email, newRole)
+      load()
+    } catch (e) {
+      if (e instanceof KlaudAuthError) onAuthError(e)
+      else alert(e instanceof Error ? e.message : String(e))
+    }
+  }
+
+  const doDelete = async (u: KlaudUser) => {
+    if (!confirm(`${u.email} 삭제? (log/report 히스토리는 보존, 다음 로그인 시 자동 재등록 가능)\n완전 차단은 'disabled' role 권장.`)) return
+    try {
+      await deleteKlaudUser(u.email)
+      load()
+    } catch (e) {
+      if (e instanceof KlaudAuthError) onAuthError(e)
+      else alert(e instanceof Error ? e.message : String(e))
+    }
+  }
+
+  const inputStyle: React.CSSProperties = {
+    padding: '6px 10px', borderRadius: 6, border: '1px solid var(--border-color)',
+    background: 'var(--bg-secondary)', color: 'var(--text-primary)', fontSize: '0.85rem',
+  }
+
+  const adminCount = users.filter(u => u.role === 'admin').length
+  const regularCount = users.filter(u => u.role === 'regular').length
+  const disabledCount = users.filter(u => u.role === 'disabled').length
+
+  return (
+    <div>
+      {/* Stats */}
+      <div className="glass" style={{ padding: '10px 14px', borderRadius: 10, marginBottom: 12, display: 'flex', gap: 18, fontSize: '0.85rem', flexWrap: 'wrap', alignItems: 'center' }}>
+        <span>👥 총 <strong>{users.length}</strong></span>
+        <span style={{ color: USER_ROLE_COLOR.admin }}>admin: {adminCount}</span>
+        <span>regular: {regularCount}</span>
+        <span style={{ color: '#6b7280' }}>disabled: {disabledCount}</span>
+        {envAdmins.length > 0 && (
+          <span style={{ color: 'var(--text-secondary)', fontSize: '0.78rem' }}>
+            env admin: {envAdmins.join(', ')}
+          </span>
+        )}
+        <span style={{ flex: 1 }} />
+        <button
+          type="button" onClick={() => setShowCreate(!showCreate)}
+          style={{
+            padding: '6px 14px', borderRadius: 6, background: 'var(--accent, #7aa2ff)',
+            color: '#fff', border: 'none', cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600,
+          }}
+        >{showCreate ? '취소' : '+ 사용자 등록'}</button>
+      </div>
+
+      {/* Create form */}
+      {showCreate && (
+        <div className="glass" style={{ padding: 14, borderRadius: 10, marginBottom: 12 }}>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            <input
+              type="email" placeholder="이메일 (예: jacob@hybecorp.com)"
+              value={createEmail} onChange={e => setCreateEmail(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') doCreate() }}
+              style={{ ...inputStyle, minWidth: 280, flex: 1 }} autoFocus
+            />
+            <select value={createRole} onChange={e => setCreateRole(e.target.value as KlaudUserRole)} style={inputStyle}>
+              <option value="regular">regular</option>
+              <option value="admin">admin</option>
+              <option value="disabled">disabled</option>
+            </select>
+            <input
+              type="text" placeholder="메모 (선택)"
+              value={createNote} onChange={e => setCreateNote(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') doCreate() }}
+              style={{ ...inputStyle, minWidth: 200, flex: 1 }}
+            />
+            <button
+              type="button" onClick={doCreate} disabled={!createEmail.trim()}
+              style={{
+                padding: '6px 14px', borderRadius: 6,
+                background: createEmail.trim() ? 'var(--accent, #7aa2ff)' : 'transparent',
+                color: createEmail.trim() ? '#fff' : 'var(--text-secondary)',
+                border: 'none', cursor: createEmail.trim() ? 'pointer' : 'not-allowed',
+                fontSize: '0.85rem', fontWeight: 600,
+              }}
+            >등록</button>
+          </div>
+          <div style={{ marginTop: 8, fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+            아직 Klaud 로그인 안 한 사용자도 미리 등록 가능. admin role 사전 부여 후 사용자가 처음 로그인하면 자동 활성.
+          </div>
+        </div>
+      )}
+
+      {/* Filter */}
+      <div className="glass" style={{ padding: 12, borderRadius: 10, marginBottom: 12, display: 'flex', gap: 8 }}>
+        <select value={filterRole} onChange={e => setFilterRole(e.target.value)} style={inputStyle}>
+          <option value="">role: all</option>
+          <option value="admin">admin</option>
+          <option value="regular">regular</option>
+          <option value="disabled">disabled</option>
+        </select>
+        <input
+          type="text" placeholder="이메일 / 이름 검색"
+          value={filterQ} onChange={e => setFilterQ(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter') load() }}
+          style={{ ...inputStyle, flex: 1 }}
+        />
+      </div>
+
+      {err && <div style={{ color: '#ef4444', fontSize: '0.85rem', marginBottom: 8 }}>오류: {err}</div>}
+
+      {/* Users table */}
+      <div className="glass" style={{ borderRadius: 10, overflow: 'auto', maxHeight: '65vh' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+          <thead style={{ position: 'sticky', top: 0, background: 'var(--bg-secondary)', zIndex: 1 }}>
+            <tr>
+              <th style={{ padding: '8px 10px', textAlign: 'left', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>사용자</th>
+              <th style={{ padding: '8px 10px', textAlign: 'left', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>role</th>
+              <th style={{ padding: '8px 10px', textAlign: 'right', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>logs</th>
+              <th style={{ padding: '8px 10px', textAlign: 'right', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>reports</th>
+              <th style={{ padding: '8px 10px', textAlign: 'left', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>last seen</th>
+              <th style={{ padding: '8px 10px', textAlign: 'left', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>machines</th>
+              <th style={{ padding: '8px 10px', textAlign: 'right', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>액션</th>
+            </tr>
+          </thead>
+          <tbody>
+            {users.map(u => {
+              const isEnvAdmin = envAdmins.includes(u.email)
+              return (
+                <tr key={u.email} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                  <td style={{ padding: '6px 10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      {u.picture_url ? (
+                        <img src={u.picture_url} alt="" style={{ width: 28, height: 28, borderRadius: '50%' }} />
+                      ) : (
+                        <div style={{
+                          width: 28, height: 28, borderRadius: '50%', background: 'var(--bg-secondary)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontSize: '0.85rem', color: 'var(--text-secondary)',
+                        }}>{u.email.charAt(0).toUpperCase()}</div>
+                      )}
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: '0.85rem' }}>{u.display_name || u.email.split('@')[0]}</div>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)' }}>
+                          {u.email}
+                          {isEnvAdmin && <span style={{ marginLeft: 6, color: '#7aa2ff' }}>· env</span>}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+                  <td style={{ padding: '6px 10px' }}>
+                    <select
+                      value={u.role}
+                      onChange={e => doRoleChange(u, e.target.value as KlaudUserRole)}
+                      style={{
+                        ...inputStyle, padding: '4px 8px', fontSize: '0.78rem',
+                        color: USER_ROLE_COLOR[u.role], fontWeight: 600,
+                      }}
+                    >
+                      <option value="admin">admin</option>
+                      <option value="regular">regular</option>
+                      <option value="disabled">disabled</option>
+                    </select>
+                  </td>
+                  <td style={{ padding: '6px 10px', textAlign: 'right', fontSize: '0.82rem' }}>
+                    <button
+                      type="button" onClick={() => onJumpToUserLogs(u.email)}
+                      title="이 사용자의 로그 보기"
+                      style={{
+                        background: 'transparent', border: 'none', cursor: 'pointer',
+                        color: u.log_count > 0 ? 'var(--accent, #7aa2ff)' : 'var(--text-secondary)',
+                        textDecoration: u.log_count > 0 ? 'underline' : 'none', fontSize: '0.82rem',
+                      }}
+                    >{u.log_count}</button>
+                  </td>
+                  <td style={{ padding: '6px 10px', textAlign: 'right', fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+                    {u.report_count}
+                  </td>
+                  <td style={{ padding: '6px 10px', whiteSpace: 'nowrap', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                    {u.last_seen ? fmtTime(u.last_seen) : '— 미로그인'}
+                  </td>
+                  <td style={{ padding: '6px 10px', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                    {u.machine_ids.length > 0
+                      ? u.machine_ids.map(m => m.slice(0, 8)).join(', ')
+                      : '—'}
+                    {u.klaud_version && (
+                      <span style={{ marginLeft: 6, color: '#34d399' }}>v{u.klaud_version}</span>
+                    )}
+                  </td>
+                  <td style={{ padding: '6px 10px', textAlign: 'right' }}>
+                    <button
+                      type="button" onClick={() => doDelete(u)}
+                      disabled={isEnvAdmin}
+                      title={isEnvAdmin ? 'env whitelist 의 admin 은 삭제 불가 (env 수정 후 재시작 필요)' : '삭제'}
+                      style={{
+                        padding: '4px 10px', borderRadius: 6, background: 'transparent',
+                        border: '1px solid var(--border-color)',
+                        cursor: isEnvAdmin ? 'not-allowed' : 'pointer',
+                        opacity: isEnvAdmin ? 0.4 : 1,
+                        fontSize: '0.78rem', color: '#ef4444',
+                      }}
+                    >🗑</button>
+                  </td>
+                </tr>
+              )
+            })}
+            {users.length === 0 && !loading && (
+              <tr>
+                <td colSpan={7} style={{ padding: 30, textAlign: 'center', color: 'var(--text-secondary)' }}>
+                  사용자가 없습니다. Klaud SSO 로그인 시 자동 등록되거나, 위의 [+ 사용자 등록] 으로 추가 가능.
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
 }
 
 export default KlaudAdminPage

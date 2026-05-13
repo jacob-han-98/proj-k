@@ -26,6 +26,7 @@ import { getConfluenceCreds } from './auth';
 import { initUpdater } from './updater';
 import { startMcpBridgeIfEnabled, stopMcpBridge } from './mcp-bridge';
 import { installLogPush } from './log-push';
+import { installKlaudLogSink } from './klaud-log-sink';
 import { installDebugProbeServer } from './debug-probe';
 import { startDevBundleWatcher } from './dev-bundle-watcher';
 import { initThreadsDb, closeThreadsDb } from './db';
@@ -273,7 +274,12 @@ function logEnvironment(): void {
 
 app.whenReady().then(async () => {
   // log-push 는 setting 을 읽으므로 settings 모듈이 살아있어야 한다 → 가장 먼저.
+  // 2026-05-13 릴리스-A2: 통합 sink (운영 로그 + 제보) 도 같은 타이밍에 install.
+  // 둘은 독립 — log-push 는 dev WSL collector 로 console 만, klaud-log-sink 는 production
+  // 사내 backend 로 console + renderer + 제보 모두. main 의 console 은 log-push 가 wrap 한 뒤
+  // klaud-log-sink.mirrorToSink 도 같이 호출하도록 log-push 가 처리.
   installLogPush(__APP_VERSION__);
+  installKlaudLogSink({ version: __APP_VERSION__ });
   // 스레드 DB 부팅 (sql.js wasm load + schema migrate). 실패해도 main 진행.
   await initThreadsDb().catch((e) => console.error('[main] initThreadsDb', e));
   logEnvironment();

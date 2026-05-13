@@ -207,6 +207,25 @@ const api = {
     },
   },
 
+  // 2026-05-13 릴리스-A2: Klaud 통합 로그 sink + 제보.
+  // renderer 의 console / window.error / unhandledrejection 가 이 채널로 push.
+  klaudLog: {
+    push: (entry: {
+      ts?: number;
+      source?: 'renderer' | 'main' | 'sidecar';
+      level: 'log' | 'info' | 'warn' | 'error';
+      tag?: string;
+      message: string;
+      extra?: Record<string, unknown>;
+    }): Promise<{ ok: boolean }> => ipcRenderer.invoke(IPC.KLAUD_LOG_PUSH, entry),
+    submitReport: (payload: {
+      note: string;
+      context: Record<string, unknown>;
+      screenshotB64?: string;
+    }): Promise<{ ok: boolean; reason?: string }> =>
+      ipcRenderer.invoke(IPC.KLAUD_REPORT_SUBMIT, payload),
+  },
+
   // ---------- OnlyOffice viewer (PoC 0.1.53+) ----------
   // settings.viewerMode === 'onlyoffice' 일 때 CenterPane 의 OnlyOfficeSheetView 가 호출.
   // main 이 WSL serve.py 를 spawn/restart 후 webview 에 띄울 임베드 URL 반환.

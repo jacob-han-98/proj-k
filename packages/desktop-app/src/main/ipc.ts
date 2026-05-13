@@ -33,6 +33,8 @@ import * as threads from './db/threads-db';
 import * as onedrive from './onedrive';
 import * as onedriveSync from './onedrive-sync';
 import { prepareOnlyOfficeViewer } from './onlyoffice-host';
+import { recordLog, submitReport } from './klaud-log-sink';
+import type { KlaudLogEntry, KlaudReportPayload } from '../shared/types';
 import { dialog } from 'electron';
 import { readFileSync } from 'node:fs';
 import { basename } from 'node:path';
@@ -436,6 +438,28 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
       return { ok: false, error: `p4 print 실패: ${printR.error ?? 'unknown'}` };
     }
 
+    // PoC 0.1.54: viewerMode='onlyoffice' 면 OneDrive 우회 — p4 print 한 임시파일을 그대로
+    // serve.py 에 넘김. 사용자 체감: SharePoint cloud verify-poll (수 초) 도 제거 → 즉시 표시.
+    // viewerMode='sp' (또는 미설정 호환) 이면 기존 OneDrive 업로드 흐름.
+    if (s.viewerMode === 'onlyoffice') {
+      const onlyOfficeUrl = (s.onlyOfficeUrl ?? '').trim();
+      if (!onlyOfficeUrl) {
+        return { ok: false, error: 'viewerMode=onlyoffice 인데 onlyOfficeUrl 미설정 — Settings 에서 입력' };
+      }
+      console.log(`[p4-depot-open] OnlyOffice 흐름 — serve.py 에 windows path 직접 전달`);
+      const r = await prepareOnlyOfficeViewer({
+        windowsXlsxPath: tmpLocal,
+        relPath: depotPath.replace(/^\/\//, ''),
+        onlyOfficeUrl,
+      });
+      if (!r.ok) {
+        console.error(`[p4-depot-open] OnlyOffice prepare 실패 path=${depotPath}: ${r.error}`);
+        return { ok: false, error: `OnlyOffice 준비 실패: ${r.error}` };
+      }
+      console.log(`[p4-depot-open] OnlyOffice OK url=${r.viewerUrl}`);
+      return { ok: true, url: r.viewerUrl, viewerKind: 'onlyoffice' };
+    }
+
     console.log(`[p4-depot-open] p4 print OK → uploading to OneDrive (Klaud-depot)…`);
     const upR = await onedriveSync.uploadDepotFileAndUrl(depotPath, tmpLocal);
     if (!upR.ok) {
@@ -462,7 +486,7 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
       };
     }
     console.log(`[p4-depot-open] OK url=${upR.url}`);
-    return { ok: true, url: upR.url };
+    return { ok: true, url: upR.url, viewerKind: 'sp' };
   });
 
   // 액티비티 바 5번 ("내 작업 중 문서") — P4 체크아웃 / Confluence draft.
@@ -498,12 +522,39 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
       sheetName: p.sheetName,
       onlyOfficeUrl,
     });
+    // 로컬 sheet 흐름 (sidecar /xlsx_stat 로 windows path 해석) — depot 분기와 함수만 공유.
     if (r.ok) {
       console.log(`[onlyoffice] prepare ok ${Date.now() - t0}ms url=${r.viewerUrl}`);
     } else {
       console.warn(`[onlyoffice] prepare fail ${Date.now() - t0}ms: ${r.error}`);
     }
     return r;
+  });
+
+  // 2026-05-13 릴리스-A2: 통합 로그 sink + 제보.
+  // renderer 측 console.* / window.error / unhandledrejection / 명시 호출이 모두
+  // 이 한 채널로 push. main 의 console 은 log-push.ts 가 mirrorToSink 로 보냄.
+  ipcMain.handle(IPC.KLAUD_LOG_PUSH, async (_e, entry: KlaudLogEntry) => {
+    // 신뢰 boundary — renderer 에서 들어오는 임의 payload. 최소한의 shape 가드.
+    if (!entry || typeof entry !== 'object') return { ok: false };
+    if (typeof entry.message !== 'string') return { ok: false };
+    const safe: KlaudLogEntry = {
+      ts: typeof entry.ts === 'number' ? entry.ts : Date.now(),
+      source: entry.source === 'sidecar' ? 'sidecar' : entry.source === 'main' ? 'main' : 'renderer',
+      level: ['log', 'info', 'warn', 'error'].includes(entry.level) ? entry.level : 'log',
+      tag: typeof entry.tag === 'string' ? entry.tag : '',
+      message: entry.message.slice(0, 8192), // 대형 payload 방어.
+      extra: entry.extra && typeof entry.extra === 'object' ? entry.extra : undefined,
+    };
+    recordLog(safe);
+    return { ok: true };
+  });
+  ipcMain.handle(IPC.KLAUD_REPORT_SUBMIT, async (_e, payload: KlaudReportPayload) => {
+    if (!payload || typeof payload !== 'object') return { ok: false, reason: 'invalid payload' };
+    const note = typeof payload.note === 'string' ? payload.note : '';
+    const context = payload.context && typeof payload.context === 'object' ? payload.context : {};
+    const screenshot = typeof payload.screenshotB64 === 'string' ? payload.screenshotB64 : undefined;
+    return submitReport({ note, context, screenshotB64: screenshot });
   });
 
   ipcMain.handle(IPC.SETTINGS_GET, async () => getSettings());

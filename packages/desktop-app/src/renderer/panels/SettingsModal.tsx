@@ -34,6 +34,10 @@ export function SettingsModal({ initialEmail, initialBaseUrl, onClose, onSaved }
   const [mcpBridgeUrl, setMcpBridgeUrl] = useState('');
   const [logCollectorUrl, setLogCollectorUrl] = useState('');
   const [devBundleUrl, setDevBundleUrl] = useState('');
+  // 2026-05-13 릴리스-A2: 통합 로그 sink + 제보 channel.
+  const [klaudLogSinkUrl, setKlaudLogSinkUrl] = useState('');
+  // default true — settings 미설정 사용자는 자동 활성. opt-out 만 명시 저장.
+  const [reportingEnabled, setReportingEnabled] = useState(true);
   const [email, setEmail] = useState(initialEmail ?? '');
   const [apiToken, setApiToken] = useState('');
   const [baseUrl, setBaseUrl] = useState(initialBaseUrl ?? DEFAULT_BASE_URL);
@@ -54,10 +58,10 @@ export function SettingsModal({ initialEmail, initialBaseUrl, onClose, onSaved }
   const [confluenceTestSpaceKey, setConfluenceTestSpaceKey] = useState('');
   const [confluenceTestParentPageId, setConfluenceTestParentPageId] = useState('');
 
-  // PoC 0.1.53+: Excel viewer 분기. 'sp' (default, OneDrive Sync 흐름) 또는 'onlyoffice'
-  // (자체 호스팅 OnlyOffice DS CE 임베드 — sync 함정 우회용 대안). onlyOfficeUrl 비어있으면
-  // 'onlyoffice' 선택해도 prepare() fail 후 SP 로 자동 fallback.
-  const [viewerMode, setViewerMode] = useState<'sp' | 'onlyoffice'>('sp');
+  // PoC 0.1.53+: Excel viewer 분기. 'onlyoffice' (default — 자체 호스팅 OnlyOffice DS CE
+  // 임베드) 또는 명시적 'sp' (SharePoint Excel for the Web). 초기 useState 도 'onlyoffice'
+  // 로 시작 — async getSettings() 도착 전 잠깐 'sp' 가 dropdown 에 비추는 race 회피.
+  const [viewerMode, setViewerMode] = useState<'sp' | 'onlyoffice'>('onlyoffice');
   const [onlyOfficeUrl, setOnlyOfficeUrl] = useState('');
 
   useEffect(() => {
@@ -74,6 +78,8 @@ export function SettingsModal({ initialEmail, initialBaseUrl, onClose, onSaved }
       setMcpBridgeUrl(s.mcpBridgeUrl ?? DEFAULT_MCP_BRIDGE_URL_HINT);
       setLogCollectorUrl(s.logCollectorUrl ?? DEFAULT_LOG_COLLECTOR_URL_HINT);
       setDevBundleUrl(s.devBundleUrl ?? DEFAULT_DEV_BUNDLE_URL_HINT);
+      setKlaudLogSinkUrl(s.klaudLogSinkUrl ?? '');
+      setReportingEnabled(s.reportingEnabled !== false);
       setP4Host(s.p4Host ?? '');
       setP4User(s.p4User ?? '');
       setP4Client(s.p4Client ?? '');
@@ -130,6 +136,8 @@ export function SettingsModal({ initialEmail, initialBaseUrl, onClose, onSaved }
         mcpBridgeUrl: mcpBridgeUrl.trim() || undefined,
         logCollectorUrl: logCollectorUrl.trim() || undefined,
         devBundleUrl: devBundleUrl.trim() || undefined,
+        klaudLogSinkUrl: klaudLogSinkUrl.trim() || undefined,
+        reportingEnabled,
         p4Host: p4Host.trim() || undefined,
         p4User: p4User.trim() || undefined,
         p4Client: p4Client.trim() || undefined,
@@ -290,6 +298,41 @@ export function SettingsModal({ initialEmail, initialBaseUrl, onClose, onSaved }
         />
         <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: -4 }}>
           예: <code>http://localhost:8773</code>. WSL <code>npm run serve:dev-bundle</code> 가 out/ 를 host. 5초 polling 으로 변경 감지 → swap → relaunch (빌드 cycle ~5초). 미설정 시 비활성.
+        </div>
+
+        <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 12, marginBottom: 4 }}>
+          운영 모니터링 (Klaud log sink + 제보)
+        </div>
+
+        <label htmlFor="settings-klaud-log-sink-url" style={{ marginTop: 4 }}>Klaud log sink URL</label>
+        <input
+          id="settings-klaud-log-sink-url"
+          aria-label="Klaud log sink URL"
+          data-testid="settings-klaud-log-sink-url"
+          value={klaudLogSinkUrl}
+          onChange={(e) => setKlaudLogSinkUrl(e.target.value)}
+          placeholder="https://cp.tech2.hybe.im/proj-k/admin"
+          spellCheck={false}
+        />
+        <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: -4 }}>
+          renderer/main console + 제보 가 <code>{'<URL>/klaud/log/batch'}</code> + <code>{'<URL>/klaud/report'}</code> 로 fire-and-forget POST. 미설정 시 큐만 적재 (송신 X). 관리자 페이지에서 사용자별 로그/제보 조회.
+        </div>
+
+        <label
+          htmlFor="settings-reporting-enabled"
+          style={{ marginTop: 8, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}
+        >
+          <input
+            id="settings-reporting-enabled"
+            type="checkbox"
+            data-testid="settings-reporting-enabled"
+            checked={reportingEnabled}
+            onChange={(e) => setReportingEnabled(e.target.checked)}
+          />
+          <span>로그/제보 전송 활성</span>
+        </label>
+        <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: -4 }}>
+          체크 해제 시 URL 설정과 무관하게 일체 송신 안 함. opt-out.
         </div>
 
         <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 12, marginBottom: 4 }}>

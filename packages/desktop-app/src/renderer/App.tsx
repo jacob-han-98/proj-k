@@ -16,6 +16,8 @@ import { SidebarHost } from './workbench/Sidebar/SidebarHost';
 import { CommandPalette } from './workbench/CommandPalette';
 import { useWorkbenchStore } from './workbench/store';
 import { tabIdOf } from './workbench/types';
+import { installKlaudLogCapture, updateLogContext } from './klaud-log-capture';
+import { ReportModal } from './panels/ReportModal';
 
 type Selection = { kind: 'sheet' | 'confluence'; node: TreeNode } | null;
 
@@ -27,6 +29,9 @@ export function App() {
   const [showDiagnostics, setShowDiagnostics] = useState(false);
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
   const [threadListKey, setThreadListKey] = useState(0); // refresh trigger
+  // SettingsModal 저장 시 +1. settings 의존 컴포넌트 (ConfluencePanel 의 testSpace 인디케이터 등)
+  // 가 의존성으로 deps 에 넣고 변경 시 refetch.
+  const [settingsVersion, setSettingsVersion] = useState(0);
   const [sheetMappings, setSheetMappings] = useState<Record<string, string>>({});
   // 사이드바 너비 — VS Code 처럼 사용자 drag 로 가로폭 조절. 기본 312px (기존 240 의 +30%).
   // localStorage 에 영속 — 다음 부팅에 같은 너비로 복원.
@@ -74,6 +79,25 @@ export function App() {
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', onUp);
   };
+
+  // 2026-05-13 릴리스-A2: renderer console + window.error + unhandledrejection 캡처 설치.
+  // 부팅 즉시 — main 측 klaud-log-sink 도 같은 타이밍에 install 됨.
+  useEffect(() => {
+    installKlaudLogCapture();
+  }, []);
+
+  // 제보 모달 토글 — TitleBar 🚨 버튼이 setShowReport(true) 호출.
+  const [showReport, setShowReport] = useState(false);
+
+  // 로그/제보 context 자동 갱신 — 현재 선택된 문서 + breadcrumb. push 마다 entry.extra
+  // 에 동봉되어 backend 가 사용자 시점을 재구성하기 쉬워짐.
+  useEffect(() => {
+    updateLogContext({
+      selection_kind: selection?.kind,
+      selection_id: selection?.node.id,
+      selection_title: selection?.node.title,
+    });
+  }, [selection]);
 
   // 부팅 시 settings 의 sheetMappings load.
   useEffect(() => {
@@ -573,6 +597,7 @@ export function App() {
         onOpenSettings={() => setShowCreds(true)}
         onOpenDiagnostics={() => setShowDiagnostics(true)}
         onOpenAgentWeb={() => useWorkbenchStore.getState().openTab({ kind: 'agent-web' })}
+        onOpenReport={() => setShowReport(true)}
       />
 
       <ActivityBar />
@@ -582,6 +607,8 @@ export function App() {
           selectedTreeId={selection?.node.id ?? null}
           onOpenSheet={(node) => setSelection({ kind: 'sheet', node })}
           onOpenConfluencePage={(node) => setSelection({ kind: 'confluence', node })}
+          onOpenSettings={() => setShowCreds(true)}
+          settingsVersion={settingsVersion}
           selectedThreadId={selectedThreadId}
           onSelectThread={setSelectedThreadId}
           onOpenThreadInEditor={(t) =>
@@ -634,6 +661,7 @@ export function App() {
           onClose={() => setShowCreds(false)}
           onSaved={async () => {
             await refreshCreds();
+            setSettingsVersion((v) => v + 1);
             setShowCreds(false);
           }}
         />
@@ -648,6 +676,8 @@ export function App() {
           }}
         />
       )}
+
+      {showReport && <ReportModal onClose={() => setShowReport(false)} />}
 
       <UpdateToast />
       <CommandPalette />

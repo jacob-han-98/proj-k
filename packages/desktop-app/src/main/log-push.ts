@@ -8,6 +8,7 @@
 // 별도로 유지 (klaud_get_logs 가 그쪽 사용).
 
 import { getSettings } from './settings';
+import { mirrorToSink } from './klaud-log-sink';
 
 const QUEUE_LIMIT = 200;
 let queue: Array<Record<string, unknown>> = [];
@@ -97,6 +98,12 @@ export function installLogPush(version: string): void {
         enqueue(level, tag, message);
       } catch {
         // ignore
+      }
+      // 2026-05-13 릴리스-A2: 통합 sink 에도 동일 entry 복제.
+      try {
+        mirrorToSink(level, tag, message);
+      } catch {
+        // ignore — sink 가 install 전이거나 디스크 가득 등.
       }
     };
   }

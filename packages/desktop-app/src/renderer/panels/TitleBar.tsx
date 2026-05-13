@@ -22,9 +22,11 @@ interface Props {
   onOpenDiagnostics: () => void;
   // agent-sdk-poc 웹 임베드 탭 트리거.
   onOpenAgentWeb: () => void;
+  // 2026-05-13 릴리스-A2: 제보 모달 트리거.
+  onOpenReport: () => void;
 }
 
-export function TitleBar({ sidecar, breadcrumb, onOpenSettings, onOpenDiagnostics, onOpenAgentWeb }: Props) {
+export function TitleBar({ sidecar, breadcrumb, onOpenSettings, onOpenDiagnostics, onOpenAgentWeb, onOpenReport }: Props) {
   const [maximized, setMaximized] = useState(false);
   const openPalette = useWorkbenchStore((s) => s.openPalette);
 
@@ -85,6 +87,15 @@ export function TitleBar({ sidecar, breadcrumb, onOpenSettings, onOpenDiagnostic
           title="Agent 웹 UI 임베드 — 대화 / 관리 / 공유 / 출처 분할 등 모든 web 기능"
         >
           🤖
+        </button>
+        <button
+          type="button"
+          className="topbar-settings topbar-report"
+          onClick={onOpenReport}
+          data-testid="topbar-report"
+          title="이상해요 / 제보 — 그 시점 이전 로그를 한 묶음으로 관리자에게 전달"
+        >
+          🚨 제보
         </button>
         <button
           type="button"

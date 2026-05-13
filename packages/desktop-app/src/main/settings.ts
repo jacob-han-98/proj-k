@@ -50,6 +50,19 @@ export interface Settings {
   viewerMode?: 'sp' | 'onlyoffice';
   // OnlyOffice Document Server endpoint. 예: http://172.20.105.147:8080
   onlyOfficeUrl?: string;
+
+  // 2026-05-13 릴리스-A2: 통합 로그 sink (운영 모니터링 + 제보).
+  // - klaudLogSinkUrl: 사내 backend endpoint (예: http://cp.tech2.hybe.im/proj-k/admin).
+  //   미설정 시 frontend 는 큐에 적재만 하고 송신 X — 사용자에게 영향 0.
+  //   설정되면 console + window.error + unhandledrejection + 제보 가 모두 이 URL 로.
+  //   /klaud/log/batch + /klaud/report 두 endpoint 를 호출 — server.py 가 backend 로 proxy.
+  // - reportingEnabled: 사용자 opt-out. default true (안 켜져 있어도 url 미설정이면 무효).
+  //   끄면 익명/사용자 로그 송신 자체 안 함.
+  klaudLogSinkUrl?: string;
+  reportingEnabled?: boolean;
+  // machine_id 는 backend 가 사용자 식별 (SSO 합류 전) 에 쓰는 익명 UUID. 첫 부팅 시
+  // 자동 생성되어 settings 에 영구 보관. 사용자 변경 불가 (UI 미노출).
+  klaudMachineId?: string;
 }
 
 function settingsFile(): string {

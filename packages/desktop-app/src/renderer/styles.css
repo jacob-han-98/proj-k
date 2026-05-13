@@ -3986,6 +3986,173 @@ html, body, #root { height: 100%; margin: 0; padding: 0; background: var(--bg); 
   justify-content: center;
   z-index: 1000;
 }
+
+/* 2026-05-13 릴리스-A2: 제보 모달 — diag-modal 패턴 모방, 자체 prefix. */
+.report-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+.report-modal {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  width: min(560px, 90vw);
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+}
+.report-modal-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+}
+.report-modal-title {
+  flex: 1;
+  font-weight: 600;
+}
+.report-modal-close {
+  all: unset;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 13px;
+}
+.report-modal-close:hover {
+  background: var(--list-hoverBackground);
+}
+.report-modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.report-modal-intro {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.5;
+}
+.report-modal-note {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-elev);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.report-modal-note:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+.report-modal-context {
+  background: var(--bg-elev);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 8px 12px;
+}
+.report-modal-context-title {
+  font-size: 11px;
+  color: var(--text-dim);
+  margin-bottom: 4px;
+}
+.report-modal-context-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.report-modal-context-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.report-modal-context-list li > span {
+  flex: 0 0 64px;
+  color: var(--text-dim);
+}
+.report-modal-context-list li > code {
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  color: var(--text);
+  background: transparent;
+}
+.report-modal-result {
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+.report-modal-result.ok {
+  background: rgba(107, 217, 107, 0.1);
+  color: var(--text);
+}
+.report-modal-result.err {
+  background: rgba(217, 107, 107, 0.1);
+  color: var(--text);
+}
+.report-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--border);
+}
+.report-modal-cancel-btn,
+.report-modal-submit-btn {
+  all: unset;
+  cursor: pointer;
+  padding: 6px 14px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+.report-modal-cancel-btn {
+  border: 1px solid var(--border);
+  color: var(--text);
+}
+.report-modal-cancel-btn:hover {
+  background: var(--list-hoverBackground);
+}
+.report-modal-submit-btn {
+  background: var(--accent);
+  color: var(--accent-fg);
+}
+.report-modal-submit-btn:hover {
+  filter: brightness(1.1);
+}
+.report-modal-submit-btn:disabled,
+.report-modal-cancel-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* 2026-05-13: 제보 버튼 강조 — 다른 topbar 버튼보다 약간 두드러지게. */
+.topbar-report {
+  border: 1px solid var(--accent) !important;
+  color: var(--accent) !important;
+}
+.topbar-report:hover {
+  background: var(--accent) !important;
+  color: var(--accent-fg) !important;
+}
 .diag-modal {
   background: var(--bg);
   color: var(--text);

@@ -246,6 +246,12 @@ export const IPC = {
   // PoC 0.1.53 — OnlyOffice 임베드 viewer 준비. main 이 WSL 의 serve.py 를 spawn/restart 후
   // 임베드 HTML URL 반환. 매 sheet 클릭 시 호출 (현재는 동시 1 sheet 만 지원 — serve.py 단일 인스턴스).
   ONLYOFFICE_PREPARE: 'onlyoffice:prepare',
+  // 2026-05-13 릴리스-A2: Klaud 통합 로그 sink + 제보.
+  // - KLAUD_LOG_PUSH: renderer 가 자신의 console / window.error / unhandledrejection 을 main 에 push.
+  //   main 이 ring buffer + 파일 누적 + (설정되면) backend POST.
+  // - KLAUD_REPORT_SUBMIT: 제보 버튼 클릭 시 사용자 노트 + 현재 컨텍스트 → main → backend.
+  KLAUD_LOG_PUSH: 'klaud:log:push',
+  KLAUD_REPORT_SUBMIT: 'klaud:report:submit',
 } as const;
 
 // main → renderer 단축키 forward payload. webview 안에서 발생한 키도 우리 앱 단축키면
@@ -254,6 +260,35 @@ export const IPC = {
 export type ShortcutEvent =
   | { name: 'command-palette' }
   | { name: 'activity-bar'; digit: '1' | '2' | '3' | '4' | '5' };
+
+// 2026-05-13 릴리스-A2: Klaud 통합 로그 sink 의 엔트리 shape.
+// renderer 의 console / window.error / unhandledrejection / 명시 호출이 모두 이 형태로 push.
+// main 의 console 도 동일 shape 로 ring buffer 적재 (source 만 'main').
+// backend (server.py → agent-sdk-poc proxy) 로 batch POST 될 때도 같은 shape.
+export interface KlaudLogEntry {
+  ts: number; // epoch ms
+  source: 'renderer' | 'main' | 'sidecar';
+  level: 'log' | 'info' | 'warn' | 'error';
+  // 메시지가 [foo] 로 시작하면 그걸 tag 로 분리. 아니면 빈 문자열.
+  tag: string;
+  message: string;
+  // optional. 현재 활성 탭/모드/페이지 id 등 context. renderer 가 채움.
+  extra?: Record<string, unknown>;
+}
+
+// 제보 페이로드. 사용자 노트 + 현재 컨텍스트. backend 가 (machine_id, session_id, ts) 로
+// 직전 N분 로그를 묶어 관리자 페이지에서 조회 가능하게.
+export interface KlaudReportPayload {
+  note: string;
+  context: {
+    activeTab?: { id: string; kind: string; title: string };
+    splitMode?: string;
+    url?: string;
+    [k: string]: unknown;
+  };
+  // optional. base64 PNG. 사용자가 첨부 토글 시.
+  screenshotB64?: string;
+}
 
 // Phase 3 thread workspace IPC payloads.
 export interface ThreadSummary {

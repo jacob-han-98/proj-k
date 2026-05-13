@@ -63,6 +63,13 @@ export const mockProjkInitScript = `
                 confluencePageId: '3',
                 relPath: 'Design/시스템 디자인/전투',
               },
+              {
+                id: 'confluence:4',
+                type: 'page',
+                title: '탐색',
+                confluencePageId: '4',
+                relPath: 'Design/시스템 디자인/탐색',
+              },
             ],
           },
         ],

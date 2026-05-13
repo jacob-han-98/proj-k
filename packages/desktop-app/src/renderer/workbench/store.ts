@@ -64,6 +64,17 @@ type WorkbenchState = {
   // 탭이 닫히면 그 탭의 split payload 도 같이 정리.
   closeTab: (id: string) => void;
 
+  // 2026-05-12: Chrome 스타일 고정 탭 — 사용자가 우클릭 → "고정" 으로 좌측에 고정.
+  // PD 피드백 1b: "현재 리뷰 중인 문서가 무엇인지 명확하게, 컨텍스트 스위칭 후 복귀
+  // 쉽게". pinnedTabIds 는 순서 보존된 ID 배열 (insertion order = 좌측에서 등장 순).
+  // TabBar 가 display order 를 (pinned + unpinned) 로 재구성. closeTab 시 자동 정리.
+  // 세션 영속 X — openTabs 자체가 영속되지 않으므로 (재부팅 시 빈 상태) pinned 만 따로
+  // 보관할 의미 없음. 사용자 멘탈모델 단순 유지.
+  pinnedTabIds: string[];
+  pinTab: (id: string) => void;
+  unpinTab: (id: string) => void;
+  togglePinTab: (id: string) => void;
+
   // PR4: editor 영역의 우측 split (어시스턴트). 탭별 isolated.
   tabSplits: Record<string, SplitPayload | undefined>;
   // mode 미지정 = 'pick' (수동 시작 빈 상태). 기존 호출자는 mode 인자 생략 가능.
@@ -176,6 +187,10 @@ export const useWorkbenchStore = create<WorkbenchState>((set) => ({
     // 탭 닫히면 그 탭의 split payload 도 정리.
     const splits = { ...state.tabSplits };
     delete splits[id];
+    // 고정 탭이었으면 pinned 목록에서도 정리 — leak 방지.
+    const pinnedTabIds = state.pinnedTabIds.includes(id)
+      ? state.pinnedTabIds.filter((p) => p !== id)
+      : state.pinnedTabIds;
     // 같은 docKey 의 다른 탭이 남아있지 않으면 editing 상태도 함께 정리.
     // depot 파일은 revision 별로 별도 탭이지만 docKey 는 공유 → 마지막 revision 탭이 닫혀야 정리.
     let editingDocs = state.editingDocs;
@@ -209,7 +224,27 @@ export const useWorkbenchStore = create<WorkbenchState>((set) => ({
       tabSplits: splits,
       editingDocs,
       qnaPendingAttachments,
+      pinnedTabIds,
     };
+  }),
+
+  pinnedTabIds: [],
+  pinTab: (id) => set((state) => {
+    if (state.pinnedTabIds.includes(id)) return state;
+    // 존재하지 않는 탭 id 는 무시 — leak/race 방지.
+    if (!state.openTabs.some((t) => t.id === id)) return state;
+    return { ...state, pinnedTabIds: [...state.pinnedTabIds, id] };
+  }),
+  unpinTab: (id) => set((state) => {
+    if (!state.pinnedTabIds.includes(id)) return state;
+    return { ...state, pinnedTabIds: state.pinnedTabIds.filter((p) => p !== id) };
+  }),
+  togglePinTab: (id) => set((state) => {
+    if (!state.openTabs.some((t) => t.id === id)) return state;
+    if (state.pinnedTabIds.includes(id)) {
+      return { ...state, pinnedTabIds: state.pinnedTabIds.filter((p) => p !== id) };
+    }
+    return { ...state, pinnedTabIds: [...state.pinnedTabIds, id] };
   }),
 
   tabSplits: {},

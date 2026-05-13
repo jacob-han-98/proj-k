@@ -55,3 +55,20 @@ export function docKeyOfNode(node: { id: string; relPath?: string; oneDriveUrl?:
   if (node.relPath) return `local:${node.relPath}`;
   return null;
 }
+
+// 2026-05-12: Chrome 스타일 탭 표시 순서. pinned 가 좌측에 pinnedTabIds 순서대로 먼저
+// 나오고, 그 뒤에 unpinned 가 openTabs 원본 순서대로. pinnedTabIds 에 있지만 openTabs
+// 에는 없는 id 는 stale 로 간주해 제외 (closeTab 청소 누락 방어). 순수 함수 — 단위 테스트
+// 로 분기 검증.
+export function getDisplayedTabs(openTabs: DocTab[], pinnedTabIds: string[]): DocTab[] {
+  if (pinnedTabIds.length === 0) return openTabs;
+  const byId = new Map(openTabs.map((t) => [t.id, t]));
+  const pinned: DocTab[] = [];
+  for (const id of pinnedTabIds) {
+    const t = byId.get(id);
+    if (t) pinned.push(t);
+  }
+  const pinnedSet = new Set(pinned.map((t) => t.id));
+  const unpinned = openTabs.filter((t) => !pinnedSet.has(t.id));
+  return [...pinned, ...unpinned];
+}

@@ -2182,6 +2182,7 @@ html, body, #root { height: 100%; margin: 0; padding: 0; background: var(--bg); 
 }
 
 .tab-bar {
+  position: relative;
   flex: 0 0 35px;
   display: flex;
   align-items: stretch;
@@ -2270,6 +2271,60 @@ html, body, #root { height: 100%; margin: 0; padding: 0; background: var(--bg); 
 .tab-close .codicon {
   font-size: 14px;
   line-height: 1;
+}
+
+/* 2026-05-12 PD 피드백 1b: Chrome 스타일 고정 탭. 좌측 accent border + 📌 마커.
+   close X 는 컴포넌트 단에서 hide (실수 닫힘 방지). */
+.tab.pinned {
+  background: var(--tab-activeBackground);
+  border-left: 2px solid var(--accent);
+  padding-left: 6px;
+}
+
+.tab.pinned:not(.active) {
+  /* 비활성 고정 탭도 보통 탭보다 한 단계 진하게 — '계속 보고 있는 문서' 강조. */
+  background: color-mix(in srgb, var(--accent) 12%, var(--tab-inactiveBackground));
+  color: var(--tab-activeForeground);
+}
+
+.tab.pinned .tab-pin-marker {
+  font-size: 11px;
+  color: var(--accent);
+  flex: 0 0 11px;
+  opacity: 0.95;
+}
+
+.tab-context-menu {
+  position: fixed;
+  z-index: 10000;
+  min-width: 140px;
+  background: var(--menu-background, var(--bg-elev));
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  padding: 4px 0;
+  font-size: 12px;
+}
+
+.tab-context-menu-item {
+  all: unset;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 12px;
+  cursor: pointer;
+  color: var(--text);
+}
+
+.tab-context-menu-item:hover {
+  background: var(--list-hoverBackground);
+}
+
+.tab-context-menu-icon {
+  font-size: 13px;
+  opacity: 0.8;
 }
 
 .tab-content-area {

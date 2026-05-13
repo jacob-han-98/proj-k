@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { app } from 'electron';
 import { getSidecarDir, getDesktopAppDir } from './paths';
 import { effectiveRetrieverUrl, effectiveAgentUrl, effectiveRepoRoot, effectiveP4WorkspaceRoot } from './settings';
+import { recordLog as recordSinkLog } from './klaud-log-sink';
 import type { SidecarStatus } from '../shared/types';
 
 const HEALTH_TIMEOUT_MS = 30_000;
@@ -232,7 +233,23 @@ export async function startSidecar(): Promise<void> {
   );
 
   child.stdout?.on('data', (d) => console.log(`[sidecar] ${d.toString().trimEnd()}`));
-  child.stderr?.on('data', (d) => console.warn(`[sidecar:err] ${d.toString().trimEnd()}`));
+  child.stderr?.on('data', (d) => {
+    const text = d.toString().trimEnd();
+    console.warn(`[sidecar:err] ${text}`);
+    // 2026-05-13 Multi-3: sidecar stderr 도 통합 sink 로 source='sidecar' 분리 적재.
+    // 크래시 시점 직전 진단 정보 보존. 라인 너무 길면 잘라서 sink queue 부담 방지.
+    try {
+      recordSinkLog({
+        ts: Date.now(),
+        source: 'sidecar',
+        level: 'warn',
+        tag: 'sidecar-stderr',
+        message: text.slice(0, 2000),
+      });
+    } catch {
+      /* ignore */
+    }
+  });
 
   child.on('error', (err) => {
     console.error('[sidecar] spawn error', err);
@@ -249,6 +266,21 @@ export async function startSidecar(): Promise<void> {
     proc = null;
     if (status.state === 'stopped') return;
     setStatus({ state: 'error', port, pid: null, message: `exited code=${code}` });
+    // 2026-05-13 Multi-3: 비정상 종료를 통합 sink 에 source='sidecar' + level='error' 로
+    // 명시 push (console.warn 만으로는 level=warn 으로 들어가 web admin 에서 크래시 필터
+    // 약함). 정상 stop 은 위에서 early return 으로 skip 됨.
+    try {
+      recordSinkLog({
+        ts: Date.now(),
+        source: 'sidecar',
+        level: 'error',
+        tag: 'sidecar-crash',
+        message: `sidecar exited unexpectedly: code=${code} signal=${signal}`,
+        extra: { code, signal, restart_attempt: restartAttempts },
+      });
+    } catch {
+      /* sink 미설치 시 — silent */
+    }
     if (restartAttempts < RESTART_BACKOFF_MS.length) {
       const delay = RESTART_BACKOFF_MS[restartAttempts++];
       setTimeout(() => {

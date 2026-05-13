@@ -6,6 +6,7 @@ export default defineConfig(({ mode }) => ({
   plugins: [react()],
   base: mode === 'production' ? '/proj-k/agentsdk/' : '/',
   server: {
+    host: true,           // 0.0.0.0 bind — WSL 외부 (Windows host / LAN) 접근 허용
     allowedHosts: true,
     proxy: {
       '/api': {

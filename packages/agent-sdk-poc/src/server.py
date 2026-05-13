@@ -48,6 +48,7 @@ from agent import run_query_with_session
 import storage
 import followups as followups_mod
 import doc_context as doc_ctx
+import klaud_sink
 from preset_prompts import PRESETS
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -91,6 +92,17 @@ def log_event(sid: str, event_type: str, detail: str = ""):
         active_queries[sid]["status"] = event_type
         active_queries[sid]["last_event"] = ts
     log.info(f"[{sid[:8]}] {event_type}: {detail[:100]}")
+    # Klaud 통합 로그 sink — agent timeline 도 함께 적재 (init 전이면 no-op)
+    klaud_sink.enqueue_agent_event(event_type, detail, session_id=sid)
+
+
+@app.on_event("startup")
+async def _klaud_sink_startup():
+    """Klaud 통합 로그 sink 초기화 — SQLite open + writer thread + root logger handler."""
+    try:
+        klaud_sink.init()
+    except Exception as e:  # sink 가 죽어도 server 는 계속
+        log.warning(f"klaud_sink init failed: {e}")
 
 
 def _sse(event_type: str, data: dict) -> dict:
@@ -2041,6 +2053,175 @@ async def quick_find(req: QuickFindRequest, _strategy: str | None = None):
             yield _ndj({"type": "error", "message": f"unexpected: {e}"})
 
     return StreamingResponse(gen(), media_type="application/x-ndjson")
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# /klaud/* — Klaud 통합 로그 sink + 제보 endpoint (2026-05-13 릴리스 블로커)
+# 자세한 contract: docs/klaud-log-sink.md 또는 frontend bridge 메시지 20260513-022643-a3f1c0
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class KlaudLogBatchRequest(BaseModel):
+    """frontend → backend 로그 batch.
+
+    entries 는 list[dict] 로 받음 — pydantic 엄격 검증을 의도적으로 안 함.
+    개별 entry 의 필수 필드(ts/source/message) 누락이나 source whitelist 벗어남은
+    ingest_batch() 가 entry 단위로 silent drop. 한 건 깨졌다고 batch 전체가
+    422 거부되는 일 없도록 (fire-and-forget 의 의도).
+    """
+    machine_id: str | None = None
+    user_email: str | None = None
+    klaud_version: str | None = None
+    session_id: str | None = None
+    entries: list[dict]
+
+
+class KlaudReportContext(BaseModel):
+    active_tab: dict | None = None
+    split_mode: str | None = None  # review | summary | null
+    url: str | None = None
+    screenshot_b64: str | None = None
+
+
+class KlaudReportRequest(BaseModel):
+    machine_id: str
+    user_email: str | None = None
+    klaud_version: str | None = None
+    session_id: str | None = None
+    ts: str | None = None
+    note: str | None = None
+    context: KlaudReportContext | None = None
+
+
+def _require_admin(authorization: str | None) -> None:
+    token = klaud_sink.admin_token()
+    if not token:
+        raise HTTPException(status_code=503, detail="KLAUD_ADMIN_TOKEN env not set on server")
+    expected = f"Bearer {token}"
+    if authorization != expected:
+        raise HTTPException(status_code=401, detail="invalid admin token")
+
+
+@app.post("/klaud/log/batch")
+async def klaud_log_batch(req: KlaudLogBatchRequest):
+    """frontend 가 1~5초 batch 로 push. fire-and-forget, 응답은 단순 200."""
+    # body 한도 체크 — pydantic 가 받은 시점이라 메모리엔 이미 들어와 있음.
+    # 진짜 한도는 uvicorn/starlette 미들웨어에서 보장하는 게 정석이지만,
+    # entries 개수 sanity 체크는 여기서.
+    if len(req.entries) > 1000:
+        raise HTTPException(status_code=413, detail="batch too large (max 1000 entries)")
+    n = klaud_sink.ingest_batch(
+        entries=req.entries,
+        machine_id=req.machine_id,
+        user_email=req.user_email,
+        klaud_version=req.klaud_version,
+        session_id=req.session_id,
+    )
+    return {"accepted": n}
+
+
+@app.post("/klaud/report")
+async def klaud_report(req: KlaudReportRequest):
+    """사용자가 제보 버튼 누르면 호출. 제보 row 생성 + 묶기 window 저장."""
+    if not req.machine_id:
+        raise HTTPException(status_code=400, detail="machine_id required")
+    ctx_dict = req.context.model_dump() if req.context else None
+    screenshot = None
+    if req.context and req.context.screenshot_b64:
+        screenshot = req.context.screenshot_b64
+        # context_json 에는 screenshot 제외 (별도 column)
+        ctx_dict = {k: v for k, v in ctx_dict.items() if k != "screenshot_b64"}
+
+    try:
+        report_uuid = klaud_sink.insert_report(
+            machine_id=req.machine_id,
+            user_email=req.user_email,
+            klaud_version=req.klaud_version,
+            session_id=req.session_id,
+            note=req.note,
+            context=ctx_dict,
+            screenshot_b64=screenshot,
+            ts=req.ts,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"insert failed: {e}") from e
+    log_event("klaud_report", "klaud_report", f"{report_uuid} from {req.machine_id[:8]}")
+    return {"report_id": report_uuid}
+
+
+from fastapi import Header  # noqa: E402
+
+
+@app.get("/klaud/logs")
+async def klaud_logs_admin(
+    user_email: str | None = None,
+    machine_id: str | None = None,
+    session_id: str | None = None,
+    source: str | None = None,
+    level: str | None = None,
+    ts_from: str | None = None,
+    ts_to: str | None = None,
+    cursor: int | None = None,
+    limit: int = 500,
+    authorization: str | None = Header(default=None),
+):
+    """admin 조회 — Authorization: Bearer $KLAUD_ADMIN_TOKEN 필요."""
+    _require_admin(authorization)
+    logs = klaud_sink.query_logs(
+        user_email=user_email,
+        machine_id=machine_id,
+        session_id=session_id,
+        source=source,
+        level=level,
+        ts_from=ts_from,
+        ts_to=ts_to,
+        cursor=cursor,
+        limit=limit,
+    )
+    next_cursor = logs[-1]["id"] if logs and len(logs) == min(limit, 5000) else None
+    return {"logs": logs, "next_cursor": next_cursor, "count": len(logs)}
+
+
+@app.get("/klaud/reports")
+async def klaud_reports_admin(
+    user_email: str | None = None,
+    machine_id: str | None = None,
+    ts_from: str | None = None,
+    ts_to: str | None = None,
+    cursor: int | None = None,
+    limit: int = 100,
+    authorization: str | None = Header(default=None),
+):
+    _require_admin(authorization)
+    reports = klaud_sink.query_reports(
+        user_email=user_email,
+        machine_id=machine_id,
+        ts_from=ts_from,
+        ts_to=ts_to,
+        cursor=cursor,
+        limit=limit,
+    )
+    next_cursor = reports[-1]["id"] if reports and len(reports) == min(limit, 1000) else None
+    return {"reports": reports, "next_cursor": next_cursor, "count": len(reports)}
+
+
+@app.get("/klaud/reports/{report_uuid}")
+async def klaud_report_detail(
+    report_uuid: str,
+    authorization: str | None = Header(default=None),
+):
+    """제보 + 묶인 직전 N분 로그."""
+    _require_admin(authorization)
+    bundle = klaud_sink.get_report_with_logs(report_uuid)
+    if bundle is None:
+        raise HTTPException(status_code=404, detail=f"report not found: {report_uuid}")
+    return bundle
+
+
+@app.get("/klaud/stats")
+async def klaud_stats(authorization: str | None = Header(default=None)):
+    """관리자/디버그 — store 상태 요약 (queue size, dropped count, totals)."""
+    _require_admin(authorization)
+    return klaud_sink.stats()
 
 
 if __name__ == "__main__":

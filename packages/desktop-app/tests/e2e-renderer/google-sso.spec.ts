@@ -41,6 +41,9 @@ test.beforeEach(async ({ page }) => {
   });
   await page.goto('/');
   await page.getByTestId('topbar-settings').click();
+  // 2026-05-13: SettingsModal 이 VSCode 스타일 — 좌측 nav 의 "인증" 카테고리 클릭해
+  // Google 필드 노출. default active 는 'general'.
+  await page.getByTestId('settings-modal-nav-auth').click();
   await expect(page.getByTestId('settings-google-client-id')).toBeVisible();
 });
 

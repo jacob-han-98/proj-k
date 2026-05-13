@@ -2339,15 +2339,16 @@ async def klaud_crawl_purge(
     req: KlaudCrawlPurgeRequest,
     authorization: str | None = Header(default=None),
 ):
-    """purge — status='purged' + chunk_count=0. ChromaDB chunk 실 삭제는 Phase B."""
+    """purge — status='purged' + chunk_count=0 + ChromaDB chunk 실 삭제 (Phase B)."""
     _require_admin(authorization)
     if req.source not in klaud_crawl_state.VALID_SOURCES:
         raise HTTPException(status_code=400, detail=f"invalid source: {req.source}")
     if not req.resource_paths:
         raise HTTPException(status_code=400, detail="resource_paths empty")
     n = klaud_crawl_state.mark_purged(req.source, req.resource_paths)
-    log_event("klaud_crawl", "purge", f"{req.source}: {n} purged")
-    return {"purged": n}
+    chunks_deleted = klaud_crawl_state.purge_chromadb_chunks(req.source, req.resource_paths)
+    log_event("klaud_crawl", "purge", f"{req.source}: {n} purged + {chunks_deleted} chunks")
+    return {"purged": n, "chunks_deleted": chunks_deleted}
 
 
 @app.post("/klaud/crawl/reindex")

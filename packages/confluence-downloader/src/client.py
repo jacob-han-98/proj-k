@@ -92,6 +92,53 @@ class ConfluenceClient:
             start += limit
         return all_attachments
 
+    def search_modified_since(self, since_ts: str, space_key: str | None = None,
+                              ancestor_id: str | None = None, limit: int = 500) -> list:
+        """직전 시점 이후 변경된 페이지 목록 (릴리스-C cron-tick 의 Confluence 증분).
+
+        Args:
+            since_ts: ISO 8601 (예: "2026-05-13T00:00:00Z") — CQL `lastmodified > ...`.
+                      CQL datetime literal 은 "yyyy/MM/dd HH:mm" 형식이라 변환.
+            space_key: 특정 스페이스만 (예: "PK", "ART"). 미지정이면 전체.
+            ancestor_id: 특정 root 의 후손만 (CQL ancestor=). 스페이스가 큰 경우 권장.
+
+        Returns:
+            [{"id": page_id, "title": ..., "lastModified": ..., "type": "page"}, ...]
+
+        Note: CQL 의 lastmodified 비교는 분 단위 정확도. 같은 분 안의 변경은 중복으로 잡힐
+        수 있음 (보수적). cron-tick 입장에서는 중복 OK, 누락이 위험이라 안전한 trade-off.
+        """
+        since_norm = since_ts.replace("T", " ")[:16].replace("-", "/")
+        cql_parts = [f'lastmodified > "{since_norm}"', 'type=page']
+        if space_key:
+            cql_parts.append(f'space="{space_key}"')
+        if ancestor_id:
+            cql_parts.append(f'ancestor={ancestor_id}')
+        cql = " AND ".join(cql_parts)
+
+        results: list = []
+        start = 0
+        page_size = 50
+        while True:
+            data = self._get("/content/search", params={
+                "cql": cql,
+                "limit": page_size,
+                "start": start,
+                "expand": "version",
+            })
+            items = data.get("results", [])
+            for it in items:
+                results.append({
+                    "id": it.get("id"),
+                    "title": it.get("title"),
+                    "type": it.get("type", "page"),
+                    "lastModified": it.get("version", {}).get("when"),
+                })
+            if len(items) < page_size or len(results) >= limit:
+                break
+            start += page_size
+        return results[:limit]
+
     def download_attachment(self, download_path: str) -> bytes:
         """첨부 파일 다운로드. download_path는 attachment._links.download 값."""
         url = f"{self.base_url}{download_path}"

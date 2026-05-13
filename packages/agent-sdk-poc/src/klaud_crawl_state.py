@@ -160,6 +160,67 @@ def mark_purged(source: str, resource_paths: list[str]) -> int:
     return n
 
 
+def purge_chromadb_chunks(source: str, resource_paths: list[str]) -> int:
+    """ChromaDB chunk 실 삭제 — purge 호출 시 같이.
+
+    ChromaDB collection (~/.qna-poc-chroma, project_k) 의 metadata 매칭:
+    - p4-xlsx: workbook 키로 매칭. resource_path '7_System/PK_HUD 시스템.xlsx' → workbook='PK_HUD 시스템'
+    - confluence-*: source_path LIKE '%/<resource_path>/content.md' 매칭 — 단 ChromaDB 의 where 는
+      LIKE 미지원이라 전체 metadata 의 source_path 를 받아서 path 안에 resource_path 포함된 것만 필터.
+
+    Returns: 실제 삭제된 chunk 수. ChromaDB 가 없거나 실패하면 0.
+    """
+    if not resource_paths:
+        return 0
+    try:
+        import chromadb  # type: ignore[import-not-found]
+    except ImportError:
+        _LOG.warning("chromadb not installed — skip purge_chromadb_chunks")
+        return 0
+
+    chroma_dir = Path.home() / ".qna-poc-chroma"
+    if not chroma_dir.exists():
+        _LOG.warning(f"ChromaDB dir not found: {chroma_dir}")
+        return 0
+
+    try:
+        client = chromadb.PersistentClient(path=str(chroma_dir))
+        col = client.get_collection("project_k")
+    except Exception as e:
+        _LOG.warning(f"ChromaDB connect failed: {e}")
+        return 0
+
+    deleted = 0
+    for rp in resource_paths:
+        try:
+            if source == "p4-xlsx":
+                workbook = Path(rp).stem  # '7_System/PK_HUD 시스템.xlsx' → 'PK_HUD 시스템'
+                res = col.get(where={"workbook": workbook}, include=[])
+                ids = res.get("ids", [])
+                if ids:
+                    col.delete(ids=ids)
+                    deleted += len(ids)
+            elif source in ("confluence-projk", "confluence-art"):
+                # source_path 가 LIKE 미지원이라 전체 metadata 받아 path 매칭
+                # 큰 collection 에선 비효율 — 운영 부담 늘면 별도 인덱스 필요
+                res = col.get(include=["metadatas"])
+                ids = res.get("ids", []) or []
+                metas = res.get("metadatas", []) or []
+                rp_norm = rp.strip("/").replace("\\", "/")
+                match_ids = [
+                    ids[i] for i, m in enumerate(metas)
+                    if m and rp_norm in str(m.get("source_path", "")).replace("\\", "/")
+                ]
+                if match_ids:
+                    col.delete(ids=match_ids)
+                    deleted += len(match_ids)
+        except Exception as e:
+            _LOG.warning(f"ChromaDB delete failed for {rp}: {e}")
+    if deleted:
+        _LOG.info(f"ChromaDB purged {deleted} chunks ({source}, {len(resource_paths)} resources)")
+    return deleted
+
+
 def mark_stale(source: str, resource_paths: list[str] | None = None, all_in_source: bool = False) -> int:
     """reindex — status='stale'. 다음 cron-tick 에 재처리.
 

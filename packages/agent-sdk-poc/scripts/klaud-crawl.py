@@ -173,30 +173,196 @@ def cmd_reindex(args: argparse.Namespace) -> int:
 
 
 def cmd_cron_tick(args: argparse.Namespace) -> int:
-    """변경 감지 + 증분 인덱싱.
+    """변경 감지 + stale 표시.
 
-    Phase A: stub — last_cron_tick_at 만 기록. 실 fetch+update 는 Phase B.
-    Phase B 예정:
-      1. Confluence v2 API since=<last_modified> 로 변경 페이지 조회
-      2. P4 changes -e <last-changelist> 로 변경 XLSX 조회
-      3. confluence-downloader / xlsx-extractor 호출 (또는 직접 fetch)
-      4. ChromaDB 의 chunk 업데이트
-      5. crawl_state.upsert_resource(...) 로 status='fresh'
+    Phase B: 두 source 의 upstream 변경 감지 → status='stale' 표시.
+    실 fetch + ChromaDB update 는 별도 `reindex-run` 명령 (Phase C) 또는 사용자가
+    직접 confluence-downloader / xlsx-extractor 실행 후 `upsert_resource` 호출.
+
+    이렇게 분리한 이유:
+    - 변경 감지 (가벼움, ~수 초) 와 실 fetch + re-chunk (무거움, 시간 단위) 의 latency 차이.
+    - cron-tick 은 10분 주기로 가벼워야 하고, 실 fetch 는 operator 가 확인 후 실행하는 게 안전.
     """
-    ts = datetime.now(timezone.utc).isoformat()
-    state.set_last_cron_tick(ts)
+    new_tick = datetime.now(timezone.utc).isoformat()
     sources = [args.source] if args.source else sorted(state.VALID_SOURCES)
-    print(f"⏱ cron-tick @ {_fmt_ts(ts)} — sources: {sources}")
+    s = state.stats()
+    last_tick = s.get("last_cron_tick_at")
+
+    print(f"⏱ cron-tick @ {_fmt_ts(new_tick)}")
+    if last_tick:
+        print(f"   previous tick: {_fmt_ts(last_tick)}")
+    else:
+        print(f"   previous tick: (none — first run, since 1 day ago)")
+    print(f"   sources: {sources}")
+
     if args.dry_run:
-        print("(dry-run — 실 fetch 없음)")
+        # last_tick 갱신 안 함 — dry-run 은 read-only
+        print("(dry-run)")
         return 0
-    stale = []
+
+    # 변경 감지
+    total_changed = 0
     for src in sources:
-        rows = state.list_resources(source=src, status="stale", limit=5000)
-        stale.extend(rows)
-    print(f"   stale: {len(stale)} resources need re-index")
-    print("   ⚠ Phase A — 실 fetch/update 미구현 (Phase B 에서 confluence-downloader / xlsx-extractor 연결)")
+        if src.startswith("confluence-"):
+            changed = _detect_confluence_changes(src, last_tick, args)
+        elif src == "p4-xlsx":
+            changed = _detect_p4_xlsx_changes(last_tick, args)
+        else:
+            continue
+        # 변경된 리소스를 stale 처리 (다음 reindex 명령에서 실 fetch)
+        if changed:
+            paths = [c["resource_path"] for c in changed]
+            state.mark_stale(src, resource_paths=paths)
+            for c in changed:
+                # 새 리소스이면 신규 upsert
+                if not c.get("existing"):
+                    state.upsert_resource(
+                        source=src,
+                        resource_path=c["resource_path"],
+                        resource_id=c.get("resource_id"),
+                        last_modified_upstream=c.get("last_modified"),
+                        status="stale",
+                    )
+        total_changed += len(changed)
+        print(f"   {src}: {len(changed)} changes detected")
+
+    state.set_last_cron_tick(new_tick)
+    print(f"✅ cron-tick complete — {total_changed} resources marked stale")
+    if total_changed:
+        print(f"   다음: 'klaud-crawl reindex --all --source <s>' 로 실 fetch + ChromaDB 업데이트")
     return 0
+
+
+def _detect_confluence_changes(source: str, last_tick: str | None, args) -> list[dict]:
+    """Confluence v1 CQL lastmodified 로 변경 페이지 조회.
+
+    `confluence-downloader` 의 ConfluenceClient 를 import 해서 사용.
+    """
+    try:
+        import sys
+        cd_src = Path(__file__).resolve().parent.parent.parent / "confluence-downloader" / "src"
+        cd_root = cd_src.parent
+        if str(cd_root) not in sys.path:
+            sys.path.insert(0, str(cd_root))
+        from src.client import ConfluenceClient  # type: ignore[import-not-found]
+    except ImportError as e:
+        print(f"   ⚠ confluence-downloader import 실패: {e}")
+        return []
+
+    import os
+    url = os.environ.get("CONFLUENCE_URL")
+    user = os.environ.get("CONFLUENCE_USERNAME")
+    token = os.environ.get("CONFLUENCE_API_TOKEN")
+    if not (url and user and token):
+        # confluence-downloader/.env 시도
+        from pathlib import Path as _P
+        env_path = _P(__file__).resolve().parent.parent.parent / "confluence-downloader" / ".env"
+        if env_path.exists():
+            for line in env_path.read_text().splitlines():
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    k, _, v = line.partition("=")
+                    os.environ.setdefault(k.strip(), v.strip())
+            url = os.environ.get("CONFLUENCE_URL")
+            user = os.environ.get("CONFLUENCE_USERNAME")
+            token = os.environ.get("CONFLUENCE_API_TOKEN")
+    if not (url and user and token):
+        print(f"   ⚠ CONFLUENCE_URL/USERNAME/API_TOKEN env 미설정 — {source} skip")
+        return []
+
+    if source == "confluence-projk":
+        ancestor = os.environ.get("CONFLUENCE_ROOT_PAGE_ID")
+    else:
+        ancestor = os.environ.get("CONFLUENCE_ART_ROOT_PAGE_ID")
+    if not ancestor:
+        print(f"   ⚠ {source} 의 root_page_id env 미설정 — skip")
+        return []
+
+    # 첫 tick 이면 1일 전부터, 그 이후엔 last_tick 이후
+    from datetime import datetime, timedelta, timezone
+    if last_tick:
+        since_ts = last_tick
+    else:
+        since_ts = (datetime.now(timezone.utc) - timedelta(days=1)).isoformat()
+
+    client = ConfluenceClient(url, user, token, request_delay=0.3)
+    try:
+        pages = client.search_modified_since(since_ts, ancestor_id=ancestor, limit=500)
+    except Exception as e:
+        print(f"   ⚠ Confluence search 실패: {e}")
+        return []
+
+    # crawl_state 와 매칭 — 기존 리소스 여부 확인
+    existing = {r["resource_path"] for r in state.list_resources(source=source, limit=10000)}
+    changed: list[dict] = []
+    for p in pages:
+        # resource_path = page title 단순 사용 (실 디렉토리 구조는 다운로드 시점에 결정)
+        rp = p.get("title", "")
+        if not rp:
+            continue
+        changed.append({
+            "resource_path": rp,
+            "resource_id": p.get("id"),
+            "last_modified": p.get("lastModified"),
+            "existing": rp in existing,
+        })
+    return changed
+
+
+def _detect_p4_xlsx_changes(last_tick: str | None, args) -> list[dict]:
+    """P4 changes -e <last_changelist> 로 변경 xlsx list.
+
+    p4_changes 모듈 (graceful skip if not available).
+    """
+    try:
+        from src import p4_changes  # type: ignore[import-not-found]
+    except ImportError:
+        try:
+            import sys
+            sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+            import p4_changes  # type: ignore[import-not-found]
+        except ImportError as e:
+            print(f"   ⚠ p4_changes import 실패: {e}")
+            return []
+
+    if not p4_changes.is_available():
+        print("   ⚠ p4 cli 또는 P4PORT 미설정 — p4-xlsx skip")
+        return []
+
+    import os
+    depot_paths = os.environ.get(
+        "P4_DEPOT_PATHS",
+        "//main/ProjectK/Resource/design/...,//main/ProjectK/Design/..."
+    ).split(",")
+    depot_paths = [p.strip() for p in depot_paths if p.strip()]
+
+    # last_changelist 는 별도 state — 간단히 env 또는 0
+    last_cl = int(os.environ.get("P4_LAST_CHANGELIST", "0")) or None
+    changes = p4_changes.list_changes_since(last_cl, depot_paths, max_changelists=200)
+
+    existing = {r["resource_path"] for r in state.list_resources(source="p4-xlsx", limit=10000)}
+    files_seen: set[str] = set()
+    changed: list[dict] = []
+    for cl in changes:
+        files = p4_changes.list_files_in_changelist(cl["changelist"])
+        for f in files:
+            if not f.endswith(".xlsx"):
+                continue
+            if f in files_seen:
+                continue
+            files_seen.add(f)
+            # depot path → resource_path 정규화 (예: //main/ProjectK/Resource/design/Skill.xlsx → 'Resource/design/Skill.xlsx')
+            rp = f.split("ProjectK/", 1)[-1] if "ProjectK/" in f else f.lstrip("/")
+            changed.append({
+                "resource_path": rp,
+                "resource_id": f,
+                "last_modified": cl["date"],
+                "existing": rp in existing,
+            })
+    if changes:
+        latest = max(c["changelist"] for c in changes)
+        print(f"   p4 latest changelist seen: {latest} (set P4_LAST_CHANGELIST={latest} for next tick)")
+    return changed
 
 
 # ── main ─────────────────────────────────────────────────────────────

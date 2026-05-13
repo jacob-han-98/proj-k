@@ -158,11 +158,14 @@ def resolve_output_path(tree: dict, base_dir: Path, parent_path: Path = None) ->
 
 
 def download_page(client: ConfluenceClient, page_id: str, output_path: Path,
-                  skip_existing: bool = False, content_type: str = "page") -> dict:
+                  skip_existing: bool = False, content_type: str = "page",
+                  no_images: bool = False) -> dict:
     """단일 페이지를 다운로드하여 Markdown + 이미지 + 영상으로 저장.
 
     Args:
         content_type: "page" 또는 "folder". folder는 본문이 없을 수 있음.
+        no_images: True 면 이미지/영상 첨부 다운로드 skip (markdown 의 ![](...) 참조는 유지).
+                   Art 스페이스 같은 graphic-heavy 스페이스에서 텍스트만 인덱싱하고 싶을 때 사용.
 
     Returns:
         {"status": "ok"|"skipped"|"error", "images": int, "videos": int, "size": int, ...}
@@ -204,7 +207,8 @@ def download_page(client: ConfluenceClient, page_id: str, output_path: Path,
 
         # 5) 첨부 파일 목록 가져오기 (이미지+영상 공통)
         attachment_map = {}
-        if images_needed or videos_needed:
+        need_attachments = (images_needed and not no_images) or videos_needed
+        if need_attachments:
             attachments = client.get_attachments(page_id)
             for att in attachments:
                 att_title = att.get("title", "")
@@ -213,7 +217,7 @@ def download_page(client: ConfluenceClient, page_id: str, output_path: Path,
                     attachment_map[att_title] = download_link
 
         # 6) 이미지 다운로드
-        if images_needed:
+        if images_needed and not no_images:
             images_dir = output_path / "images"
             images_dir.mkdir(exist_ok=True)
             for img_filename in images_needed:
@@ -252,7 +256,8 @@ def download_page(client: ConfluenceClient, page_id: str, output_path: Path,
 
 def download_tree(client: ConfluenceClient, tree: dict,
                   skip_existing: bool = False,
-                  progress: dict = None) -> list:
+                  progress: dict = None,
+                  no_images: bool = False) -> list:
     """트리 전체를 재귀적으로 다운로드.
 
     Returns:
@@ -271,7 +276,7 @@ def download_tree(client: ConfluenceClient, tree: dict,
     type_label = f"[{content_type}] " if content_type != "page" else ""
     print(f"  [{n}/{total} {pct}%] {type_label}{tree['title']}", end="", flush=True)
 
-    result = download_page(client, tree["id"], output_path, skip_existing, content_type)
+    result = download_page(client, tree["id"], output_path, skip_existing, content_type, no_images=no_images)
     result["title"] = tree["title"]
     result["id"] = tree["id"]
 
@@ -286,7 +291,7 @@ def download_tree(client: ConfluenceClient, tree: dict,
 
     results = [result]
     for child in tree.get("children", []):
-        results.extend(download_tree(client, child, skip_existing, progress))
+        results.extend(download_tree(client, child, skip_existing, progress, no_images=no_images))
 
     return results
 
@@ -339,6 +344,10 @@ def main():
                         help="출력 디렉토리 (기본: ./output)")
     parser.add_argument("--delay", type=float, default=0.3,
                         help="API 요청 간 딜레이(초) (기본: 0.3)")
+    parser.add_argument("--no-images", action="store_true",
+                        help="이미지/영상 첨부 다운로드 skip (Art 스페이스 같은 graphic-heavy + 텍스트만 인덱싱)")
+    parser.add_argument("--art-space", action="store_true",
+                        help="CONFLUENCE_ART_ROOT_PAGE_ID 를 root 로 사용 (Art - Project K 스페이스). --no-images 권장.")
     args = parser.parse_args()
 
     # .env 로드
@@ -352,7 +361,15 @@ def main():
     url = os.getenv("CONFLUENCE_URL")
     username = os.getenv("CONFLUENCE_USERNAME")
     token = os.getenv("CONFLUENCE_API_TOKEN")
-    root_page_id = args.page_id or os.getenv("CONFLUENCE_ROOT_PAGE_ID")
+    if args.page_id:
+        root_page_id = args.page_id
+    elif args.art_space:
+        root_page_id = os.getenv("CONFLUENCE_ART_ROOT_PAGE_ID")
+        if not root_page_id:
+            print("❌ --art-space 사용 시 CONFLUENCE_ART_ROOT_PAGE_ID env 필요")
+            sys.exit(1)
+    else:
+        root_page_id = os.getenv("CONFLUENCE_ROOT_PAGE_ID")
 
     missing = []
     if not url:
@@ -416,7 +433,9 @@ def main():
     # 2) 다운로드 실행
     print(f"\n📥 다운로드 시작 ({total_pages}개 페이지)...\n")
     start = time.time()
-    results = download_tree(client, tree, args.skip_existing)
+    # Art space 는 default 로 --no-images (graphic 첨부 무거우니 텍스트만)
+    no_images_eff = args.no_images or args.art_space
+    results = download_tree(client, tree, args.skip_existing, no_images=no_images_eff)
     elapsed = time.time() - start
 
     # 3) 결과 요약

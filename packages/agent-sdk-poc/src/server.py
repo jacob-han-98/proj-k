@@ -49,6 +49,7 @@ import storage
 import followups as followups_mod
 import doc_context as doc_ctx
 import klaud_sink
+import google_id_token
 from preset_prompts import PRESETS
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -2067,9 +2068,14 @@ class KlaudLogBatchRequest(BaseModel):
     개별 entry 의 필수 필드(ts/source/message) 누락이나 source whitelist 벗어남은
     ingest_batch() 가 entry 단위로 silent drop. 한 건 깨졌다고 batch 전체가
     422 거부되는 일 없도록 (fire-and-forget 의 의도).
+
+    id_token (옵셔널): Google OAuth id_token. backend 가 verify 성공 시
+    user_email 을 claims.email 로 덮어쓰기 (위조 방지). 실패/미포함 → null
+    또는 frontend 가 보낸 user_email 그대로 (env 미설정 시).
     """
     machine_id: str | None = None
     user_email: str | None = None
+    id_token: str | None = None
     klaud_version: str | None = None
     session_id: str | None = None
     entries: list[dict]
@@ -2085,6 +2091,7 @@ class KlaudReportContext(BaseModel):
 class KlaudReportRequest(BaseModel):
     machine_id: str
     user_email: str | None = None
+    id_token: str | None = None  # Google id_token (옵셔널). verify 성공 시 user_email 덮어쓰기.
     klaud_version: str | None = None
     session_id: str | None = None
     ts: str | None = None
@@ -2092,13 +2099,54 @@ class KlaudReportRequest(BaseModel):
     context: KlaudReportContext | None = None
 
 
+def _resolve_user_email(id_token_str: str | None, claimed_email: str | None) -> str | None:
+    """id_token verify → 성공 시 그 email, 실패 시 None.
+    id_token 미포함 → frontend 가 보낸 user_email 그대로 (PoC, SSO 미로그인 흐름).
+    SSO 비활성 (env 미설정) → id_token 무시, claimed_email 그대로.
+    """
+    if not id_token_str:
+        return claimed_email
+    if not google_id_token.sso_enabled():
+        # SSO 비활성 — id_token 검증 자체 안 함. trust 없는 채로 claimed 사용.
+        return claimed_email
+    claims = google_id_token.verify(id_token_str)
+    if claims:
+        return claims.get("email")
+    return None  # verify 실패 → silent fallback to null
+
+
 def _require_admin(authorization: str | None) -> None:
-    token = klaud_sink.admin_token()
-    if not token:
-        raise HTTPException(status_code=503, detail="KLAUD_ADMIN_TOKEN env not set on server")
-    expected = f"Bearer {token}"
-    if authorization != expected:
-        raise HTTPException(status_code=401, detail="invalid admin token")
+    """GET endpoint dual auth.
+
+    Authorization: Bearer <X> — X 가 KLAUD_ADMIN_TOKEN 와 동일 또는 Google id_token +
+    email-in-KLAUD_ADMIN_EMAILS 면 통과. 둘 다 실패면 401.
+
+    KLAUD_ADMIN_TOKEN 도 KLAUD_GOOGLE_CLIENT_ID 도 미설정이면 503 (운영 안전).
+    """
+    admin_token = klaud_sink.admin_token()
+    sso_on = google_id_token.sso_enabled()
+
+    if not admin_token and not sso_on:
+        raise HTTPException(
+            status_code=503,
+            detail="neither KLAUD_ADMIN_TOKEN nor KLAUD_GOOGLE_CLIENT_ID set on server",
+        )
+
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="missing Bearer authorization")
+    token = authorization[7:]
+
+    # 1) static admin token 경로 (기존)
+    if admin_token and token == admin_token:
+        return
+
+    # 2) Google id_token + email whitelist 경로 (SSO 합류)
+    if sso_on:
+        claims = google_id_token.verify(token)
+        if claims and google_id_token.is_admin_email(claims.get("email")):
+            return
+
+    raise HTTPException(status_code=401, detail="invalid admin token")
 
 
 @app.post("/klaud/log/batch")
@@ -2109,10 +2157,11 @@ async def klaud_log_batch(req: KlaudLogBatchRequest):
     # entries 개수 sanity 체크는 여기서.
     if len(req.entries) > 1000:
         raise HTTPException(status_code=413, detail="batch too large (max 1000 entries)")
+    resolved_email = _resolve_user_email(req.id_token, req.user_email)
     n = klaud_sink.ingest_batch(
         entries=req.entries,
         machine_id=req.machine_id,
-        user_email=req.user_email,
+        user_email=resolved_email,
         klaud_version=req.klaud_version,
         session_id=req.session_id,
     )
@@ -2131,10 +2180,11 @@ async def klaud_report(req: KlaudReportRequest):
         # context_json 에는 screenshot 제외 (별도 column)
         ctx_dict = {k: v for k, v in ctx_dict.items() if k != "screenshot_b64"}
 
+    resolved_email = _resolve_user_email(req.id_token, req.user_email)
     try:
         report_uuid = klaud_sink.insert_report(
             machine_id=req.machine_id,
-            user_email=req.user_email,
+            user_email=resolved_email,
             klaud_version=req.klaud_version,
             session_id=req.session_id,
             note=req.note,
@@ -2219,9 +2269,11 @@ async def klaud_report_detail(
 
 @app.get("/klaud/stats")
 async def klaud_stats(authorization: str | None = Header(default=None)):
-    """관리자/디버그 — store 상태 요약 (queue size, dropped count, totals)."""
+    """관리자/디버그 — store 상태 + SSO verify 통계 요약."""
     _require_admin(authorization)
-    return klaud_sink.stats()
+    out = klaud_sink.stats()
+    out["sso"] = google_id_token.stats()
+    return out
 
 
 if __name__ == "__main__":

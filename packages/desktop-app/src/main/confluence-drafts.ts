@@ -13,13 +13,8 @@
 // invalidateConfluenceDraftsCache() 호출해야 (현재는 SettingsModal save 시 호출).
 
 import { getConfluenceCreds } from './auth';
+import { getConfluenceAuth, type ConfluenceAuthContext } from './confluence-rest';
 import type { ActiveConfluenceDraft, ActiveConfluenceResult } from '../shared/types';
-
-const CONFLUENCE_BASE = 'https://bighitcorp.atlassian.net';
-
-function authHeader(email: string, token: string): string {
-  return 'Basic ' + Buffer.from(`${email}:${token}`).toString('base64');
-}
 
 let cachedAccountId: string | null = null;
 let cachedSpaceIdByKey: Map<string, string> | null = null;
@@ -29,11 +24,11 @@ export function invalidateConfluenceDraftsCache(): void {
   cachedSpaceIdByKey = null;
 }
 
-async function getCurrentAccountId(auth: string): Promise<string | null> {
+async function getCurrentAccountId(auth: ConfluenceAuthContext): Promise<string | null> {
   if (cachedAccountId) return cachedAccountId;
   try {
-    const res = await fetch(`${CONFLUENCE_BASE}/wiki/rest/api/user/current`, {
-      headers: { Authorization: auth, Accept: 'application/json' },
+    const res = await fetch(`${auth.baseUrl}/rest/api/user/current`, {
+      headers: auth.headers,
     });
     if (!res.ok) return null;
     const j = (await res.json()) as { accountId?: string };
@@ -47,11 +42,10 @@ async function getCurrentAccountId(auth: string): Promise<string | null> {
 
 // 한 번에 여러 key 를 ?keys= 로 lookup. 응답 results[].id 가 string id.
 async function getSpaceIdsByKeys(
-  auth: string,
+  auth: ConfluenceAuthContext,
   keys: string[],
 ): Promise<Map<string, string>> {
   if (cachedSpaceIdByKey) {
-    // 요청 keys 가 캐시 superset 안에 다 들어있으면 재사용.
     const allCached = keys.every((k) => cachedSpaceIdByKey!.has(k));
     if (allCached) return cachedSpaceIdByKey;
   }
@@ -62,8 +56,8 @@ async function getSpaceIdsByKeys(
   }
   try {
     const qs = keys.map((k) => `keys=${encodeURIComponent(k)}`).join('&');
-    const res = await fetch(`${CONFLUENCE_BASE}/wiki/api/v2/spaces?${qs}`, {
-      headers: { Authorization: auth, Accept: 'application/json' },
+    const res = await fetch(`${auth.baseUrl}/api/v2/spaces?${qs}`, {
+      headers: auth.headers,
     });
     if (!res.ok) {
       cachedSpaceIdByKey = out;
@@ -81,23 +75,20 @@ async function getSpaceIdsByKeys(
   }
 }
 
-// space id 1 개 단위로 draft 페이지 fetch. owner-id 로 본인 것만.
-// API: `GET /wiki/api/v2/pages?status=draft&space-id=<sid>&owner-id=<aid>&limit=50`
 async function listDraftsForSpace(
-  auth: string,
+  auth: ConfluenceAuthContext,
   spaceId: string,
   spaceKey: string,
   ownerId: string,
 ): Promise<ActiveConfluenceDraft[]> {
-  const url = new URL(`${CONFLUENCE_BASE}/wiki/api/v2/pages`);
+  const url = new URL(`${auth.baseUrl}/api/v2/pages`);
   url.searchParams.set('status', 'draft');
   url.searchParams.set('space-id', spaceId);
   url.searchParams.set('owner-id', ownerId);
   url.searchParams.set('limit', '50');
-  // body-format 지정 안 함 — 본문 필요 없음, 메타만.
   try {
     const res = await fetch(url.toString(), {
-      headers: { Authorization: auth, Accept: 'application/json' },
+      headers: auth.headers,
     });
     if (!res.ok) return [];
     const j = (await res.json()) as {
@@ -123,15 +114,16 @@ export async function listMyConfluenceDrafts(
   spaceKeys: string[] | undefined,
 ): Promise<ActiveConfluenceResult> {
   const creds = await getConfluenceCreds();
-  if (!creds?.email || !creds?.apiToken) {
+  const fallback: typeof creds = creds ?? { email: '', apiToken: '', baseUrl: '' };
+  const auth = await getConfluenceAuth(fallback);
+  if (!auth.isOAuth && (!creds?.email || !creds?.apiToken)) {
     return {
       ok: false,
       drafts: [],
-      diagnostics: 'Confluence 자격 미설정 — 우상단 ⚙ 에서 입력하세요.',
+      diagnostics: 'Confluence 자격 미설정 — Atlassian 로그인 또는 SettingsModal apiToken.',
     };
   }
   const keys = spaceKeys && spaceKeys.length > 0 ? spaceKeys : ['PK'];
-  const auth = authHeader(creds.email, creds.apiToken);
 
   const accountId = await getCurrentAccountId(auth);
   if (!accountId) {

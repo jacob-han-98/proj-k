@@ -7,6 +7,7 @@
 // 섞인 경우는 미매칭으로 처리. MVP 허용 범위.
 
 import { getConfluenceCreds } from './auth';
+import { getConfluenceAuth } from './confluence-rest';
 
 export interface ChangeItem {
   id: string;
@@ -25,11 +26,10 @@ export interface ApplyResult {
   error?: string;
 }
 
-const CONFLUENCE_BASE = 'https://bighitcorp.atlassian.net';
-
-function authHeader(email: string, token: string): string {
-  return 'Basic ' + Buffer.from(`${email}:${token}`).toString('base64');
-}
+// 2026-05-13 Final-3 Step 2: hard-coded base + Basic-only authHeader 제거. 모든 호출은
+// getConfluenceAuth(creds) → { baseUrl, headers, isOAuth } 사용 (OAuth 우선, Basic fallback).
+// 옛 CONFLUENCE_BASE 는 pageUrl 표시용으로만 잠시 보존.
+const CONFLUENCE_FALLBACK_SITE = 'https://bighitcorp.atlassian.net';
 
 // whitespace 정규화: 연속 공백/줄바꿈을 단일 공백으로
 function normalize(s: string): string {
@@ -141,15 +141,21 @@ export async function preCheckChangesMatch(
   changes: Array<{ id: string; before: string }>,
 ): Promise<PreCheckResult> {
   const creds = await getConfluenceCreds();
+  // OAuth 로그인만 있어도 동작 — apiToken 없는 사용자 허용. helper 가 적절히 분기.
   if (!creds?.apiToken) {
-    return { ok: false, matched: [], unmatched: changes.map((c) => c.id), error: 'Confluence 자격 미설정' };
+    // OAuth 사용 가능한지 점검 — getConfluenceAuth 가 OAuth 있으면 그쪽 사용.
+    // 다만 fallback 시도하려면 creds 가 최소한 빈 객체라도 있어야.
   }
-  const auth = authHeader(creds.email, creds.apiToken);
+  const fallback: typeof creds = creds ?? { email: '', apiToken: '', baseUrl: '' };
+  const auth = await getConfluenceAuth(fallback);
+  if (!auth.isOAuth && !creds?.apiToken) {
+    return { ok: false, matched: [], unmatched: changes.map((c) => c.id), error: 'Confluence 자격 미설정 — Atlassian 로그인 또는 apiToken 설정' };
+  }
   let body: string;
   try {
     const res = await fetch(
-      `${CONFLUENCE_BASE}/wiki/api/v2/pages/${pageId}?body-format=storage`,
-      { headers: { Authorization: auth, Accept: 'application/json' } },
+      `${auth.baseUrl}/api/v2/pages/${pageId}?body-format=storage`,
+      { headers: auth.headers },
     );
     if (!res.ok) {
       return {
@@ -185,11 +191,11 @@ export async function applyEditsToConfluencePage(
   changes: ChangeItem[],
 ): Promise<ApplyResult> {
   const creds = await getConfluenceCreds();
-  if (!creds?.apiToken) {
-    return { ok: false, applied: 0, skipped: changes.length, skippedIds: changes.map(c => c.id), error: 'Confluence 인증 정보 없음 — SettingsModal 에서 설정' };
+  const fallback: typeof creds = creds ?? { email: '', apiToken: '', baseUrl: '' };
+  const auth = await getConfluenceAuth(fallback);
+  if (!auth.isOAuth && !creds?.apiToken) {
+    return { ok: false, applied: 0, skipped: changes.length, skippedIds: changes.map(c => c.id), error: 'Confluence 인증 정보 없음 — Atlassian 로그인 또는 SettingsModal apiToken 설정' };
   }
-
-  const auth = authHeader(creds.email, creds.apiToken);
 
   // 1. GET page (storage format)
   let pageData: {
@@ -200,8 +206,8 @@ export async function applyEditsToConfluencePage(
   };
   try {
     const res = await fetch(
-      `${CONFLUENCE_BASE}/wiki/api/v2/pages/${pageId}?body-format=storage`,
-      { headers: { Authorization: auth, Accept: 'application/json' } },
+      `${auth.baseUrl}/api/v2/pages/${pageId}?body-format=storage`,
+      { headers: auth.headers },
     );
     if (!res.ok) {
       const errText = await res.text().catch(() => '');
@@ -239,16 +245,19 @@ export async function applyEditsToConfluencePage(
       title: pageData.title,
       body: { representation: 'storage', value: body },
     };
-    const putRes = await fetch(`${CONFLUENCE_BASE}/wiki/api/v2/pages/${pageId}`, {
+    const putRes = await fetch(`${auth.baseUrl}/api/v2/pages/${pageId}`, {
       method: 'PUT',
-      headers: { Authorization: auth, 'Content-Type': 'application/json', Accept: 'application/json' },
+      headers: { ...auth.headers, 'Content-Type': 'application/json' },
       body: JSON.stringify(putBody),
     });
     if (!putRes.ok) {
       const errText = await putRes.text().catch(() => '');
       return { ok: false, applied: applied.length, skipped: skipped.length, skippedIds: skipped, error: `PUT page HTTP ${putRes.status}: ${errText.slice(0, 200)}` };
     }
-    const pageUrl = `${CONFLUENCE_BASE}/wiki/spaces/PK/pages/${pageId}`;
+    // pageUrl 표시는 항상 사용자 friendly site (basic 의 baseUrl 또는 OAuth 의 site_url) 로.
+    // OAuth 면 api.atlassian.com URL 보다는 jacob 의 atlassian.net URL 이 자연.
+    const displaySite = auth.siteUrl ?? (creds?.baseUrl ?? CONFLUENCE_FALLBACK_SITE);
+    const pageUrl = `${displaySite}/wiki/spaces/PK/pages/${pageId}`;
     return { ok: true, applied: applied.length, skipped: skipped.length, skippedIds: skipped, pageUrl };
   } catch (e) {
     return { ok: false, applied: applied.length, skipped: skipped.length, skippedIds: skipped, error: `PUT page 실패: ${(e as Error).message}` };

@@ -13,9 +13,10 @@
 //   - testSpaceKey 로부터 spaceId 조회 (v2 API 는 numeric spaceId 요구).
 
 import { getConfluenceCreds } from './auth';
+import { getConfluenceAuth, type ConfluenceAuthContext } from './confluence-rest';
 import { getSettings } from './settings';
 
-const CONFLUENCE_BASE = 'https://bighitcorp.atlassian.net';
+const CONFLUENCE_FALLBACK_SITE = 'https://bighitcorp.atlassian.net';
 
 export interface CopyResult {
   ok: true;
@@ -30,10 +31,6 @@ export interface CopyError {
   error: string;
 }
 
-function authHeader(email: string, token: string): string {
-  return 'Basic ' + Buffer.from(`${email}:${token}`).toString('base64');
-}
-
 // 한국 시간대 ish — 사용자가 사본을 한국 환경에서 보니. ISO 의 끝 Z 제거 + 분 단위 절단.
 function timestampLabel(): string {
   const now = new Date();
@@ -46,10 +43,9 @@ interface SpaceInfo {
   key: string;
 }
 
-async function resolveSpaceIdFromKey(auth: string, spaceKey: string): Promise<SpaceInfo | null> {
-  // v2 API 는 numeric spaceId 사용. key 는 v1/v2 양쪽에서 받지만 v2 spaces?keys=KEY 가 가장 공식.
-  const url = `${CONFLUENCE_BASE}/wiki/api/v2/spaces?keys=${encodeURIComponent(spaceKey)}&limit=1`;
-  const res = await fetch(url, { headers: { Authorization: auth, Accept: 'application/json' } });
+async function resolveSpaceIdFromKey(auth: ConfluenceAuthContext, spaceKey: string): Promise<SpaceInfo | null> {
+  const url = `${auth.baseUrl}/api/v2/spaces?keys=${encodeURIComponent(spaceKey)}&limit=1`;
+  const res = await fetch(url, { headers: auth.headers });
   if (!res.ok) return null;
   const j = (await res.json()) as { results?: Array<{ id: string; key: string }> };
   const first = j.results?.[0];
@@ -61,9 +57,9 @@ interface SourcePage {
   storage: string;
 }
 
-async function fetchSourcePage(auth: string, sourceId: string): Promise<SourcePage | null> {
-  const url = `${CONFLUENCE_BASE}/wiki/api/v2/pages/${encodeURIComponent(sourceId)}?body-format=storage`;
-  const res = await fetch(url, { headers: { Authorization: auth, Accept: 'application/json' } });
+async function fetchSourcePage(auth: ConfluenceAuthContext, sourceId: string): Promise<SourcePage | null> {
+  const url = `${auth.baseUrl}/api/v2/pages/${encodeURIComponent(sourceId)}?body-format=storage`;
+  const res = await fetch(url, { headers: auth.headers });
   if (!res.ok) return null;
   const j = (await res.json()) as {
     title?: string;
@@ -75,8 +71,10 @@ async function fetchSourcePage(auth: string, sourceId: string): Promise<SourcePa
 
 export async function copyPageToTestSpace(sourcePageId: string): Promise<CopyResult | CopyError> {
   const creds = await getConfluenceCreds();
-  if (!creds?.apiToken || !creds.email) {
-    return { ok: false, error: 'Confluence 자격 미설정 — SettingsModal 에서 email + apiToken 입력 필요' };
+  const fallback: typeof creds = creds ?? { email: '', apiToken: '', baseUrl: '' };
+  const auth = await getConfluenceAuth(fallback);
+  if (!auth.isOAuth && (!creds?.apiToken || !creds.email)) {
+    return { ok: false, error: 'Confluence 자격 미설정 — Atlassian 로그인 또는 SettingsModal apiToken' };
   }
   const settings = getSettings();
   const testSpaceKey = settings.confluenceTestSpaceKey;
@@ -84,8 +82,6 @@ export async function copyPageToTestSpace(sourcePageId: string): Promise<CopyRes
     return { ok: false, error: '테스트 스페이스 미설정 — SettingsModal 의 confluenceTestSpaceKey 입력 필요' };
   }
   const testParentId = settings.confluenceTestParentPageId;
-
-  const auth = authHeader(creds.email, creds.apiToken);
 
   // 1) 원본 페이지 fetch
   let src: SourcePage | null;
@@ -124,12 +120,11 @@ export async function copyPageToTestSpace(sourcePageId: string): Promise<CopyRes
 
   let createResp: Response;
   try {
-    createResp = await fetch(`${CONFLUENCE_BASE}/wiki/api/v2/pages`, {
+    createResp = await fetch(`${auth.baseUrl}/api/v2/pages`, {
       method: 'POST',
       headers: {
-        Authorization: auth,
+        ...auth.headers,
         'Content-Type': 'application/json',
-        Accept: 'application/json',
       },
       body: JSON.stringify(createBody),
     });
@@ -146,8 +141,11 @@ export async function copyPageToTestSpace(sourcePageId: string): Promise<CopyRes
     id: string;
     _links?: { webui?: string; base?: string };
   };
+  // newPageUrl 은 사용자가 클릭할 link — OAuth 의 api.atlassian.com 이 아니라 jacob의
+  // atlassian.net URL 로 표시.
+  const displaySite = auth.siteUrl ?? creds?.baseUrl ?? CONFLUENCE_FALLBACK_SITE;
   const webui = created._links?.webui ?? `/spaces/${testSpaceKey}/pages/${created.id}`;
-  const base = created._links?.base ?? `${CONFLUENCE_BASE}/wiki`;
+  const base = created._links?.base ?? `${displaySite}/wiki`;
   return {
     ok: true,
     newPageId: created.id,

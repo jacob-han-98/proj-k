@@ -5,6 +5,11 @@ ConvertProgram/.env
 packages/*/.env
 packages/*/.env.local
 
+# desktop-app dev 환경의 GCP OAuth credentials JSON (client_secret 포함).
+# main 의 env-loader 가 부팅 시 자동 인식하지만 절대 commit X.
+packages/desktop-app/env/
+client_secret_*.json
+
 # Chrome Extension config (API keys) and logs
 packages/chrome-extension/lib/config.js
 packages/chrome-extension/logs/

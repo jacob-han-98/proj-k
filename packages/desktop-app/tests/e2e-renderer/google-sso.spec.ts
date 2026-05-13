@@ -72,8 +72,13 @@ test('로그아웃 → 다시 미로그인 상태로 복원', async ({ page }) =
   await expect(page.getByTestId('settings-google-auth-msg')).toContainText('로그아웃');
 });
 
-test('clientId/hd 입력 후 저장 → settings.set 에 두 필드 포함', async ({ page }) => {
-  let lastSetPayload: Record<string, unknown> | null = null;
+test('hd 칸은 disabled — 사내 정책으로 hybecorp.com 고정', async ({ page }) => {
+  const hd = page.getByTestId('settings-google-hd');
+  await expect(hd).toBeDisabled();
+  await expect(hd).toHaveValue('hybecorp.com');
+});
+
+test('clientId 입력 후 저장 → settings.set 에 client_id 포함 + hd 는 undefined (옛 값 청소)', async ({ page }) => {
   await page.evaluate(() => {
     const real = (window as unknown as { projk: { setSettings: (p: unknown) => Promise<unknown> } }).projk;
     const orig = real.setSettings.bind(real);
@@ -84,7 +89,6 @@ test('clientId/hd 입력 후 저장 → settings.set 에 두 필드 포함', asy
   });
 
   await page.getByTestId('settings-google-client-id').fill('123.apps.googleusercontent.com');
-  await page.getByTestId('settings-google-hd').fill('bighitcorp.com');
   await page.getByTestId('settings-save').click();
 
   await expect.poll(async () => {
@@ -95,7 +99,6 @@ test('clientId/hd 입력 후 저장 → settings.set 에 두 필드 포함', asy
     () => (window as unknown as { __lastSetPayload: Record<string, unknown> }).__lastSetPayload,
   )) as { googleOAuthClientId?: string; googleWorkspaceDomain?: string };
   expect(payload.googleOAuthClientId).toBe('123.apps.googleusercontent.com');
-  expect(payload.googleWorkspaceDomain).toBe('bighitcorp.com');
-  // capture for unused-var lint clarity
-  expect(lastSetPayload).toBeNull();
+  // hd 는 사내 정책 고정이라 settings 에 더 이상 저장 X (undefined 로 보내 옛 값 청소).
+  expect(payload.googleWorkspaceDomain).toBeUndefined();
 });

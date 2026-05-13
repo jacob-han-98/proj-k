@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { AppSettings } from '../../shared/types';
+import { KLAUD_BUILTIN_WORKSPACE_DOMAIN, type AppSettings } from '../../shared/types';
 
 // 단일 모달에서 데이터 경로 / 자동 업데이트 피드 / Confluence 자격증명 까지 모두 입력.
 // 사용자가 PowerShell 의 setx 와 손으로 환경변수 만질 일이 없도록 흡수.
@@ -66,8 +66,9 @@ export function SettingsModal({ initialEmail, initialBaseUrl, onClose, onSaved }
   const [onlyOfficeUrl, setOnlyOfficeUrl] = useState('');
 
   // 2026-05-13 릴리스-B: Google Workspace SSO.
+  // googleWorkspaceDomain 은 사내 정책 고정 (KLAUD_BUILTIN_WORKSPACE_DOMAIN) — UI 에 표시만,
+  // state 보유 안 함. dev override 는 PROJK_GOOGLE_WORKSPACE_DOMAIN env 로만.
   const [googleOAuthClientId, setGoogleOAuthClientId] = useState('');
-  const [googleWorkspaceDomain, setGoogleWorkspaceDomain] = useState('');
   const [googleCreds, setGoogleCreds] = useState<{
     email: string;
     name?: string;
@@ -135,7 +136,6 @@ export function SettingsModal({ initialEmail, initialBaseUrl, onClose, onSaved }
       setViewerMode(s.viewerMode ?? 'onlyoffice');
       setOnlyOfficeUrl(s.onlyOfficeUrl ?? DEFAULT_ONLYOFFICE_URL_HINT);
       setGoogleOAuthClientId(s.googleOAuthClientId ?? '');
-      setGoogleWorkspaceDomain(s.googleWorkspaceDomain ?? '');
     });
     void refreshGoogleCreds();
   }, []);
@@ -196,7 +196,8 @@ export function SettingsModal({ initialEmail, initialBaseUrl, onClose, onSaved }
         viewerMode,
         onlyOfficeUrl: onlyOfficeUrl.trim() || undefined,
         googleOAuthClientId: googleOAuthClientId.trim() || undefined,
-        googleWorkspaceDomain: googleWorkspaceDomain.trim() || undefined,
+        // 2026-05-13 사내 정책 고정 — 옛 settings 의 사용자 입력값 청소.
+        googleWorkspaceDomain: undefined,
       });
 
       // 2) Confluence 자격증명 (비밀 — safeStorage 암호화)
@@ -410,13 +411,14 @@ export function SettingsModal({ initialEmail, initialBaseUrl, onClose, onSaved }
           id="settings-google-hd"
           aria-label="Workspace 도메인 제한"
           data-testid="settings-google-hd"
-          value={googleWorkspaceDomain}
-          onChange={(e) => setGoogleWorkspaceDomain(e.target.value)}
-          placeholder="bighitcorp.com (비우면 일반 Google 계정 허용)"
+          value={KLAUD_BUILTIN_WORKSPACE_DOMAIN}
+          readOnly
+          disabled
           spellCheck={false}
+          style={{ opacity: 0.7, cursor: 'not-allowed' }}
         />
         <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: -4 }}>
-          채우면 그 도메인 계정만 로그인 가능. dev 환경에서는 비워두면 gmail.com 등 일반 계정도 OK.
+          🔒 사내 정책으로 <code>{KLAUD_BUILTIN_WORKSPACE_DOMAIN}</code> 로 고정. 이 도메인 외 계정은 로그인 불가. (dev/staging override 는 <code>PROJK_GOOGLE_WORKSPACE_DOMAIN</code> env)
         </div>
 
         <div

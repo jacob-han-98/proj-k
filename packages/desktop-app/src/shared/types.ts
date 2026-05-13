@@ -275,6 +275,11 @@ export interface GoogleCredsInfoView {
   expiresInSeconds: number;
 }
 
+// 2026-05-13 사용자 결정: 사내 워크스페이스 도메인 고정 — 모든 사용자가 같은 hd 적용.
+// SettingsModal 의 hd 칸은 disabled, 값은 이 상수 표시. env PROJK_GOOGLE_WORKSPACE_DOMAIN
+// 가 있으면 그게 우선 (dev/staging override). 빈 문자열로 설정 시 hd 검증 skip.
+export const KLAUD_BUILTIN_WORKSPACE_DOMAIN = 'hybecorp.com';
+
 // main → renderer 단축키 forward payload. webview 안에서 발생한 키도 우리 앱 단축키면
 // main 이 가로채 동일하게 동작시키기 위해. Ctrl+P / Ctrl+1~5 만 (현재 사용 중인 글로벌
 // 단축키와 동일 — 새 단축키 추가 시 이 union 도 같이 확장).

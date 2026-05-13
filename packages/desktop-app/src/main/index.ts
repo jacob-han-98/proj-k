@@ -27,6 +27,7 @@ import { initUpdater } from './updater';
 import { startMcpBridgeIfEnabled, stopMcpBridge } from './mcp-bridge';
 import { installLogPush } from './log-push';
 import { installKlaudLogSink } from './klaud-log-sink';
+import { loadDevEnvFromFiles } from './env-loader';
 import { installDebugProbeServer } from './debug-probe';
 import { startDevBundleWatcher } from './dev-bundle-watcher';
 import { initThreadsDb, closeThreadsDb } from './db';
@@ -273,6 +274,11 @@ function logEnvironment(): void {
 }
 
 app.whenReady().then(async () => {
+  // 2026-05-13 릴리스-B: dev 환경의 GCP OAuth credentials JSON 자동 인식 — env/ 안에
+  // client_secret_*.googleusercontent.com.json 있으면 PROJK_GOOGLE_CLIENT_ID 로 inject.
+  // production 빌드에는 env/ 없으니 자동 noop. SettingsModal 의 OAuth Client ID 비워두면
+  // env 가 fallback 으로 작동.
+  loadDevEnvFromFiles();
   // log-push 는 setting 을 읽으므로 settings 모듈이 살아있어야 한다 → 가장 먼저.
   // 2026-05-13 릴리스-A2: 통합 sink (운영 로그 + 제보) 도 같은 타이밍에 install.
   // 둘은 독립 — log-push 는 dev WSL collector 로 console 만, klaud-log-sink 는 production

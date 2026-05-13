@@ -23,6 +23,7 @@ import {
   type GoogleCreds,
 } from './google-auth';
 import { getSettings } from './settings';
+import { KLAUD_BUILTIN_WORKSPACE_DOMAIN } from '../shared/types';
 
 const AUTHORIZE_URL = 'https://accounts.google.com/o/oauth2/v2/auth';
 const TOKEN_URL = 'https://oauth2.googleapis.com/token';
@@ -48,7 +49,9 @@ interface LoopbackCapture {
 }
 
 // 임시 HTTP 서버. 첫 요청에서 code/state 캡처 후 즉시 종료. 60초 안에 안 오면 reject.
-function startLoopback(): LoopbackCapture {
+// 2026-05-13 bugfix: server.listen() 은 비동기 — listening 이벤트 기다린 뒤 address() 조회.
+// 안 기다리면 addr null 로 .port read 실패.
+async function startLoopback(): Promise<LoopbackCapture> {
   let captured: { code: string; state: string } | null = null;
   let resolveFn: (v: { code: string; state: string }) => void = () => undefined;
   let rejectFn: (e: Error) => void = () => undefined;
@@ -92,8 +95,16 @@ function startLoopback(): LoopbackCapture {
     resolveFn(captured);
   });
 
-  server.listen(0, '127.0.0.1');
-  const addr = server.address() as AddressInfo;
+  // listening 이벤트까지 await — server.address() 가 안정적으로 AddressInfo 반환하는 시점.
+  await new Promise<void>((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', () => resolve());
+  });
+  const addr = server.address() as AddressInfo | null;
+  if (!addr || typeof addr === 'string') {
+    server.close();
+    throw new Error('loopback 서버 binding 실패 — address() null');
+  }
   const port = addr.port;
   const redirectUri = `http://127.0.0.1:${port}/oauth2callback`;
 
@@ -171,11 +182,16 @@ export async function interactiveLogin(
         'Google OAuth client_id 가 설정되지 않았습니다. SettingsModal 또는 PROJK_GOOGLE_CLIENT_ID env 에 값을 입력해주세요.',
     };
   }
-  const hd = (settings.googleWorkspaceDomain ?? '').trim();
+  // 2026-05-13 사용자 결정: hd 는 사내 도메인 (KLAUD_BUILTIN_WORKSPACE_DOMAIN) 고정.
+  // settings.googleWorkspaceDomain 은 deprecated (옛 값 호환만, 무시). env override 가능 —
+  // dev/staging 또는 다른 사내 도메인 시 PROJK_GOOGLE_WORKSPACE_DOMAIN 으로. 빈 문자열로
+  // 명시 시 hd 검증 skip (gmail 테스트).
+  const hdOverride = process.env.PROJK_GOOGLE_WORKSPACE_DOMAIN;
+  const hd = (hdOverride !== undefined ? hdOverride : KLAUD_BUILTIN_WORKSPACE_DOMAIN).trim();
 
   const { verifier, challenge } = generatePkce();
   const state = base64Url(randomBytes(16));
-  const loopback = startLoopback();
+  const loopback = await startLoopback();
 
   const params = new URLSearchParams({
     client_id: clientId,

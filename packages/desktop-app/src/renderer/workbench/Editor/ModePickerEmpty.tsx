@@ -46,11 +46,23 @@ const MODES: Mode[] = [
 interface Props {
   title: string;
   onPickMode: (mode: Exclude<SplitMode, 'pick'>) => void;
+  // 2026-05-12: ⚙ 토글 — 같은 패널 안에서 prompt settings 뷰로 swap.
+  onOpenSettings: () => void;
 }
 
-export function ModePickerEmpty({ title, onPickMode }: Props) {
+export function ModePickerEmpty({ title, onPickMode, onOpenSettings }: Props) {
   return (
     <div className="mode-picker-empty" data-testid="mode-picker-empty">
+      <button
+        type="button"
+        className="mode-picker-settings"
+        onClick={onOpenSettings}
+        aria-label="어시스턴트 프롬프트 설정"
+        title="요약 / 리뷰 prompt 수정"
+        data-testid="mode-picker-settings"
+      >
+        <i className="codicon codicon-settings-gear" aria-hidden="true" />
+      </button>
       <div className="mode-picker-headline">무엇을 도와드릴까요?</div>
       <div className="mode-picker-subtitle" data-testid="mode-picker-subtitle">
         "{title}" 페이지에 대해 질문하거나 리뷰를 요청하세요.

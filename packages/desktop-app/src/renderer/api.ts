@@ -280,6 +280,9 @@ export async function summaryStream(
     model?: string;
     summary_style?: string;
     max_tokens?: number;
+    // 2026-05-12: ModePickerEmpty ⚙ 설정에서 사용자가 textarea 로 수정한 prompt 풀텍스트.
+    // 미지정 시 backend preset 사용 (기존 동작).
+    prompt_override?: string;
   },
   onLine: (event: { type: string; payload: unknown }) => void,
 ): Promise<void> {
@@ -303,6 +306,8 @@ export async function reviewStream(
     review_instruction?: string;
     // P2: 옵션 패널에서 고른 6개 컨트롤. backend 가 옵셔널로 받음 — 미지정 시 기존 동작.
     review_options?: ReviewOptionsPayload;
+    // 2026-05-12: 사용자 prompt override. 미지정 시 backend preset 사용.
+    prompt_override?: string;
   },
   onLine: (event: { type: string; payload: unknown }) => void,
 ): Promise<void> {
@@ -313,6 +318,34 @@ export async function reviewStream(
     body: JSON.stringify(payload),
   });
   await readNdjson(res, onLine);
+}
+
+// 2026-05-12: ⚙ 설정 — 어시스턴트 모드의 preset prompt 노출용. sidecar 가 agent-sdk-poc
+// 의 GET /presets/{mode} 로 프록시. 응답 없거나 실패 시 null — UI 가 "백엔드 연결 실패"
+// 표시 후 사용자가 수동 갱신.
+export interface AssistantPreset {
+  prompt: string;
+  model?: string;
+  version: string;
+}
+
+export async function fetchAssistantPreset(
+  mode: 'summary' | 'review',
+): Promise<AssistantPreset | null> {
+  try {
+    const port = await ensurePort();
+    const res = await fetch(`http://127.0.0.1:${port}/presets/${mode}`);
+    if (!res.ok) return null;
+    const data = (await res.json()) as Partial<AssistantPreset>;
+    if (typeof data?.prompt !== 'string') return null;
+    return {
+      prompt: data.prompt,
+      model: typeof data.model === 'string' ? data.model : undefined,
+      version: typeof data.version === 'string' ? data.version : '',
+    };
+  } catch {
+    return null;
+  }
 }
 
 // Phase 4-3.5: review 결과 + 사용자 instruction → 변경안 (changes 배열).

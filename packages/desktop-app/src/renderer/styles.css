@@ -2959,6 +2959,187 @@ html, body, #root { height: 100%; margin: 0; padding: 0; background: var(--bg); 
   color: var(--text-dim);
 }
 
+/* 2026-05-12: ⚙ 토글 — ModePickerEmpty 우상단 floating. */
+.mode-picker-empty {
+  position: relative;
+}
+
+.mode-picker-settings {
+  all: unset;
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: background 0.08s ease, color 0.08s ease;
+}
+
+.mode-picker-settings:hover {
+  background: var(--list-hoverBackground);
+  color: var(--text);
+}
+
+/* 2026-05-12: AssistantPromptSettings — ⚙ 토글이 여는 prompt override 뷰. */
+.assistant-prompt-settings {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.assistant-prompt-settings-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.assistant-prompt-settings-title {
+  flex: 1 1 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.assistant-prompt-settings-intro {
+  padding: 10px 12px;
+  font-size: 11px;
+  color: var(--text-dim);
+  line-height: 1.6;
+  border-bottom: 1px solid var(--border);
+}
+
+.assistant-prompt-settings-flash {
+  padding: 6px 12px;
+  font-size: 11px;
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  border-bottom: 1px solid var(--border);
+}
+
+.assistant-prompt-settings-body {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 12px;
+  overflow: auto;
+  min-height: 0;
+}
+
+.assistant-prompt-mode {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-elev);
+}
+
+.assistant-prompt-mode-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.assistant-prompt-mode-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.assistant-prompt-mode-meta {
+  font-size: 11px;
+  color: var(--text-dim);
+}
+
+.assistant-prompt-mode-error {
+  font-size: 11px;
+  color: var(--danger, #d83a3a);
+  background: color-mix(in srgb, var(--danger, #d83a3a) 10%, transparent);
+  padding: 6px 8px;
+  border-radius: 4px;
+}
+
+.assistant-prompt-mode-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  resize: vertical;
+  min-height: 160px;
+  padding: 8px 10px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.assistant-prompt-mode-textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.assistant-prompt-mode-textarea:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.assistant-prompt-mode-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.assistant-prompt-mode-save,
+.assistant-prompt-mode-reset {
+  all: unset;
+  padding: 6px 12px;
+  font-size: 11px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: opacity 0.08s ease, background 0.08s ease;
+}
+
+.assistant-prompt-mode-save {
+  background: var(--accent);
+  color: var(--accent-fg, #fff);
+}
+
+.assistant-prompt-mode-save:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.assistant-prompt-mode-reset {
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+}
+
+.assistant-prompt-mode-reset:hover:not(:disabled) {
+  color: var(--text);
+  background: var(--list-hoverBackground);
+}
+
+.assistant-prompt-mode-save:disabled,
+.assistant-prompt-mode-reset:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
 .doc-assistant-placeholder {
   display: flex;
   flex-direction: column;

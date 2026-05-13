@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { summaryStream } from '../../api';
+import { loadOverride } from '../../panels/assistant-prompt-overrides';
 import { SummaryCard } from '../../panels/SummaryCard';
 import {
   hashContent,
@@ -45,7 +46,14 @@ export function SummarySplitPane({ tabId: _tabId, title, text, trigger, confluen
   const [state, setState] = useState<SummaryState>({ summary: null, streaming: true });
   const [refreshNonce, setRefreshNonce] = useState(0);
 
-  const contentHash = useMemo(() => hashContent(text), [text]);
+  // 2026-05-12: prompt override 도 키에 포함 — override 가 바뀌면 다음 mount 때
+  // 새 hash 로 cache miss 발생, 새 stream 으로 결과 받음.
+  const contentHash = useMemo(() => {
+    const ch = hashContent(text);
+    const override = loadOverride('summary');
+    const overrideTag = override && override.prompt.trim() ? `-o${hashContent(override.prompt)}` : '';
+    return `${ch}${overrideTag}`;
+  }, [text]);
 
   useEffect(() => {
     let cancelled = false;
@@ -70,7 +78,14 @@ export function SummarySplitPane({ tabId: _tabId, title, text, trigger, confluen
 
     void (async () => {
       try {
-        await summaryStream({ title, text }, (event) => {
+        // 2026-05-12: ⚙ 설정에서 사용자가 prompt override 를 저장했으면 그 텍스트를
+        // prompt_override 로 첨부. 백엔드는 prompt_override 가 있으면 preset 무시.
+        const override = loadOverride('summary');
+        const payload: Parameters<typeof summaryStream>[0] = { title, text };
+        if (override && override.prompt.trim()) {
+          payload.prompt_override = override.prompt;
+        }
+        await summaryStream(payload, (event) => {
           if (cancelled) return;
           const e = event as unknown as { type: string; [k: string]: unknown };
           if (e.type === 'status') {

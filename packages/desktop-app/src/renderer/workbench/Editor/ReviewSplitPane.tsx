@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { reviewStream, suggestEditsStream, type ChangeItem } from '../../api';
 import type { TreeNode } from '../../../shared/types';
 import { attachReviewItemToQnA } from '../../qna/dispatch';
+import { loadOverride } from '../../panels/assistant-prompt-overrides';
 import { ReviewCard, type ReviewData } from '../../panels/ReviewCard';
 import { ChangesCard } from '../../panels/ChangesCard';
 import {
@@ -113,10 +114,17 @@ export function ReviewSplitPane({ tabId: _tabId, title, text, trigger, reviewOpt
   // P2 보강: 옵션 변경 시 cache miss 보장 위해 옵션 hash 도 결합.
   // 회귀 방지: 이전엔 본문만으로 키 잡아 옵션 토글해도 cache hit 으로 같은 결과 → 사용자가
   // 옵션이 안 먹히는 것처럼 보고함. 옵션도 키에 포함 = 옵션 변경마다 새 stream.
+  // 2026-05-12: prompt override 도 키에 포함 — 사용자가 ⚙ 설정에서 prompt 수정 후
+  // 같은 페이지 다시 열면 새 prompt 로 다시 받아야 의미 있음.
   const contentHash = useMemo(() => {
     const ch = hashContent(text);
-    if (!reviewOptions) return ch;
-    return `${ch}-${hashReviewOptions(reviewOptions)}`;
+    const override = loadOverride('review');
+    const overrideTag = override && override.prompt.trim() ? `-o${hashContent(override.prompt)}` : '';
+    if (!reviewOptions) return `${ch}${overrideTag}`;
+    return `${ch}-${hashReviewOptions(reviewOptions)}${overrideTag}`;
+    // 의존성에 override 가 없는 건 의도적 — override 변경 후 사용자가 ⚙ 설정에서
+    // back → 칩 다시 클릭하는 사이에 컴포넌트가 unmount/remount 되므로 다음 mount 때
+    // 새 hash 가 계산됨. 같은 컴포넌트 내에서 override 가 바뀌는 경로는 현재 없음.
   }, [text, reviewOptions]);
 
   // 새 trigger 또는 refreshNonce 변경 시 review 재시작 — 단, refreshNonce 가 0 이 아닐
@@ -150,8 +158,19 @@ export function ReviewSplitPane({ tabId: _tabId, title, text, trigger, reviewOpt
 
     void (async () => {
       try {
-        const reviewPayload: { title: string; text: string; review_options?: ReturnType<typeof toBackendPayload> } = { title, text };
+        const reviewPayload: {
+          title: string;
+          text: string;
+          review_options?: ReturnType<typeof toBackendPayload>;
+          prompt_override?: string;
+        } = { title, text };
         if (reviewOptions) reviewPayload.review_options = toBackendPayload(reviewOptions);
+        // 2026-05-12: ⚙ 설정에서 사용자가 prompt override 를 저장했으면 첨부.
+        // 백엔드는 prompt_override 있으면 preset 무시, review_options 는 그대로 적용.
+        const override = loadOverride('review');
+        if (override && override.prompt.trim()) {
+          reviewPayload.prompt_override = override.prompt;
+        }
         await reviewStream(reviewPayload, (event) => {
           if (cancelled) return;
           const e = event as unknown as { type: string; [k: string]: unknown };
@@ -293,6 +312,7 @@ export function ReviewSplitPane({ tabId: _tabId, title, text, trigger, reviewOpt
           status={review.status}
           cachedAt={review.cachedAt ?? null}
           cachedModel={review.cachedModel ?? null}
+          enabledCategories={reviewOptions?.categories}
           onReRunRequest={() => setRefreshNonce((n) => n + 1)}
           onFixRequest={(filtered) => void startFix(filtered)}
           onAttachReviewItem={

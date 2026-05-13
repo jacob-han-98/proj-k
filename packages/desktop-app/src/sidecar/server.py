@@ -1061,6 +1061,36 @@ async def preset_prompts() -> dict:
         return {"presets": []}
 
 
+# ---------- /presets/{mode} (2026-05-12: ⚙ 설정 — preset prompt 노출) ----------
+# ModePickerEmpty 의 ⚙ 토글이 여는 AssistantPromptSettings 가 mount 시 호출.
+# agent-sdk-poc 의 GET /presets/summary, /presets/review 로 단순 프록시.
+# 백엔드 응답: { prompt: str, model?: str, version: str }
+
+
+@app.get("/presets/{mode}")
+async def get_assistant_preset(mode: str):
+    if mode not in ("summary", "review"):
+        raise HTTPException(status_code=404, detail=f"unknown preset mode: {mode}")
+    base = _agent_url()
+    if not base:
+        raise HTTPException(
+            status_code=503,
+            detail="agent 백엔드 URL 미설정 — SettingsModal 에서 설정",
+        )
+    timeout = httpx.Timeout(connect=5.0, read=10.0, write=5.0, pool=5.0)
+    try:
+        async with httpx.AsyncClient(timeout=timeout) as client:
+            r = await client.get(f"{base}/presets/{mode}")
+            if r.status_code != 200:
+                raise HTTPException(
+                    status_code=r.status_code,
+                    detail=f"upstream {r.status_code}: {r.text[:200]}",
+                )
+            return r.json()
+    except httpx.HTTPError as e:
+        raise HTTPException(status_code=502, detail=f"upstream 연결 실패: {e!s}") from e
+
+
 # ---------- /summary_stream (P1: Confluence webview body → agent 요약 모드) ----------
 # review_stream 과 동일한 NDJSON proxy 패턴. agent-sdk-poc 의 /summary_stream 이
 # {data.summary} markdown 문자열 + token 토큰 단위 스트리밍.
@@ -1073,6 +1103,10 @@ class SummaryRequest(BaseModel):
     model: str | None = None
     summary_style: str | None = None  # backend 가 향후 분기 — 지금은 "default" 만 처리
     max_tokens: int | None = None     # backend 가 기본 8194 적용
+    # 2026-05-12: ⚙ 설정에서 사용자가 textarea 로 수정한 prompt 풀텍스트.
+    # backend agent-sdk-poc 가 받으면 preset 무시하고 이 텍스트를 prompt 로 사용.
+    # 미지정 (None) / 빈 문자열이면 기존 동작.
+    prompt_override: str | None = None
 
 
 async def _proxy_summary_stream(payload: dict[str, Any]) -> AsyncIterator[str]:
@@ -1110,7 +1144,8 @@ async def summary_stream(req: SummaryRequest):
 class ReviewOptionsModel(BaseModel):
     # P2: 사용자가 ReviewOptionsPanel 에서 고른 6개 컨트롤. backend agent 가 받아
     # system prompt / instruction 으로 변환. sidecar 는 그대로 pass-through.
-    issue_cap: int | str  # 0 | 5 | 10 | "all"
+    issue_cap: int | str  # 2026-05-12 PD 피드백: frontend 는 int 만 송신 (textbox).
+                          # int | str 은 backend (agent-sdk-poc) 의 옛 "all" payload 호환용.
     verification_cap: int | str
     suggestion_cap: int | str
     categories: list[str]  # ["logic-flow" | "qa-checklist" | "readability"]
@@ -1123,6 +1158,9 @@ class ReviewRequest(BaseModel):
     model: str | None = None
     review_instruction: str | None = None
     review_options: ReviewOptionsModel | None = None
+    # 2026-05-12: ⚙ 설정에서 사용자가 수정한 prompt 풀텍스트. backend 가 받으면
+    # preset 무시. review_options 는 prompt_override 와 함께 와도 그대로 적용.
+    prompt_override: str | None = None
 
 
 async def _proxy_review_stream(payload: dict[str, Any]) -> AsyncIterator[str]:

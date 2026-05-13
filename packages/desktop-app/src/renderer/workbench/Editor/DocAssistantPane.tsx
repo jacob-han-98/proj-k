@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { useWorkbenchStore } from '../store';
 import type { SplitMode } from '../store';
 import type { TreeNode } from '../../../shared/types';
 import type { ReviewOptions } from '../../panels/review-options-mapping';
 import { attachDocToQnA } from '../../qna/dispatch';
+import { AssistantPromptSettings } from './AssistantPromptSettings';
 import { ModePickerEmpty } from './ModePickerEmpty';
 import { ReviewOptionsPanel } from './ReviewOptionsPanel';
 import { ReviewSplitPane } from './ReviewSplitPane';
@@ -49,8 +51,21 @@ export function DocAssistantPane({
 }: Props) {
   const setSplitMode = useWorkbenchStore((s) => s.setSplitMode);
   const setReviewOptions = useWorkbenchStore((s) => s.setReviewOptions);
+  // 2026-05-12: ⚙ 토글 — pick 모드에서만 의미 있지만 hooks-rule 상 최상단 선언.
+  // (다른 mode 일 땐 unused — 무해.)
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   if (mode === 'pick') {
+    if (settingsOpen) {
+      return (
+        <aside className="doc-assistant-pane" data-testid="doc-assistant-pane" data-mode="settings">
+          <AssistantPromptSettings
+            onBack={() => setSettingsOpen(false)}
+            onClose={onClose}
+          />
+        </aside>
+      );
+    }
     return (
       <aside className="doc-assistant-pane" data-testid="doc-assistant-pane" data-mode="pick">
         <header className="doc-assistant-header">
@@ -71,6 +86,7 @@ export function DocAssistantPane({
         <div className="doc-assistant-body">
           <ModePickerEmpty
             title={title}
+            onOpenSettings={() => setSettingsOpen(true)}
             onPickMode={(m) => {
               // Phase B: 사용자 결정으로 split 의 'agent' 모드는 폐지. 칩 클릭 시 그
               // 자리에서 채팅을 띄우지 않고 4번째 액티비티 (qna) 로 점프 + 첨부 push +

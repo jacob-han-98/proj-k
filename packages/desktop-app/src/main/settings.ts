@@ -64,6 +64,12 @@ export interface Settings {
   // machine_id 는 backend 가 사용자 식별 (SSO 합류 전) 에 쓰는 익명 UUID. 첫 부팅 시
   // 자동 생성되어 settings 에 영구 보관. 사용자 변경 불가 (UI 미노출).
   klaudMachineId?: string;
+
+  // 2026-05-13 릴리스-B: Google Workspace SSO. 둘 다 비어 있으면 SSO 비활성.
+  // PROJK_GOOGLE_CLIENT_ID env 가 fallback (설정 OR env 둘 중 하나라도 있으면 활성).
+  // hd 가 비어 있으면 워크스페이스 제한 없음 (gmail.com 등 일반 Google 계정도 허용 — dev 용).
+  googleOAuthClientId?: string;
+  googleWorkspaceDomain?: string;
 }
 
 function settingsFile(): string {

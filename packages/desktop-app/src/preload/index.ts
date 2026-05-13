@@ -228,6 +228,21 @@ const api = {
       ipcRenderer.invoke(IPC.KLAUD_CAPTURE_SCREENSHOT),
   },
 
+  // 2026-05-13 릴리스-B: Google Workspace SSO.
+  google: {
+    authStart: (): Promise<{ ok: boolean; reason?: string; email?: string; name?: string }> =>
+      ipcRenderer.invoke(IPC.GOOGLE_AUTH_START),
+    getCreds: (): Promise<{
+      email: string;
+      name?: string;
+      picture?: string;
+      hd?: string;
+      hasToken: boolean;
+      expiresInSeconds: number;
+    } | null> => ipcRenderer.invoke(IPC.GOOGLE_CREDS_GET),
+    signOut: (): Promise<{ ok: boolean }> => ipcRenderer.invoke(IPC.GOOGLE_SIGN_OUT),
+  },
+
   // ---------- OnlyOffice viewer (PoC 0.1.53+) ----------
   // settings.viewerMode === 'onlyoffice' 일 때 CenterPane 의 OnlyOfficeSheetView 가 호출.
   // main 이 WSL serve.py 를 spawn/restart 후 webview 에 띄울 임베드 URL 반환.

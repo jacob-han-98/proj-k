@@ -65,6 +65,51 @@ export function SettingsModal({ initialEmail, initialBaseUrl, onClose, onSaved }
   const [viewerMode, setViewerMode] = useState<'sp' | 'onlyoffice'>('onlyoffice');
   const [onlyOfficeUrl, setOnlyOfficeUrl] = useState('');
 
+  // 2026-05-13 릴리스-B: Google Workspace SSO.
+  const [googleOAuthClientId, setGoogleOAuthClientId] = useState('');
+  const [googleWorkspaceDomain, setGoogleWorkspaceDomain] = useState('');
+  const [googleCreds, setGoogleCreds] = useState<{
+    email: string;
+    name?: string;
+    picture?: string;
+    hd?: string;
+    hasToken: boolean;
+    expiresInSeconds: number;
+  } | null>(null);
+  const [googleAuthing, setGoogleAuthing] = useState(false);
+  const [googleAuthMsg, setGoogleAuthMsg] = useState<string | null>(null);
+
+  const refreshGoogleCreds = async () => {
+    try {
+      const c = await window.projk.google.getCreds();
+      setGoogleCreds(c);
+    } catch {
+      setGoogleCreds(null);
+    }
+  };
+  const runGoogleAuth = async () => {
+    setGoogleAuthing(true);
+    setGoogleAuthMsg(null);
+    try {
+      const r = await window.projk.google.authStart();
+      if (r.ok) {
+        setGoogleAuthMsg(`✓ 로그인 완료 — ${r.email}`);
+        await refreshGoogleCreds();
+      } else {
+        setGoogleAuthMsg(`✗ ${r.reason ?? '실패'}`);
+      }
+    } catch (e) {
+      setGoogleAuthMsg(`✗ ${(e as Error).message}`);
+    } finally {
+      setGoogleAuthing(false);
+    }
+  };
+  const runGoogleSignOut = async () => {
+    await window.projk.google.signOut();
+    setGoogleAuthMsg('로그아웃 됨.');
+    await refreshGoogleCreds();
+  };
+
   useEffect(() => {
     window.projk.getSettings().then((s) => {
       setSavedSettings(s);
@@ -89,7 +134,10 @@ export function SettingsModal({ initialEmail, initialBaseUrl, onClose, onSaved }
       setConfluenceTestParentPageId(s.confluenceTestParentPageId ?? '');
       setViewerMode(s.viewerMode ?? 'onlyoffice');
       setOnlyOfficeUrl(s.onlyOfficeUrl ?? DEFAULT_ONLYOFFICE_URL_HINT);
+      setGoogleOAuthClientId(s.googleOAuthClientId ?? '');
+      setGoogleWorkspaceDomain(s.googleWorkspaceDomain ?? '');
     });
+    void refreshGoogleCreds();
   }, []);
 
   const runP4Discover = async () => {
@@ -147,6 +195,8 @@ export function SettingsModal({ initialEmail, initialBaseUrl, onClose, onSaved }
         confluenceTestParentPageId: confluenceTestParentPageId.trim() || undefined,
         viewerMode,
         onlyOfficeUrl: onlyOfficeUrl.trim() || undefined,
+        googleOAuthClientId: googleOAuthClientId.trim() || undefined,
+        googleWorkspaceDomain: googleWorkspaceDomain.trim() || undefined,
       });
 
       // 2) Confluence 자격증명 (비밀 — safeStorage 암호화)
@@ -336,6 +386,101 @@ export function SettingsModal({ initialEmail, initialBaseUrl, onClose, onSaved }
           체크 해제 시 URL 설정과 무관하게 일체 송신 안 함. opt-out.
         </div>
 
+        {/* 2026-05-13 릴리스-B: Google Workspace SSO */}
+        <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 12, marginBottom: 4 }}>
+          Google Workspace 로그인 (사용자 식별 — 로그/제보 시 email 자동 동봉)
+        </div>
+
+        <label htmlFor="settings-google-client-id">OAuth Client ID</label>
+        <input
+          id="settings-google-client-id"
+          aria-label="Google OAuth Client ID"
+          data-testid="settings-google-client-id"
+          value={googleOAuthClientId}
+          onChange={(e) => setGoogleOAuthClientId(e.target.value)}
+          placeholder="<gcp-project>.apps.googleusercontent.com"
+          spellCheck={false}
+        />
+        <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: -4 }}>
+          GCP Console (Desktop app 타입) 에서 발급. 비우면 <code>PROJK_GOOGLE_CLIENT_ID</code> env 사용. 둘 다 미설정 시 SSO 비활성.
+        </div>
+
+        <label htmlFor="settings-google-hd" style={{ marginTop: 8 }}>Workspace 도메인 제한 (hd)</label>
+        <input
+          id="settings-google-hd"
+          aria-label="Workspace 도메인 제한"
+          data-testid="settings-google-hd"
+          value={googleWorkspaceDomain}
+          onChange={(e) => setGoogleWorkspaceDomain(e.target.value)}
+          placeholder="bighitcorp.com (비우면 일반 Google 계정 허용)"
+          spellCheck={false}
+        />
+        <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: -4 }}>
+          채우면 그 도메인 계정만 로그인 가능. dev 환경에서는 비워두면 gmail.com 등 일반 계정도 OK.
+        </div>
+
+        <div
+          style={{ display: 'flex', gap: 6, alignItems: 'center', marginTop: 8 }}
+          data-testid="settings-google-auth-row"
+        >
+          {googleCreds && googleCreds.hasToken ? (
+            <>
+              <span style={{ fontSize: 12 }} data-testid="settings-google-status">
+                ✓ <strong>{googleCreds.email}</strong>
+                {googleCreds.name ? ` (${googleCreds.name})` : ''}
+                {googleCreds.expiresInSeconds < 0
+                  ? ' — 토큰 만료됨, 다시 로그인'
+                  : ''}
+              </span>
+              <button
+                type="button"
+                onClick={() => void runGoogleSignOut()}
+                data-testid="settings-google-signout"
+                style={{
+                  padding: '4px 10px',
+                  fontSize: 11,
+                  borderRadius: 4,
+                  border: '1px solid var(--border)',
+                  background: 'var(--bg)',
+                  cursor: 'pointer',
+                }}
+              >
+                로그아웃
+              </button>
+            </>
+          ) : (
+            <>
+              <span style={{ fontSize: 12, color: 'var(--text-dim)' }} data-testid="settings-google-status">
+                로그인 안 됨 — 로그/제보 의 user_email 이 익명 (machine_id)
+              </span>
+              <button
+                type="button"
+                onClick={() => void runGoogleAuth()}
+                disabled={googleAuthing}
+                data-testid="settings-google-signin"
+                style={{
+                  padding: '4px 10px',
+                  fontSize: 11,
+                  borderRadius: 4,
+                  border: '1px solid var(--border)',
+                  background: 'var(--bg)',
+                  cursor: googleAuthing ? 'default' : 'pointer',
+                }}
+              >
+                {googleAuthing ? '로그인 중…' : 'Google 로그인'}
+              </button>
+            </>
+          )}
+        </div>
+        {googleAuthMsg && (
+          <div
+            style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: 2 }}
+            data-testid="settings-google-auth-msg"
+          >
+            {googleAuthMsg}
+          </div>
+        )}
+
         <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 12, marginBottom: 4 }}>
           Perforce (선택 — depot 트리)
         </div>
@@ -509,7 +654,12 @@ export function SettingsModal({ initialEmail, initialBaseUrl, onClose, onSaved }
 
         <div className="row">
           <button onClick={onClose}>취소</button>
-          <button className="primary" onClick={save} disabled={saving}>
+          <button
+            className="primary"
+            onClick={save}
+            disabled={saving}
+            data-testid="settings-save"
+          >
             {saving ? '저장 중…' : '저장하고 적용'}
           </button>
         </div>

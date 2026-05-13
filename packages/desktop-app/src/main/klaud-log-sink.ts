@@ -23,6 +23,7 @@ import { join } from 'node:path';
 import { randomUUID } from 'node:crypto';
 import { getSettings, setSettings } from './settings';
 import type { KlaudLogEntry, KlaudReportPayload } from '../shared/types';
+import { getCurrentIdToken } from './google-auth';
 
 const RING_MAX = 5000;
 const FILE_ROTATE_BYTES = 5 * 1024 * 1024; // 5MB per file
@@ -112,12 +113,19 @@ async function flushQueue(): Promise<void> {
   const url = (s.klaudLogSinkUrl ?? '').replace(/\/+$/, '');
   if (!url) return; // endpoint 없으면 queue 에 쌓아둠 — 나중에 url 설정되면 flush.
   const batch = queueForSink.slice(0, BATCH_MAX);
-  const body = {
+  // 2026-05-13 릴리스-B: 로그인된 사용자 있으면 id_token + email 동봉. backend 가
+  // id_token JWT verify 후 entries 의 user_email 을 덮어씌움 — 위조 방지.
+  const idTokenPair = await getCurrentIdToken().catch(() => null);
+  const body: Record<string, unknown> = {
     machine_id: ensureMachineId(),
     session_id: ensureSessionId(),
     klaud_version: appVersion ?? 'unknown',
     entries: batch,
   };
+  if (idTokenPair) {
+    body.user_email = idTokenPair.email; // backend 가 검증 후 덮어씀
+    body.id_token = idTokenPair.id_token;
+  }
   try {
     const res = await fetch(`${url}/klaud/log/batch`, {
       method: 'POST',
@@ -219,7 +227,10 @@ export async function submitReport(payload: KlaudReportPayload): Promise<{ ok: b
   const url = (s.klaudLogSinkUrl ?? '').replace(/\/+$/, '');
   // url 미설정도 정상 — 큐가 비어있게만. 다만 제보는 url 없으면 의미가 없으므로 false 리턴.
   if (!url) return { ok: false, reason: 'klaudLogSinkUrl unset' };
-  const body = {
+  // 2026-05-13 릴리스-B: 로그인된 사용자 있으면 id_token 동봉 — backend 가 verify 후
+  // user_email 을 id_token.email 로 덮어씀.
+  const idTokenPair = await getCurrentIdToken().catch(() => null);
+  const body: Record<string, unknown> = {
     machine_id: ensureMachineId(),
     session_id: ensureSessionId(),
     klaud_version: appVersion ?? 'unknown',
@@ -229,6 +240,10 @@ export async function submitReport(payload: KlaudReportPayload): Promise<{ ok: b
     screenshot_b64: payload.screenshotB64 ?? null,
     recent_logs: getRingSnapshot().slice(-500),
   };
+  if (idTokenPair) {
+    body.user_email = idTokenPair.email;
+    body.id_token = idTokenPair.id_token;
+  }
   try {
     const res = await fetch(`${url}/klaud/report`, {
       method: 'POST',

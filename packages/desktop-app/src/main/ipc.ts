@@ -35,6 +35,8 @@ import * as onedriveSync from './onedrive-sync';
 import { prepareOnlyOfficeViewer } from './onlyoffice-host';
 import { recordLog, submitReport } from './klaud-log-sink';
 import type { KlaudLogEntry, KlaudReportPayload } from '../shared/types';
+import { getCredsInfo as getGoogleCredsInfo, clearGoogleCreds } from './google-auth';
+import { interactiveLogin as interactiveGoogleLogin } from './google-oauth';
 import { dialog } from 'electron';
 import { readFileSync } from 'node:fs';
 import { basename } from 'node:path';
@@ -556,6 +558,19 @@ export function registerIpc(getWindow: () => BrowserWindow | null): void {
     const screenshot = typeof payload.screenshotB64 === 'string' ? payload.screenshotB64 : undefined;
     return submitReport({ note, context, screenshotB64: screenshot });
   });
+  // 2026-05-13 릴리스-B: Google Workspace SSO.
+  ipcMain.handle(IPC.GOOGLE_AUTH_START, async () => {
+    const w = getWindow();
+    return interactiveGoogleLogin(w);
+  });
+  ipcMain.handle(IPC.GOOGLE_CREDS_GET, async () => {
+    return getGoogleCredsInfo();
+  });
+  ipcMain.handle(IPC.GOOGLE_SIGN_OUT, async () => {
+    await clearGoogleCreds();
+    return { ok: true };
+  });
+
   // 제보 모달이 첨부 체크 시 호출. 1MB 초과 PNG 는 backend storage 부담 + b64 인플레이션
   // 고려해 빈 문자열로 응답 (frontend 가 silent skip — 사용자에게 별도 알림 X).
   ipcMain.handle(IPC.KLAUD_CAPTURE_SCREENSHOT, async () => {

@@ -255,7 +255,25 @@ export const IPC = {
   // 제보 모달에서 첨부 체크 시 main 이 mainWindow.webContents.capturePage() 로 PNG 캡처
   // → 1MB 이하면 base64 반환, 초과면 빈 문자열 반환 (frontend 가 silent skip).
   KLAUD_CAPTURE_SCREENSHOT: 'klaud:capture-screenshot',
+  // 2026-05-13 릴리스-B: Google Workspace SSO.
+  // GOOGLE_AUTH_START: SettingsModal 의 "Google 로그인" 버튼이 호출. main 이 PKCE flow
+  //   진행 (loopback 서버 + BrowserWindow). 성공/실패 reason 반환.
+  // GOOGLE_CREDS_GET: GoogleCredsInfo (email/name/picture/hasToken, 토큰 자체는 X).
+  // GOOGLE_SIGN_OUT: 저장된 token 파일을 비움. renderer 가 confirm 후 호출.
+  GOOGLE_AUTH_START: 'google:auth:start',
+  GOOGLE_CREDS_GET: 'google:creds:get',
+  GOOGLE_SIGN_OUT: 'google:sign-out',
 } as const;
+
+// 2026-05-13 릴리스-B: renderer 에 노출되는 Google 자격 메타. 토큰 자체는 main 전용.
+export interface GoogleCredsInfoView {
+  email: string;
+  name?: string;
+  picture?: string;
+  hd?: string;
+  hasToken: boolean;
+  expiresInSeconds: number;
+}
 
 // main → renderer 단축키 forward payload. webview 안에서 발생한 키도 우리 앱 단축키면
 // main 이 가로채 동일하게 동작시키기 위해. Ctrl+P / Ctrl+1~5 만 (현재 사용 중인 글로벌
@@ -404,6 +422,18 @@ export interface AppSettings {
   // OnlyOffice Document Server endpoint. 예: 'http://172.20.105.147:8080' (jacob WSL Docker)
   // 또는 사내 VM 에 띄운 서버 도메인. 주소 변경 시 사용자가 SettingsModal 에서 입력.
   onlyOfficeUrl?: string;
+
+  // 2026-05-13 릴리스-A2: Klaud 통합 로그 sink + 제보 (운영 모니터링).
+  // klaudLogSinkUrl 미설정 시 frontend 가 큐만 적재 (송신 X). klaudTelemetryEnabled
+  // false 시 일체 송신 안 함 (opt-out). klaudMachineId 는 첫 부팅 시 자동 발급.
+  klaudLogSinkUrl?: string;
+  klaudTelemetryEnabled?: boolean;
+  klaudMachineId?: string;
+
+  // 2026-05-13 릴리스-B: Google Workspace SSO. 두 값 모두 비어 있으면 SSO 비활성.
+  // PROJK_GOOGLE_CLIENT_ID env 가 fallback. hd 가 비어 있으면 워크스페이스 제한 없음.
+  googleOAuthClientId?: string;
+  googleWorkspaceDomain?: string;
 }
 
 // 액티비티 바 5번 ("내 작업 중 문서") — P4 체크아웃 한 항목.

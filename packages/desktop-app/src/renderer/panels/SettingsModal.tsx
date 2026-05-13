@@ -69,6 +69,9 @@ export function SettingsModal({ initialEmail, initialBaseUrl, onClose, onSaved }
   // googleWorkspaceDomain 은 사내 정책 고정 (KLAUD_BUILTIN_WORKSPACE_DOMAIN) — UI 에 표시만,
   // state 보유 안 함. dev override 는 PROJK_GOOGLE_WORKSPACE_DOMAIN env 로만.
   const [googleOAuthClientId, setGoogleOAuthClientId] = useState('');
+
+  // 2026-05-13: 리뷰 모드 진입 시 그 탭 자동 고정. default ON.
+  const [autoPinOnReview, setAutoPinOnReview] = useState(true);
   const [googleCreds, setGoogleCreds] = useState<{
     email: string;
     name?: string;
@@ -136,6 +139,7 @@ export function SettingsModal({ initialEmail, initialBaseUrl, onClose, onSaved }
       setViewerMode(s.viewerMode ?? 'onlyoffice');
       setOnlyOfficeUrl(s.onlyOfficeUrl ?? DEFAULT_ONLYOFFICE_URL_HINT);
       setGoogleOAuthClientId(s.googleOAuthClientId ?? '');
+      setAutoPinOnReview(s.autoPinOnReview !== false);
     });
     void refreshGoogleCreds();
   }, []);
@@ -198,6 +202,8 @@ export function SettingsModal({ initialEmail, initialBaseUrl, onClose, onSaved }
         googleOAuthClientId: googleOAuthClientId.trim() || undefined,
         // 2026-05-13 사내 정책 고정 — 옛 settings 의 사용자 입력값 청소.
         googleWorkspaceDomain: undefined,
+        // 2026-05-13: default ON 이라 OFF 만 명시 저장.
+        autoPinOnReview: autoPinOnReview ? undefined : false,
       });
 
       // 2) Confluence 자격증명 (비밀 — safeStorage 암호화)
@@ -385,6 +391,27 @@ export function SettingsModal({ initialEmail, initialBaseUrl, onClose, onSaved }
         </label>
         <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: -4 }}>
           체크 해제 시 URL 설정과 무관하게 일체 송신 안 함. opt-out.
+        </div>
+
+        {/* 2026-05-13: 리뷰 자동 고정 */}
+        <div style={{ fontSize: 11, color: 'var(--text-dim)', marginTop: 12, marginBottom: 4 }}>
+          탭 동작
+        </div>
+        <label
+          htmlFor="settings-auto-pin-on-review"
+          style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer' }}
+        >
+          <input
+            id="settings-auto-pin-on-review"
+            type="checkbox"
+            data-testid="settings-auto-pin-on-review"
+            checked={autoPinOnReview}
+            onChange={(e) => setAutoPinOnReview(e.target.checked)}
+          />
+          <span>리뷰 모드 진입 시 그 탭을 자동으로 고정</span>
+        </label>
+        <div style={{ fontSize: 10, color: 'var(--text-dim)', marginTop: -4 }}>
+          켜져 있으면 어시스턴트의 "리뷰하기" 칩 클릭 시 좌측에 자동 고정. 컨텍스트 스위칭해도 그 탭이 항상 보임. 수동 우클릭 → "고정 해제" 가능.
         </div>
 
         {/* 2026-05-13 릴리스-B: Google Workspace SSO */}

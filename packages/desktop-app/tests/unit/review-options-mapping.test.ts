@@ -17,12 +17,12 @@ import {
 
 describe('review-options-mapping', () => {
   describe('DEFAULT_REVIEW_OPTIONS', () => {
-    it('caps 5 + 모든 카테고리 + 기획팀장 단독 — 두 번째 스크린샷 default 와 일치', () => {
+    it('caps 5 + 추가 분석 모두 OFF (2026-05-13) + 기획팀장 단독', () => {
       expect(DEFAULT_REVIEW_OPTIONS).toEqual({
         issueCap: 5,
         verificationCap: 5,
         suggestionCap: 5,
-        categories: ['logic-flow', 'qa-checklist', 'readability'],
+        categories: [],
         reviewerPersonas: ['planner-lead'],
       });
     });
@@ -68,9 +68,12 @@ describe('review-options-mapping', () => {
     });
 
     it('immutable — array 들이 원본과 분리됨', () => {
-      const opts: ReviewOptions = { ...DEFAULT_REVIEW_OPTIONS };
+      const opts: ReviewOptions = {
+        ...DEFAULT_REVIEW_OPTIONS,
+        categories: ['logic-flow', 'qa-checklist', 'readability'],
+      };
       const out = toBackendPayload(opts);
-      out.categories.push('logic-flow');
+      out.categories.push('readability');
       out.reviewer_personas.push('programmer');
       // 원본은 그대로
       expect(opts.categories).toEqual(['logic-flow', 'qa-checklist', 'readability']);
@@ -80,20 +83,26 @@ describe('review-options-mapping', () => {
 
   describe('toggleCategory', () => {
     it('포함된 카테고리 → 제거', () => {
-      const out = toggleCategory(DEFAULT_REVIEW_OPTIONS, 'qa-checklist');
+      const start: ReviewOptions = {
+        ...DEFAULT_REVIEW_OPTIONS,
+        categories: ['logic-flow', 'qa-checklist', 'readability'],
+      };
+      const out = toggleCategory(start, 'qa-checklist');
       expect(out.categories).toEqual(['logic-flow', 'readability']);
     });
 
     it('미포함 카테고리 → 추가 (insertion order)', () => {
-      const start: ReviewOptions = { ...DEFAULT_REVIEW_OPTIONS, categories: [] };
-      const a = toggleCategory(start, 'qa-checklist');
+      const a = toggleCategory(DEFAULT_REVIEW_OPTIONS, 'qa-checklist');
       expect(a.categories).toEqual(['qa-checklist']);
       const b = toggleCategory(a, 'logic-flow');
       expect(b.categories).toEqual(['qa-checklist', 'logic-flow']);
     });
 
     it('immutable — 원본은 안 바뀜', () => {
-      const start = { ...DEFAULT_REVIEW_OPTIONS };
+      const start: ReviewOptions = {
+        ...DEFAULT_REVIEW_OPTIONS,
+        categories: ['logic-flow', 'qa-checklist', 'readability'],
+      };
       toggleCategory(start, 'qa-checklist');
       expect(start.categories).toEqual(['logic-flow', 'qa-checklist', 'readability']);
     });

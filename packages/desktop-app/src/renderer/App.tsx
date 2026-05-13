@@ -99,10 +99,12 @@ export function App() {
     });
   }, [selection]);
 
-  // 부팅 시 settings 의 sheetMappings load.
+  // 부팅 시 settings 의 sheetMappings + autoPinOnReview store 동기화.
+  // 2026-05-13: autoPinOnReview default true — settings 에 false 명시 시만 OFF.
   useEffect(() => {
     window.projk.getSettings().then((s) => {
       setSheetMappings(s.sheetMappings ?? {});
+      useWorkbenchStore.getState().setAutoPinOnReview(s.autoPinOnReview !== false);
     });
   }, []);
 

@@ -26,13 +26,14 @@ export interface ReviewOptions {
   reviewerPersonas: ReviewerPersona[];
 }
 
-// 옵션 패널 첫 진입 시 default — 두 번째 스크린샷의 highlight 와 일치.
-// 5 / 5 / 5 + 모든 카테고리 + 기획팀장 단독 (사용자가 명시적으로 추가 토글 가능).
+// 옵션 패널 첫 진입 시 default.
+// cap 5 / 5 / 5 + 추가 분석 카테고리는 모두 OFF (2026-05-13 사용자 결정 — 메인 리뷰
+// 결과 위주, 추가 분석은 사용자가 필요할 때 토글) + 기획팀장 단독.
 export const DEFAULT_REVIEW_OPTIONS: ReviewOptions = {
   issueCap: 5,
   verificationCap: 5,
   suggestionCap: 5,
-  categories: ['logic-flow', 'qa-checklist', 'readability'],
+  categories: [],
   reviewerPersonas: ['planner-lead'],
 };
 

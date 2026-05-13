@@ -28,6 +28,7 @@ describe('store: pin/unpin/togglePin', () => {
       tabSplits: {},
       editingDocs: {},
       qnaPendingAttachments: {},
+      autoPinOnReview: true,
     });
   });
 
@@ -84,5 +85,67 @@ describe('store: pin/unpin/togglePin', () => {
     store.pinTab('confluence:B');
     store.closeTab('confluence:A');
     expect(useWorkbenchStore.getState().pinnedTabIds).toEqual(['confluence:B']);
+  });
+});
+
+// 2026-05-13: 리뷰 모드 진입 시 자동 고정 (autoPinOnReview).
+describe('store: auto-pin on review', () => {
+  beforeEach(() => {
+    useWorkbenchStore.setState({
+      openTabs: [],
+      activeTabId: null,
+      pinnedTabIds: [],
+      tabSplits: {},
+      editingDocs: {},
+      qnaPendingAttachments: {},
+      autoPinOnReview: true,
+    });
+  });
+
+  function setupTab(): void {
+    useWorkbenchStore.getState().openTab({ kind: 'confluence', node: makeNode('A', 'A') });
+    useWorkbenchStore.getState().openSplit('confluence:A', '전투', '본문'); // mode='pick'
+  }
+
+  it('setSplitMode("review") → 그 탭이 자동 pin', () => {
+    setupTab();
+    expect(useWorkbenchStore.getState().pinnedTabIds).toEqual([]);
+    useWorkbenchStore.getState().setSplitMode('confluence:A', 'review');
+    expect(useWorkbenchStore.getState().pinnedTabIds).toEqual(['confluence:A']);
+  });
+
+  it('autoPinOnReview=false 면 setSplitMode("review") 해도 pin 안 됨', () => {
+    setupTab();
+    useWorkbenchStore.setState({ autoPinOnReview: false });
+    useWorkbenchStore.getState().setSplitMode('confluence:A', 'review');
+    expect(useWorkbenchStore.getState().pinnedTabIds).toEqual([]);
+  });
+
+  it('summary / agent 모드는 auto-pin 안 됨', () => {
+    setupTab();
+    useWorkbenchStore.getState().setSplitMode('confluence:A', 'summary');
+    expect(useWorkbenchStore.getState().pinnedTabIds).toEqual([]);
+    useWorkbenchStore.getState().setSplitMode('confluence:A', 'agent');
+    expect(useWorkbenchStore.getState().pinnedTabIds).toEqual([]);
+  });
+
+  it('openSplit(mode="review") → 직접 review 모드 시작 시 자동 pin (Excel 즉시 리뷰 흐름)', () => {
+    useWorkbenchStore.getState().openTab({ kind: 'excel', node: makeNode('s1', 'sheet') });
+    useWorkbenchStore.getState().openSplit('excel:s1', '시트', '본문', 'review');
+    expect(useWorkbenchStore.getState().pinnedTabIds).toEqual(['excel:s1']);
+  });
+
+  it('이미 pinned 인 탭은 setSplitMode("review") 가 중복 안 만듦', () => {
+    setupTab();
+    useWorkbenchStore.getState().pinTab('confluence:A');
+    useWorkbenchStore.getState().setSplitMode('confluence:A', 'review');
+    expect(useWorkbenchStore.getState().pinnedTabIds).toEqual(['confluence:A']);
+  });
+
+  it('존재하지 않는 탭 id 의 setSplitMode → state 안 바뀜 (no auto-pin race)', () => {
+    useWorkbenchStore.getState().openSplit('confluence:GHOST', '제목', '본문', 'pick');
+    // openSplit 은 tabSplits 만 채우고 openTabs 는 안 건드림. setSplitMode 로 review 전환.
+    useWorkbenchStore.getState().setSplitMode('confluence:GHOST', 'review');
+    expect(useWorkbenchStore.getState().pinnedTabIds).toEqual([]);
   });
 });

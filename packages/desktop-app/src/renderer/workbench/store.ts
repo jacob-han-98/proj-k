@@ -75,6 +75,12 @@ type WorkbenchState = {
   unpinTab: (id: string) => void;
   togglePinTab: (id: string) => void;
 
+  // 2026-05-13: 리뷰 모드 진입 시 그 탭을 자동으로 고정 (default ON).
+  // App.tsx 가 settings 로드 시 setAutoPinOnReview 로 동기화. setSplitMode 가 'review'
+  // 로 전환되거나 openSplit 이 mode='review' 로 호출되는 시점에 pinTab 자동 호출.
+  autoPinOnReview: boolean;
+  setAutoPinOnReview: (b: boolean) => void;
+
   // PR4: editor 영역의 우측 split (어시스턴트). 탭별 isolated.
   tabSplits: Record<string, SplitPayload | undefined>;
   // mode 미지정 = 'pick' (수동 시작 빈 상태). 기존 호출자는 mode 인자 생략 가능.
@@ -247,15 +253,29 @@ export const useWorkbenchStore = create<WorkbenchState>((set) => ({
     return { ...state, pinnedTabIds: [...state.pinnedTabIds, id] };
   }),
 
+  // 2026-05-13: default ON. settings.autoPinOnReview !== false 면 ON.
+  autoPinOnReview: true,
+  setAutoPinOnReview: (b) => set({ autoPinOnReview: b }),
+
   tabSplits: {},
 
-  openSplit: (tabId, title, text, mode = 'pick', reviewOptions) => set((state) => ({
-    ...state,
-    tabSplits: {
+  openSplit: (tabId, title, text, mode = 'pick', reviewOptions) => set((state) => {
+    const nextSplits = {
       ...state.tabSplits,
       [tabId]: { title, text, trigger: Date.now(), mode, reviewOptions },
-    },
-  })),
+    };
+    // 2026-05-13: 리뷰 모드 시작 시 자동 고정 (autoPinOnReview ON 일 때).
+    let pinnedTabIds = state.pinnedTabIds;
+    if (
+      mode === 'review' &&
+      state.autoPinOnReview &&
+      !pinnedTabIds.includes(tabId) &&
+      state.openTabs.some((t) => t.id === tabId)
+    ) {
+      pinnedTabIds = [...pinnedTabIds, tabId];
+    }
+    return { ...state, tabSplits: nextSplits, pinnedTabIds };
+  }),
 
   setSplitMode: (tabId, mode) => set((state) => {
     const cur = state.tabSplits[tabId];
@@ -263,13 +283,21 @@ export const useWorkbenchStore = create<WorkbenchState>((set) => ({
     if (cur.mode === mode) return state;
     // 모드 전환 시 reviewOptions 도 reset — 사용자가 리뷰 → 다른 모드 → 리뷰 다시 가면
     // 옵션 패널 새로 보이는 게 자연스러움.
-    return {
-      ...state,
-      tabSplits: {
-        ...state.tabSplits,
-        [tabId]: { ...cur, mode, trigger: Date.now(), reviewOptions: undefined },
-      },
+    const nextSplits = {
+      ...state.tabSplits,
+      [tabId]: { ...cur, mode, trigger: Date.now(), reviewOptions: undefined },
     };
+    // 2026-05-13: 리뷰 모드로 전환 시 자동 고정 (autoPinOnReview ON 일 때).
+    let pinnedTabIds = state.pinnedTabIds;
+    if (
+      mode === 'review' &&
+      state.autoPinOnReview &&
+      !pinnedTabIds.includes(tabId) &&
+      state.openTabs.some((t) => t.id === tabId)
+    ) {
+      pinnedTabIds = [...pinnedTabIds, tabId];
+    }
+    return { ...state, tabSplits: nextSplits, pinnedTabIds };
   }),
 
   setReviewOptions: (tabId, options) => set((state) => {

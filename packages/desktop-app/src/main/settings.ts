@@ -70,6 +70,10 @@ export interface Settings {
   // hd 가 비어 있으면 워크스페이스 제한 없음 (gmail.com 등 일반 Google 계정도 허용 — dev 용).
   googleOAuthClientId?: string;
   googleWorkspaceDomain?: string;
+
+  // 2026-05-13: 리뷰 모드 진입 시 그 탭 자동 고정. 사용자 결정 default ON. UI 토글 노출.
+  // false 만 명시 저장 (default ON 이라 미설정 = ON).
+  autoPinOnReview?: boolean;
 }
 
 function settingsFile(): string {

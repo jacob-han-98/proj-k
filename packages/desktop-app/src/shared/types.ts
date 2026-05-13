@@ -439,6 +439,9 @@ export interface AppSettings {
   // PROJK_GOOGLE_CLIENT_ID env 가 fallback. hd 가 비어 있으면 워크스페이스 제한 없음.
   googleOAuthClientId?: string;
   googleWorkspaceDomain?: string;
+
+  // 2026-05-13: 리뷰 모드 진입 시 그 탭 자동 고정. default ON. false 만 명시 저장.
+  autoPinOnReview?: boolean;
 }
 
 // 액티비티 바 5번 ("내 작업 중 문서") — P4 체크아웃 한 항목.

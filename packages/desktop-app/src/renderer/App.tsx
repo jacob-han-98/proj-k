@@ -14,6 +14,7 @@ import { TitleBar } from './panels/TitleBar';
 import { EditorHost } from './workbench/Editor/EditorHost';
 import { SidebarHost } from './workbench/Sidebar/SidebarHost';
 import { CommandPalette } from './workbench/CommandPalette';
+import { TabSwitcher } from './workbench/Editor/TabSwitcher';
 import { useWorkbenchStore } from './workbench/store';
 import { tabIdOf } from './workbench/types';
 import { installKlaudLogCapture, updateLogContext } from './klaud-log-capture';
@@ -174,6 +175,45 @@ export function App() {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
+  }, []);
+
+  // 2026-05-13: VS Code 스타일 Ctrl+Tab MRU 탭 스위처.
+  // - Ctrl 누른 상태로 Tab → 첫 누름이면 store.openTabSwitcher 로 overlay 시작 (cursor=1,
+  //   현재 [0] 다음의 MRU 탭). 이후 Tab 추가 → moveTabSwitcher(+1), Shift+Tab → -1.
+  // - Ctrl release → commitTabSwitcher (현재 cursor 의 탭으로 focus + overlay 닫음).
+  // - keyup 의 e.key 는 'Control' (Win/Linux) 또는 'Meta' (Mac). 둘 다 commit 트리거.
+  // - input/textarea/contenteditable 안에서도 동작 — 사용자가 어디에 focus 있어도 일관.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab') return;
+      if (!(e.ctrlKey || e.metaKey)) return;
+      if (e.altKey) return;
+      // openTabs 가 2개 미만이면 의미 없음 — store action 이 자체 단축 처리.
+      e.preventDefault();
+      const direction = e.shiftKey ? -1 : 1;
+      const { tabSwitcher, openTabSwitcher, moveTabSwitcher } = useWorkbenchStore.getState();
+      if (!tabSwitcher) openTabSwitcher(direction);
+      else moveTabSwitcher(direction);
+    };
+    const onKeyUp = (e: KeyboardEvent) => {
+      // Ctrl 또는 Meta release 시 commit. 이벤트 e.key 는 'Control' 또는 'Meta'.
+      if (e.key !== 'Control' && e.key !== 'Meta') return;
+      const { tabSwitcher, commitTabSwitcher } = useWorkbenchStore.getState();
+      if (tabSwitcher) commitTabSwitcher();
+    };
+    // window blur 시 (Alt+Tab 등) overlay 가 stuck 으로 남는 회귀 방지 — cancel.
+    const onBlur = () => {
+      const { tabSwitcher, cancelTabSwitcher } = useWorkbenchStore.getState();
+      if (tabSwitcher) cancelTabSwitcher();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    window.addEventListener('keyup', onKeyUp);
+    window.addEventListener('blur', onBlur);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      window.removeEventListener('keyup', onKeyUp);
+      window.removeEventListener('blur', onBlur);
+    };
   }, []);
 
   // webview 가 focus 를 가져가 keydown 이 main renderer 까지 전달 안 되는 케이스
@@ -683,6 +723,7 @@ export function App() {
 
       <UpdateToast />
       <CommandPalette />
+      <TabSwitcher />
     </div>
   );
 }

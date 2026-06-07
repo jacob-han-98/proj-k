@@ -134,12 +134,14 @@ export function ActiveDocsPanel({ onOpenSheet, onOpenConfluencePage }: Props) {
       }
       // P4DepotTree.openDepotFile 와 동일한 임시 TreeNode 합성. tabIdOf 가 oneDriveUrl 있을 때
       // node.id 를 그대로 탭 id 로 — 같은 파일의 다른 revision 도 별도 탭.
+      // viewerKind 는 main 이 viewerMode 분기해서 반환 — CenterPane 분기에 사용.
       const node: TreeNode = {
         id: `depot:${file.depotPath}#rev${r.revision}`,
         type: 'sheet',
         title: basename(file.depotPath),
         relPath: file.depotPath.replace(/^\/\//, ''),
         oneDriveUrl: r.url,
+        viewerKind: r.viewerKind,
       };
       onOpenSheet(node);
     } catch (e) {

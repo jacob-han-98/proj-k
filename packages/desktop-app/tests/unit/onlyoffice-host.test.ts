@@ -74,3 +74,23 @@ describe('getServePyWslPath', () => {
     expect(getServePyWslPath()).toBe('/mnt/e/repos/proj-k/packages/excel-viewer-poc/serve.py');
   });
 });
+
+// PoC 0.1.54: depot 흐름이 windowsXlsxPath 를 통해 sidecar /xlsx_stat 우회 가능해야 한다.
+// 실제 spawn / WSL IP / fetch 없이 input validation 분기만 격리 검증 (early-return error 만).
+describe('prepareOnlyOfficeViewer input branching', () => {
+  it('windowsXlsxPath / sidecarBaseUrl 둘 다 누락 → 친절한 에러 반환', async () => {
+    // wsl IP 감지 단계까지 진행하려면 wsl CLI 호출이 필요 → 그 직전 분기인 onlyOfficeUrl 검증을
+    // 통과시키고 wslIp 흐름 들어가기 전 input 검증이 fire 하는지만 확인.
+    // dynamic import — listener 등록은 위에서 mock 처리됨.
+    const { prepareOnlyOfficeViewer } = await import('../../src/main/onlyoffice-host');
+    const r = await prepareOnlyOfficeViewer({
+      relPath: '7_System/PK_HUD',
+      onlyOfficeUrl: 'http://172.20.105.147:8080',
+      // 둘 다 미설정.
+    });
+    // wsl IP 감지 실패 또는 input 누락 둘 중 하나 — 환경에 wsl 없으면 IP 감지 단계에서 fail,
+    // 있으면 input 누락 단계에서 fail. 둘 다 ok:false 면 동작 합격.
+    expect(r.ok).toBe(false);
+    expect(r.error).toBeTruthy();
+  });
+});

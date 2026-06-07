@@ -150,8 +150,9 @@ test('첫 부팅: settings 비어있으면 ⚙ 설정 모달이 자동으로 뜨
 test('settings modal: 명시적으로 열어 사용자 값으로 덮어쓸 수 있다', async ({ page }) => {
   await page.goto('/');
 
-  // 기본 storedSettings 가 채워져있어 모달이 자동 오픈되지 않음 — 버튼으로 연다.
-  await page.getByRole('button', { name: /설정/ }).click();
+  // 기본 storedSettings 가 채워져있어 모달이 자동 오픈되지 않음 — 토바 버튼으로 연다.
+  // (sidebar 의 confluence-test-space-indicator 도 "설정" 텍스트 포함하므로 testid 로 한정)
+  await page.getByTestId('topbar-settings').click();
 
   await page.getByTestId('settings-repo-root').fill('\\\\wsl.localhost\\Ubuntu-24.04\\home\\jacob\\repos\\proj-k');
   await page.getByTestId('settings-feed-url').fill('http://localhost:9999/');

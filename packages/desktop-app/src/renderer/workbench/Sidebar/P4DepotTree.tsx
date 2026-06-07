@@ -68,12 +68,15 @@ export function P4DepotTree() {
         return;
       }
       // 임시 TreeNode — id 는 depotPath 로 unique (같은 파일 클릭은 같은 탭).
+      // viewerKind: main 이 viewerMode 분기해서 반환 (sp / onlyoffice). CenterPane 이
+      // 이 값으로 DepotSheetView (SP webview) ↔ OnlyOfficeDepotView (serve.py URL) 선택.
       const node: TreeNode = {
         id: `depot:${entry.path}`,
         type: 'sheet',
         title: entry.name,
         relPath: entry.path.replace(/^\/\//, ''),
         oneDriveUrl: r.url,
+        viewerKind: r.viewerKind,
       };
       useWorkbenchStore.getState().openTab({ kind: 'excel', node });
     } catch (e) {

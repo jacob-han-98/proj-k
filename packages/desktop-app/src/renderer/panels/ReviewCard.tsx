@@ -10,6 +10,7 @@
 import { useMemo, useState, type CSSProperties } from 'react';
 import { parsePartialReviewJSON } from './partial-review-parser';
 import { relativeTime } from './review-fixture-cache';
+import type { ReviewCategory } from './review-options-mapping';
 
 export interface ReviewItem {
   text: string;
@@ -63,6 +64,10 @@ interface Props {
     category: 'issue' | 'verification' | 'suggestion',
     perspective?: string,
   ) => void;
+  // 사용자가 옵션 패널에서 선택한 추가 분석 항목. backend 응답에 flow/qa_checklist/
+  // readability 가 들어와도 사용자가 off 한 항목은 화면에 그리지 않음. undefined 면 backend
+  // 가 보낸 모든 섹션을 그대로 노출 (P0 / Excel 같은 옵션 없는 흐름의 back-compat).
+  enabledCategories?: ReviewCategory[];
 }
 
 export function ReviewCard({
@@ -77,7 +82,11 @@ export function ReviewCard({
   cachedModel,
   onReRunRequest,
   onAttachReviewItem,
+  enabledCategories,
 }: Props) {
+  const showFlow = !enabledCategories || enabledCategories.includes('logic-flow');
+  const showQaChecklist = !enabledCategories || enabledCategories.includes('qa-checklist');
+  const showReadability = !enabledCategories || enabledCategories.includes('readability');
   // streamBuffer 에서 partial parse — final data 가 도착하기 전에도 sections 등장.
   const partialData = useMemo<ReviewData | null>(() => {
     if (data) return null; // 최종 데이터 있으면 partial 무시
@@ -164,14 +173,14 @@ export function ReviewCard({
         onAttachReviewItem={onAttachReviewItem}
       />
 
-      {effectiveData.flow && (
+      {showFlow && effectiveData.flow && (
         <div className="review-section flow">
           <div className="review-section-title">🔀 로직 플로우</div>
           <div className="review-flow-content">{formatFlow(effectiveData.flow)}</div>
         </div>
       )}
 
-      {effectiveData.qa_checklist && effectiveData.qa_checklist.length > 0 && (
+      {showQaChecklist && effectiveData.qa_checklist && effectiveData.qa_checklist.length > 0 && (
         <div className="review-section checklist">
           <div className="review-section-title">✅ QA 체크리스트 ({effectiveData.qa_checklist.length}건)</div>
           <div className="review-checklist-items">
@@ -185,7 +194,7 @@ export function ReviewCard({
         </div>
       )}
 
-      {effectiveData.readability && (
+      {showReadability && effectiveData.readability && (
         <div className="review-section readability">
           <div className="review-section-title">
             📖 문서 가독성{effectiveData.readability.score != null ? ` (${effectiveData.readability.score}/100)` : ''}

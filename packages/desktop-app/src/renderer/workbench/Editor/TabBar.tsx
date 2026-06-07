@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { DocTab, DocTabKind } from '../types';
-import { getDisplayedTabs } from '../types';
+import { getDisplayedTabs, docKeyOfNode } from '../types';
 import { useWorkbenchStore } from '../store';
 
 // VS Code 스타일 탭바 — editor 영역 상단 35px.
@@ -10,13 +10,17 @@ import { useWorkbenchStore } from '../store';
 // 고정 탭은 좌측 정렬 + accent left-border 하이라이트 + close X 숨김 (middle-click 또는
 // 메뉴로만 닫음 — 실수 방지). 사용자는 "리뷰 중인 문서" 를 고정해 두면 컨텍스트 스위칭
 // 후에도 명확히 알 수 있음.
+//
+// 2026-05-13: 고정 탭 색을 모드별로 분리 — 리뷰 = 파랑, 편집 = 주황. data-pin-mode 부여
+// 해서 CSS variant 적용. Confluence/Excel 아이콘에 브랜드색 (Atlassian / Office).
+// 탭 너비 180px 로 고정 — 사용자가 PD 피드백으로 요청한 일관된 가로폭.
 
-function iconFor(kind: DocTabKind): string {
+function iconFor(kind: DocTabKind): { icon: string; brand?: 'confluence' | 'excel' } {
   // codicons. confluence = book, excel = table, qna-thread = comment-discussion, agent-web = sparkle.
-  if (kind === 'confluence') return 'book';
-  if (kind === 'excel') return 'table';
-  if (kind === 'agent-web') return 'sparkle';
-  return 'comment-discussion';
+  if (kind === 'confluence') return { icon: 'book', brand: 'confluence' };
+  if (kind === 'excel') return { icon: 'table', brand: 'excel' };
+  if (kind === 'agent-web') return { icon: 'sparkle' };
+  return { icon: 'comment-discussion' };
 }
 
 function titleOf(tab: DocTab): string {
@@ -39,6 +43,11 @@ export function TabBar() {
   const focusTab = useWorkbenchStore((s) => s.focusTab);
   const closeTab = useWorkbenchStore((s) => s.closeTab);
   const togglePinTab = useWorkbenchStore((s) => s.togglePinTab);
+  // 2026-05-13: 모드별 pin 색 분리 — 리뷰 모드(tabSplits[id].mode='review') 와 편집 모드
+  // (editingDocs[docKeyOfNode(tab.node)]) 둘 다 추적. 둘 중 하나라도 켜져 있고 pinned 면
+  // 해당 색 입힘. 둘 다 켜진 드문 케이스는 편집 우선 (사용자의 현재 행동에 가까움).
+  const tabSplits = useWorkbenchStore((s) => s.tabSplits);
+  const editingDocs = useWorkbenchStore((s) => s.editingDocs);
 
   const [menu, setMenu] = useState<MenuState | null>(null);
 
@@ -72,6 +81,16 @@ export function TabBar() {
         const isActive = tab.id === activeTabId;
         const isPinned = pinnedSet.has(tab.id);
         const title = titleOf(tab);
+        const ic = iconFor(tab.kind);
+        // 2026-05-13: pin mode 결정 — 편집이 리뷰보다 우선 (사용자의 현재 행동에 가까운 신호).
+        let pinMode: 'edit' | 'review' | null = null;
+        if (isPinned) {
+          if (tab.kind === 'confluence' || tab.kind === 'excel') {
+            const dk = docKeyOfNode(tab.node);
+            if (dk && editingDocs[dk]) pinMode = 'edit';
+          }
+          if (!pinMode && tabSplits[tab.id]?.mode === 'review') pinMode = 'review';
+        }
         return (
           <div
             key={tab.id}
@@ -80,6 +99,7 @@ export function TabBar() {
             className={`tab${isActive ? ' active' : ''}${isPinned ? ' pinned' : ''}`}
             data-testid={`tab-${tab.id}`}
             data-pinned={isPinned ? 'true' : 'false'}
+            data-pin-mode={pinMode ?? ''}
             title={title}
             onClick={() => focusTab(tab.id)}
             // mouse-middle close — VS Code 와 동일한 단축
@@ -98,7 +118,10 @@ export function TabBar() {
                 data-testid={`tab-pin-marker-${tab.id}`}
               />
             )}
-            <i className={`codicon codicon-${iconFor(tab.kind)} tab-icon`} aria-hidden="true" />
+            <i
+              className={`codicon codicon-${ic.icon} tab-icon${ic.brand ? ` icon-${ic.brand}` : ''}`}
+              aria-hidden="true"
+            />
             <span className="tab-title">{title}</span>
             {!isPinned && (
               <button

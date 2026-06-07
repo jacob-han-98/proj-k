@@ -44,7 +44,10 @@ let serveProc: ChildProcess | null = null;
 let cachedWslIp: { ip: string; ts: number } | null = null;
 
 export interface PrepareViewerInput {
-  sidecarBaseUrl: string;
+  // Local sheet 흐름: sidecarBaseUrl 로 /xlsx_stat 호출해 windows path 해석.
+  // Depot 흐름: 호출자가 이미 p4 print 한 windowsXlsxPath 를 직접 전달 — sidecar 거치지 않음.
+  sidecarBaseUrl?: string;
+  windowsXlsxPath?: string;
   relPath: string;
   sheetName?: string;
   onlyOfficeUrl: string;
@@ -159,15 +162,25 @@ export async function prepareOnlyOfficeViewer(
   if (!wslIp) {
     return { ok: false, error: 'WSL IP 감지 실패 — wsl 미설치/미실행' };
   }
-  const stat = await fetchXlsxStat(input.sidecarBaseUrl, input.relPath);
-  if (!stat?.path) {
-    return {
-      ok: false,
-      error: `sidecar /xlsx_stat 응답 없음 — relPath="${input.relPath}" (P4 워크스페이스 미동기화?)`,
-    };
+  // Depot 흐름은 호출자가 windowsXlsxPath 를 직접 넘김 (이미 p4 print 한 임시파일).
+  // Local sheet 흐름은 sidecarBaseUrl 로 /xlsx_stat 조회해 워크스페이스 path 해석.
+  let winPath: string;
+  if (input.windowsXlsxPath) {
+    winPath = input.windowsXlsxPath;
+  } else if (input.sidecarBaseUrl) {
+    const stat = await fetchXlsxStat(input.sidecarBaseUrl, input.relPath);
+    if (!stat?.path) {
+      return {
+        ok: false,
+        error: `sidecar /xlsx_stat 응답 없음 — relPath="${input.relPath}" (P4 워크스페이스 미동기화?)`,
+      };
+    }
+    winPath = stat.path;
+  } else {
+    return { ok: false, error: 'prepareOnlyOfficeViewer: windowsXlsxPath / sidecarBaseUrl 둘 다 누락' };
   }
-  const wslXlsxPath = windowsPathToWsl(stat.path);
-  dlog(`${tag} resolved win=${stat.path} wsl=${wslXlsxPath} wslIp=${wslIp}`);
+  const wslXlsxPath = windowsPathToWsl(winPath);
+  dlog(`${tag} resolved win=${winPath} wsl=${wslXlsxPath} wslIp=${wslIp}`);
 
   killServe();
   const free = await pollPort(FILE_PORT, 'free', PORT_FREE_WAIT_MS);

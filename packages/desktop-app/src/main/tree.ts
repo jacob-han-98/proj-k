@@ -1,6 +1,7 @@
 import { getXlsxOutputDir, getConfluenceOutputDir } from './paths';
 import { buildP4Tree, buildConfluenceTreeFromManifest } from './tree-core';
 import { getSidecarStatus } from './sidecar';
+import { fetchTestSpaceTreeNode } from './confluence-test-space';
 import type { P4TreeResult, ConfluenceTreeResult } from '../shared/types';
 
 // Tree 빌드는 sidecar(WSL Linux Python) 가 native FS 로 처리하는 게 가장 안정적이고 빠르다.
@@ -37,12 +38,21 @@ export async function getP4Tree(): Promise<P4TreeResult> {
 }
 
 export async function getConfluenceTree(): Promise<ConfluenceTreeResult> {
+  let base: ConfluenceTreeResult;
   const fromSidecar = await fetchSidecarTree('/tree/confluence');
   if (fromSidecar && typeof fromSidecar === 'object') {
-    return fromSidecar as ConfluenceTreeResult;
+    base = fromSidecar as ConfluenceTreeResult;
+  } else {
+    const outDir = getConfluenceOutputDir();
+    const manifestPath = outDir ? `${outDir}/_manifest.json` : '';
+    const nodes = manifestPath ? await buildConfluenceTreeFromManifest(manifestPath) : [];
+    base = { nodes, rootDir: outDir, loadedAt: Date.now() };
   }
-  const outDir = getConfluenceOutputDir();
-  const manifestPath = outDir ? `${outDir}/_manifest.json` : '';
-  const nodes = manifestPath ? await buildConfluenceTreeFromManifest(manifestPath) : [];
-  return { nodes, rootDir: outDir, loadedAt: Date.now() };
+  // 테스트 스페이스 라이브 fetch — confluenceTestSpaceKey 설정되고 creds 있을 때만 비-null.
+  // 실패해도 base 트리는 그대로 반환 (silent — 인디케이터의 "설정됨" 표기가 사용자에게 충분한 단서).
+  const testSpaceNode = await fetchTestSpaceTreeNode();
+  if (testSpaceNode) {
+    base = { ...base, nodes: [testSpaceNode, ...base.nodes] };
+  }
+  return base;
 }

@@ -15,6 +15,10 @@ interface Props {
   selectedTreeId: string | null;
   onOpenSheet: (node: TreeNode) => void;
   onOpenConfluencePage: (node: TreeNode) => void;
+  // Confluence 패널의 테스트 스페이스 인디케이터 → SettingsModal 열기.
+  onOpenSettings: () => void;
+  // SettingsModal 저장 시 +1. ConfluencePanel 이 testSpace 설정값 refetch.
+  settingsVersion: number;
   // QnA threads
   selectedThreadId: string | null;
   onSelectThread: (id: string | null) => void;
@@ -43,6 +47,8 @@ export function SidebarHost(props: Props) {
         <ConfluencePanel
           selectedId={props.selectedTreeId}
           onOpenConfluencePage={props.onOpenConfluencePage}
+          onOpenSettings={props.onOpenSettings}
+          settingsVersion={props.settingsVersion}
         />
       </div>
       <div

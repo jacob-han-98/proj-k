@@ -453,6 +453,30 @@ html, body, #root { height: 100%; margin: 0; padding: 0; background: var(--bg); 
   padding: 6px 12px;
   letter-spacing: 0.04em;
 }
+/* Confluence 패널의 "테스트 스페이스" 인디케이터 — 트리 위 한 줄. 사본이 어디로 가는지 +
+   설정 OK 인지를 가시화. 클릭 → SettingsModal. 트리는 manifest 기반이라 운영 테스트 스페이스가
+   자동으로 보이지 않으므로 별도 표기 필요. */
+.confluence-test-space-indicator {
+  all: unset;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 6px 12px;
+  margin: 4px 4px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--bg-elev);
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--text);
+}
+.confluence-test-space-indicator:hover { background: var(--hover); }
+.confluence-test-space-indicator:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.confluence-test-space-indicator .label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.confluence-test-space-indicator .sub { color: var(--text-dim); font-size: 10px; }
+.confluence-test-space-indicator.unset { color: var(--text-dim); border-style: dashed; }
+
 .sidebar .tree { padding: 0 4px; }
 .sidebar .tree-row {
   display: flex;
@@ -2200,8 +2224,10 @@ html, body, #root { height: 100%; margin: 0; padding: 0; background: var(--bg); 
   gap: 6px;
   padding: 0 8px 0 12px;
   height: 35px;
-  min-width: 0;
-  max-width: 240px;
+  /* 2026-05-13: 사용자 PD 요청 — 일관된 탭 너비 (VS Code 기본). 한국어 12~14자까지 ellipsis 없이 들어감. */
+  flex: 0 0 180px;
+  min-width: 180px;
+  max-width: 180px;
   background: var(--tab-inactiveBackground);
   color: var(--tab-inactiveForeground);
   border-right: 1px solid var(--tab-border);
@@ -2274,24 +2300,56 @@ html, body, #root { height: 100%; margin: 0; padding: 0; background: var(--bg); 
 }
 
 /* 2026-05-12 PD 피드백 1b: Chrome 스타일 고정 탭. 좌측 accent border + 📌 마커.
-   close X 는 컴포넌트 단에서 hide (실수 닫힘 방지). */
+   close X 는 컴포넌트 단에서 hide (실수 닫힘 방지).
+
+   2026-05-13: 사용자 PD 요청 — 고정 탭 색을 모드별로 분리.
+     - 리뷰 모드 (data-pin-mode="review"): 파랑 (--pin-review-color, 현 accent 와 동일톤)
+     - 편집 모드 (data-pin-mode="edit"):   주황 (--pin-edit-color, "수정 중" 경고 톤)
+     - 기본 (mode 없음): 기존 accent 그대로
+   pin marker / border-left / 비활성 배경 모두 같은 색 체계로 묶음.
+*/
 .tab.pinned {
   background: var(--tab-activeBackground);
-  border-left: 2px solid var(--accent);
+  border-left: 2px solid var(--pin-color, var(--accent));
   padding-left: 6px;
+}
+
+.tab.pinned[data-pin-mode="review"] {
+  --pin-color: #007acc;
+}
+
+.tab.pinned[data-pin-mode="edit"] {
+  --pin-color: #d77800;
 }
 
 .tab.pinned:not(.active) {
   /* 비활성 고정 탭도 보통 탭보다 한 단계 진하게 — '계속 보고 있는 문서' 강조. */
-  background: color-mix(in srgb, var(--accent) 12%, var(--tab-inactiveBackground));
+  background: color-mix(in srgb, var(--pin-color, var(--accent)) 12%, var(--tab-inactiveBackground));
   color: var(--tab-activeForeground);
 }
 
 .tab.pinned .tab-pin-marker {
   font-size: 11px;
-  color: var(--accent);
+  color: var(--pin-color, var(--accent));
   flex: 0 0 11px;
   opacity: 0.95;
+}
+
+/* 2026-05-13: 아이콘에 브랜드 색 (Confluence Atlassian / Excel Office).
+   활성 탭이면 100% 명도, 비활성 탭은 약간 dim (--tab-inactiveForeground 와 비슷한 톤).
+   사용자가 한눈에 출처 (Confluence vs Excel) 를 구분할 수 있게.
+*/
+.tab .tab-icon.icon-confluence {
+  color: #0052cc;
+  opacity: 1;
+}
+.tab .tab-icon.icon-excel {
+  color: #107c41;
+  opacity: 1;
+}
+.tab:not(.active):not(.pinned) .tab-icon.icon-confluence,
+.tab:not(.active):not(.pinned) .tab-icon.icon-excel {
+  opacity: 0.75;
 }
 
 .tab-context-menu {
@@ -4521,4 +4579,109 @@ html, body, #root { height: 100%; margin: 0; padding: 0; background: var(--bg); 
   padding: 1px 6px;
   border-radius: 3px;
   font-size: 11px;
+}
+
+/* 2026-05-13: Ctrl+Tab MRU 스위처 overlay.
+   화면 중앙에 작은 카드 — VS Code Quick Switch 처럼 가볍게 떠 있다가 Ctrl release 시 사라짐.
+   backdrop 없음 (사용자 흐름 끊지 않음). z-index 는 CommandPalette 보다 살짝 낮게 — 두 단축키
+   동시 충돌은 없지만 안전. */
+.tab-switcher {
+  position: fixed;
+  top: 25%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 9000;
+  min-width: 320px;
+  max-width: 480px;
+  background: var(--menu-background, var(--bg-elev));
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  padding: 8px 0;
+  user-select: none;
+  font-size: 13px;
+}
+
+.tab-switcher-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 12px 6px;
+  color: var(--text-dim);
+  font-size: 11px;
+  border-bottom: 1px solid var(--border);
+}
+
+.tab-switcher-header .codicon {
+  font-size: 12px;
+}
+
+.tab-switcher-list {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  max-height: 360px;
+  overflow-y: auto;
+}
+
+.tab-switcher-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  cursor: pointer;
+  color: var(--text);
+}
+
+.tab-switcher-item.active {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--text);
+}
+
+.tab-switcher-item:hover {
+  background: var(--list-hoverBackground);
+}
+
+.tab-switcher-icon {
+  font-size: 14px;
+  flex: 0 0 14px;
+  opacity: 0.85;
+}
+
+.tab-switcher-icon.icon-confluence {
+  color: #0052cc;
+  opacity: 1;
+}
+.tab-switcher-icon.icon-excel {
+  color: #107c41;
+  opacity: 1;
+}
+
+.tab-switcher-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* 2026-05-13: switcher 후보 옆 mode 배지 — TabBar pin 색과 동일 톤 (리뷰=파랑 / 편집=주황).
+   사용자가 Ctrl+Tab 으로 후보 훑을 때 "지금 작업중인 게 어느 거지" 즉시 식별. */
+.tab-switcher-badge {
+  flex: 0 0 auto;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 8px;
+  letter-spacing: 0.02em;
+  border: 1px solid currentColor;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+}
+
+.tab-switcher-badge.badge-review {
+  color: #007acc;
+}
+
+.tab-switcher-badge.badge-edit {
+  color: #d77800;
 }

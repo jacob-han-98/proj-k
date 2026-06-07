@@ -46,14 +46,44 @@ export function docKeyOfLocal(relPath: string): string {
 export function docKeyOfDepot(depotPath: string): string {
   return `depot:${depotPath}`;
 }
+export function docKeyOfConfluence(pageId: string): string {
+  return `confluence:${pageId}`;
+}
 // TreeNode 가 어떤 종류인지에 따라 docKey 도출. depot 노드는 id 가 'depot:<path>#rev<n>'.
-export function docKeyOfNode(node: { id: string; relPath?: string; oneDriveUrl?: string }): string | null {
+// Confluence 는 pageId 가 안정 키 — 같은 페이지를 다른 경로에서 열어도 키 충돌 없음.
+export function docKeyOfNode(node: {
+  id: string;
+  relPath?: string;
+  oneDriveUrl?: string;
+  confluencePageId?: string;
+}): string | null {
+  if (node.confluencePageId) return `confluence:${node.confluencePageId}`;
   if (node.oneDriveUrl && node.id.startsWith('depot:')) {
     const m = node.id.match(/^depot:(.+?)(?:#rev\d+)?$/);
     return m ? `depot:${m[1]}` : null;
   }
   if (node.relPath) return `local:${node.relPath}`;
   return null;
+}
+
+// 2026-05-13: Ctrl+Tab MRU 스위처 helper. focusTab/openTab 마다 호출 — id 가 이미 있으면
+// 제거 후 head 에 unshift, 없으면 head 에 push. 결과는 가장 최근 사용 탭이 [0], 그 다음이 [1]...
+// 순수 함수 — 단위 테스트로 분기 검증.
+export function bumpFocusOrder(order: string[], id: string): string[] {
+  if (order[0] === id) return order;
+  const filtered = order.filter((p) => p !== id);
+  return [id, ...filtered];
+}
+
+// 2026-05-13: Ctrl+Tab MRU 후보 list. 현재 활성 탭 다음으로 가장 최근 사용한 탭부터.
+// 첫 Ctrl+Tab → cursor=1 (현재 [0], 다음 [1]). Shift+Tab → 끝에서부터 (cursor = len-1).
+// stale 한 id (openTabs 에 없는) 는 제외.
+export function tabSwitcherCandidates(openTabs: DocTab[], focusOrder: string[]): string[] {
+  if (openTabs.length === 0) return [];
+  const known = new Set(openTabs.map((t) => t.id));
+  const inOrder = focusOrder.filter((id) => known.has(id));
+  const missing = openTabs.filter((t) => !inOrder.includes(t.id)).map((t) => t.id);
+  return [...inOrder, ...missing];
 }
 
 // 2026-05-12: Chrome 스타일 탭 표시 순서. pinned 가 좌측에 pinnedTabIds 순서대로 먼저

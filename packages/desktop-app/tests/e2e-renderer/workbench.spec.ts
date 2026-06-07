@@ -278,11 +278,112 @@ test('P4 depot 탭 — 활성 시 root 자동 fetch + 2단계 auto-expand + 파�
   await tree.getByTestId('depot-row-//depot/Design').click();
   await expect(tree.getByTestId('depot-row-//depot/Design/Combat.xlsx')).toBeVisible();
 
-  // PR9c: 파일 클릭 → openDepotFile IPC → 새 excel 탭 (mock revision 42).
-  // tabIdOf 가 oneDriveUrl 있을 때 node.id 기반 → 'excel:depot://depot/HUD.xlsx#rev42'.
+  // PR9c: 파일 클릭 → openDepotFile IPC → 새 excel 탭. P4DepotTree 의 openDepotFile 은
+  // node.id = `depot:${entry.path}` (revision 미부착 — ActiveDocsPanel 만 #rev 사용).
   await tree.getByTestId('depot-row-//depot/HUD.xlsx').click();
-  await expect(page.getByTestId('tab-slot-excel:depot://depot/HUD.xlsx#rev42')).toBeVisible();
+  await expect(page.getByTestId('tab-slot-excel:depot://depot/HUD.xlsx')).toBeVisible();
   await expect(page.getByTestId('center-pane')).toContainText('읽기 전용');
+});
+
+// PoC 0.1.54 회귀 방지 — depot 파일 클릭 시 main 이 viewerMode='onlyoffice' 면
+// openDepotFile 결과로 viewerKind:'onlyoffice' + serve.py URL 을 돌려준다. CenterPane 은
+// 그 노드를 OnlyOfficeDepotView (data-testid='onlyoffice-depot-webview') 로 렌더해야 한다.
+// 회귀: 이전엔 node.oneDriveUrl 만 보고 무조건 DepotSheetView (SharePoint) 로 갔음.
+test('P4 depot + viewerMode=onlyoffice → OnlyOfficeDepotView 마운트 (SharePoint 흐름 우회)', async ({ page }) => {
+  // mock 의 openDepotFile 응답을 onlyoffice 분기로 swap.
+  await page.evaluate(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).__setDepotViewerKind('onlyoffice');
+  });
+
+  await page.getByTestId('activity-p4').click();
+  await page.getByTestId('p4-source-depot').click();
+  const tree = page.getByTestId('depot-tree');
+  await expect(tree.getByTestId('depot-row-//depot/HUD.xlsx')).toBeVisible();
+  await tree.getByTestId('depot-row-//depot/HUD.xlsx').click();
+
+  // tab id 는 viewerKind 와 무관하게 node.id 기반 — 동일.
+  await expect(page.getByTestId('tab-slot-excel:depot://depot/HUD.xlsx')).toBeVisible();
+
+  // OnlyOffice 전용 webview 가 DOM 에 마운트 + src 가 serve.py URL 이어야 한다.
+  // vanilla chromium 환경에서 <webview> 는 native 가 아니라 unknown element → display:none
+  // 처리됨. 따라서 visible 이 아니라 attached + src attribute 만 검증.
+  const wv = page.getByTestId('onlyoffice-depot-webview');
+  await expect(wv).toBeAttached();
+  await expect(wv).toHaveAttribute('src', /^http:\/\/[\d.]+:9000\//);
+  await expect(page.getByTestId('center-pane')).not.toContainText('읽기 전용');
+  // sheet-mapping-prompt 도 안 떠야 — depot 흐름은 sheetMappings 와 무관.
+  await expect(page.getByTestId('sheet-mapping-prompt')).toHaveCount(0);
+});
+
+test('P4 depot + viewerMode=sp (default) → DepotSheetView 마운트 (기존 SharePoint 흐름 유지)', async ({ page }) => {
+  // 기본 mock 동작 (__setDepotViewerKind 미호출 시 'sp').
+  await page.getByTestId('activity-p4').click();
+  await page.getByTestId('p4-source-depot').click();
+  const tree = page.getByTestId('depot-tree');
+  await tree.getByTestId('depot-row-//depot/HUD.xlsx').click();
+
+  await expect(page.getByTestId('center-pane')).toContainText('읽기 전용');
+  await expect(page.getByTestId('onlyoffice-depot-webview')).toHaveCount(0);
+});
+
+// ---------- Confluence 테스트 스페이스 인디케이터 (B2-1 후속) ----------
+//
+// 트리는 manifest 기반이라 운영 테스트 스페이스 (PKTEST 등) 가 자동으로 안 보임 → 사본이
+// 어디로 가는지 + 설정 OK 인지를 트리 위 한 줄로 가시화. 클릭 시 SettingsModal 오픈.
+
+test('Confluence 인디케이터 — testSpace 미설정 시 unset 표시 + 클릭 → SettingsModal 열림', async ({
+  page,
+}) => {
+  // default mock storedSettings 에는 confluenceTestSpaceKey 없음 → unset 분기.
+  const indicator = page.getByTestId('confluence-test-space-indicator');
+  await expect(indicator).toBeVisible();
+  await expect(indicator).toHaveAttribute('data-state', 'unset');
+  await expect(indicator).toContainText('미설정');
+
+  // 클릭 → SettingsModal 등장.
+  await indicator.click();
+  await expect(page.getByTestId('settings-conf-test-space')).toBeVisible();
+});
+
+test('Confluence 인디케이터 — testSpace 설정된 채로 부팅 시 spaceKey 표시', async ({ page }) => {
+  // 두 번째 page 생성 — 기본 fixture page 가 이미 default settings 로 부팅했으니
+  // initialSettings 를 새 page 에 따로 주입해야 함. context.newPage() 가 새 init 사이클.
+  const ctx = page.context();
+  const p2 = await ctx.newPage();
+  await p2.addInitScript(() => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (window as any).__initialSettings = {
+      confluenceTestSpaceKey: 'PKTEST',
+      confluenceTestParentPageId: '987654321012345',
+    };
+  });
+  await p2.addInitScript({ content: mockProjkInitScript });
+  await p2.goto('/');
+
+  const indicator = p2.getByTestId('confluence-test-space-indicator');
+  await expect(indicator).toBeVisible();
+  await expect(indicator).toHaveAttribute('data-state', 'set');
+  await expect(indicator).toContainText('PKTEST');
+  // parentId 가 길어도 12자 + … 로 잘려 표기.
+  await expect(indicator).toContainText('987654321012');
+  await p2.close();
+});
+
+test('Confluence 인디케이터 — SettingsModal 에서 testSpace 저장 시 즉시 반영', async ({ page }) => {
+  const indicator = page.getByTestId('confluence-test-space-indicator');
+  await expect(indicator).toHaveAttribute('data-state', 'unset');
+
+  // 클릭 → 모달 → 입력 → 저장.
+  await indicator.click();
+  const input = page.getByTestId('settings-conf-test-space');
+  await expect(input).toBeVisible();
+  await input.fill('PKTEST');
+  await page.getByRole('button', { name: '저장하고 적용' }).click();
+
+  // settingsVersion 이 +1 되며 ConfluencePanel 이 refetch → set 상태로 전환.
+  await expect(indicator).toHaveAttribute('data-state', 'set');
+  await expect(indicator).toContainText('PKTEST');
 });
 
 test('리뷰 split — 활성 시 좌우 분할 + 닫기 X 동작', async ({ page }) => {

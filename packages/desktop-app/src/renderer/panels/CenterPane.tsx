@@ -4,6 +4,7 @@ import { useWorkbenchStore } from '../workbench/store';
 import { docKeyOfNode } from '../workbench/types';
 import { flattenSheetContent, getSheetContent } from '../api';
 import { attachDocToQnA } from '../qna/dispatch';
+import { isConfluenceEditUrl } from './confluence-url';
 
 // Excel for the Web 임베드 URL 의 ?action= 값을 스왑.
 // **0.1.50 회귀 보류**: ?action=embedview 시도 후 사용자 환경에서 SharePoint 가 file
@@ -227,9 +228,19 @@ export function CenterPane({
 
   if (selection.kind === 'sheet') {
     const relPath = selection.node.relPath ?? selection.node.id;
-    // depot 파일은 node.oneDriveUrl 에 임베드 URL 이 직접 박혀있음 — 별도 처리. viewerMode 무관.
+    // depot 파일은 node.oneDriveUrl 에 임베드 URL 이 직접 박혀있음. main 이 viewerMode 분기 후
+    // node.viewerKind 를 채움 — CenterPane 은 그 값으로 viewer-specific 컴포넌트 선택.
     const directUrl = selection.node.oneDriveUrl;
     if (directUrl) {
+      if (selection.node.viewerKind === 'onlyoffice') {
+        return (
+          <OnlyOfficeDepotView
+            key={`oo-depot:${selection.node.id}`}
+            node={selection.node}
+            directUrl={directUrl}
+          />
+        );
+      }
       return <DepotSheetView key={selection.node.id} node={selection.node} directUrl={directUrl} />;
     }
     // PoC 0.1.53+ — viewerMode='onlyoffice' 면 OnlyOffice 임베드. 실패하면 사용자에게 안내 후
@@ -314,6 +325,36 @@ function ConfluencePane({
     return attachConfluenceChromeStripper(wv);
   }, [showInternalMenu]);
 
+  // 2026-05-13: Confluence 편집 URL 자동 감지 — webview 가 edit-v2 / resumedraft 로 진입하면
+  // store 의 editingDocs 에 true 설정. autoPinOnReview ON 이면 store 가 자동으로 탭도 pin.
+  // 사용자가 페이지 안에서 "편집" 버튼을 누르거나, 외부 링크로 직접 edit URL 로 진입한 케이스
+  // 둘 다 잡힘. view 로 돌아오면 false — 단, 자동 unpin 은 하지 않음 (명시적 unpin 만 신뢰).
+  const confDocKey = node.confluencePageId ? `confluence:${node.confluencePageId}` : null;
+  useEffect(() => {
+    const wv = webviewRef.current;
+    if (!wv || !confDocKey) return;
+    const setEditing = useWorkbenchStore.getState().setDocEditing;
+    const onNav = (e: Event) => {
+      // electron WebViewElement 의 did-navigate / did-navigate-in-page 이벤트는
+      // (e as any).url 로 새 URL 을 노출. 표준 DOM 이벤트 타입엔 없음.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const u = (e as any).url as string | undefined;
+      if (!u) return;
+      const editing = isConfluenceEditUrl(u);
+      setEditing(confDocKey, editing);
+    };
+    wv.addEventListener('did-navigate', onNav);
+    wv.addEventListener('did-navigate-in-page', onNav);
+    return () => {
+      try {
+        wv.removeEventListener('did-navigate', onNav);
+        wv.removeEventListener('did-navigate-in-page', onNav);
+      } catch {
+        /* detached — 무시 */
+      }
+    };
+  }, [confDocKey]);
+
   const copyToTestSpace = async () => {
     if (!node.confluencePageId) {
       alert('이 노드에 Confluence page ID 가 없어요.');
@@ -335,6 +376,9 @@ function ConfluencePane({
         confluencePageId: r.newPageId,
       };
       useWorkbenchStore.getState().openTab({ kind: 'confluence', node: newNode });
+      // 트리 refresh — ConfluencePanel 이 main 의 getConfluenceTree 를 재호출하면서
+      // testSpace 자식 라이브 fetch → 새 사본이 즉시 트리에 등장.
+      useWorkbenchStore.getState().bumpConfluenceTree();
     } catch (e) {
       alert(`테스트 사본 호출 예외: ${(e as Error).message}`);
     } finally {
@@ -572,6 +616,40 @@ function OnlyOfficeSheetView(props: { node: TreeNode; relPath: string }) {
         src={viewerUrl}
         partition="persist:onlyoffice"
         data-testid="onlyoffice-webview"
+        {...({ allowpopups: 'true' } as any)}
+        style={{ width: '100%', height: 'calc(100% - 36px)' }}
+      />
+    </main>
+  );
+}
+
+// PoC 0.1.54 — depot 파일을 OnlyOffice 로 표시. main 이 P4_DEPOT_OPEN 에서 p4 print +
+// prepareOnlyOfficeViewer 까지 끝낸 viewer URL (http://<wsl-ip>:9000/) 를 그대로 webview 에
+// 마운트. local OnlyOffice 흐름과 달리 preparing/error state 가 필요 없음 (URL 이 이미 준비됨).
+//
+// 한계 (PoC scope):
+//  - 한 번에 한 시트만 (serve.py 단일 인스턴스 — local OnlyOfficeSheetView 와 동일).
+//  - 편집 / 리뷰 / Agent 질문 등 부가 액션 미구현.
+//  - depot 클릭 → main spawn 까지 ~3-5초. URL 받은 시점엔 이미 ready.
+function OnlyOfficeDepotView({ node, directUrl }: { node: TreeNode; directUrl: string }) {
+  return (
+    <main className="center" data-testid="center-pane">
+      <div
+        className="sheet-topbar"
+        style={{ display: 'flex', alignItems: 'center', padding: '4px 8px', height: 36 }}
+      >
+        <span style={{ fontWeight: 600, fontSize: 13 }}>🗄️ {node.title}</span>
+        <span style={{ flex: 1 }} />
+        <span style={{ fontSize: 11, color: 'var(--text-dim)' }}>
+          OnlyOffice DS CE · depot · {node.relPath ?? node.id}
+        </span>
+      </div>
+      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
+      <webview
+        key={`oo-depot::${node.id}`}
+        src={directUrl}
+        partition="persist:onlyoffice"
+        data-testid="onlyoffice-depot-webview"
         {...({ allowpopups: 'true' } as any)}
         style={{ width: '100%', height: 'calc(100% - 36px)' }}
       />

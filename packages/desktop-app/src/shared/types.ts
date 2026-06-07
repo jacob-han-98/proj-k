@@ -15,9 +15,15 @@ export interface TreeNode {
   confluencePageId?: string;
   // Workbook source xlsx path under repo (for "Open in Excel")
   xlsxRepoPath?: string;
-  // PR9c: depot 파일을 webview 로 열 때 직접 사용하는 OneDrive 임베드 URL.
+  // PR9c: depot 파일을 webview 로 열 때 직접 사용하는 임베드 URL.
   // 일반 sheet 노드는 비어있고 sheetMappings 룩업으로 처리. depot 임시 노드는 fetch 후 채워짐.
+  // viewerKind 가 'onlyoffice' 면 OnlyOffice serve.py 의 http://<wsl-ip>:9000/ 형식이고,
+  // 'sp' (또는 미설정) 이면 SharePoint Excel for the Web 임베드 URL.
   oneDriveUrl?: string;
+  // PoC 0.1.54: depot 노드가 어떤 viewer 로 열렸는지. CenterPane 이 viewer-specific
+  // 컴포넌트 선택에 사용. local sheet 노드는 항상 미설정 (CenterPane 의 viewerMode state 가
+  // 분기 책임).
+  viewerKind?: 'sp' | 'onlyoffice';
   // Quick Find 시트 클릭 흐름에서 사용 — 워크북 안의 특정 시트로 점프할 시트명.
   // 빌더가 SharePoint URL 에 `&activeCell='<sheetName>'!A1` 부착해서 Excel for the Web 이
   // 그 시트 탭으로 자동 활성화하게 함. 비어있으면 워크북 첫 시트 (default 동작).
@@ -63,11 +69,14 @@ export interface P4DepotResult {
   diagnostics?: string;
 }
 
-// 0.1.52 — depot 파일 보기. p4 print → OneDrive 업로드 → cloud verify-poll → URL.
+// 0.1.52 — depot 파일 보기. p4 print → (viewerMode 분기) → URL.
+//  - 'sp' (기존): OneDrive 업로드 + cloud verify-poll → SharePoint 임베드 URL.
+//  - 'onlyoffice' (0.1.54+): serve.py 가 windows 임시파일 호스팅 → http://<wsl-ip>:9000/.
 // 옛 revision/fromCache 필드는 manifest cache 와 함께 제거.
 export interface P4DepotOpenResult {
   ok: boolean;
   url?: string;
+  viewerKind?: 'sp' | 'onlyoffice';
   error?: string;
 }
 

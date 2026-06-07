@@ -240,12 +240,14 @@ export const mockProjkInitScript = `
 
   // App settings (in-memory). 기본은 "이미 한 번 설정 마쳐서 자동 모달이 안 뜨는 상태".
   // 첫 부팅 시나리오를 검증하려는 테스트는 window.__resetSettings() 호출 후 page.goto.
-  let storedSettings = {
+  // 테스트가 부팅 시점에 특정 settings 값을 주입하려면 mock 보다 먼저 addInitScript 로
+  // window.__initialSettings 를 채워두면 된다 (예: { confluenceTestSpaceKey: 'PKTEST' }).
+  let storedSettings = Object.assign({
     repoRoot: '/mock/preset-root',
     updateFeedUrl: 'http://localhost:8766/',
     retrieverUrl: 'http://localhost:8088',
     agentUrl: 'http://localhost:8090',
-  };
+  }, window.__initialSettings || {});
   window.__getStoredSettings = () => storedSettings;
   window.__resetSettings = () => { storedSettings = {}; };
 
@@ -262,6 +264,11 @@ export const mockProjkInitScript = `
   // 테스트가 window.__setRepollResponse({ok:true, ready:true, ...}) 로 다음 재시도 응답 갈아끼움.
   window.__setRepollResponse = (r) => { window.__repollResponse = r; };
   window.__getRepollCallCount = () => window.__repollCallCount ?? 0;
+
+  // PoC 0.1.54 — depot viewerKind 결정 helper. openDepotFile mock 이 이 값으로 분기:
+  //   undefined / 'sp' → 기존 SharePoint URL + viewerKind:'sp' (DepotSheetView)
+  //   'onlyoffice'     → OnlyOffice serve.py URL + viewerKind:'onlyoffice' (OnlyOfficeDepotView)
+  window.__setDepotViewerKind = (k) => { window.__depotViewerKind = k; };
 
   window.projk = {
     getP4Tree: () => Promise.resolve(fakeP4Tree),
@@ -396,16 +403,31 @@ export const mockProjkInitScript = `
       // 트리 표시용 — mock 은 빈 캐시.
       cachedPaths: () => Promise.resolve([]),
       // PR9c: depot 파일 보기 (p4 print → OneDrive read-only). mock 은 즉시 fake URL.
-      openDepotFile: (depotPath) =>
-        Promise.resolve({
+      // PoC 0.1.54: spec 이 window.__setDepotViewerKind('onlyoffice' | 'sp') 로 viewerKind 변경 가능.
+      // 미설정 시 'sp' (기존 SharePoint 흐름). 'onlyoffice' 면 OnlyOffice serve.py 형식의
+      // URL + viewerKind:'onlyoffice' 반환 → CenterPane 이 OnlyOfficeDepotView 마운트.
+      openDepotFile: (depotPath) => {
+        const kind = (window.__depotViewerKind || 'sp');
+        if (kind === 'onlyoffice') {
+          return Promise.resolve({
+            ok: true,
+            url: 'http://172.20.105.147:9000/',
+            viewerKind: 'onlyoffice',
+            revision: 42,
+            fromCache: false,
+          });
+        }
+        return Promise.resolve({
           ok: true,
           url:
             'https://example.sharepoint.com/personal/mock_user/Documents/Klaud-depot/' +
             encodeURIComponent(depotPath.replace(/^\\/\\//, '')) +
             '.xlsx?web=1&action=view',
+          viewerKind: 'sp',
           revision: 42,
           fromCache: false,
-        }),
+        });
+      },
       depotDirs: (parentPath) => {
         // 단순 mock: //depot 의 자식은 폴더 1개 + .xlsx 1개. 그 외 path 는 빈 폴더.
         if (parentPath === '//depot') {

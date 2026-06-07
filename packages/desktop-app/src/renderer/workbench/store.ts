@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import type { DocTab, OpenTabSpec, SidebarKind } from './types';
-import { tabIdOf, docKeyOfNode } from './types';
+import { tabIdOf, docKeyOfNode, bumpFocusOrder, tabSwitcherCandidates } from './types';
 import type { ReviewOptions } from '../panels/review-options-mapping';
 import type { QnAAttachment } from '../qna/attachments';
 
@@ -78,8 +78,24 @@ type WorkbenchState = {
   // 2026-05-13: 리뷰 모드 진입 시 그 탭을 자동으로 고정 (default ON).
   // App.tsx 가 settings 로드 시 setAutoPinOnReview 로 동기화. setSplitMode 가 'review'
   // 로 전환되거나 openSplit 이 mode='review' 로 호출되는 시점에 pinTab 자동 호출.
+  // 같은 flag 가 편집 모드 진입 시에도 자동 고정 (setDocEditing(true)).
   autoPinOnReview: boolean;
   setAutoPinOnReview: (b: boolean) => void;
+
+  // 2026-05-13: Ctrl+Tab MRU 스위처. focusTab 마다 head 로 unshift (dedup). closeTab 시 정리.
+  // App.tsx 의 Ctrl+Tab 핸들러가 이 순서대로 next/prev candidate 선택.
+  tabFocusOrder: string[];
+
+  // 2026-05-13: Ctrl+Tab MRU 스위처 overlay 상태. open 동안 후보 list 표시 + cursor 이동.
+  // 첫 Ctrl+Tab 시작 → openTabSwitcher(direction). Tab 추가 → moveTabSwitcher(direction).
+  // Ctrl release → commitTabSwitcher() — 현재 cursor 의 탭으로 focus + close. Esc → cancel.
+  tabSwitcher: { candidates: string[]; cursor: number } | null;
+  openTabSwitcher: (direction: 1 | -1) => void;
+  moveTabSwitcher: (direction: 1 | -1) => void;
+  // 2026-05-13: Home/End/PageUp/PageDown — absolute cursor 점프. clamp 후 set.
+  setTabSwitcherCursor: (cursor: number) => void;
+  commitTabSwitcher: () => void;
+  cancelTabSwitcher: () => void;
 
   // PR4: editor 영역의 우측 split (어시스턴트). 탭별 isolated.
   tabSplits: Record<string, SplitPayload | undefined>;
@@ -133,6 +149,13 @@ type WorkbenchState = {
   // 같은 아이콘으로 연달아 dispatch 해도 매번 새로 발동 (값이 같으면 React 가 변화 X 로 간주).
   activityIconPulse: { kind: SidebarKind; ts: number } | null;
   pulseActivityIcon: (kind: SidebarKind) => void;
+
+  // 2026-05-12: Confluence 트리 외부 refresh 트리거. ConfluencePanel useEffect 의 deps 에
+  // 들어가 변경 시 트리 재조회. CenterPane 이 "테스트로 복사" 성공 직후 bump 호출 →
+  // main 의 getConfluenceTree 가 라이브 v2 API 로 testSpace 자식을 다시 가져와 새 사본이
+  // 즉시 트리에 등장.
+  confluenceTreeVersion: number;
+  bumpConfluenceTree: () => void;
 };
 
 export const useWorkbenchStore = create<WorkbenchState>((set) => ({
@@ -155,9 +178,16 @@ export const useWorkbenchStore = create<WorkbenchState>((set) => ({
         const updated: DocTab[] = state.openTabs.map((t) =>
           t.id === id && t.kind === 'qna-thread' ? { ...t, title: spec.title } : t,
         );
-        return { ...state, openTabs: updated, activeTabId: id };
+        return {
+          ...state,
+          openTabs: updated,
+          activeTabId: id,
+          tabFocusOrder: bumpFocusOrder(state.tabFocusOrder, id),
+        };
       }
-      return state.activeTabId === id ? state : { ...state, activeTabId: id };
+      return state.activeTabId === id
+        ? { ...state, tabFocusOrder: bumpFocusOrder(state.tabFocusOrder, id) }
+        : { ...state, activeTabId: id, tabFocusOrder: bumpFocusOrder(state.tabFocusOrder, id) };
     }
     let tab: DocTab;
     if (spec.kind === 'qna-thread') {
@@ -171,12 +201,17 @@ export const useWorkbenchStore = create<WorkbenchState>((set) => ({
       ...state,
       openTabs: [...state.openTabs, tab],
       activeTabId: id,
+      tabFocusOrder: bumpFocusOrder(state.tabFocusOrder, id),
     };
   }),
 
   focusTab: (id) => set((state) => {
     if (!state.openTabs.find((t) => t.id === id)) return state;
-    return state.activeTabId === id ? state : { ...state, activeTabId: id };
+    if (state.activeTabId === id) {
+      // 이미 활성 — focus order 만 갱신 (MRU 의미상 가장 최근 사용 흔적은 남김).
+      return { ...state, tabFocusOrder: bumpFocusOrder(state.tabFocusOrder, id) };
+    }
+    return { ...state, activeTabId: id, tabFocusOrder: bumpFocusOrder(state.tabFocusOrder, id) };
   }),
 
   closeTab: (id) => set((state) => {
@@ -223,6 +258,9 @@ export const useWorkbenchStore = create<WorkbenchState>((set) => ({
       delete a[closing.threadId];
       qnaPendingAttachments = a;
     }
+    const tabFocusOrder = state.tabFocusOrder.includes(id)
+      ? state.tabFocusOrder.filter((p) => p !== id)
+      : state.tabFocusOrder;
     return {
       ...state,
       openTabs: next,
@@ -231,6 +269,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set) => ({
       editingDocs,
       qnaPendingAttachments,
       pinnedTabIds,
+      tabFocusOrder,
     };
   }),
 
@@ -256,6 +295,56 @@ export const useWorkbenchStore = create<WorkbenchState>((set) => ({
   // 2026-05-13: default ON. settings.autoPinOnReview !== false 면 ON.
   autoPinOnReview: true,
   setAutoPinOnReview: (b) => set({ autoPinOnReview: b }),
+
+  tabFocusOrder: [],
+
+  tabSwitcher: null,
+  openTabSwitcher: (direction) => set((state) => {
+    if (state.tabSwitcher) return state;
+    const candidates = tabSwitcherCandidates(state.openTabs, state.tabFocusOrder);
+    if (candidates.length < 2) return state;
+    // 첫 Ctrl+Tab → 두 번째 (현재 활성 다음 MRU). Ctrl+Shift+Tab → 마지막 (가장 오래 안 본 것).
+    const cursor = direction === 1 ? 1 : candidates.length - 1;
+    return { ...state, tabSwitcher: { candidates, cursor } };
+  }),
+  moveTabSwitcher: (direction) => set((state) => {
+    const sw = state.tabSwitcher;
+    if (!sw) return state;
+    const n = sw.candidates.length;
+    if (n === 0) return state;
+    const cursor = (sw.cursor + direction + n) % n;
+    return { ...state, tabSwitcher: { ...sw, cursor } };
+  }),
+  setTabSwitcherCursor: (cursor) => set((state) => {
+    const sw = state.tabSwitcher;
+    if (!sw) return state;
+    const n = sw.candidates.length;
+    if (n === 0) return state;
+    // clamp [0, n-1]. Home/End/PageUp/PageDown 의 over-shoot 은 끝에 멈춤 (wrap 아님 —
+    // 사용자가 의도적으로 끝으로 점프했으니 그 자리 유지가 자연스러움).
+    const clamped = Math.max(0, Math.min(n - 1, cursor));
+    if (clamped === sw.cursor) return state;
+    return { ...state, tabSwitcher: { ...sw, cursor: clamped } };
+  }),
+  commitTabSwitcher: () => set((state) => {
+    const sw = state.tabSwitcher;
+    if (!sw) return state;
+    const id = sw.candidates[sw.cursor];
+    // commit 은 focusTab 호출과 동일 — activeTabId + focus order 갱신.
+    let next: Partial<WorkbenchState> = { tabSwitcher: null };
+    if (id && state.openTabs.some((t) => t.id === id)) {
+      next = {
+        ...next,
+        activeTabId: id,
+        tabFocusOrder: bumpFocusOrder(state.tabFocusOrder, id),
+      };
+    }
+    return { ...state, ...next };
+  }),
+  cancelTabSwitcher: () => set((state) => {
+    if (!state.tabSwitcher) return state;
+    return { ...state, tabSwitcher: null };
+  }),
 
   tabSplits: {},
 
@@ -326,13 +415,37 @@ export const useWorkbenchStore = create<WorkbenchState>((set) => ({
     const next = { ...state.editingDocs };
     if (editing) next[docKey] = true;
     else delete next[docKey];
-    return { ...state, editingDocs: next };
+    // 2026-05-13: 편집 진입 시 autoPinOnReview ON 이면 그 docKey 와 매칭되는 탭을 자동 고정.
+    // Confluence 의 편집 URL 진입 + Excel 의 ✏ 토글 둘 다 여기로 모임. unpin 은 사용자 명시
+    // 행동 (우클릭 → 고정 해제) 으로만 — 편집 종료가 자동 unpin 까지 하면 의도와 어긋남.
+    let pinnedTabIds = state.pinnedTabIds;
+    if (editing && state.autoPinOnReview) {
+      const matchTab = state.openTabs.find((t) => {
+        if (t.kind !== 'excel' && t.kind !== 'confluence') return false;
+        return docKeyOfNode(t.node) === docKey;
+      });
+      if (matchTab && !pinnedTabIds.includes(matchTab.id)) {
+        pinnedTabIds = [...pinnedTabIds, matchTab.id];
+      }
+    }
+    return { ...state, editingDocs: next, pinnedTabIds };
   }),
   toggleDocEditing: (docKey) => set((state) => {
     const next = { ...state.editingDocs };
-    if (next[docKey]) delete next[docKey];
-    else next[docKey] = true;
-    return { ...state, editingDocs: next };
+    const turningOn = !next[docKey];
+    if (turningOn) next[docKey] = true;
+    else delete next[docKey];
+    let pinnedTabIds = state.pinnedTabIds;
+    if (turningOn && state.autoPinOnReview) {
+      const matchTab = state.openTabs.find((t) => {
+        if (t.kind !== 'excel' && t.kind !== 'confluence') return false;
+        return docKeyOfNode(t.node) === docKey;
+      });
+      if (matchTab && !pinnedTabIds.includes(matchTab.id)) {
+        pinnedTabIds = [...pinnedTabIds, matchTab.id];
+      }
+    }
+    return { ...state, editingDocs: next, pinnedTabIds };
   }),
 
   paletteOpen: false,
@@ -369,4 +482,7 @@ export const useWorkbenchStore = create<WorkbenchState>((set) => ({
 
   activityIconPulse: null,
   pulseActivityIcon: (kind) => set({ activityIconPulse: { kind, ts: Date.now() } }),
+
+  confluenceTreeVersion: 0,
+  bumpConfluenceTree: () => set((s) => ({ confluenceTreeVersion: s.confluenceTreeVersion + 1 })),
 }));

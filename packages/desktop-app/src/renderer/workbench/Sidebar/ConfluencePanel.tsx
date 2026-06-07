@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactElement } from 'react';
 import type { TreeNode, ConfluenceTreeResult } from '../../../shared/types';
 import { iconNodeFor } from './tree-icons';
+import { useWorkbenchStore } from '../store';
 import {
   TREE_PERSIST_KEYS,
   loadExpanded,
@@ -13,10 +14,21 @@ import {
 interface Props {
   selectedId: string | null;
   onOpenConfluencePage: (node: TreeNode) => void;
+  onOpenSettings: () => void;
+  // App.tsx 의 SettingsModal onSaved 시 +1. 변경 감지해 testSpace 인디케이터 refetch.
+  settingsVersion: number;
 }
 
-export function ConfluencePanel({ selectedId, onOpenConfluencePage }: Props) {
+export function ConfluencePanel({
+  selectedId,
+  onOpenConfluencePage,
+  onOpenSettings,
+  settingsVersion,
+}: Props) {
   const [confluence, setConfluence] = useState<ConfluenceTreeResult | null>(null);
+  const [testSpace, setTestSpace] = useState<{ key?: string; parentId?: string } | null>(null);
+  // 사본 직후 / 설정 변경 직후 트리 재조회 트리거. store 의 bumpConfluenceTree 호출 시 +1.
+  const confluenceTreeVersion = useWorkbenchStore((s) => s.confluenceTreeVersion);
   // 펼쳐진 폴더/페이지 ID 영속. mount 시 prefill, 트리 도착 시 invalid id 는 prune.
   const [expanded, setExpanded] = useState<Set<string>>(() =>
     loadExpanded(TREE_PERSIST_KEYS.CONFLUENCE_EXPANDED),
@@ -34,7 +46,28 @@ export function ConfluencePanel({ selectedId, onOpenConfluencePage }: Props) {
       if (s.state === 'ready') fetchTree();
     });
     return off;
-  }, []);
+    // settingsVersion / confluenceTreeVersion 변경 시 — testSpace 설정 변경 또는 사본 직후 —
+    // 트리를 라이브 재조회. main 의 getConfluenceTree 가 testSpace 자식을 v2 API 로 다시 가져옴.
+  }, [settingsVersion, confluenceTreeVersion]);
+
+  // 테스트 스페이스 인디케이터 — 트리는 로컬 다운로드 manifest 기반이라 운영 테스트 스페이스가
+  // 자동으로 보이지 않는다. 사용자에게 "사본이 어디로 가는지" + "설정 OK 인지" 가시화.
+  // settingsVersion 이 바뀌면 (= SettingsModal 저장 직후) 재조회.
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const s = await window.projk.getSettings();
+        if (cancelled) return;
+        const key = s.confluenceTestSpaceKey?.trim();
+        const parentId = s.confluenceTestParentPageId?.trim();
+        setTestSpace({ key: key || undefined, parentId: parentId || undefined });
+      } catch {
+        if (!cancelled) setTestSpace({});
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [settingsVersion]);
 
   // 트리 도착 시 영속된 expanded 중 사라진 id 제거 (없어진 페이지에 무리한 복원 시도 방지).
   // 빈 트리 (사이드카 starting / 데이터 미설정) 에선 prune skip — 영속값이 빈 set 으로 덮여
@@ -97,8 +130,32 @@ export function ConfluencePanel({ selectedId, onOpenConfluencePage }: Props) {
     );
   };
 
+  const hasTestSpace = !!testSpace?.key;
   return (
     <div className="sidebar" data-testid="confluence-panel">
+      <button
+        type="button"
+        className={`confluence-test-space-indicator${hasTestSpace ? '' : ' unset'}`}
+        data-testid="confluence-test-space-indicator"
+        data-state={hasTestSpace ? 'set' : 'unset'}
+        onClick={onOpenSettings}
+        title={
+          hasTestSpace
+            ? `'테스트로 복사' 클릭 시 이 스페이스에 사본 생성 — 클릭하여 설정 변경`
+            : '테스트 스페이스가 설정되지 않아 doc-header 의 📋 테스트로 복사 버튼이 안 뜹니다. 클릭하여 설정.'
+        }
+      >
+        {hasTestSpace ? (
+          <>
+            <span className="label">📋 테스트 스페이스: <strong>{testSpace!.key}</strong></span>
+            {testSpace!.parentId && (
+              <span className="sub">parent {testSpace!.parentId.slice(0, 12)}{testSpace!.parentId.length > 12 ? '…' : ''}</span>
+            )}
+          </>
+        ) : (
+          <span className="label">⚠ 테스트 스페이스 미설정 — 클릭하여 설정</span>
+        )}
+      </button>
       <div className="tree" data-testid="confluence-tree">
         {!confluence && (
           <div className="tree-row" style={{ color: 'var(--text-dim)', paddingLeft: 12 }}>

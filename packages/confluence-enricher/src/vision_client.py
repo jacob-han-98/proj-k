@@ -25,8 +25,9 @@ MAX_IMAGE_BYTES = 3_900_000  # API 5MB 제한은 base64 문자열 기준 → raw
 MODEL_MAPPING = {
     "claude-sonnet-4-5": "global.anthropic.claude-sonnet-4-5-20250929-v1:0",
     "claude-sonnet-4-6": "us.anthropic.claude-sonnet-4-6-v1:0",
-    "claude-opus": "global.anthropic.claude-opus-4-5-20251101-v1:0",
+    "claude-opus": "global.anthropic.claude-opus-4-8",
     "claude-opus-4-5": "global.anthropic.claude-opus-4-5-20251101-v1:0",
+    "claude-opus-4-8": "global.anthropic.claude-opus-4-8",
     "claude-opus-4-6": "global.anthropic.claude-opus-4-6-v1",
     "claude-haiku-4-5": "global.anthropic.claude-haiku-4-5-20251001-v1:0",
 }

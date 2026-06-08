@@ -139,6 +139,44 @@ class ConfluenceClient:
             start += page_size
         return results[:limit]
 
+    def list_all_descendants(self, ancestor_id: str, limit: int = 20000) -> list:
+        """root(ancestor) 아래 **모든** 페이지 전수 열거 (klaud-crawl report 용).
+
+        ⚠️ CQL `ancestor=` 단일 쿼리는 Confluence Cloud 의 deep pagination 제약으로
+        start offset 이 100 에서 막힌다(=불완전). 대신 `get_children`(CQL parent=) 으로
+        **재귀 순회** — downloader 의 build_page_tree 와 동일한 검증된 방식. 각 부모의
+        직속 자식은 100 미만이라 페이징 캡에 안 걸린다. folder 는 결과에서 제외하되
+        그 하위는 계속 순회한다.
+
+        Returns:
+            [{"id", "title", "type", "lastModified"}, ...] (page 만, 최대 limit)
+        """
+        results: list = []
+        seen: set = set()
+        stack = [ancestor_id]
+        while stack and len(results) < limit:
+            pid = stack.pop()
+            try:
+                children = self.get_children(pid)
+            except Exception:
+                continue
+            for c in children:
+                cid = c.get("id")
+                if not cid or cid in seen:
+                    continue
+                seen.add(cid)
+                ctype = c.get("type", "page")
+                # page/folder 모두 하위를 더 순회
+                stack.append(cid)
+                if ctype == "page":
+                    results.append({
+                        "id": cid,
+                        "title": c.get("title"),
+                        "type": ctype,
+                        "lastModified": c.get("version", {}).get("when"),
+                    })
+        return results[:limit]
+
     def download_attachment(self, download_path: str) -> bytes:
         """첨부 파일 다운로드. download_path는 attachment._links.download 값."""
         url = f"{self.base_url}{download_path}"

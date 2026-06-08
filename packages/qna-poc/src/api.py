@@ -274,7 +274,7 @@ class AskRequest(BaseModel):
     question: str
     conversation_id: str | None = None
     role: str | None = None
-    model: str = "claude-opus-4-6"
+    model: str = "claude-opus-4-8"
     prompt_style: str = "검증세트 최적화"  # "검증세트 최적화" | "기본"
     prompt_overrides: dict[str, str] | None = None  # 단계별 프롬프트 override (key: planning/answer/...)
 
@@ -310,7 +310,7 @@ def health():
 class ReviewRequest(BaseModel):
     title: str
     text: str
-    model: str = "claude-opus-4-6"
+    model: str = "claude-opus-4-8"
     prompt_overrides: dict[str, str] | None = None
     review_instruction: str = ""
 

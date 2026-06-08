@@ -327,15 +327,15 @@ def parse_stages(stage_arg):
 
 # ── Phase A: Capture (순차, 단일 Excel COM 인스턴스) ──
 
-def run_capture_batch(xlsx_files, target_sheet=None, skip_existing=True):
-    """Phase A: Excel COM으로 모든 파일 캡처.
+def run_capture_batch(xlsx_files, target_sheet=None, skip_existing=True,
+                      backend="com", oo_url=None):
+    """Phase A: 시트별 전체 PNG 캡처.
 
-    단일 Excel 인스턴스를 재사용하여 파일 열기/닫기 오버헤드를 최소화한다.
+    backend="com": Excel COM(Windows) — 단일 Excel 인스턴스 재사용.
+    backend="onlyoffice": OnlyOffice DS(Linux headless) — capture_all_oo 사용.
     """
-    from capture import capture_all
-
     log.stage_start_log("capture",
-        f"Excel COM batch capture ({len(xlsx_files)} files, "
+        f"{backend} batch capture ({len(xlsx_files)} files, "
         f"{'skip existing' if skip_existing else 'force'})")
 
     t_start = time.time()
@@ -344,13 +344,18 @@ def run_capture_batch(xlsx_files, target_sheet=None, skip_existing=True):
     total_blank = 0
     total_failed = 0
 
-    # Excel COM 인스턴스 생성 (모든 파일에서 재사용)
-    import win32com.client
-    excel = win32com.client.Dispatch("Excel.Application")
-    excel.Visible = False
-    excel.DisplayAlerts = False
-    excel.Interactive = False
-    excel.AskToUpdateLinks = False
+    # 캡처 함수 + (COM 한정) Excel 인스턴스 준비
+    excel = None
+    if backend == "onlyoffice":
+        from capture_onlyoffice import capture_all_oo
+    else:
+        from capture import capture_all
+        import win32com.client
+        excel = win32com.client.Dispatch("Excel.Application")
+        excel.Visible = False
+        excel.DisplayAlerts = False
+        excel.Interactive = False
+        excel.AskToUpdateLinks = False
 
     try:
         for i, xlsx_path in enumerate(xlsx_files):
@@ -377,10 +382,15 @@ def run_capture_batch(xlsx_files, target_sheet=None, skip_existing=True):
 
             log.info(f"[{i+1}/{len(xlsx_files)}] {name}...")
             try:
-                results = capture_all(
-                    str(xlsx_path), str(OUTPUT_DIR), target_sheet,
-                    excel_app=excel
-                )
+                if backend == "onlyoffice":
+                    results = capture_all_oo(
+                        str(xlsx_path), str(OUTPUT_DIR), target_sheet, oo_url=oo_url
+                    )
+                else:
+                    results = capture_all(
+                        str(xlsx_path), str(OUTPUT_DIR), target_sheet,
+                        excel_app=excel
+                    )
                 ok = sum(1 for r in results if r.get("split_success"))
                 blank = sum(1 for r in results if r.get("blank"))
                 fail = len(results) - ok - blank
@@ -393,10 +403,11 @@ def run_capture_batch(xlsx_files, target_sheet=None, skip_existing=True):
                 log.error(f"  -> FAILED: {e}")
                 total_failed += 1
     finally:
-        try:
-            excel.Quit()
-        except Exception:
-            pass
+        if excel is not None:
+            try:
+                excel.Quit()
+            except Exception:
+                pass
 
     elapsed = time.time() - t_start
     summary = (f"{len(xlsx_files)} files "
@@ -784,6 +795,14 @@ def main():
     parser.add_argument("--output", help="출력 디렉토리 (기본: output/)")
     parser.add_argument("--changed-only", action="store_true",
                         help="소스 파일이 변경된 것만 처리 (mtime 비교)")
+    parser.add_argument("--capture-backend", choices=["com", "onlyoffice"],
+                        default=os.environ.get(
+                            "XLSX_CAPTURE_BACKEND",
+                            "com" if sys.platform == "win32" else "onlyoffice"),
+                        help="캡처 백엔드: com(Excel COM, Windows) / onlyoffice(DS, Linux headless)")
+    parser.add_argument("--onlyoffice-url",
+                        default=os.environ.get("PROJK_ONLYOFFICE_URL", "http://localhost:8080"),
+                        help="OnlyOffice DS endpoint (onlyoffice 백엔드)")
 
     args = parser.parse_args()
 
@@ -844,7 +863,8 @@ def main():
 
     # ── Phase A: Capture (순차) ──
     if "capture" in run_stages:
-        run_capture_batch(xlsx_files, args.sheet, skip_existing=not args.force)
+        run_capture_batch(xlsx_files, args.sheet, skip_existing=not args.force,
+                          backend=args.capture_backend, oo_url=args.onlyoffice_url)
 
     # ── Phase B: 시트별 병렬 파이프라인 ──
     pipeline_stages = [s for s in run_stages if s != "capture"]

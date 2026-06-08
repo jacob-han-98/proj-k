@@ -1286,17 +1286,17 @@ with st.sidebar:
     st.caption("PoC v0.2.0")
 
 # ── 세션 기본값 ──
-MODEL_OPTIONS = ["claude-opus-4-6", "claude-sonnet-4-6", "claude-haiku-4-5"]
-MODEL_LABELS = {"claude-opus-4-6": "Opus 4.6", "claude-sonnet-4-6": "Sonnet 4.6", "claude-haiku-4-5": "Haiku 4.5"}
+MODEL_OPTIONS = ["claude-opus-4-8", "claude-sonnet-4-6", "claude-haiku-4-5"]
+MODEL_LABELS = {"claude-opus-4-8": "Opus 4.6", "claude-sonnet-4-6": "Sonnet 4.6", "claude-haiku-4-5": "Haiku 4.5"}
 PROMPT_STYLE_OPTIONS = ["검증세트 최적화", "기본"]
 if "role" not in st.session_state:
     st.session_state.role = "기획자"
 if "answer_model" not in st.session_state:
-    st.session_state.answer_model = "claude-opus-4-6"
+    st.session_state.answer_model = "claude-opus-4-8"
 if "planning_model" not in st.session_state:
-    st.session_state.planning_model = "claude-opus-4-6"
+    st.session_state.planning_model = "claude-opus-4-8"
 if "reflection_model" not in st.session_state:
-    st.session_state.reflection_model = "claude-opus-4-6"
+    st.session_state.reflection_model = "claude-opus-4-8"
 if "prompt_style" not in st.session_state:
     st.session_state.prompt_style = "기본"
 

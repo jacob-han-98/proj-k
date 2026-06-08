@@ -28,7 +28,8 @@ AWS_BEARER_TOKEN = os.environ.get("AWS_BEARER_TOKEN_BEDROCK", "")
 MODEL_IDS = {
     "haiku": "global.anthropic.claude-haiku-4-5-20251001-v1:0",
     "sonnet": "global.anthropic.claude-sonnet-4-5-20250929-v1:0",
-    "opus": "global.anthropic.claude-opus-4-6-v1",
+    "opus": "global.anthropic.claude-opus-4-8",
+    "claude-opus-4-8": "global.anthropic.claude-opus-4-8",
 }
 
 

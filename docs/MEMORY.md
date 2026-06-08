@@ -3,9 +3,30 @@
 > 세션 간 항상성을 유지하기 위한 작업 상태 기록.
 > 세션 시작 시 반드시 이 파일을 먼저 읽는다.
 
-## 최종 업데이트: 2026-04-20
+## 최종 업데이트: 2026-06-07
 
-## 현재 단계: 크롬 확장 안정화 + agent-sdk-poc "비교 모드" PoC 추가
+## 현재 단계: 백엔드 CLI 데이터 파이프라인 (트랙2 headless 변환 완료 / 트랙1 크롤 CLI 진행)
+
+---
+
+### [최근 작업 내역] 2026-06-07: 백엔드 CLI 파이프라인 — OnlyOffice headless 변환 + 크롤 CLI
+
+> 환경: **AI-TEST-02** (독립 Ubuntu 서버, 백엔드 전용). 모든 동작 백엔드 CLI 원칙.
+> 상세 계획: `~/.claude/plans/abstract-herding-hennessy.md`
+
+**트랙2 — Excel 변환 Windows 탈피 (✅ 완료·재현 가능)**
+- Excel COM(Windows) 캡처 → **OnlyOffice DS(Linux Docker, headless)** 변환으로 드롭인 교체.
+- 핵심 보장 "시트 1개 = 공백 없는 단일 이미지" 충족: 변환 API `fitToWidth:1`+큰 pageSize → 시트당 1 PDF 페이지 → PyMuPDF 콘텐츠 bbox clip.
+- 대표 파일 `PK_변신 및 스킬 시스템.xlsx`(13시트) end-to-end 통과: 한글/도형/플로우차트/임베드 스크린샷 fidelity 우수, Vision→content.md(mermaid)까지 정상. LibreOffice 폐기 3대 사유 해소.
+- 신규/수정: `packages/xlsx-extractor/src/capture_onlyoffice.py`, `run.py --capture-backend {com,onlyoffice}`, `packages/excel-viewer-poc/{Dockerfile,oo-up.sh,poc_convert.py}`.
+- 셋업 함정(메모리 `reference-onlyoffice-headless-capture` 참조): SSRF allowPrivateIPAddress, 한글폰트 baked, pageSize 1200×5000mm 안전값, bbox=raster probe.
+
+**트랙1 — 크롤/업데이트 CLI (진행 중)**
+- 목표: `klaud-crawl` CLI 에 실 fetch+재인덱싱(Phase C) + 현황 report(삭제 감지 포함) + sync + 1시간 systemd timer 추가.
+- ✅ 완료: `klaud_crawl_state.py` 에 `crawl_kv` 테이블 + `set_kv/get_kv` + `last_cron_tick` 영속화 (cron 재시작 시 in-memory 소실 버그 수정).
+- ⏳ 남음: `report`(upstream 전수 vs 로컬 set-diff), `reindex-run`(stale 실 fetch+변환+인덱싱, p4-xlsx 는 onlyoffice 백엔드 체이닝), `sync`(원샷), systemd timer, p4 client spec.
+- 기존: `scripts/klaud-crawl.py`(status/diff/purge/reindex/cron-tick — 감지까지만, Phase A stub), `src/p4_changes.py`.
+- 환경 설치됨: docker.io, helix-cli(p4), OnlyOffice DS 컨테이너, xlsx-extractor `.venv`(pymupdf 등).
 
 ---
 
@@ -500,3 +521,28 @@
 - "기획해줘" = QnA (전략/방향), "기획서 수정/작성해줘" = Proposal (문서 작업)
 - 신규 기획서는 Confluence가 기본 (기획팀 정책)
 - Excel 수정 = Claude Excel 플러그인 + 복사, Confluence 수정 = 크롬 확장 (향후)
+
+---
+
+## 2026-06-08 — 데이터 크롤/업데이트 백엔드 CLI (3 파이프라인) + systemd 자동화
+
+**klaud-crawl CLI 확장** (`packages/agent-sdk-poc/scripts/klaud-crawl.py`): `report`(upstream 전수 vs 로컬 set-diff, read-only, data/report_*_latest.json) + `reindex-run`(stale 실 fetch+변환+요약, --limit/--only/--no-index/--dry-run) + `sync`(flock 직렬화: cron-tick→reindex→DataSheet→report 원샷). crawl_kv 에 baseline changelist 영속화.
+
+**3개 데이터 파이프라인 부트스트랩 (AI-TEST-02)**:
+1. **Confluence** — 전체 재크롤 795p → 요약 → MASTER_INDEX Confluence **455→1250p** ($5.80 Haiku). 이미지는 `/wiki/download/` 401(토큰 basic-auth 거부) → text-only.
+2. **p4 GDD (Design/7_System+8_Contents 만)** — p4 sync(7.8GB) → xlsx-extractor **OnlyOffice 백엔드** 변환 → content.md → 요약. 변경분 4 워크북 변환 + 기존 137 reconcile = crawl_state 141 fresh. 설정: `scripts/crawl.env` 에 7·8 만 명시.
+3. **p4 DataSheet (Resource/design)** — p4 sync → `data-pipeline/game_data.ingest_all` → `~/.qna-poc-gamedata/game_data.db` **193테이블/54,330행**. MCP query_game_table 데이터 복구(이전엔 DB 부재).
+
+**환경 셋업**: output 심볼릭 링크가 깨진 `/mnt/e` → **`/home/jacob/proj-k-data`** 재지정. 크롤 venv(xlsx-extractor/.venv)에 beautifulsoup4/markdownify/python-dotenv/httpx 추가. p4 client `jacob-server` view = 7_System+8_Contents+Resource/design 3경로. game_data.py openpyxl import 누락 1건 수정.
+
+**systemd 1시간 타이머** `klaud-crawl-sync.{service,timer}` (OnCalendar=hourly, Persistent, ExecStartPre p4 login) — 서비스 수동 1회 end-to-end 성공 검증. 3 파이프라인 모두 증분 자동 갱신.
+
+상세: 메모리 [[reference-crawl-pipeline-aitest02]].
+
+### 2026-06-08 (추가) — 벡터 DB(ChromaDB) 절차 보강 + 문서화
+
+Klaud 빠른검색이 **하이브리드**(Enter 시 L1 키워드 + 벡터 의미검색 병렬, `~/.qna-poc-chroma` `project_k` 조회)임을 확인. 공백 2건 보강:
+1. 이 박스에 chromadb 미설치 + 벡터 DB 미구축 → 의미검색이 조용히 빈 결과로 degrade 였음 → **chromadb 설치 + 초기 전체 구축**(qna-poc `indexer --reset`, 8_Contents 변환 완료 후 자동).
+2. 크롤 파이프라인이 마크다운 인덱스만 갱신했음 → **reindex-run/sync 에 벡터 갱신 연결**: 변경 content.md 마다 `purge_chromadb_chunks → chunk_file → index_chunks(Titan v2)`. 삭제/이동 정리 시 ChromaDB 청크도 동기 제거. env `PROJK_VECTOR_INDEX=0` 로 off.
+
+전체 절차 문서: **`packages/agent-sdk-poc/docs/DATA_PIPELINE.md`** (3 소스 + 마크다운/벡터 2 인덱스 레이어 + CLI/자동화/Gotchas).

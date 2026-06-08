@@ -50,7 +50,7 @@ def _mock_httpx_get(monkeypatch: pytest.MonkeyPatch, response_body: dict, status
 def test_get_summary_preset_proxies_to_upstream(
     monkeypatch: pytest.MonkeyPatch, client_with_agent: TestClient
 ) -> None:
-    expected = {"prompt": "요약 preset", "model": "claude-opus-4-7", "version": "v1"}
+    expected = {"prompt": "요약 preset", "model": "claude-opus-4-8", "version": "v1"}
     _mock_httpx_get(monkeypatch, expected)
     res = client_with_agent.get("/presets/summary")
     assert res.status_code == 200
@@ -60,7 +60,7 @@ def test_get_summary_preset_proxies_to_upstream(
 def test_get_review_preset_proxies_to_upstream(
     monkeypatch: pytest.MonkeyPatch, client_with_agent: TestClient
 ) -> None:
-    expected = {"prompt": "리뷰 preset", "model": "claude-opus-4-7", "version": "v2"}
+    expected = {"prompt": "리뷰 preset", "model": "claude-opus-4-8", "version": "v2"}
     _mock_httpx_get(monkeypatch, expected)
     res = client_with_agent.get("/presets/review")
     assert res.status_code == 200

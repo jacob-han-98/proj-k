@@ -108,6 +108,56 @@ def list_files_in_changelist(changelist: int) -> list[str]:
     return files
 
 
+def list_depot_files(depot_paths: Iterable[str], max_files: int = 20000) -> list[dict]:
+    """`p4 files` 로 depot 경로의 **현재 살아있는** 파일 전수 열거 (klaud-crawl report 용).
+
+    deleted/purged revision 은 제외 (action 이 'delete'/'purge'/'archive' 인 head rev).
+    upstream 의 현재 파일 집합을 얻어 로컬 크롤 상태와 set-diff 하는 데 쓴다.
+
+    Returns:
+        [{"depot_file": "//main/.../X.xlsx", "rev": int, "action": str}, ...]
+        실패 / 미설치 시 빈 list.
+    """
+    if not is_available():
+        _LOG.warning("p4 cli or P4PORT not configured — skip list_depot_files")
+        return []
+
+    out: list[dict] = []
+    seen: set[str] = set()
+    for path in depot_paths:
+        ok, stdout, stderr = _run_p4(["files", "-e", path], timeout=120)
+        # -e: head revision 이 not deleted 인 파일만. (구버전 p4 는 -e 미지원일 수 있어 fallback)
+        if not ok and "-e" in (stderr or ""):
+            ok, stdout, stderr = _run_p4(["files", path], timeout=120)
+        if not ok:
+            _LOG.warning(f"p4 files failed for {path}: {stderr[:200]}")
+            continue
+        for line in stdout.splitlines():
+            # 형식: "//depot/path/file.xlsx#3 - edit change 12345 (text)"
+            line = line.strip()
+            if not line.startswith("//") or "#" not in line:
+                continue
+            depot_file, _, rest = line.partition("#")
+            if depot_file in seen:
+                continue
+            # action 추출: "<rev> - <action> change ..."
+            action = ""
+            rev = 0
+            try:
+                rev = int(rest.split()[0])
+            except (ValueError, IndexError):
+                pass
+            if " - " in rest:
+                action = rest.split(" - ", 1)[1].split()[0]
+            if action in {"delete", "purge", "archive", "move/delete"}:
+                continue  # head rev 가 삭제 → upstream 에 없음
+            seen.add(depot_file)
+            out.append({"depot_file": depot_file, "rev": rev, "action": action})
+            if len(out) >= max_files:
+                return out
+    return out
+
+
 def latest_changelist(depot_path: str = "//...") -> int | None:
     """현재 head changelist 번호. cron-tick 의 last_changelist 갱신용."""
     if not is_available():

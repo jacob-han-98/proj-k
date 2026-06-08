@@ -28,7 +28,7 @@ config_text = (Path(EXTENSION_DIR) / "lib" / "config.js").read_text()
 API_TOKEN = re.search(r"confluenceApiToken:\s*['\"]([^'\"]+)['\"]", config_text).group(1)
 BEDROCK_TOKEN = re.search(r"bedrockToken:\s*['\"]([^'\"]+)['\"]", config_text).group(1)
 BACKEND_URL = re.search(r"backendUrl:\s*['\"]([^'\"]+)['\"]", config_text).group(1)
-BEDROCK_MODEL = "claude-opus-4-6"
+BEDROCK_MODEL = "claude-opus-4-8"
 BEDROCK_REGION = "us-east-1"
 
 AUTH = (CONFLUENCE_EMAIL, API_TOKEN)
@@ -307,6 +307,7 @@ Return JSON array (generate up to {len(all_items)} changes — one per instructi
     # Bearer token 방식으로 Bedrock Runtime API 호출
     BEDROCK_MODEL_MAP = {
         "claude-opus-4-6": "global.anthropic.claude-opus-4-6-v1",
+        "claude-opus-4-8": "global.anthropic.claude-opus-4-8",
         "claude-sonnet-4-6": "global.anthropic.claude-sonnet-4-6",
         "claude-haiku-4-5": "global.anthropic.claude-haiku-4-5-20251001-v1:0",
     }

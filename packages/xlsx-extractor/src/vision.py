@@ -32,7 +32,7 @@ from dotenv import load_dotenv
 load_dotenv(Path(__file__).parent.parent / ".env")
 
 # ── 설정 ──
-VISION_MODEL = os.environ.get("VISION_MODEL", "claude-opus-4-6")
+VISION_MODEL = os.environ.get("VISION_MODEL", "claude-opus-4-8")
 VISION_MAX_TOKENS = 16000
 
 
@@ -48,9 +48,11 @@ def call_vision(prompt, image_paths, max_tokens=VISION_MAX_TOKENS):
     region = os.environ.get("AWS_REGION", "us-east-1")
 
     model_mapping = {
-        "claude-opus": "global.anthropic.claude-opus-4-5-20251101-v1:0",
+        "claude-opus": "global.anthropic.claude-opus-4-8",
         "claude-opus-4-5": "global.anthropic.claude-opus-4-5-20251101-v1:0",
         "claude-opus-4-6": "global.anthropic.claude-opus-4-6-v1",
+        "claude-opus-4-7": "global.anthropic.claude-opus-4-7",
+        "claude-opus-4-8": "global.anthropic.claude-opus-4-8",
         "claude-sonnet-4-5": "global.anthropic.claude-sonnet-4-5-20250929-v1:0",
         "claude-sonnet-4-6": "global.anthropic.claude-sonnet-4-6-v1",
         "claude-haiku-4-5": "global.anthropic.claude-haiku-4-5-20251001-v1:0",

@@ -247,7 +247,7 @@ def run_api_test():
 
     review_resp = requests.post(
         f"{backend_url}/review_stream",
-        json={"title": title, "text": text, "model": "claude-opus-4-6"},
+        json={"title": title, "text": text, "model": "claude-opus-4-8"},
         stream=True,
         timeout=600,
     )

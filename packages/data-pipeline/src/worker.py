@@ -965,7 +965,7 @@ def handle_enrich(job: dict, worker_id: str) -> dict:
     log.info(f"보강: {doc.get('title', '')} ({page_dir.name})")
 
     # Opus 4.6으로 모델 오버라이드
-    os.environ["VISION_MODEL"] = "claude-opus-4-6"
+    os.environ["VISION_MODEL"] = "claude-opus-4-8"
 
     # enrich 실행
     result = enricher_mod.enrich_page(page_dir, dry_run=False)

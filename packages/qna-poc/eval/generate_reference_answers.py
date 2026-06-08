@@ -183,8 +183,8 @@ def main():
     parser = argparse.ArgumentParser(description="레퍼런스 답변 생성 (Claude 웹앱 시뮬레이션)")
     parser.add_argument("--sample", type=int, help="샘플 N개만 실행")
     parser.add_argument("--id", type=str, help="특정 질문 ID만 실행")
-    parser.add_argument("--model", type=str, default="claude-opus-4-5",
-                        help="사용 모델 (기본: claude-opus-4-5)")
+    parser.add_argument("--model", type=str, default="claude-opus-4-8",
+                        help="사용 모델 (기본: claude-opus-4-8)")
     parser.add_argument("--workers", type=int, default=3,
                         help="동시 실행 수 (기본: 3, Opus는 rate limit 주의)")
     parser.add_argument("--resume", action="store_true",

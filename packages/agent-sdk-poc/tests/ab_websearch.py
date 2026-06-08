@@ -86,7 +86,7 @@ async def run_tavily(query: str) -> dict:
     client = anthropic.Anthropic(api_key=os.environ.get("ANTHROPIC_API_KEY", ""))
     try:
         msg = client.messages.create(
-            model="claude-opus-4-5",
+            model="claude-opus-4-8",
             max_tokens=2000,
             system=sys_prompt,
             messages=[{"role": "user", "content": query}],
@@ -124,7 +124,7 @@ async def run_native(query: str) -> dict:
     )
     try:
         msg = client.messages.create(
-            model="claude-opus-4-5",
+            model="claude-opus-4-8",
             max_tokens=2000,
             system=sys_prompt,
             tools=[{"type": "web_search_20250305", "name": "web_search", "max_uses": 5}],

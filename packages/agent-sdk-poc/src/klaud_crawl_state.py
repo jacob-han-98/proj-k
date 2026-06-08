@@ -72,6 +72,14 @@ CREATE TABLE IF NOT EXISTS crawl_events (
 );
 CREATE INDEX IF NOT EXISTS idx_events_ts ON crawl_events(ts);
 CREATE INDEX IF NOT EXISTS idx_events_source ON crawl_events(source);
+
+-- 영속 key-value (last_cron_tick, P4 last_changelist 등). cron 은 매번 새 프로세스라
+-- in-memory 상태가 소실되므로 여기에 저장.
+CREATE TABLE IF NOT EXISTS crawl_kv (
+  k TEXT PRIMARY KEY,
+  v TEXT,
+  updated_at TEXT
+);
 """
 
 
@@ -347,15 +355,41 @@ def stats() -> dict:
         "failed": per_status.get("failed", 0),
         "fresh": per_status.get("fresh", 0),
         "purged": per_status.get("purged", 0),
-        "last_cron_tick_at": _LAST_CRON_TICK_AT,
+        "last_cron_tick_at": get_last_cron_tick(),
         "db_path": str(_DB_PATH),
     }
 
 
+# ── 영속 key-value (crawl_kv) ─────────────────────────────────────────
+
+
+def set_kv(key: str, value: str | None) -> None:
+    """영속 kv 저장 (cron 재시작에도 유지)."""
+    now = _now()
+    with _LOCK:
+        _conn().execute(
+            "INSERT INTO crawl_kv (k, v, updated_at) VALUES (?, ?, ?) "
+            "ON CONFLICT(k) DO UPDATE SET v=excluded.v, updated_at=excluded.updated_at",
+            (key, value, now),
+        )
+
+
+def get_kv(key: str, default: str | None = None) -> str | None:
+    with _LOCK:
+        row = _conn().execute("SELECT v FROM crawl_kv WHERE k=?", (key,)).fetchone()
+    return row[0] if row else default
+
+
 def set_last_cron_tick(ts_iso: str | None = None) -> None:
-    """cron-tick 시작/종료 시 갱신. /admin/klaud 의 헤더 표시용."""
+    """cron-tick 시작/종료 시 갱신. crawl_kv 에 영속 + in-memory 캐시."""
     global _LAST_CRON_TICK_AT
     _LAST_CRON_TICK_AT = ts_iso or _now()
+    set_kv("last_cron_tick", _LAST_CRON_TICK_AT)
+
+
+def get_last_cron_tick() -> str | None:
+    """마지막 cron-tick 시각 (crawl_kv 영속값 우선)."""
+    return get_kv("last_cron_tick", _LAST_CRON_TICK_AT)
 
 
 # ── event log ────────────────────────────────────────────────────────

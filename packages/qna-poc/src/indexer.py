@@ -175,7 +175,7 @@ def _correct_ocr_section(section_text: str, ooxml_text: str) -> str:
         result = call_bedrock(
             messages=[{"role": "user", "content": user_msg}],
             system=OCR_CORRECT_SYSTEM,
-            model="claude-opus-4-6",
+            model="claude-opus-4-8",
             max_tokens=4096,
             temperature=0,
         )

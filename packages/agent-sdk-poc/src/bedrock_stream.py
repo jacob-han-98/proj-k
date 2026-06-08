@@ -35,14 +35,15 @@ AWS_BEARER_TOKEN = os.environ.get("AWS_BEARER_TOKEN_BEDROCK", "")
 MODEL_IDS = {
     "haiku": "global.anthropic.claude-haiku-4-5-20251001-v1:0",
     "sonnet": "global.anthropic.claude-sonnet-4-5-20250929-v1:0",
-    "opus": "global.anthropic.claude-opus-4-6-v1",
+    "opus": "global.anthropic.claude-opus-4-8",
+    "claude-opus-4-8": "global.anthropic.claude-opus-4-8",
 }
 
 
 def normalize_model(name: str | None) -> str:
     """프론트엔드/extension 이 보내는 자유 표기 → MODEL_IDS 키.
 
-    'claude-opus-4-6', 'opus', 'OPUS' 등 다양한 표기를 허용.
+    'claude-opus-4-8', 'opus', 'OPUS' 등 다양한 표기를 허용.
     """
     if not name:
         return "sonnet"

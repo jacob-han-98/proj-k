@@ -1,6 +1,10 @@
 services:
   documentserver:
-    image: onlyoffice/documentserver:latest
+    # 한글 폰트 baked-in custom image (Dockerfile). 최초/이미지 변경 시 build.
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: projk-onlyoffice-ds:latest
     container_name: onlyoffice-ds-poc
     restart: unless-stopped
     environment:

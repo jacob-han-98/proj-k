@@ -1607,7 +1607,7 @@ async def presets_summary():
     """ModePickerEmpty ⚙ 설정 — Summary preset 노출. 사용자 textarea prefill 용."""
     return {
         "prompt": _SUMMARY_SYSTEM_DEFAULT,
-        "model": "claude-opus-4-7",
+        "model": "claude-opus-4-8",
         "version": _preset_version(_SUMMARY_SYSTEM_DEFAULT),
     }
 
@@ -1621,7 +1621,7 @@ async def presets_review():
     """
     return {
         "prompt": _REVIEW_SYSTEM,
-        "model": "claude-opus-4-7",
+        "model": "claude-opus-4-8",
         "version": _preset_version(_REVIEW_SYSTEM),
     }
 

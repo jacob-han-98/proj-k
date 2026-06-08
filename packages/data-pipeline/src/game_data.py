@@ -33,6 +33,8 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Optional
 
+import openpyxl  # parse_enums() 등 일부 함수에 로컬 import 누락이 있어 모듈 레벨로 보강
+
 log = logging.getLogger("game_data")
 
 # ── 상수 ──────────────────────────────────────────────────

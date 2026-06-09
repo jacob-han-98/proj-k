@@ -4,7 +4,7 @@
 > 원본: packages/xlsx-extractor/output/8_Contents/PK_아키텍트_모험가연맹_분석 Ver0.1/History_Ver0.1/_final/content.md
 
 ## 한 줄 설명
-Project K 모험가연맹 아키텍트 분석 문서의 버전 이력 및 작성 기록을 관리하는 시트.
+PK_아키텍트_모험가연맹_분석 문서의 버전 0.1 작성 이력을 기록한 변경 로그.
 
 ## 핵심 용어
 - Version

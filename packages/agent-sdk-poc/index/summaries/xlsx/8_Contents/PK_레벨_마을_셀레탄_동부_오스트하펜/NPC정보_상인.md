@@ -20,33 +20,23 @@
 - 주문서 상인
 - 창고 관리인
 - 무기/방어구 상인
-- 아사 종족 (동대륙)
-- 커런 종족 (서대륙)
-- 케렌 종족 (서대륙)
+- 아샤 종족
+- 케렌 종족
 - 바리울
 - 소르브
-- 플리더턴
-- 로바르스
 - 홀바르드
-- 에시라 (Esira)
+- 로바르스
 - 스켈라
-- resource (리소스 ID)
+- 에시라
+- resource (Merchant_Potion_A, Merchant_General_A, Merchant_Scroll_A, Merchant_Storage_A, Merchant_Weapon_A, Merchant_Food_A, Merchant_Pet_A, Merchant_Subjob_A)
 
 ## 숫자/상수/공식
-- 리안: 20대 여성
-- 아사프: 10대 후반 남성
-- 다니아: 30대 여성
-- 강로: 40대 남성
-- 도수: 30대 남성
-- 후연: 40대 여성
-- 네타냐: 40대 여성
-- 사할: 30대 남성
+- (없음)
 
 ## 참조 시스템
 - (없음)
 
 ## 주요 섹션
-- NPC 정보
 - 물약 상인
 - 잡화 상인
 - 주문서 상인

@@ -2,7 +2,7 @@
 
 이 파일은 Agent가 세션 시작 시 한 번 읽어 전체 지형을 파악하는 카탈로그다. 각 항목은 `원본 content.md 경로 — 한 줄 설명` 형식이다. 원본 문서를 읽을 때는 해당 경로의 `content.md`를, 요약만 볼 때는 같은 이름의 `index/summaries/.../*.md`를 사용하라.
 
-> 코퍼스 규모: Excel 595 시트 / Confluence 1252 페이지
+> 코퍼스 규모: Excel 595 시트 / Confluence 1253 페이지
 
 
 ## Excel 기획서
@@ -865,7 +865,7 @@
 ## Confluence
 
 
-### Design (796 페이지)
+### Design (797 페이지)
 
 - [(NEW) IBT - 1차 스탯 기반 2차 스탯 상승 구조 재정의](packages/confluence-downloader/output/Design/시스템 디자인/성장 밸런스/(NEW) IBT - 1차 스탯 기반 2차 스탯 상승 구조 재정의/content.md) — 캐릭터 1차 스탯이 2차 스탯에 미치는 영향을 재정의하고, 미사용 중인 잠재력 스탯을 삭제하는 구조 개선안을 정의한 문서.
 - [(NEW) IBT - 캐릭터 레벨&경험치](packages/confluence-downloader/output/Design/시스템 디자인/성장 밸런스/(NEW) IBT - 캐릭터 레벨&경험치/content.md) — IBT(Internal Balanced Test) 기간 캐릭터 레벨 및 경험치 시스템의 성장 밸런스 설계 및 1~65레벨 플레이 타임, 경험치 명세를 정의한 문서.
@@ -1032,7 +1032,7 @@
 - [[IBT] 정령의 탑 콘텐츠 내 개선 사항 (IBT 타겟)](packages/confluence-downloader/output/Design/컨텐츠 디자인/Beta3 개선 항목/[IBT] 정령의 탑 콘텐츠 내 개선 사항 (IBT 타겟)/content.md) — 정령의 탑 콘텐츠의 원활한 플레이를 위해 패배 UI 출력, 오브젝트 스폰 타이밍, 탑 진입 시 UI 배치 등 3가지 개선 사항을 정리한 문서.
 - [[IBT] 컷신 개선](packages/confluence-downloader/output/Design/컨텐츠 디자인/Beta3 개선 항목/[IBT] 컷신 개선/content.md) — 인트로 맵 시작 컷신의 VolumeSequence 재생 조건을 개선하여, 계정 내 다른 캐릭터 생성 후 접속 시에도 컷신이 정상 재생되도록 하는 개선 사항을 정의한다.
 - [[IBT] 퀘스트 개선](packages/confluence-downloader/output/Design/컨텐츠 디자인/Beta3 개선 항목/[IBT] 퀘스트 개선/content.md) — IBT 기간 동안 적용할 퀘스트 시스템 개선 사항으로, 신규 퀘스트 타입 추가, 다이얼로그 UI 개선, 탭 잠금 기능, 메인 퀘스트 제목 표시 개선을 포함한다.
-- [[IBT] 폴리싱 리스트](packages/confluence-downloader/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md) — IBT(Internal Beta Test) 단계에서 발견된 버그, UI/UX 폴리싱 이슈, 기획 검토 필요 항목을 우선순위별로 정리한 리스트. 5월 말 적용 목표(우선순위 1~2)와 Beta4 연기 항목(우선순위 3~5)으로 구분.
+- [[IBT] 폴리싱 리스트](/home/jacob/proj-k-data/confluence/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md) — IBT(Internal Beta Test) 단계에서 발견된 UI/UX, 퀘스트, 맵, 시스템 관련 버그 및 폴리싱 이슈 38건을 우선순위별로 정리한 추적 문서.
 - [[개발참고용] 전투력 시스템](packages/confluence-downloader/output/Design/시스템 디자인/전투/전투력 시스템/[개발참고용] 전투력 시스템/content.md) — 기존 전투력 시스템 기획서를 검토하고, 플레이어가 스탯 상승을 직관적으로 체감할 수 있도록 전투력 증감 UI와 계산 조건을 개선하는 개발 참고 문서.
 - [[개인 성장4] 점성술 시스템 컨셉](packages/confluence-downloader/output/Design/시스템 디자인/성장 컨텐츠/[개인 성장4] 점성술 시스템 컨셉/content.md) — 각 계절의 황도궁 별자리 성흔을 장착하여 개별/세트 효과 능력치를 얻는 개인 성장 시스템으로, 확률/조합/강화 형태의 성장 구조를 제공한다.
 - [[개인 성장] 승천의 인장](packages/confluence-downloader/output/Design/시스템 디자인/성장 컨텐츠/[개인 성장] 승천의 인장/content.md) — 캐릭터가 1단계부터 50단계까지 일직선으로 순차 강화하여 능력치를 얻는 선형 성장 시스템으로, 실패 페널티 없이 기적의 재시도와 특별 구간 무작위 버프를 통해 성장 쾌감을 극대화한다.
@@ -1053,7 +1053,7 @@
 - [[작성예정] 분해 UIUX 개선](packages/confluence-downloader/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/[작성예정] 분해 UIUX 개선/content.md) — 분해 시스템의 UIUX 정리 및 개선을 다루는 문서로, 현재 작성 예정 상태이며 설정값 수정과 일괄 분해 관련 내용 재정리가 필요함.
 - [[작성예정] 시스템 메시지 UIUX 개선](packages/confluence-downloader/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/[작성예정] 시스템 메시지 UIUX 개선/content.md) — 시스템 메시지의 UI/UX 개선 및 인벤토리 시스템 UIUX 정리를 위한 작성 예정 문서.
 - [[작성예정] 캐릭터 정보 UIUX 개선](packages/confluence-downloader/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/[작성예정] 캐릭터 정보 UIUX 개선/content.md) — 캐릭터 정보 UI/UX 개선 계획 문서로, 스탯 정리, 즐겨찾기 기능, 장비 슬롯 연결 방식, 무기 검색성 개선 등을 다룬다.
-- [[작성중] 스킬/버프 UIUX 개선](/home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/[작성중] 스킬_버프 UIUX 개선/content.md) — Project K의 스킬 및 버프 UI/UX 개선 사항을 정의하는 진행 중인 기획 문서로, 아이콘 디자인 변경, 팝업 진입 방식 개선, 자동 등록 기능 제거 등을 포함한다.
+- [[작성중] 스킬/버프 UIUX 개선](/home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/[작성중] 스킬_버프 UIUX 개선/content.md) — Project K의 스킬 및 버프 UI/UX 개선 사항을 정의하는 진행 중인 설계 문서로, 아이콘 표기, 팝업 진입 방식, 정보 표시 구조 등의 변경 사항을 명시한다.
 - [[컨셉] 길드 디자인](packages/confluence-downloader/output/Design/시스템 디자인/길드/[컨셉] 길드 디자인/content.md) — Project K의 길드 시스템 전체 컨셉을 정의하는 문서로, 길드의 목적, 방향성, 시스템 설계, 컨텐츠 구성을 포괄적으로 다룬다.
 - [[컨셉] 서버 탐험 보강 - 월드 공성전 시스템](packages/confluence-downloader/output/Design/시스템 디자인/PvP 컨텐츠/서버 이동 컨텐츠/[컨셉] 서버 탐험 보강 - 월드 공성전 시스템/content.md) — 다수의 서버가 월드 단위로 매칭되어 단일 성의 소유권을 두고 경쟁하는 대규모 RvR 콘텐츠로, 용병 시스템과 세금 징수 권한을 통해 협동과 경쟁을 극대화하는 시스템을 정의한다.
 - [[컨셉] 캐릭터 거래/임대](packages/confluence-downloader/output/Design/시스템 디자인/캐릭터 거래_임대/[컨셉] 캐릭터 거래_임대/content.md) — Project K의 캐릭터/계정 거래 및 임대 시스템 도입 방향을 정의하는 컨셉 기획 문서. 레퍼런스 게임 3가지 분석을 통해 계정 단위 판매와 캐릭터 임대 시스템 병행 도입을 제안한다.
@@ -1279,7 +1279,7 @@
 - [바리울 결사대원_성인 남자](packages/confluence-downloader/output/Design/컨텐츠 디자인/Npc/퀘스트 NPC 리스트/바리울 결사대원_성인 남자/content.md) — 바리울 재건을 위해 조직된 비밀 결사대 대원으로, 서대륙에 침투하여 정보 수집 및 인원 규합을 수행하는 퀘스트 NPC의 외형, 역할, 배경을 정의한다.
 - [바리울 결사대원_성인 여자](packages/confluence-downloader/output/Design/컨텐츠 디자인/Npc/퀘스트 NPC 리스트/바리울 결사대원_성인 여자/content.md) — 바리울 재건을 위해 조직된 비밀 결사대의 성인 여자 대원으로, 서대륙에 침투하여 정보 수집 및 인원 규합을 수행하는 퀘스트 NPC의 스펙 정의.
 - [바리울 결사대원_의무병](packages/confluence-downloader/output/Design/컨텐츠 디자인/Npc/퀘스트 NPC 리스트/바리울 결사대원_의무병/content.md) — 바리울 재건을 위해 조직된 비밀 결사대의 의무병 캐릭터로, 서대륙에 침투하여 정보 수집 및 동료 규합을 담당하는 퀘스트 NPC.
-- [바리울 시놉시스](/home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/시놉시스/바리울 시놉시스/content.md) — 바리울 멸망 18년 후 플레이어 캐릭터가 암룡 아비시의 조력을 받아 나라 재건을 위해 거인의 머리를 되찾고 서대륙의 일곱 왕을 처치하기로 계약하는 스토리 시놉시스.
+- [바리울 시놉시스](/home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/시놉시스/바리울 시놉시스/content.md) — 바리울 멸망 18년 후 플레이어가 암룡 아비시의 조력을 받아 나라 재건을 위해 거인의 머리를 되찾고 서대륙의 일곱 왕을 처치하는 스토리 라인을 정의한다.
 - [바리울 지역 제작 중 셀레탄 지역 밸런스 처리 방안 논의](packages/confluence-downloader/output/Design/시스템 디자인/성장 밸런스/바리울 지역 제작 중 셀레탄 지역 밸런스 처리 방안 논의/content.md) — 바리울 지역 개발 미완성 상황에서 셀레탄 지역의 레벨 구간 설정 및 밸런스 처리 방안을 논의하는 문서로, 두 가지 제안과 권장사항을 제시한다.
 - [바리울_젊은 남성](packages/confluence-downloader/output/Design/컨텐츠 디자인/Npc/퀘스트 NPC 리스트/바리울_젊은 남성/content.md) — Project K의 퀘스트 NPC로 등장하는 바리울 출신 젊은 남성 노동자의 캐릭터 정의 문서. 외형, 성격, 배경 설정을 명시한다.
 - [바리울_젊은 여성](packages/confluence-downloader/output/Design/컨텐츠 디자인/Npc/퀘스트 NPC 리스트/바리울_젊은 여성/content.md) — Project K의 바리울 출신 여성 NPC로, 서대륙의 하층민 노동자이며 퀘스트 제공 역할을 수행하는 캐릭터의 기본 정보 및 외형 설정을 정의한다.
@@ -1329,7 +1329,7 @@
 - [서대륙: 셀레탄Celetan](packages/confluence-downloader/output/Design/컨텐츠 디자인/월드/서대륙_ 셀레탄Celetan/content.md) — Project K의 서대륙 지역인 셀레탄의 지리, 구성, 동선, 국가 특징 및 랜드마크를 정의하는 월드 디자인 문서.
 - [서대륙: 소르브Sorv](packages/confluence-downloader/output/Design/컨텐츠 디자인/월드/서대륙_ 소르브Sorv/content.md) — Project K의 서대륙 지역인 소르브(Sorv)의 지리, 구성, 동선, 국가 특징을 정의하는 월드 디자인 문서.
 - [서대륙: 스켈라Skela](packages/confluence-downloader/output/Design/컨텐츠 디자인/월드/서대륙_ 스켈라Skela/content.md) — Project K의 서대륙에 위치한 스켈라 지역의 지리, 구성, 동선, 국가 특징을 정의하는 월드 디자인 문서.
-- [서대륙: 홀바르드Holbard](/home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 소르브Sorv/서대륙_ 홀바르드Holbard/content.md) — 힘의 논리로 지배되는 사막 국가 홀바르드의 자연 환경, 정치 체계, 경제 구조, 필드 구성 및 몬스터를 정의한 월드 디자인 문서.
+- [서대륙: 홀바르드Holbard](/home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 홀바르드Holbard/content.md) — Project K의 서대륙에 위치한 홀바르드 국가의 자연환경, 정치체제, 필드 구성, 주요 인물 및 몬스터를 정의하는 월드 디자인 문서.
 - [서대륙:레벨](packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/content.md) — Project K의 서대륙 지역에 속한 필드와 마을의 목록을 정의하는 레벨 구조 문서.
 - [서대륙_귀족 남성](packages/confluence-downloader/output/Design/컨텐츠 디자인/Npc/퀘스트 NPC 리스트/서대륙_귀족 남성/content.md) — 서대륙의 상류층 귀족 남성 NPC의 외형, 성격, 역할을 정의한 퀘스트 NPC 캐릭터 시트.
 - [서대륙_귀족 여성](packages/confluence-downloader/output/Design/컨텐츠 디자인/Npc/퀘스트 NPC 리스트/서대륙_귀족 여성/content.md) — 서대륙의 상류층 귀족 여성 NPC로, 노예 노동으로 부를 축적한 오만한 지배 계급의 특성을 가진 퀘스트 제공 캐릭터.
@@ -1355,7 +1355,7 @@
 - [성장요소1 시스템 컨셉](packages/confluence-downloader/output/Design/시스템 디자인/성장 컨텐츠/성장요소1 시스템 컨셉/content.md) — 데일리 플레이 루틴에서 기본 컨텐츠(필드사냥, 일일퀘스트, 레이드보스)를 통해 조금씩 꾸준히 성장하는 횡적 성장 시스템의 컨셉 제안 문서.
 - [성장의 증표 상인](packages/confluence-downloader/output/Design/컨텐츠 디자인/Npc/상인 NPC 리스트/성장의 증표 상인/content.md) — 스켈라 지역의 성장의 증표를 거래하는 NPC 상인 네타냐의 기본 정보, 외형, 성격, 애니메이션을 정의한 문서.
 - [성주 던전](packages/confluence-downloader/output/Design/컨텐츠 디자인/던전/던전 설정/성주 던전/content.md) — 라자루 대제가 건설한 훈련장 '영광의 홀'의 역사, 배경, 현재 역할을 정의하는 던전 설정 문서. 성주들의 무예 대회가 개최되는 장소의 스토리와 개요를 담고 있다.
-- [성향 시스템](packages/confluence-downloader/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md) — 사냥 및 PK 빈도에 따라 캐릭터의 성향을 구분하고, 성향에 따라 각종 효과와 패널티를 부여하는 시스템으로, 무분별한 PK를 억제하고 중립 유저의 플레이 환경을 보호하기 위해 설계됨.
+- [성향 시스템](/home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md) — 무분별한 PK를 억제하기 위해 사냥 및 PK 빈도에 따라 캐릭터에 성향을 부여하고, 성향에 따라 각종 효과와 패널티를 적용하는 시스템.
 - [세계관](packages/confluence-downloader/output/Design/컨텐츠 디자인/세계관/content.md) — (없음)
 - [세이프 영역 설정 규칙](packages/confluence-downloader/output/Design/시스템 디자인/UX UI 규칙/UX 규칙 문서/세이프 영역 설정 규칙/content.md) — 다양한 모바일 디바이스의 노치, 카메라, 홈 바 등 하드웨어 영역을 회피하면서 UI 요소를 안전하게 배치하기 위한 세이프존(Safe Area) 정의 및 앵커 적용 규칙.
 - [셀레탄](packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/셀레탄/content.md) — (없음)
@@ -1398,6 +1398,7 @@
 - [스킬 쿨타임 감소](packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/스킬 쿨타임 감소/content.md) — 특정 스킬의 남은 재사용 대기 시간을 지정된 시간만큼 감소시키는 보너스 효과의 정의 및 구현 규칙.
 - [스킬 테이블 관련 정보](packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 테이블 관련 정보/content.md) — (없음)
 - [스킬 회복량/사용량 표시](packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 시스템/스킬 회복량_사용량 표시/content.md) — 스킬 자동 사용에 따른 MP 회복량과 사용량을 15초 단위로 평균 계산하여 UI에 표시하는 기능을 정의한다.
+- [스킬/버프 UI 데이터 참조](/home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/[작성중] 스킬_버프 UIUX 개선/스킬_버프 UI 데이터 참조/content.md) — Project K의 스킬, 버프, 효과 시스템의 데이터 구조와 UI 표현 규칙을 정의하는 참조 문서로, CharacterSkillClass, BuffClass, EffectClass 세 가지 주요 클래스의 칼럼 정의 및 게임 내 표현 방식을 명시한다.
 - [스킬북 상인](packages/confluence-downloader/output/Design/컨텐츠 디자인/Npc/상인 NPC 리스트/스킬북 상인/content.md) — 플리데린 지역의 스킬북 상인 NPC 다니아의 기본 정보, 성격, 외형, 애니메이션을 정의한 문서.
 - [스킬북 시스템](packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 시스템/스킬북 시스템/content.md) — 스킬북 아이템을 획득하고 사용하여 클래스 기반의 스킬을 습득하는 시스템으로, 기존 변신 종속 구조에서 클래스 종속 구조로 변경되며 공용 패시브 스킬과 변신 전용 스킬을 추가한다.
 - [스탯 리스트](packages/confluence-downloader/output/Design/시스템 디자인/성장 밸런스/스탯 리스트/content.md) — Project K의 모든 플레이어 캐릭터 스탯을 정의하는 전체 리스트로, 공격, 방어, 상태이상, 회복, 획득 관련 스탯을 포함한다.
@@ -1587,7 +1588,7 @@
 - [콘텐츠별 밸런스 작업 목록](packages/confluence-downloader/output/Design/시스템 디자인/경제 밸런스/콘텐츠별 밸런스 작업 목록/content.md) — Project K의 모든 게임 콘텐츠별 경제 밸런스 작업 항목을 정의하고, 각 항목의 작업 상태(OBT 진행 여부)와 경제 영향도를 추적하는 마스터 체크리스트.
 - [퀘스트](packages/confluence-downloader/output/Design/컨텐츠 디자인/퀘스트/content.md) — (없음)
 - [퀘스트 NPC 리스트](packages/confluence-downloader/output/Design/컨텐츠 디자인/Npc/퀘스트 NPC 리스트/content.md) — (없음)
-- [퀘스트 구성 정책](packages/confluence-downloader/output/Design/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md) — Project K의 메인/서브/일간 퀘스트 제작 기준, 목표 구성, 맵별 배치 정책을 정의하는 문서.
+- [퀘스트 구성 정책](/home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md) — Project K의 메인/서브/일간 퀘스트 제작 기준, 목표 구성, 맵별 배치 개수를 정의하는 정책 문서.
 - [퀘스트 오브젝트](packages/confluence-downloader/output/Design/컨텐츠 디자인/퀘스트/퀘스트 오브젝트/content.md) — 게임 내 필드에 배치된 비인간형 고정형 사물로서 퀘스트 진행 조건과 연관되어 활성화되고 인터렉션 가능한 오브젝트의 정의, 상태 관리, 배치 방식, 테이블 구조를 정의한다.
 - [퀘스트 오브젝트 리스트](packages/confluence-downloader/output/Design/컨텐츠 디자인/오브젝트/퀘스트 오브젝트 리스트/content.md) — Project K 게임 내 퀘스트 진행에 사용되는 상호작용 가능한 오브젝트 80종의 메시 경로, 위치, 용도, 아트 스펙을 정의한 마스터 리스트.
 - [퀘스트 인스턴스 제작](packages/confluence-downloader/output/Design/제작 가이드/레벨 - 제작 가이드/퀘스트 인스턴스 제작/content.md) — 퀘스트 달성 시점에 인스턴스 입장/퇴장을 수행하고, 트리거 기반 몬스터 스폰을 제어하기 위한 엑셀 시트 및 에디터 작업 절차를 정의한다.
@@ -1652,10 +1653,10 @@
 - [필드:칼날 바람 절벽](packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/셀레탄/필드_칼날 바람 절벽/content.md) — 셀레탄 지역의 필드 맵 "칼날 바람 절벽"에 대한 레벨 디자인 문서로, 맵의 개요, 구조, 동선, 거점, 몬스터 배치를 정의한다.
 - [필드:포식자의 둥지](packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/로바르스/필드_포식자의 둥지/content.md) — 로바르스 지역의 300×300 크기 필드로, 우신 왕이 심판의 토템으로 사형을 선고받은 자들을 식인귀의 먹이로 던지는 감옥 지역을 정의한다.
 - [필드:풍요의 들판](packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/소르브/필드_풍요의 들판/content.md) — Project K의 서대륙 소르브 지역에 위치한 "풍요의 들판" 필드에 대한 레벨 디자인 기획 문서. 현재 상세 기획서는 미작성 상태.
-- [필드:해오름 언덕](packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/소르브/필드_해오름 언덕/content.md) — 소르브 첫 번째 지역인 해오름 언덕의 필드 레벨 설계 문서로, 지역의 개요, 레벨 구조, 동선, 거점 및 몬스터 배치를 정의한다.
+- [필드:해오름 언덕](/home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/소르브/필드_해오름 언덕/content.md) — 소르브 첫 번째 필드인 해오름 언덕의 지역 배경, 레벨 구조, 리전 구성, 몬스터 배치를 정의하는 필드 디자인 문서.
 - [필드:환청의 그늘](packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/셀레탄/필드_환청의 그늘/content.md) — 셀레탄 지역의 필드 "환청의 그늘"에 대한 레벨 디자인 문서로, 필드의 개요, 구조, 배치 정보를 정의한다.
 - [홀바르드](packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/홀바르드/content.md) — (없음)
-- [홀바르드 시놉시스](/home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/시놉시스/홀바르드 시놉시스/content.md) — Project K의 홀바르드 지역 메인 스토리 시놉시스로, 주인공이 바리울 결사대의 잔당을 규합하여 벨리안 왕가의 폭정을 타도하고 진정한 공주 레일라를 여왕으로 복위시키는 3막 구성의 서사를 정의한다.
+- [홀바르드 시놉시스](/home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/시놉시스/홀바르드 시놉시스/content.md) — Project K의 홀바르드 지역 메인 스토리 시놉시스로, 주인공이 바리울 결사대 잔당과 함께 벨리안 왕가의 폭정을 무너뜨리고 진정한 공주 레일라를 여왕으로 복위시키는 3막 구성의 서사.
 - [화살 연출 시스템](packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 시스템/화살 연출 시스템/content.md) — 화살 피격 시 화살대가 대상 바디의 소켓에 박히는 연출을 구현하기 위한 시스템으로, 스켈레탈 타입별 소켓 세팅과 적용 규칙을 정의한다.
 - [환경 설정 리스트 조사](packages/confluence-downloader/output/Design/시스템 디자인/기반 시스템/환경설정/환경 설정 리스트 조사/content.md) — Project K의 게임 환경설정 옵션을 레퍼런스 게임(뱀피르, 리니지W) 조사를 통해 정의한 전투, 편의, 환경, 알림 카테고리별 설정 항목 목록.
 - [환경 설정(전투/그래픽)](packages/confluence-downloader/output/Design/시스템 디자인/기반 시스템/환경설정/환경 설정(전투_그래픽)/content.md) — Project K의 전투, 그래픽, 사운드 등 게임 환경 설정 옵션을 정의하는 문서로, 모바일 포팅을 위해 그래픽 설정을 우선 구현하며 각 옵션의 분류, 우선순위, UI 규칙을 명시한다.

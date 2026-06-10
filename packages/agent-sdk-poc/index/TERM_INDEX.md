@@ -2,7 +2,7 @@
 
 각 요약 파일의 '핵심 용어' / '참조 시스템' 섹션을 역색인한 결과다. Agent가 특정 용어를 포함하는 시트/페이지를 빠르게 찾을 때 `Read`로 열어 훑거나, 대안으로 `Grep -i '용어' index/summaries/`를 쓸 수 있다.
 
-> 용어: 14,093개 · 참조 시스템: 1,409개
+> 용어: 14,114개 · 참조 시스템: 1,413개
 
 
 ## 핵심 용어
@@ -109,7 +109,7 @@
 - 진리의 상급기사_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_셀레탄_칼날바람절벽/진리의 상급기사_컨셉/_final/content.md
 - 컷신 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/컷신/content.md
 - 컷신 ← packages/confluence-downloader/output/컨텐츠 디자인/컷신/content.md
-- 퀘스트 구성 정책 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
+- 퀘스트 구성 정책 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
 - 퀘스트 구성 정책 ← packages/confluence-downloader/output/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
 - 필드:남부 해안가 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/셀레탄/필드_남부 해안가/content.md
 - 필드:배반자들의 소굴 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/셀레탄/필드_배반자들의 소굴/content.md
@@ -219,7 +219,7 @@
 - 캐릭터 로비 및 플레이 시작 설정 ← packages/confluence-downloader/output/컨텐츠 디자인/퀘스트/캐릭터 로비 및 플레이 시작 설정/content.md
 - 컷신 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/컷신/content.md
 - 컷신 ← packages/confluence-downloader/output/컨텐츠 디자인/컷신/content.md
-- 퀘스트 구성 정책 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
+- 퀘스트 구성 정책 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
 - 퀘스트 구성 정책 ← packages/confluence-downloader/output/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
 - 퀘스트맵및볼륨리스트 ← packages/xlsx-extractor/output/8_Contents/PK_퀘스트_메인퀘스트/퀘스트맵및볼륨리스트/_final/content.md
 - 폐허 식인귀 전사_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_오우거/폐허 식인귀 전사_컨셉/_final/content.md
@@ -330,7 +330,7 @@
 - 히스토리 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_블라이트/히스토리/_final/content.md
 - 히스토리 ← packages/xlsx-extractor/output/8_Contents/PK_변신_법사_시아(베이스)/히스토리/_final/content.md
 
-### 거점 (93)
+### 거점 (92)
 - [Beta1] 사냥터 개선 회의 자료 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Beta1 개선 항목/[Beta1] 사냥터 개선 회의/content.md
 - [Beta1] 사냥터 개선 회의 자료 ← packages/confluence-downloader/output/컨텐츠 디자인/Beta1 개선 항목/[Beta1] 사냥터 개선 회의 자료/content.md
 - 가시나무 숲 레벨 확장 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/스켈라/스켈라 필드 확장/가시나무 숲 레벨 확장/content.md
@@ -394,7 +394,6 @@
 - 필드:적막의 폐허 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/동대륙_레벨/필드_적막의 폐허/content.md
 - 필드:칼날 바람 절벽 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/셀레탄/필드_칼날 바람 절벽/content.md
 - 필드:풍요의 들판 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/소르브/필드_풍요의 들판/content.md
-- 필드:해오름 언덕 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/소르브/필드_해오름 언덕/content.md
 - 필드:환청의 그늘 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/셀레탄/필드_환청의 그늘/content.md
 - 필드_ 가시나무 숲 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_ 가시나무 숲/content.md
 - 필드_ 검은 물길 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_ 검은 물길/content.md
@@ -927,7 +926,7 @@
 - 차원 이동 관리인 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Npc/상인 NPC 리스트/차원 이동 관리인/content.md
 - 컷신 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/컷신/content.md
 - 컷신 ← packages/confluence-downloader/output/컨텐츠 디자인/컷신/content.md
-- 퀘스트 구성 정책 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
+- 퀘스트 구성 정책 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
 - 퀘스트 구성 정책 ← packages/confluence-downloader/output/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
 - 폐허 식인귀 전사_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_오우거/폐허 식인귀 전사_컨셉/_final/content.md
 - 필드: 가시나무 숲 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/스켈라/필드_ 가시나무 숲/content.md
@@ -1130,7 +1129,7 @@
 - 버프 강화 효과 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/버프 강화 효과/content.md
 - 버프 스택 조건 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/버프 스택 조건/content.md
 - 버프 스택 조건 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/버프 스택 조건/content.md
-- 성향 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
+- 성향 시스템 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
 - 스킬 쿨타임 감소 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/스킬 쿨타임 감소/content.md
 - 스킬 쿨타임 감소 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/스킬 쿨타임 감소/content.md
 - 스탯 비율 증감 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/스탯 비율 증감/content.md
@@ -1151,7 +1150,7 @@
 - 회피 무시 명중 효과 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/회피 무시 명중 효과/content.md
 - 회피 무시 명중 효과 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/회피 무시 명중 효과/content.md
 
-### 몬스터 배치 (65)
+### 몬스터 배치 (64)
 - (임시) 베타 일감 체크 ← packages/confluence-downloader/output/Design/일감 관리/(임시) 베타 일감 체크/content.md
 - (임시) 베타 일감 체크 ← packages/confluence-downloader/output/일감 관리/(임시) 베타 일감 체크/content.md
 - VS. 로드나인 ← packages/confluence-downloader/output/R&D 및 레퍼런스/VS. 로드나인/content.md
@@ -1192,7 +1191,6 @@
 - 필드:오염된 농장 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/셀레탄/필드_오염된 농장/content.md
 - 필드:적막의 폐허 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/동대륙_레벨/필드_적막의 폐허/content.md
 - 필드:칼날 바람 절벽 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/셀레탄/필드_칼날 바람 절벽/content.md
-- 필드:해오름 언덕 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/소르브/필드_해오름 언덕/content.md
 - 필드:환청의 그늘 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/셀레탄/필드_환청의 그늘/content.md
 - 필드_ 가시나무 숲 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_ 가시나무 숲/content.md
 - 필드_ 검은 물길 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_ 검은 물길/content.md
@@ -1264,7 +1262,7 @@
 - 창고 관리인 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Npc/상인 NPC 리스트/창고 관리인/content.md
 - 컷신 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/컷신/content.md
 - 컷신 ← packages/confluence-downloader/output/컨텐츠 디자인/컷신/content.md
-- 퀘스트 구성 정책 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
+- 퀘스트 구성 정책 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
 - 퀘스트 구성 정책 ← packages/confluence-downloader/output/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
 - 폐허 식인귀 전사_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_오우거/폐허 식인귀 전사_컨셉/_final/content.md
 - 필드:검푸른 밀림 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/로바르스/필드_검푸른 밀림/content.md
@@ -1273,7 +1271,7 @@
 - 필드:생명의 땅 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/로바르스/필드_생명의 땅/content.md
 - 필드:울부짖는 숲 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/로바르스/필드_울부짖는 숲/content.md
 - 필드:포식자의 둥지 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/로바르스/필드_포식자의 둥지/content.md
-- 필드:해오름 언덕 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/소르브/필드_해오름 언덕/content.md
+- 필드:해오름 언덕 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/소르브/필드_해오름 언덕/content.md
 - 필드_검푸른 밀림 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_검푸른 밀림/content.md
 - 필드_금빛 열매 자생지 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_금빛 열매 자생지/content.md
 - 필드_비밀 발굴지 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_비밀 발굴지/content.md
@@ -1474,6 +1472,65 @@
 - 회피 무시 명중 효과 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/회피 무시 명중 효과/content.md
 - 히스토리 ← packages/xlsx-extractor/output/8_Contents/PK_스킬 및 버프 아이콘_요청서/히스토리/_final/content.md
 
+### 리전 (57)
+- Cal_스폰 설정 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_배치 정책/Cal_스폰 설정/_final/content.md
+- IBT 레벨-경험치 밸런스 ← packages/confluence-downloader/output/Design/시스템 디자인/성장 밸런스/(NEW) IBT - 캐릭터 레벨&경험치/IBT 레벨-경험치 밸런스/content.md
+- [Beta4] 2차 필드 레벨 개편안 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/월드 개편안/[Beta4] 2차 필드 레벨 개편안/content.md
+- 가시나무 숲 레벨 확장 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/스켈라/스켈라 필드 확장/가시나무 숲 레벨 확장/content.md
+- 개요 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_셀레탄_숭배의 언덕/개요/_final/content.md
+- 검은 물길 레벨 확장 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/스켈라/스켈라 필드 확장/검은 물길 레벨 확장/content.md
+- 돌림병 발원지 레벨 확장 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/스켈라/스켈라 필드 확장/돌림병 발원지 레벨 확장/content.md
+- 마을:기원의 곶 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/동대륙_레벨/마을_기원의 곶/content.md
+- 마을_기원의 곶 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/동대륙_레벨/마을_기원의 곶/content.md
+- 몬스터 배치 정책 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/배치 정책/몬스터 배치 정책/content.md
+- 몬스터 배치 정책 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/배치 정책/몬스터 배치 정책/content.md
+- 몬스터 배치 정책 개요 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_배치 정책/몬스터 배치 정책 개요/_final/content.md
+- 물이 할퀸 땅 레벨 확장 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/스켈라/스켈라 필드 확장/물이 할퀸 땅 레벨 확장/content.md
+- 사냥터_가시나무숲_레벨확장 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_스켈라_가시나무숲/사냥터_가시나무숲_레벨확장/_final/content.md
+- 사냥터_검은 물길_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_스켈라_검은 물길/사냥터_검은 물길_레벨/_final/content.md
+- 사냥터_검은 물길_레벨 확장 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_스켈라_검은 물길/사냥터_검은 물길_레벨 확장/_final/content.md
+- 사냥터_검은 물길_몬스터배치 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_스켈라_검은 물길/사냥터_검은 물길_몬스터배치/_final/content.md
+- 사냥터_검푸른밀림_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_로바르스_검푸른밀림/사냥터_검푸른밀림_레벨/_final/content.md
+- 사냥터_그림자무덤가_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_바리울_그림자무덤가/사냥터_그림자무덤가_레벨/_final/content.md
+- 사냥터_금빛열매자생지_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_로바르스_금빛열매자생지/사냥터_금빛열매자생지_레벨/_final/content.md
+- 사냥터_금빛열매자생지_몬스터배치 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_로바르스_금빛열매자생지/사냥터_금빛열매자생지_몬스터배치/_final/content.md
+- 사냥터_돌림병발원지_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_스켈라_돌림병발원지/사냥터_돌림병발원지_레벨/_final/content.md
+- 사냥터_돌림병발원지_레벨확장 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_스켈라_돌림병발원지/사냥터_돌림병발원지_레벨확장/_final/content.md
+- 사냥터_몰락의 협곡_몬스터배치 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_소르브_몰락의 협곡/사냥터_몰락의 협곡_몬스터배치/_final/content.md
+- 사냥터_물이할퀸땅_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_스켈라_물이할퀸땅/사냥터_물이할퀸땅_레벨/_final/content.md
+- 사냥터_물이할퀸땅_레벨 확장 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_스켈라_물이할퀸땅/사냥터_물이할퀸땅_레벨 확장/_final/content.md
+- 사냥터_비밀발굴지_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_로바르스_비밀 발굴지/사냥터_비밀발굴지_레벨/_final/content.md
+- 사냥터_비밀발굴지_몬스터배치 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_로바르스_비밀 발굴지/사냥터_비밀발굴지_몬스터배치/_final/content.md
+- 사냥터_사그라진성터_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_바리울_사그라진성터/사냥터_사그라진성터_레벨/_final/content.md
+- 사냥터_생명의땅_몬스터배치 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_로바르스_생명의 땅/사냥터_생명의땅_몬스터배치/_final/content.md
+- 사냥터_안개의경계_레벨확장 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_스켈라_안개의 경계/사냥터_안개의경계_레벨확장/_final/content.md
+- 사냥터_안개의경계_몬스터배치 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_스켈라_안개의 경계/사냥터_안개의경계_몬스터배치/_final/content.md
+- 사냥터_울부짖는숲_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_로바르스_울부짖는숲/사냥터_울부짖는숲_레벨/_final/content.md
+- 사냥터_적막의폐허_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_바리울_적막의폐허/사냥터_적막의폐허_레벨/_final/content.md
+- 사냥터_죽음의은신처_레벨확장 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_스켈라_죽음의 은신처/사냥터_죽음의은신처_레벨확장/_final/content.md
+- 사냥터_죽음의은신처_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_스켈라_죽음의 은신처/사냥터_죽음의은신처_컨셉/_final/content.md
+- 사냥터_포식자의둥지_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_로바르스_포식자의둥지/사냥터_포식자의둥지_레벨/_final/content.md
+- 사냥터_포식자의둥지_몬스터배치 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_로바르스_포식자의둥지/사냥터_포식자의둥지_몬스터배치/_final/content.md
+- 사냥터_해오름언덕_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_소르브_해오름언덕/사냥터_해오름언덕_레벨/_final/content.md
+- 사냥터_해오름언덕_몬스터배치 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_소르브_해오름언덕/사냥터_해오름언덕_몬스터배치/_final/content.md
+- 안개의 경계 레벨 확장 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/스켈라/스켈라 필드 확장/안개의 경계 레벨 확장/content.md
+- 인트로던전A_성터해안가_레벨(제작보류) ← packages/xlsx-extractor/output/8_Contents/PK_레벨_던전_인트로/인트로던전A_성터해안가_레벨(제작보류)/_final/content.md
+- 인트로던전B_바리울내성_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_던전_인트로/인트로던전B_바리울내성_레벨/_final/content.md
+- 죽음의 은신처 레벨 확장 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/스켈라/스켈라 필드 확장/죽음의 은신처 레벨 확장/content.md
+- 퀘스트 구성 정책 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
+- 퀘스트 구성 정책 ← packages/confluence-downloader/output/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
+- 필드: 돌림병 발원지 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/스켈라/필드_ 돌림병 발원지/content.md
+- 필드: 안개의 경계 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/스켈라/필드_ 안개의 경계/content.md
+- 필드: 죽음의 은신처 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/스켈라/필드_ 죽음의 은신처/content.md
+- 필드:검푸른 밀림 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/로바르스/필드_검푸른 밀림/content.md
+- 필드:금빛 열매 자생지 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/로바르스/필드_금빛 열매 자생지/content.md
+- 필드:비밀 발굴지 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/로바르스/필드_비밀 발굴지/content.md
+- 필드:생명의 땅 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/로바르스/필드_생명의 땅/content.md
+- 필드:해오름 언덕 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/소르브/필드_해오름 언덕/content.md
+- 필드_ 돌림병 발원지 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_ 돌림병 발원지/content.md
+- 필드_ 안개의 경계 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_ 안개의 경계/content.md
+- 필드_ 죽음의 은신처 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_ 죽음의 은신처/content.md
+
 ### 쿨타임 (57)
 - Data Set ← packages/xlsx-extractor/output/7_System/PK_스킬 표준 데이터/Data Set/_final/content.md
 - Multiplier & Cooltime ← packages/xlsx-extractor/output/7_System/PK_스킬 표준 데이터/Multiplier & Cooltime/_final/content.md
@@ -1533,64 +1590,6 @@
 - 플래시골렘(네임드)_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_미분류네임드/플래시골렘(네임드)_전투/_final/content.md
 - 히스토리 ← packages/xlsx-extractor/output/8_Contents/PK_변신_만야/히스토리/_final/content.md
 
-### 리전 (56)
-- Cal_스폰 설정 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_배치 정책/Cal_스폰 설정/_final/content.md
-- IBT 레벨-경험치 밸런스 ← packages/confluence-downloader/output/Design/시스템 디자인/성장 밸런스/(NEW) IBT - 캐릭터 레벨&경험치/IBT 레벨-경험치 밸런스/content.md
-- [Beta4] 2차 필드 레벨 개편안 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/월드 개편안/[Beta4] 2차 필드 레벨 개편안/content.md
-- 가시나무 숲 레벨 확장 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/스켈라/스켈라 필드 확장/가시나무 숲 레벨 확장/content.md
-- 개요 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_셀레탄_숭배의 언덕/개요/_final/content.md
-- 검은 물길 레벨 확장 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/스켈라/스켈라 필드 확장/검은 물길 레벨 확장/content.md
-- 돌림병 발원지 레벨 확장 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/스켈라/스켈라 필드 확장/돌림병 발원지 레벨 확장/content.md
-- 마을:기원의 곶 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/동대륙_레벨/마을_기원의 곶/content.md
-- 마을_기원의 곶 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/동대륙_레벨/마을_기원의 곶/content.md
-- 몬스터 배치 정책 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/배치 정책/몬스터 배치 정책/content.md
-- 몬스터 배치 정책 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/배치 정책/몬스터 배치 정책/content.md
-- 몬스터 배치 정책 개요 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_배치 정책/몬스터 배치 정책 개요/_final/content.md
-- 물이 할퀸 땅 레벨 확장 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/스켈라/스켈라 필드 확장/물이 할퀸 땅 레벨 확장/content.md
-- 사냥터_가시나무숲_레벨확장 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_스켈라_가시나무숲/사냥터_가시나무숲_레벨확장/_final/content.md
-- 사냥터_검은 물길_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_스켈라_검은 물길/사냥터_검은 물길_레벨/_final/content.md
-- 사냥터_검은 물길_레벨 확장 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_스켈라_검은 물길/사냥터_검은 물길_레벨 확장/_final/content.md
-- 사냥터_검은 물길_몬스터배치 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_스켈라_검은 물길/사냥터_검은 물길_몬스터배치/_final/content.md
-- 사냥터_검푸른밀림_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_로바르스_검푸른밀림/사냥터_검푸른밀림_레벨/_final/content.md
-- 사냥터_그림자무덤가_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_바리울_그림자무덤가/사냥터_그림자무덤가_레벨/_final/content.md
-- 사냥터_금빛열매자생지_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_로바르스_금빛열매자생지/사냥터_금빛열매자생지_레벨/_final/content.md
-- 사냥터_금빛열매자생지_몬스터배치 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_로바르스_금빛열매자생지/사냥터_금빛열매자생지_몬스터배치/_final/content.md
-- 사냥터_돌림병발원지_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_스켈라_돌림병발원지/사냥터_돌림병발원지_레벨/_final/content.md
-- 사냥터_돌림병발원지_레벨확장 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_스켈라_돌림병발원지/사냥터_돌림병발원지_레벨확장/_final/content.md
-- 사냥터_몰락의 협곡_몬스터배치 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_소르브_몰락의 협곡/사냥터_몰락의 협곡_몬스터배치/_final/content.md
-- 사냥터_물이할퀸땅_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_스켈라_물이할퀸땅/사냥터_물이할퀸땅_레벨/_final/content.md
-- 사냥터_물이할퀸땅_레벨 확장 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_스켈라_물이할퀸땅/사냥터_물이할퀸땅_레벨 확장/_final/content.md
-- 사냥터_비밀발굴지_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_로바르스_비밀 발굴지/사냥터_비밀발굴지_레벨/_final/content.md
-- 사냥터_비밀발굴지_몬스터배치 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_로바르스_비밀 발굴지/사냥터_비밀발굴지_몬스터배치/_final/content.md
-- 사냥터_사그라진성터_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_바리울_사그라진성터/사냥터_사그라진성터_레벨/_final/content.md
-- 사냥터_생명의땅_몬스터배치 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_로바르스_생명의 땅/사냥터_생명의땅_몬스터배치/_final/content.md
-- 사냥터_안개의경계_레벨확장 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_스켈라_안개의 경계/사냥터_안개의경계_레벨확장/_final/content.md
-- 사냥터_안개의경계_몬스터배치 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_스켈라_안개의 경계/사냥터_안개의경계_몬스터배치/_final/content.md
-- 사냥터_울부짖는숲_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_로바르스_울부짖는숲/사냥터_울부짖는숲_레벨/_final/content.md
-- 사냥터_적막의폐허_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_바리울_적막의폐허/사냥터_적막의폐허_레벨/_final/content.md
-- 사냥터_죽음의은신처_레벨확장 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_스켈라_죽음의 은신처/사냥터_죽음의은신처_레벨확장/_final/content.md
-- 사냥터_죽음의은신처_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_스켈라_죽음의 은신처/사냥터_죽음의은신처_컨셉/_final/content.md
-- 사냥터_포식자의둥지_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_로바르스_포식자의둥지/사냥터_포식자의둥지_레벨/_final/content.md
-- 사냥터_포식자의둥지_몬스터배치 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_로바르스_포식자의둥지/사냥터_포식자의둥지_몬스터배치/_final/content.md
-- 사냥터_해오름언덕_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_소르브_해오름언덕/사냥터_해오름언덕_레벨/_final/content.md
-- 사냥터_해오름언덕_몬스터배치 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_소르브_해오름언덕/사냥터_해오름언덕_몬스터배치/_final/content.md
-- 안개의 경계 레벨 확장 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/스켈라/스켈라 필드 확장/안개의 경계 레벨 확장/content.md
-- 인트로던전A_성터해안가_레벨(제작보류) ← packages/xlsx-extractor/output/8_Contents/PK_레벨_던전_인트로/인트로던전A_성터해안가_레벨(제작보류)/_final/content.md
-- 인트로던전B_바리울내성_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_던전_인트로/인트로던전B_바리울내성_레벨/_final/content.md
-- 죽음의 은신처 레벨 확장 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/스켈라/스켈라 필드 확장/죽음의 은신처 레벨 확장/content.md
-- 퀘스트 구성 정책 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
-- 퀘스트 구성 정책 ← packages/confluence-downloader/output/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
-- 필드: 돌림병 발원지 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/스켈라/필드_ 돌림병 발원지/content.md
-- 필드: 안개의 경계 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/스켈라/필드_ 안개의 경계/content.md
-- 필드: 죽음의 은신처 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/스켈라/필드_ 죽음의 은신처/content.md
-- 필드:검푸른 밀림 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/로바르스/필드_검푸른 밀림/content.md
-- 필드:금빛 열매 자생지 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/로바르스/필드_금빛 열매 자생지/content.md
-- 필드:비밀 발굴지 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/로바르스/필드_비밀 발굴지/content.md
-- 필드:생명의 땅 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/로바르스/필드_생명의 땅/content.md
-- 필드_ 돌림병 발원지 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_ 돌림병 발원지/content.md
-- 필드_ 안개의 경계 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_ 안개의 경계/content.md
-- 필드_ 죽음의 은신처 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_ 죽음의 은신처/content.md
-
 ### 실린더 크기 (56)
 - 골렘_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_골렘/골렘_전투/_final/content.md
 - 기사단의 개_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_셀레탄_칼날바람절벽/기사단의 개_전투/_final/content.md
@@ -1649,62 +1648,6 @@
 - 폐허의 차사 파수꾼_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_그림리퍼/폐허의 차사 파수꾼_전투/_final/content.md
 - 히스토리 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_셀레탄_오염된농장/히스토리/_final/content.md
 
-### 동선 (54)
-- [Beta2] 1차 필드 레벨 개편안 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/월드 개편안/[Beta2] 1차 필드 레벨 개편안/content.md
-- [Beta2] 월드 레벨 개편안 ← packages/confluence-downloader/output/컨텐츠 디자인/Beta2 개선 항목/[Beta2] 월드 레벨 개편안/content.md
-- 가시나무 숲 레벨 확장 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/스켈라/스켈라 필드 확장/가시나무 숲 레벨 확장/content.md
-- 개요 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_던전_인터서버 던전_공허의 틈새/개요/_final/content.md
-- 개요 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_도시_로바르스_아르칸/개요/_final/content.md
-- 개요 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_로바르스_울부짖는숲/개요/_final/content.md
-- 개요 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_바리울_거인의숲/개요/_final/content.md
-- 개요 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_스켈라_물이할퀸땅/개요/_final/content.md
-- 마을:기원의 곶 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/동대륙_레벨/마을_기원의 곶/content.md
-- 마을_ 녹시온 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/마을_ 녹시온/content.md
-- 마을_기원의 곶 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/동대륙_레벨/마을_기원의 곶/content.md
-- 마을_아르칸 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/마을_아르칸/content.md
-- 사냥터_가시나무숲_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_스켈라_가시나무숲/사냥터_가시나무숲_레벨/_final/content.md
-- 사냥터_검은 물길_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_스켈라_검은 물길/사냥터_검은 물길_레벨/_final/content.md
-- 사냥터_검푸른밀림_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_로바르스_검푸른밀림/사냥터_검푸른밀림_레벨/_final/content.md
-- 사냥터_돌림병발원지_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_스켈라_돌림병발원지/사냥터_돌림병발원지_레벨/_final/content.md
-- 사냥터_배반자들의소굴_몬스터배치 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_셀레탄_배반자들의소굴/사냥터_배반자들의소굴_몬스터배치/_final/content.md
-- 사냥터_사그라진성터_지역 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_바리울_사그라진성터/사냥터_사그라진성터_지역/_final/content.md
-- 사냥터_안개의경계_레벨확장 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_스켈라_안개의 경계/사냥터_안개의경계_레벨확장/_final/content.md
-- 사냥터_오염된농장_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_셀레탄_오염된농장/사냥터_오염된농장_레벨/_final/content.md
-- 사냥터_죽음의은신처_레벨확장 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_스켈라_죽음의 은신처/사냥터_죽음의은신처_레벨확장/_final/content.md
-- 사냥터_환청의그늘_레벨개선 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_셀레탄_환청의그늘/사냥터_환청의그늘_레벨개선/_final/content.md
-- 서대륙_ 소르브Sorv ← packages/confluence-downloader/output/컨텐츠 디자인/월드/서대륙_ 소르브Sorv/content.md
-- 인트로던전B_바리울내성_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_던전_인트로/인트로던전B_바리울내성_레벨/_final/content.md
-- 필드: 죽음의 은신처 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/스켈라/필드_ 죽음의 은신처/content.md
-- 필드:그림자 무덤가 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/동대륙_레벨/필드_그림자 무덤가/content.md
-- 필드:남부 해안가 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/셀레탄/필드_남부 해안가/content.md
-- 필드:노을 평야 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/소르브/필드_노을 평야/content.md
-- 필드:배반자들의 소굴 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/셀레탄/필드_배반자들의 소굴/content.md
-- 필드:사그라진 성터 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/동대륙_레벨/필드_사그라진 성터/content.md
-- 필드:생명의 땅 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/로바르스/필드_생명의 땅/content.md
-- 필드:숭배의 언덕 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/셀레탄/필드_숭배의 언덕/content.md
-- 필드:오염된 농장 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/셀레탄/필드_오염된 농장/content.md
-- 필드:적막의 폐허 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/동대륙_레벨/필드_적막의 폐허/content.md
-- 필드:칼날 바람 절벽 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/셀레탄/필드_칼날 바람 절벽/content.md
-- 필드:풍요의 들판 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/소르브/필드_풍요의 들판/content.md
-- 필드:해오름 언덕 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/소르브/필드_해오름 언덕/content.md
-- 필드:환청의 그늘 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/셀레탄/필드_환청의 그늘/content.md
-- 필드_ 돌림병 발원지 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_ 돌림병 발원지/content.md
-- 필드_ 죽음의 은신처 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_ 죽음의 은신처/content.md
-- 필드_그림자 무덤가 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/동대륙_레벨/필드_그림자 무덤가/content.md
-- 필드_남부 해안가 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_남부 해안가/content.md
-- 필드_노을 평야 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_노을 평야/content.md
-- 필드_배반자들의 소굴 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_배반자들의 소굴/content.md
-- 필드_사그라진 성터 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/동대륙_레벨/필드_사그라진 성터/content.md
-- 필드_성난 폭풍의 평원 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_성난 폭풍의 평원/content.md
-- 필드_오염된 농장 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_오염된 농장/content.md
-- 필드_울부짖는 숲 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_울부짖는 숲/content.md
-- 필드_적막의 폐허 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/동대륙_레벨/필드_적막의 폐허/content.md
-- 필드_칼날 바람 절벽 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_칼날 바람 절벽/content.md
-- 필드_포식자의 둥지 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_포식자의 둥지/content.md
-- 필드_풍요의 들판 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_풍요의 들판/content.md
-- 필드_해오름 언덕 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_해오름 언덕/content.md
-- 필드_환청의 그늘 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_환청의 그늘/content.md
-
 ### 발동 액션 (54)
 - Legacy_발동 액션 ← packages/xlsx-extractor/output/8_Contents/PK_스킬 및 버프 아이콘_요청서/Legacy_발동 액션/_final/content.md
 - UI_변신_기본 ← packages/xlsx-extractor/output/PK_변신 및 스킬 시스템/UI_변신_기본/_final/content.md
@@ -1760,6 +1703,61 @@
 - 히스토리 ← packages/xlsx-extractor/output/8_Contents/PK_변신_만야/히스토리/_final/content.md
 - 히스토리 ← packages/xlsx-extractor/output/8_Contents/PK_스킬 및 버프 아이콘_요청서/히스토리/_final/content.md
 - 히스토리 ← packages/xlsx-extractor/output/PK_변신 및 스킬 시스템/히스토리/_final/content.md
+
+### 동선 (53)
+- [Beta2] 1차 필드 레벨 개편안 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/월드 개편안/[Beta2] 1차 필드 레벨 개편안/content.md
+- [Beta2] 월드 레벨 개편안 ← packages/confluence-downloader/output/컨텐츠 디자인/Beta2 개선 항목/[Beta2] 월드 레벨 개편안/content.md
+- 가시나무 숲 레벨 확장 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/스켈라/스켈라 필드 확장/가시나무 숲 레벨 확장/content.md
+- 개요 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_던전_인터서버 던전_공허의 틈새/개요/_final/content.md
+- 개요 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_도시_로바르스_아르칸/개요/_final/content.md
+- 개요 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_로바르스_울부짖는숲/개요/_final/content.md
+- 개요 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_바리울_거인의숲/개요/_final/content.md
+- 개요 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_스켈라_물이할퀸땅/개요/_final/content.md
+- 마을:기원의 곶 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/동대륙_레벨/마을_기원의 곶/content.md
+- 마을_ 녹시온 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/마을_ 녹시온/content.md
+- 마을_기원의 곶 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/동대륙_레벨/마을_기원의 곶/content.md
+- 마을_아르칸 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/마을_아르칸/content.md
+- 사냥터_가시나무숲_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_스켈라_가시나무숲/사냥터_가시나무숲_레벨/_final/content.md
+- 사냥터_검은 물길_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_스켈라_검은 물길/사냥터_검은 물길_레벨/_final/content.md
+- 사냥터_검푸른밀림_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_로바르스_검푸른밀림/사냥터_검푸른밀림_레벨/_final/content.md
+- 사냥터_돌림병발원지_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_스켈라_돌림병발원지/사냥터_돌림병발원지_레벨/_final/content.md
+- 사냥터_배반자들의소굴_몬스터배치 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_셀레탄_배반자들의소굴/사냥터_배반자들의소굴_몬스터배치/_final/content.md
+- 사냥터_사그라진성터_지역 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_바리울_사그라진성터/사냥터_사그라진성터_지역/_final/content.md
+- 사냥터_안개의경계_레벨확장 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_스켈라_안개의 경계/사냥터_안개의경계_레벨확장/_final/content.md
+- 사냥터_오염된농장_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_셀레탄_오염된농장/사냥터_오염된농장_레벨/_final/content.md
+- 사냥터_죽음의은신처_레벨확장 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_스켈라_죽음의 은신처/사냥터_죽음의은신처_레벨확장/_final/content.md
+- 사냥터_환청의그늘_레벨개선 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_셀레탄_환청의그늘/사냥터_환청의그늘_레벨개선/_final/content.md
+- 서대륙_ 소르브Sorv ← packages/confluence-downloader/output/컨텐츠 디자인/월드/서대륙_ 소르브Sorv/content.md
+- 인트로던전B_바리울내성_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_던전_인트로/인트로던전B_바리울내성_레벨/_final/content.md
+- 필드: 죽음의 은신처 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/스켈라/필드_ 죽음의 은신처/content.md
+- 필드:그림자 무덤가 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/동대륙_레벨/필드_그림자 무덤가/content.md
+- 필드:남부 해안가 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/셀레탄/필드_남부 해안가/content.md
+- 필드:노을 평야 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/소르브/필드_노을 평야/content.md
+- 필드:배반자들의 소굴 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/셀레탄/필드_배반자들의 소굴/content.md
+- 필드:사그라진 성터 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/동대륙_레벨/필드_사그라진 성터/content.md
+- 필드:생명의 땅 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/로바르스/필드_생명의 땅/content.md
+- 필드:숭배의 언덕 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/셀레탄/필드_숭배의 언덕/content.md
+- 필드:오염된 농장 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/셀레탄/필드_오염된 농장/content.md
+- 필드:적막의 폐허 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/동대륙_레벨/필드_적막의 폐허/content.md
+- 필드:칼날 바람 절벽 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/셀레탄/필드_칼날 바람 절벽/content.md
+- 필드:풍요의 들판 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/소르브/필드_풍요의 들판/content.md
+- 필드:환청의 그늘 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/셀레탄/필드_환청의 그늘/content.md
+- 필드_ 돌림병 발원지 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_ 돌림병 발원지/content.md
+- 필드_ 죽음의 은신처 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_ 죽음의 은신처/content.md
+- 필드_그림자 무덤가 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/동대륙_레벨/필드_그림자 무덤가/content.md
+- 필드_남부 해안가 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_남부 해안가/content.md
+- 필드_노을 평야 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_노을 평야/content.md
+- 필드_배반자들의 소굴 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_배반자들의 소굴/content.md
+- 필드_사그라진 성터 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/동대륙_레벨/필드_사그라진 성터/content.md
+- 필드_성난 폭풍의 평원 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_성난 폭풍의 평원/content.md
+- 필드_오염된 농장 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_오염된 농장/content.md
+- 필드_울부짖는 숲 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_울부짖는 숲/content.md
+- 필드_적막의 폐허 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/동대륙_레벨/필드_적막의 폐허/content.md
+- 필드_칼날 바람 절벽 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_칼날 바람 절벽/content.md
+- 필드_포식자의 둥지 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_포식자의 둥지/content.md
+- 필드_풍요의 들판 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_풍요의 들판/content.md
+- 필드_해오름 언덕 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_해오름 언덕/content.md
+- 필드_환청의 그늘 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_환청의 그늘/content.md
 
 ### 필드 보스 (53)
 - 26/05/29_시연 빌드 세팅 ← packages/confluence-downloader/output/Design/운영/26_05_29_시연 빌드 세팅/content.md
@@ -1923,6 +1921,58 @@
 - 폐허의 차사 파수꾼_아트 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_그림리퍼/폐허의 차사 파수꾼_아트/_final/content.md
 - 플래시골렘(네임드)_아트 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_미분류네임드/플래시골렘(네임드)_아트/_final/content.md
 
+### 정령 (50)
+- (가칭) 무한의 탑 - 정령 주차장 컨셉 ← packages/confluence-downloader/output/시스템 디자인/던전/(가칭) 무한의 탑 - 정령 주차장 컨셉/content.md
+- (참고)몬스터속성 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_골렘/(참고)몬스터속성/_final/content.md
+- (참고)몬스터속성 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_그림리퍼/(참고)몬스터속성/_final/content.md
+- (참고)몬스터속성 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_미분류네임드/(참고)몬스터속성/_final/content.md
+- (참고)몬스터속성 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_뱀파이어/(참고)몬스터속성/_final/content.md
+- (참고)몬스터속성 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_블레스네임드/(참고)몬스터속성/_final/content.md
+- (참고)몬스터속성 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_셀레탄_오스트하펜 남부 해안가/(참고)몬스터속성/_final/content.md
+- (참고)몬스터속성 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_셀레탄_오염된농장/(참고)몬스터속성/_final/content.md
+- (참고)몬스터속성 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_셀레탄_칼날바람절벽/(참고)몬스터속성/_final/content.md
+- (참고)몬스터속성 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_스켈레톤/(참고)몬스터속성/_final/content.md
+- (참고)몬스터속성 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_악령/(참고)몬스터속성/_final/content.md
+- (참고)몬스터속성 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_오우거/(참고)몬스터속성/_final/content.md
+- (참고)몬스터속성 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_왕/(참고)몬스터속성/_final/content.md
+- (참고)몬스터속성 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_요괴/(참고)몬스터속성/_final/content.md
+- (참고)몬스터속성 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_인간병사/(참고)몬스터속성/_final/content.md
+- Beta3_변신 등급별 FX ← packages/confluence-downloader/output/Design/R&D 및 레퍼런스/변신 관련/Beta3_변신 등급별 FX/content.md
+- Beta3_변신 등급별 FX ← packages/confluence-downloader/output/R&D 및 레퍼런스/변신 관련/Beta3_변신 등급별 FX/content.md
+- IBT 변신, 변신 수집 포인트, 정령 스탯 밸런스 ← packages/confluence-downloader/output/Design/시스템 디자인/성장 밸런스/IBT 변신, 변신 수집 포인트, 정령 스탯 밸런스/content.md
+- IBT(Beta03) 정령 타입 / 등급 별 외형 정보 ← packages/confluence-downloader/output/Design/시스템 디자인/정령 (기존 _펫_)/정령&도깨비 아트 리소스 정보/IBT(Beta03) 정령 타입 _ 등급 별 외형 정보/content.md
+- [Beta3] 연출 컷신 제작 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/컷신/[Beta3] 연출 컷신 제작/content.md
+- [IBT] 5/22 버그 리스트 ← packages/confluence-downloader/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 5_22 버그 리스트/content.md
+- [작성예정] 변신/정령 UIUX 개선 ← packages/confluence-downloader/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/[작성예정] 변신_정령 UIUX 개선/content.md
+- [컨셉] 캐릭터 거래/임대 ← packages/confluence-downloader/output/Design/시스템 디자인/캐릭터 거래_임대/[컨셉] 캐릭터 거래_임대/content.md
+- 레드닷 시스템 UIUX 정리/개선 ← packages/confluence-downloader/output/Design/시스템 디자인/기반 시스템/레드닷 시스템/레드닷 시스템 UIUX 정리_개선/content.md
+- 무한 던전 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/던전/던전 설정/무한 던전/content.md
+- 무한 던전 ← packages/confluence-downloader/output/컨텐츠 디자인/세계관/던전 리스트/무한 던전/content.md
+- 무한의탑_컨셉 및 레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_던전_정령의 탑/무한의탑_컨셉 및 레벨/_final/content.md
+- 업적 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/보상 시스템/업적 시스템/content.md
+- 업적 시스템 ← packages/confluence-downloader/output/시스템 디자인/보상 시스템/업적 시스템/content.md
+- 정령 & 도깨비 검토 및 개선 ← packages/confluence-downloader/output/Design/시스템 디자인/정령 (기존 _펫_)/정령 & 도깨비 검토 및 개선/content.md
+- 정령 (기존 "펫") ← packages/confluence-downloader/output/Design/시스템 디자인/정령 (기존 _펫_)/content.md
+- 정령 기본 정보 ← packages/confluence-downloader/output/Design/시스템 디자인/정령 (기존 _펫_)/정령 기본 정보/content.md
+- 정령 기본 정보 ← packages/confluence-downloader/output/시스템 디자인/정령 (기존 _펫_)/정령 기본 정보/content.md
+- 정령 네이밍 리스트 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/정령/정령 네이밍 리스트/content.md
+- 정령 시스템_UI ← packages/confluence-downloader/output/Design/시스템 디자인/정령 (기존 _펫_)/정령 시스템_UI/content.md
+- 정령 시스템_UI ← packages/confluence-downloader/output/시스템 디자인/정령 (기존 _펫_)/정령 시스템_UI/content.md
+- 정령 시스템_합성 ← packages/confluence-downloader/output/Design/시스템 디자인/정령 (기존 _펫_)/정령 시스템_합성/content.md
+- 정령 시스템_합성 ← packages/confluence-downloader/output/시스템 디자인/정령 (기존 _펫_)/정령 시스템_합성/content.md
+- 정령&도깨비 시스템_기본 및 강화 ← packages/confluence-downloader/output/Design/시스템 디자인/정령 (기존 _펫_)/정령&도깨비 시스템_기본 및 강화/content.md
+- 정령&도깨비 시스템_기본 및 강화 ← packages/confluence-downloader/output/시스템 디자인/정령 (기존 _펫_)/정령&도깨비 시스템_기본 및 강화/content.md
+- 정령&도깨비 아트 리소스 정보 ← packages/confluence-downloader/output/Design/시스템 디자인/정령 (기존 _펫_)/정령&도깨비 아트 리소스 정보/content.md
+- 정령&도깨비 아트 리소스 정보 ← packages/confluence-downloader/output/시스템 디자인/정령 (기존 _펫_)/정령&도깨비 아트 리소스 정보/content.md
+- 주간 던전 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/던전/던전 설정/주간 던전/content.md
+- 주간 던전 ← packages/confluence-downloader/output/컨텐츠 디자인/세계관/던전 리스트/주간 던전/content.md
+- 컨텐츠 디자인 방향 ← packages/confluence-downloader/output/Design/시스템 디자인/디자인 방향/컨텐츠 디자인 방향/content.md
+- 컨텐츠 디자인 방향 ← packages/confluence-downloader/output/시스템 디자인/디자인 방향/컨텐츠 디자인 방향/content.md
+- 클래스 별 전설 등급 변신 외형 컨셉 자료 1차 ← /home/jacob/proj-k-data/confluence/output/Design/R&D 및 레퍼런스/변신 관련/변신 외형 디자인 자료/클래스 별 전설 등급 변신 외형 컨셉 자료 1차/content.md
+- 클래스 별 전설 등급 변신 외형 컨셉 자료 2차 ← /home/jacob/proj-k-data/confluence/output/Design/R&D 및 레퍼런스/변신 관련/변신 외형 디자인 자료/클래스 별 전설 등급 변신 외형 컨셉 자료 2차/content.md
+- 횡적 성장 방향 ← packages/confluence-downloader/output/Design/시스템 디자인/디자인 방향/횡적 성장 방향/content.md
+- 횡적 성장 방향 ← packages/confluence-downloader/output/시스템 디자인/디자인 방향/횡적 성장 방향/content.md
+
 ### 대기 (49)
 - 거대 식물(필드 보스) 아트 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_미분류네임드/거대 식물(필드 보스) 아트/_final/content.md
 - 기사단의 개_아트 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_셀레탄_칼날바람절벽/기사단의 개_아트/_final/content.md
@@ -2022,57 +2072,6 @@
 - 폐허 식인귀 포식자_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_오우거/폐허 식인귀 포식자_전투/_final/content.md
 - 폐허의 차사 파수꾼_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_그림리퍼/폐허의 차사 파수꾼_전투/_final/content.md
 - 히스토리 ← packages/xlsx-extractor/output/8_Contents/PK_변신_궁사_예하진/히스토리/_final/content.md
-
-### 정령 (49)
-- (가칭) 무한의 탑 - 정령 주차장 컨셉 ← packages/confluence-downloader/output/시스템 디자인/던전/(가칭) 무한의 탑 - 정령 주차장 컨셉/content.md
-- (참고)몬스터속성 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_골렘/(참고)몬스터속성/_final/content.md
-- (참고)몬스터속성 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_그림리퍼/(참고)몬스터속성/_final/content.md
-- (참고)몬스터속성 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_미분류네임드/(참고)몬스터속성/_final/content.md
-- (참고)몬스터속성 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_뱀파이어/(참고)몬스터속성/_final/content.md
-- (참고)몬스터속성 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_블레스네임드/(참고)몬스터속성/_final/content.md
-- (참고)몬스터속성 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_셀레탄_오스트하펜 남부 해안가/(참고)몬스터속성/_final/content.md
-- (참고)몬스터속성 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_셀레탄_오염된농장/(참고)몬스터속성/_final/content.md
-- (참고)몬스터속성 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_셀레탄_칼날바람절벽/(참고)몬스터속성/_final/content.md
-- (참고)몬스터속성 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_스켈레톤/(참고)몬스터속성/_final/content.md
-- (참고)몬스터속성 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_악령/(참고)몬스터속성/_final/content.md
-- (참고)몬스터속성 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_오우거/(참고)몬스터속성/_final/content.md
-- (참고)몬스터속성 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_왕/(참고)몬스터속성/_final/content.md
-- (참고)몬스터속성 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_요괴/(참고)몬스터속성/_final/content.md
-- (참고)몬스터속성 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_인간병사/(참고)몬스터속성/_final/content.md
-- Beta3_변신 등급별 FX ← packages/confluence-downloader/output/Design/R&D 및 레퍼런스/변신 관련/Beta3_변신 등급별 FX/content.md
-- Beta3_변신 등급별 FX ← packages/confluence-downloader/output/R&D 및 레퍼런스/변신 관련/Beta3_변신 등급별 FX/content.md
-- IBT 변신, 변신 수집 포인트, 정령 스탯 밸런스 ← packages/confluence-downloader/output/Design/시스템 디자인/성장 밸런스/IBT 변신, 변신 수집 포인트, 정령 스탯 밸런스/content.md
-- IBT(Beta03) 정령 타입 / 등급 별 외형 정보 ← packages/confluence-downloader/output/Design/시스템 디자인/정령 (기존 _펫_)/정령&도깨비 아트 리소스 정보/IBT(Beta03) 정령 타입 _ 등급 별 외형 정보/content.md
-- [Beta3] 연출 컷신 제작 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/컷신/[Beta3] 연출 컷신 제작/content.md
-- [IBT] 5/22 버그 리스트 ← packages/confluence-downloader/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 5_22 버그 리스트/content.md
-- [작성예정] 변신/정령 UIUX 개선 ← packages/confluence-downloader/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/[작성예정] 변신_정령 UIUX 개선/content.md
-- [컨셉] 캐릭터 거래/임대 ← packages/confluence-downloader/output/Design/시스템 디자인/캐릭터 거래_임대/[컨셉] 캐릭터 거래_임대/content.md
-- 레드닷 시스템 UIUX 정리/개선 ← packages/confluence-downloader/output/Design/시스템 디자인/기반 시스템/레드닷 시스템/레드닷 시스템 UIUX 정리_개선/content.md
-- 무한 던전 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/던전/던전 설정/무한 던전/content.md
-- 무한 던전 ← packages/confluence-downloader/output/컨텐츠 디자인/세계관/던전 리스트/무한 던전/content.md
-- 무한의탑_컨셉 및 레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_던전_정령의 탑/무한의탑_컨셉 및 레벨/_final/content.md
-- 업적 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/보상 시스템/업적 시스템/content.md
-- 업적 시스템 ← packages/confluence-downloader/output/시스템 디자인/보상 시스템/업적 시스템/content.md
-- 정령 & 도깨비 검토 및 개선 ← packages/confluence-downloader/output/Design/시스템 디자인/정령 (기존 _펫_)/정령 & 도깨비 검토 및 개선/content.md
-- 정령 (기존 "펫") ← packages/confluence-downloader/output/Design/시스템 디자인/정령 (기존 _펫_)/content.md
-- 정령 기본 정보 ← packages/confluence-downloader/output/Design/시스템 디자인/정령 (기존 _펫_)/정령 기본 정보/content.md
-- 정령 기본 정보 ← packages/confluence-downloader/output/시스템 디자인/정령 (기존 _펫_)/정령 기본 정보/content.md
-- 정령 네이밍 리스트 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/정령/정령 네이밍 리스트/content.md
-- 정령 시스템_UI ← packages/confluence-downloader/output/Design/시스템 디자인/정령 (기존 _펫_)/정령 시스템_UI/content.md
-- 정령 시스템_UI ← packages/confluence-downloader/output/시스템 디자인/정령 (기존 _펫_)/정령 시스템_UI/content.md
-- 정령 시스템_합성 ← packages/confluence-downloader/output/Design/시스템 디자인/정령 (기존 _펫_)/정령 시스템_합성/content.md
-- 정령 시스템_합성 ← packages/confluence-downloader/output/시스템 디자인/정령 (기존 _펫_)/정령 시스템_합성/content.md
-- 정령&도깨비 시스템_기본 및 강화 ← packages/confluence-downloader/output/Design/시스템 디자인/정령 (기존 _펫_)/정령&도깨비 시스템_기본 및 강화/content.md
-- 정령&도깨비 시스템_기본 및 강화 ← packages/confluence-downloader/output/시스템 디자인/정령 (기존 _펫_)/정령&도깨비 시스템_기본 및 강화/content.md
-- 정령&도깨비 아트 리소스 정보 ← packages/confluence-downloader/output/Design/시스템 디자인/정령 (기존 _펫_)/정령&도깨비 아트 리소스 정보/content.md
-- 정령&도깨비 아트 리소스 정보 ← packages/confluence-downloader/output/시스템 디자인/정령 (기존 _펫_)/정령&도깨비 아트 리소스 정보/content.md
-- 주간 던전 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/던전/던전 설정/주간 던전/content.md
-- 주간 던전 ← packages/confluence-downloader/output/컨텐츠 디자인/세계관/던전 리스트/주간 던전/content.md
-- 컨텐츠 디자인 방향 ← packages/confluence-downloader/output/Design/시스템 디자인/디자인 방향/컨텐츠 디자인 방향/content.md
-- 컨텐츠 디자인 방향 ← packages/confluence-downloader/output/시스템 디자인/디자인 방향/컨텐츠 디자인 방향/content.md
-- 클래스 별 전설 등급 변신 외형 컨셉 자료 1차 ← /home/jacob/proj-k-data/confluence/output/Design/R&D 및 레퍼런스/변신 관련/변신 외형 디자인 자료/클래스 별 전설 등급 변신 외형 컨셉 자료 1차/content.md
-- 횡적 성장 방향 ← packages/confluence-downloader/output/Design/시스템 디자인/디자인 방향/횡적 성장 방향/content.md
-- 횡적 성장 방향 ← packages/confluence-downloader/output/시스템 디자인/디자인 방향/횡적 성장 방향/content.md
 
 ### 이펙트 (48)
 - [Beta2] 빌드 테스트 이슈 취합 ← packages/confluence-downloader/output/Design/일감 관리/[Beta2] 빌드 테스트 이슈 취합/content.md
@@ -2221,6 +2220,55 @@
 - 컷신 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/컷신/content.md
 - 컷신 ← packages/confluence-downloader/output/컨텐츠 디자인/컷신/content.md
 - 향후 기획 업무 ← packages/xlsx-extractor/output/7_System/PK_튜토리얼_IBT개선/향후 기획 업무/_final/content.md
+
+### 인벤토리 (47)
+- Common Widget ← packages/confluence-downloader/output/Design/시스템 디자인/UX UI 규칙/UX 규칙 문서/Common Widget/content.md
+- History_Ver0.3 ← packages/xlsx-extractor/output/7_System/PK_튜토리얼_IBT개선/History_Ver0.3/_final/content.md
+- IBT용 밸런스 특이사항 ← packages/confluence-downloader/output/Design/시스템 디자인/경제 밸런스/IBT 전용/IBT용 밸런스 특이사항/content.md
+- UXUI 개선 리스트 ← packages/confluence-downloader/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/UXUI 개선 리스트/content.md
+- [Beta1] 버그 / 개선 리스트 ← packages/confluence-downloader/output/Design/일감 관리/[Beta1] 버그 _ 개선 리스트/content.md
+- [Beta1] 버그 _ 개선 리스트 ← packages/confluence-downloader/output/일감 관리/[Beta1] 버그 _ 개선 리스트/content.md
+- [Beta2] 인트로 시스템 ← packages/confluence-downloader/output/컨텐츠 디자인/Beta2 개선 항목/[Beta2] 인트로 시스템/content.md
+- [Beta3] 튜토리얼 개선 사항 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Beta3 개선 항목/[Beta3] 튜토리얼 개선 사항/content.md
+- [IBT] 폴리싱 리스트 ← /home/jacob/proj-k-data/confluence/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
+- 등급 표시 규칙 ← packages/confluence-downloader/output/Design/시스템 디자인/UX UI 규칙/UX 규칙 문서/등급 표시 규칙/content.md
+- 등급 표시 규칙 ← packages/confluence-downloader/output/시스템 디자인/UX UI 규칙/UX 규칙 문서/등급 표시 규칙/content.md
+- 레드닷 시스템 UIUX 정리/개선 ← packages/confluence-downloader/output/Design/시스템 디자인/기반 시스템/레드닷 시스템/레드닷 시스템 UIUX 정리_개선/content.md
+- 레드닷 시스템 ← packages/confluence-downloader/output/시스템 디자인/기반 시스템/레드닷 시스템/content.md
+- 레드닷 시스템_인벤토리 ← packages/confluence-downloader/output/Design/시스템 디자인/기반 시스템/레드닷 시스템/레드닷 시스템_인벤토리/content.md
+- 레드닷 시스템_인벤토리 ← packages/confluence-downloader/output/시스템 디자인/기반 시스템/레드닷 시스템/레드닷 시스템_인벤토리/content.md
+- 레드닷-인벤토리 ← packages/confluence-downloader/output/Design/시스템 디자인/기반 시스템/레드닷 시스템/레드닷 시스템 UIUX 정리_개선/레드닷-인벤토리/content.md
+- 레드닷-컬렉션 ← packages/confluence-downloader/output/Design/시스템 디자인/기반 시스템/레드닷 시스템/레드닷 시스템 UIUX 정리_개선/레드닷-컬렉션/content.md
+- 리소스 테이블 - Npc - Storage ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Npc/리소스 테이블 - Npc - Storage/content.md
+- 버그 및 이슈 ← packages/confluence-downloader/output/Design/일감 관리/버그 및 이슈/content.md
+- 버그 및 이슈 ← packages/confluence-downloader/output/일감 관리/버그 및 이슈/content.md
+- 보상 공통 ← packages/confluence-downloader/output/Design/시스템 디자인/보상 시스템/보상 공통/content.md
+- 보상 공통 ← packages/confluence-downloader/output/시스템 디자인/보상 시스템/보상 공통/content.md
+- 성물(특수 장비) 시스템 ← packages/confluence-downloader/output/시스템 디자인/아이템/성물(특수 장비) 시스템/content.md
+- 순간 이동 주문서 시스템 ← packages/confluence-downloader/output/시스템 디자인/기반 시스템/이동 편의성/순간 이동 주문서 시스템/content.md
+- 시스템 사운드 요청 ← packages/xlsx-extractor/output/8_Contents/PK_사운드_발주리스트_알파2/시스템 사운드 요청/_final/content.md
+- 아이템 아이콘 정보 구조 ← packages/confluence-downloader/output/Design/시스템 디자인/아이템/아이템 아이콘 정보 구조/content.md
+- 아이템 아이콘 정보 구조 ← packages/confluence-downloader/output/시스템 디자인/아이템/아이템 아이콘 정보 구조/content.md
+- 아이템 아이콘 클릭&홀드 조작 ← packages/confluence-downloader/output/Design/시스템 디자인/아이템/아이템 아이콘 클릭&홀드 조작/content.md
+- 아이템 아이콘 클릭&홀드 조작 ← packages/confluence-downloader/output/시스템 디자인/아이템/아이템 아이콘 클릭&홀드 조작/content.md
+- 아이템 일괄 구매 ← packages/confluence-downloader/output/Design/시스템 디자인/아이템/아이템 일괄 구매/content.md
+- 아이템 자동 정렬 ← packages/confluence-downloader/output/Design/시스템 디자인/아이템/인벤토리/아이템 자동 정렬/content.md
+- 아이템 자동 정렬 ← packages/confluence-downloader/output/시스템 디자인/아이템/인벤토리/아이템 자동 정렬/content.md
+- 아이템 제작 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/제작/아이템 제작 시스템/content.md
+- 아이템 제작 시스템 ← packages/confluence-downloader/output/시스템 디자인/제작/아이템 제작 시스템/content.md
+- 아이템 툴팁 정보 ← packages/confluence-downloader/output/Design/시스템 디자인/아이템/아이템 툴팁 정보/content.md
+- 아이템 티어 기능 ← packages/confluence-downloader/output/Design/시스템 디자인/아이템/아이템 티어 기능/content.md
+- 아이템 티어 기능 ← packages/confluence-downloader/output/시스템 디자인/아이템/아이템 티어 기능/content.md
+- 오프라인 자동 사냥 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/기반 시스템/오프라인 자동 사냥 시스템/content.md
+- 오프라인 자동 사냥 시스템 ← packages/confluence-downloader/output/시스템 디자인/기반 시스템/오프라인 자동 사냥 시스템/content.md
+- 인벤토리 UIUX 개선 ← packages/confluence-downloader/output/Design/시스템 디자인/아이템/인벤토리/인벤토리 UIUX 개선/content.md
+- 자동 물약 사용 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/전투/자동 물약 사용 시스템/content.md
+- 자동 물약 사용 시스템 ← packages/confluence-downloader/output/시스템 디자인/전투/자동 물약 사용 시스템/content.md
+- 장비 강화_UI ← packages/confluence-downloader/output/시스템 디자인/아이템/아이템 강화/장비 강화 시스템/장비 강화_UI/content.md
+- 전환 UI FLOW 규칙 설정 ← packages/confluence-downloader/output/시스템 디자인/UX UI 규칙/UX 규칙 문서/전환 UI FLOW 규칙 설정/content.md
+- 점성술 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/성장 컨텐츠/점성술 시스템/content.md
+- 창고 자동 보관 ← packages/confluence-downloader/output/Design/시스템 디자인/아이템/창고 자동 보관/content.md
+- 컬렉션 UI ← packages/confluence-downloader/output/Design/시스템 디자인/컬렉션/컬렉션 UI/content.md
 
 ### 일반 몬스터 (47)
 - PK_몬스터_인간병사 / 히스토리 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_인간병사/히스토리/_final/content.md
@@ -2415,53 +2463,52 @@
 - 콘텐츠 별 재화 비중 ← packages/confluence-downloader/output/Design/시스템 디자인/경제 밸런스/콘텐츠 별 재화 비중/content.md
 - 히스토리 ← packages/xlsx-extractor/output/8_Contents/PK_아이템 및 기타 아이콘_요청서/히스토리/_final/content.md
 
-### 인벤토리 (46)
-- Common Widget ← packages/confluence-downloader/output/Design/시스템 디자인/UX UI 규칙/UX 규칙 문서/Common Widget/content.md
-- History_Ver0.3 ← packages/xlsx-extractor/output/7_System/PK_튜토리얼_IBT개선/History_Ver0.3/_final/content.md
-- IBT용 밸런스 특이사항 ← packages/confluence-downloader/output/Design/시스템 디자인/경제 밸런스/IBT 전용/IBT용 밸런스 특이사항/content.md
-- UXUI 개선 리스트 ← packages/confluence-downloader/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/UXUI 개선 리스트/content.md
-- [Beta1] 버그 / 개선 리스트 ← packages/confluence-downloader/output/Design/일감 관리/[Beta1] 버그 _ 개선 리스트/content.md
-- [Beta1] 버그 _ 개선 리스트 ← packages/confluence-downloader/output/일감 관리/[Beta1] 버그 _ 개선 리스트/content.md
-- [Beta2] 인트로 시스템 ← packages/confluence-downloader/output/컨텐츠 디자인/Beta2 개선 항목/[Beta2] 인트로 시스템/content.md
-- [Beta3] 튜토리얼 개선 사항 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Beta3 개선 항목/[Beta3] 튜토리얼 개선 사항/content.md
-- 등급 표시 규칙 ← packages/confluence-downloader/output/Design/시스템 디자인/UX UI 규칙/UX 규칙 문서/등급 표시 규칙/content.md
-- 등급 표시 규칙 ← packages/confluence-downloader/output/시스템 디자인/UX UI 규칙/UX 규칙 문서/등급 표시 규칙/content.md
-- 레드닷 시스템 UIUX 정리/개선 ← packages/confluence-downloader/output/Design/시스템 디자인/기반 시스템/레드닷 시스템/레드닷 시스템 UIUX 정리_개선/content.md
-- 레드닷 시스템 ← packages/confluence-downloader/output/시스템 디자인/기반 시스템/레드닷 시스템/content.md
-- 레드닷 시스템_인벤토리 ← packages/confluence-downloader/output/Design/시스템 디자인/기반 시스템/레드닷 시스템/레드닷 시스템_인벤토리/content.md
-- 레드닷 시스템_인벤토리 ← packages/confluence-downloader/output/시스템 디자인/기반 시스템/레드닷 시스템/레드닷 시스템_인벤토리/content.md
-- 레드닷-인벤토리 ← packages/confluence-downloader/output/Design/시스템 디자인/기반 시스템/레드닷 시스템/레드닷 시스템 UIUX 정리_개선/레드닷-인벤토리/content.md
-- 레드닷-컬렉션 ← packages/confluence-downloader/output/Design/시스템 디자인/기반 시스템/레드닷 시스템/레드닷 시스템 UIUX 정리_개선/레드닷-컬렉션/content.md
-- 리소스 테이블 - Npc - Storage ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Npc/리소스 테이블 - Npc - Storage/content.md
-- 버그 및 이슈 ← packages/confluence-downloader/output/Design/일감 관리/버그 및 이슈/content.md
-- 버그 및 이슈 ← packages/confluence-downloader/output/일감 관리/버그 및 이슈/content.md
-- 보상 공통 ← packages/confluence-downloader/output/Design/시스템 디자인/보상 시스템/보상 공통/content.md
-- 보상 공통 ← packages/confluence-downloader/output/시스템 디자인/보상 시스템/보상 공통/content.md
-- 성물(특수 장비) 시스템 ← packages/confluence-downloader/output/시스템 디자인/아이템/성물(특수 장비) 시스템/content.md
-- 순간 이동 주문서 시스템 ← packages/confluence-downloader/output/시스템 디자인/기반 시스템/이동 편의성/순간 이동 주문서 시스템/content.md
-- 시스템 사운드 요청 ← packages/xlsx-extractor/output/8_Contents/PK_사운드_발주리스트_알파2/시스템 사운드 요청/_final/content.md
-- 아이템 아이콘 정보 구조 ← packages/confluence-downloader/output/Design/시스템 디자인/아이템/아이템 아이콘 정보 구조/content.md
-- 아이템 아이콘 정보 구조 ← packages/confluence-downloader/output/시스템 디자인/아이템/아이템 아이콘 정보 구조/content.md
-- 아이템 아이콘 클릭&홀드 조작 ← packages/confluence-downloader/output/Design/시스템 디자인/아이템/아이템 아이콘 클릭&홀드 조작/content.md
-- 아이템 아이콘 클릭&홀드 조작 ← packages/confluence-downloader/output/시스템 디자인/아이템/아이템 아이콘 클릭&홀드 조작/content.md
-- 아이템 일괄 구매 ← packages/confluence-downloader/output/Design/시스템 디자인/아이템/아이템 일괄 구매/content.md
-- 아이템 자동 정렬 ← packages/confluence-downloader/output/Design/시스템 디자인/아이템/인벤토리/아이템 자동 정렬/content.md
-- 아이템 자동 정렬 ← packages/confluence-downloader/output/시스템 디자인/아이템/인벤토리/아이템 자동 정렬/content.md
-- 아이템 제작 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/제작/아이템 제작 시스템/content.md
-- 아이템 제작 시스템 ← packages/confluence-downloader/output/시스템 디자인/제작/아이템 제작 시스템/content.md
-- 아이템 툴팁 정보 ← packages/confluence-downloader/output/Design/시스템 디자인/아이템/아이템 툴팁 정보/content.md
-- 아이템 티어 기능 ← packages/confluence-downloader/output/Design/시스템 디자인/아이템/아이템 티어 기능/content.md
-- 아이템 티어 기능 ← packages/confluence-downloader/output/시스템 디자인/아이템/아이템 티어 기능/content.md
-- 오프라인 자동 사냥 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/기반 시스템/오프라인 자동 사냥 시스템/content.md
-- 오프라인 자동 사냥 시스템 ← packages/confluence-downloader/output/시스템 디자인/기반 시스템/오프라인 자동 사냥 시스템/content.md
-- 인벤토리 UIUX 개선 ← packages/confluence-downloader/output/Design/시스템 디자인/아이템/인벤토리/인벤토리 UIUX 개선/content.md
-- 자동 물약 사용 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/전투/자동 물약 사용 시스템/content.md
-- 자동 물약 사용 시스템 ← packages/confluence-downloader/output/시스템 디자인/전투/자동 물약 사용 시스템/content.md
-- 장비 강화_UI ← packages/confluence-downloader/output/시스템 디자인/아이템/아이템 강화/장비 강화 시스템/장비 강화_UI/content.md
-- 전환 UI FLOW 규칙 설정 ← packages/confluence-downloader/output/시스템 디자인/UX UI 규칙/UX 규칙 문서/전환 UI FLOW 규칙 설정/content.md
-- 점성술 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/성장 컨텐츠/점성술 시스템/content.md
-- 창고 자동 보관 ← packages/confluence-downloader/output/Design/시스템 디자인/아이템/창고 자동 보관/content.md
-- 컬렉션 UI ← packages/confluence-downloader/output/Design/시스템 디자인/컬렉션/컬렉션 UI/content.md
+### EffectClass (45)
+- [스킬] EffectCategoryEnum 설명서 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 테이블 관련 정보/[스킬] EffectCategoryEnum 설명서/content.md
+- [스킬] EffectCategoryEnum 설명서 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 테이블 관련 정보/[스킬] EffectCategoryEnum 설명서/content.md
+- 공용 FX 리스트 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 시스템/공용 FX 리스트/content.md
+- 공용 FX 리스트 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 시스템/공용 FX 리스트/content.md
+- 대상 상태에 따른 추가 효과 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/대상 상태에 따른 추가 효과/content.md
+- 대상 상태에 따른 추가 효과 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/대상 상태에 따른 추가 효과/content.md
+- 대상의 상태에 따른 조건부 효과 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/대상의 상태에 따른 조건부 효과/content.md
+- 대상의 상태에 따른 조건부 효과 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/대상의 상태에 따른 조건부 효과/content.md
+- 리소스 테이블 - Effect - Barrier-teleport ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Effect/리소스 테이블 - Effect - Barrier-teleport/content.md
+- 리소스 테이블 - Item ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Item/content.md
+- 무기 대미지를 최대로 적용 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/무기 대미지를 최대로 적용/content.md
+- 무기 대미지를 최대로 적용 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/무기 대미지를 최대로 적용/content.md
+- 버프 강화 효과 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/버프 강화 효과/content.md
+- 버프 강화 효과 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/버프 강화 효과/content.md
+- 버프 스택 비례 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/버프 스택 비례/content.md
+- 버프 스택 비례 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/버프 스택 비례/content.md
+- 버프 스택 증감 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/버프 스택 증감/content.md
+- 버프 스택 증감 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/버프 스택 증감/content.md
+- 버프 스택: 최대 스택 달성 시 발동 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/버프 스택_ 최대 스택 달성 시 발동/content.md
+- 버프 스택_ 최대 스택 달성 시 발동 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/버프 스택_ 최대 스택 달성 시 발동/content.md
+- 버프 제거 효과 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/Legacy/버프 제거 효과/content.md
+- 버프 제거 효과 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/Legacy/버프 제거 효과/content.md
+- 스킬 쿨타임 감소 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/스킬 쿨타임 감소/content.md
+- 스킬 쿨타임 감소 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/스킬 쿨타임 감소/content.md
+- 스킬/버프 UI 데이터 참조 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/[작성중] 스킬_버프 UIUX 개선/스킬_버프 UI 데이터 참조/content.md
+- 스탯 비례 보너스 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/스탯 비례 보너스/content.md
+- 스탯 비례 보너스 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/스탯 비례 보너스/content.md
+- 스탯 비율 증감 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/스탯 비율 증감/content.md
+- 스탯 비율 증감 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/스탯 비율 증감/content.md
+- 스탯 상승 효과 상한치 설정 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/스탯 상승 효과 상한치 설정/content.md
+- 스탯 상승 효과 상한치 설정 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/스탯 상승 효과 상한치 설정/content.md
+- 은신 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/은신 시스템/content.md
+- 은신 시스템 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/은신 시스템/content.md
+- 자폭 효과 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/자폭 효과/content.md
+- 자폭 효과 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/자폭 효과/content.md
+- 적 대상의 스탯 비례 보너스 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/적 대상의 스탯 비례 보너스/content.md
+- 적 대상의 스탯 비례 보너스 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/적 대상의 스탯 비례 보너스/content.md
+- 테이블 문법 ← packages/confluence-downloader/output/Design/제작 가이드/테이블 문법/content.md
+- 테이블 문법 ← packages/confluence-downloader/output/제작 가이드/테이블 문법/content.md
+- 텔레포트 불가 효과 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/텔레포트 불가 효과/content.md
+- 텔레포트 불가 효과 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/텔레포트 불가 효과/content.md
+- 패시브 스킬 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 시스템/패시브 스킬 시스템/content.md
+- 패시브 스킬 시스템 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 시스템/패시브 스킬 시스템/content.md
+- 회피 무시 명중 효과 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/회피 무시 명중 효과/content.md
+- 회피 무시 명중 효과 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/회피 무시 명중 효과/content.md
 
 ### 걷기 (45)
 - 거대 식물(필드 보스) 아트 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_미분류네임드/거대 식물(필드 보스) 아트/_final/content.md
@@ -2545,7 +2592,7 @@
 - 정령의 증표 상인 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Npc/상인 NPC 리스트/정령의 증표 상인/content.md
 - 컷신 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/컷신/content.md
 - 컷신 ← packages/confluence-downloader/output/컨텐츠 디자인/컷신/content.md
-- 퀘스트 구성 정책 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
+- 퀘스트 구성 정책 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
 - 퀘스트 구성 정책 ← packages/confluence-downloader/output/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
 - 폐허 식인귀 전사_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_오우거/폐허 식인귀 전사_컨셉/_final/content.md
 - 필드:노을 평야 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/소르브/필드_노을 평야/content.md
@@ -2553,55 +2600,9 @@
 - 필드:부서진 유적 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/소르브/필드_부서진 유적/content.md
 - 필드:성난 폭풍의 평원 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/소르브/필드_성난 폭풍의 평원/content.md
 - 필드:풍요의 들판 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/소르브/필드_풍요의 들판/content.md
-- 필드:해오름 언덕 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/소르브/필드_해오름 언덕/content.md
+- 필드:해오름 언덕 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/소르브/필드_해오름 언덕/content.md
 - 필드_몰락의 협곡 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_몰락의 협곡/content.md
 - 필드_해오름 언덕 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_해오름 언덕/content.md
-
-### EffectClass (44)
-- [스킬] EffectCategoryEnum 설명서 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 테이블 관련 정보/[스킬] EffectCategoryEnum 설명서/content.md
-- [스킬] EffectCategoryEnum 설명서 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 테이블 관련 정보/[스킬] EffectCategoryEnum 설명서/content.md
-- 공용 FX 리스트 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 시스템/공용 FX 리스트/content.md
-- 공용 FX 리스트 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 시스템/공용 FX 리스트/content.md
-- 대상 상태에 따른 추가 효과 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/대상 상태에 따른 추가 효과/content.md
-- 대상 상태에 따른 추가 효과 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/대상 상태에 따른 추가 효과/content.md
-- 대상의 상태에 따른 조건부 효과 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/대상의 상태에 따른 조건부 효과/content.md
-- 대상의 상태에 따른 조건부 효과 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/대상의 상태에 따른 조건부 효과/content.md
-- 리소스 테이블 - Effect - Barrier-teleport ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Effect/리소스 테이블 - Effect - Barrier-teleport/content.md
-- 리소스 테이블 - Item ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Item/content.md
-- 무기 대미지를 최대로 적용 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/무기 대미지를 최대로 적용/content.md
-- 무기 대미지를 최대로 적용 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/무기 대미지를 최대로 적용/content.md
-- 버프 강화 효과 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/버프 강화 효과/content.md
-- 버프 강화 효과 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/버프 강화 효과/content.md
-- 버프 스택 비례 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/버프 스택 비례/content.md
-- 버프 스택 비례 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/버프 스택 비례/content.md
-- 버프 스택 증감 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/버프 스택 증감/content.md
-- 버프 스택 증감 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/버프 스택 증감/content.md
-- 버프 스택: 최대 스택 달성 시 발동 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/버프 스택_ 최대 스택 달성 시 발동/content.md
-- 버프 스택_ 최대 스택 달성 시 발동 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/버프 스택_ 최대 스택 달성 시 발동/content.md
-- 버프 제거 효과 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/Legacy/버프 제거 효과/content.md
-- 버프 제거 효과 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/Legacy/버프 제거 효과/content.md
-- 스킬 쿨타임 감소 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/스킬 쿨타임 감소/content.md
-- 스킬 쿨타임 감소 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/스킬 쿨타임 감소/content.md
-- 스탯 비례 보너스 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/스탯 비례 보너스/content.md
-- 스탯 비례 보너스 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/스탯 비례 보너스/content.md
-- 스탯 비율 증감 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/스탯 비율 증감/content.md
-- 스탯 비율 증감 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/스탯 비율 증감/content.md
-- 스탯 상승 효과 상한치 설정 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/스탯 상승 효과 상한치 설정/content.md
-- 스탯 상승 효과 상한치 설정 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/스탯 상승 효과 상한치 설정/content.md
-- 은신 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/은신 시스템/content.md
-- 은신 시스템 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/은신 시스템/content.md
-- 자폭 효과 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/자폭 효과/content.md
-- 자폭 효과 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/자폭 효과/content.md
-- 적 대상의 스탯 비례 보너스 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/적 대상의 스탯 비례 보너스/content.md
-- 적 대상의 스탯 비례 보너스 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/적 대상의 스탯 비례 보너스/content.md
-- 테이블 문법 ← packages/confluence-downloader/output/Design/제작 가이드/테이블 문법/content.md
-- 테이블 문법 ← packages/confluence-downloader/output/제작 가이드/테이블 문법/content.md
-- 텔레포트 불가 효과 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/텔레포트 불가 효과/content.md
-- 텔레포트 불가 효과 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/텔레포트 불가 효과/content.md
-- 패시브 스킬 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 시스템/패시브 스킬 시스템/content.md
-- 패시브 스킬 시스템 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 시스템/패시브 스킬 시스템/content.md
-- 회피 무시 명중 효과 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/회피 무시 명중 효과/content.md
-- 회피 무시 명중 효과 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/회피 무시 명중 효과/content.md
 
 ### 거래소 (43)
 - 26/05/29_시연 빌드 세팅 ← packages/confluence-downloader/output/Design/운영/26_05_29_시연 빌드 세팅/content.md
@@ -2693,49 +2694,6 @@
 - 히스토리 ← packages/xlsx-extractor/output/8_Contents/PK_퀘스트_메인퀘스트/히스토리/_final/content.md
 - 히스토리 ← packages/xlsx-extractor/output/8_Contents/PK_퀘스트_서브퀘스트/히스토리/_final/content.md
 
-### 디버프 (42)
-- PC FX 연출 정책 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 시스템/PC FX 연출 정책/content.md
-- PC FX 연출 정책 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 시스템/PC FX 연출 정책/content.md
-- [네임드] 소르브 왕: 라그나르 기획 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/몬스터/[네임드] 소르브 왕_ 라그나르 기획/content.md
-- [작성중] 스킬/버프 UIUX 개선 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/[작성중] 스킬_버프 UIUX 개선/content.md
-- 개요 ← packages/xlsx-extractor/output/8_Contents/PK_변신_만야/개요/_final/content.md
-- 결투장(PvP 컨텐츠) 방향 (작성 예정) ← packages/confluence-downloader/output/Design/시스템 디자인/디자인 방향/작성 중 폴더/결투장(PvP 컨텐츠) 방향 (작성 예정)/content.md
-- 결투장(PvP 컨텐츠) 방향 (작성 예정) ← packages/confluence-downloader/output/시스템 디자인/디자인 방향/작성 중 폴더/결투장(PvP 컨텐츠) 방향 (작성 예정)/content.md
-- 공성전 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/PvP 컨텐츠/공성전/공성전 시스템/content.md
-- 기본 정보 ← packages/xlsx-extractor/output/8_Contents/PK_변신_법사_시아(베이스)/기본 정보/_final/content.md
-- 네임드 몬스터_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_블라이트/네임드 몬스터_전투/_final/content.md
-- 네임드 몬스터_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_요괴/네임드 몬스터_전투/_final/content.md
-- 대상 상태에 따른 추가 효과 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/대상 상태에 따른 추가 효과/content.md
-- 대상 상태에 따른 추가 효과 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/대상 상태에 따른 추가 효과/content.md
-- 데스로드_몬스터_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_블레스네임드/데스로드_몬스터_전투/_final/content.md
-- 래버넌트_몬스터_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_블레스네임드/래버넌트_몬스터_전투/_final/content.md
-- 로바르스 왕_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_왕/로바르스 왕_전투/_final/content.md
-- 버프 ← packages/xlsx-extractor/output/8_Contents/PK_스킬 및 버프 아이콘_요청서/버프/_final/content.md
-- 버프 스택 증감 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/버프 스택 증감/content.md
-- 버프 스택 증감 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/버프 스택 증감/content.md
-- 성향 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
-- 성향 시스템 ← packages/confluence-downloader/output/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
-- 세부 정보 ← packages/xlsx-extractor/output/8_Contents/PK_변신_궁사_렌(베이스)/세부 정보/_final/content.md
-- 세부 정보 ← packages/xlsx-extractor/output/8_Contents/PK_변신_궁사_예하진/세부 정보/_final/content.md
-- 세부 정보 ← packages/xlsx-extractor/output/8_Contents/PK_변신_만야/세부 정보/_final/content.md
-- 스킬 기본 정보 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 리스트/스킬 기본 정보/content.md
-- 스킬 기본 정보 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 리스트/스킬 기본 정보/content.md
-- 스킬 리스트 - 샤먼 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 리스트/스킬 리스트 - 샤먼/content.md
-- 스킬 리스트 - 샤먼 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 리스트/스킬 리스트 - 샤먼/content.md
-- 아트_UI 리스트 ← packages/xlsx-extractor/output/8_Contents/PK_변신_법사_빙룡의 신녀/아트_UI 리스트/_final/content.md
-- 아트_이펙트 리스트 ← packages/xlsx-extractor/output/8_Contents/PK_변신_검사_유리태A/아트_이펙트 리스트/_final/content.md
-- 아트_이펙트 리스트 ← packages/xlsx-extractor/output/8_Contents/PK_변신_궁사_예하진/아트_이펙트 리스트/_final/content.md
-- 클래스 디자인 - 가디언 ← packages/confluence-downloader/output/Design/시스템 디자인/클래스/클래스 디자인 - 가디언/content.md
-- 클래스 디자인 - 샤먼 ← packages/confluence-downloader/output/Design/시스템 디자인/클래스/클래스 디자인 - 샤먼/content.md
-- 클래스 디자인 - 샤먼 ← packages/confluence-downloader/output/시스템 디자인/클래스/클래스 디자인 - 샤먼/content.md
-- 클래스 스킬 연출 폴리싱 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 리스트/클래스 스킬 연출 폴리싱/content.md
-- 페리안느 여왕_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_왕/페리안느 여왕_전투/_final/content.md
-- 평타 치명타에 경직 효과 추가 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/평타 치명타에 경직 효과 추가/content.md
-- 평타 치명타에 경직 효과 추가 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/평타 치명타에 경직 효과 추가/content.md
-- 플래시골렘(네임드)_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_미분류네임드/플래시골렘(네임드)_전투/_final/content.md
-- 히드라(필드보스) 컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_미분류네임드/히드라(필드보스) 컨셉/_final/content.md
-- 히스토리 ← packages/xlsx-extractor/output/8_Contents/PK_스킬 및 버프 아이콘_요청서/히스토리/_final/content.md
-
 ### 보스 몬스터 (42)
 - MonsterClass ← packages/xlsx-extractor/output/8_Contents/PK_퀘스트_서브퀘스트/MonsterClass/_final/content.md
 - [Beta3] 몬스터 사망 연출 이펙트 개선 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Beta3 개선 항목/[Beta3] 몬스터 사망 연출 이펙트 개선/content.md
@@ -2823,47 +2781,88 @@
 - 컬렉션 시스템 ← packages/confluence-downloader/output/시스템 디자인/컬렉션/컬렉션 시스템/content.md
 - 콘텐츠별 밸런스 작업 목록 ← packages/confluence-downloader/output/Design/시스템 디자인/경제 밸런스/콘텐츠별 밸런스 작업 목록/content.md
 
-### 높낮이 (40)
-- 마을: 녹시온 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/스켈라/마을_ 녹시온/content.md
-- 마을:테라미르 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/소르브/마을_테라미르/content.md
-- 마을_ 녹시온 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/마을_ 녹시온/content.md
-- 마을_아르칸 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/마을_아르칸/content.md
-- 마을_테라미르 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/마을_테라미르/content.md
-- 사냥터_사그라진성터_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_바리울_사그라진성터/사냥터_사그라진성터_레벨/_final/content.md
-- 필드: 가시나무 숲 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/스켈라/필드_ 가시나무 숲/content.md
-- 필드: 검은 물길 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/스켈라/필드_ 검은 물길/content.md
-- 필드: 안개의 경계 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/스켈라/필드_ 안개의 경계/content.md
-- 필드:거인의 숲 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/동대륙_레벨/필드_거인의 숲/content.md
-- 필드:그림자 무덤가 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/동대륙_레벨/필드_그림자 무덤가/content.md
-- 필드:노을 평야 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/소르브/필드_노을 평야/content.md
-- 필드:배반자들의 소굴 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/셀레탄/필드_배반자들의 소굴/content.md
-- 필드:사그라진 성터 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/동대륙_레벨/필드_사그라진 성터/content.md
-- 필드:숭배의 언덕 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/셀레탄/필드_숭배의 언덕/content.md
-- 필드:적막의 폐허 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/동대륙_레벨/필드_적막의 폐허/content.md
-- 필드:풍요의 들판 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/소르브/필드_풍요의 들판/content.md
-- 필드:해오름 언덕 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/소르브/필드_해오름 언덕/content.md
-- 필드:환청의 그늘 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/셀레탄/필드_환청의 그늘/content.md
-- 필드_ 가시나무 숲 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_ 가시나무 숲/content.md
-- 필드_ 검은 물길 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_ 검은 물길/content.md
-- 필드_ 안개의 경계 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_ 안개의 경계/content.md
-- 필드_거인의 숲 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/동대륙_레벨/필드_거인의 숲/content.md
-- 필드_검푸른 밀림 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_검푸른 밀림/content.md
-- 필드_그림자 무덤가 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/동대륙_레벨/필드_그림자 무덤가/content.md
-- 필드_금빛 열매 자생지 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_금빛 열매 자생지/content.md
-- 필드_노을 평야 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_노을 평야/content.md
-- 필드_몰락의 협곡 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_몰락의 협곡/content.md
-- 필드_배반자들의 소굴 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_배반자들의 소굴/content.md
-- 필드_비밀 발굴지 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_비밀 발굴지/content.md
-- 필드_사그라진 성터 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/동대륙_레벨/필드_사그라진 성터/content.md
-- 필드_생명의 땅 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_생명의 땅/content.md
-- 필드_성난 폭풍의 평원 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_성난 폭풍의 평원/content.md
-- 필드_숭배의 언덕 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_숭배의 언덕/content.md
-- 필드_울부짖는 숲 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_울부짖는 숲/content.md
-- 필드_적막의 폐허 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/동대륙_레벨/필드_적막의 폐허/content.md
-- 필드_포식자의 둥지 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_포식자의 둥지/content.md
-- 필드_풍요의 들판 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_풍요의 들판/content.md
-- 필드_해오름 언덕 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_해오름 언덕/content.md
-- 필드_환청의 그늘 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_환청의 그늘/content.md
+### BuffClass (40)
+- Enum - Buff ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/Enum/Enum - Buff/content.md
+- [개발참고용] 전투력 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/전투/전투력 시스템/[개발참고용] 전투력 시스템/content.md
+- [개발참고용] 전투력 시스템 ← packages/confluence-downloader/output/시스템 디자인/전투/전투력 시스템/[개발참고용] 전투력 시스템/content.md
+- [스킬] InvokeConditionEnum ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 테이블 관련 정보/[스킬] InvokeConditionEnum/content.md
+- [스킬] InvokeConditionEnum ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 테이블 관련 정보/[스킬] InvokeConditionEnum/content.md
+- 군중 제어 정보 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/군중 제어 정보/content.md
+- 군중 제어 정보 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/군중 제어 정보/content.md
+- 대상 상태에 따른 추가 효과 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/대상 상태에 따른 추가 효과/content.md
+- 대상 상태에 따른 추가 효과 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/대상 상태에 따른 추가 효과/content.md
+- 대상의 상태에 따른 조건부 효과 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/대상의 상태에 따른 조건부 효과/content.md
+- 대상의 상태에 따른 조건부 효과 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/대상의 상태에 따른 조건부 효과/content.md
+- 레벨당 스탯 증감 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/레벨당 스탯 증감/content.md
+- 레벨당 스탯 증감 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/레벨당 스탯 증감/content.md
+- 리소스 테이블 - Battle ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Battle/content.md
+- 리소스 테이블 - Buff ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Buff/content.md
+- 무작위 버프 지속 시간 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/무작위 버프 지속 시간/content.md
+- 무작위 버프 지속 시간 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/무작위 버프 지속 시간/content.md
+- 버프 스택 비례 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/버프 스택 비례/content.md
+- 버프 스택 비례 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/버프 스택 비례/content.md
+- 버프 스택: 최대 스택 달성 시 발동 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/버프 스택_ 최대 스택 달성 시 발동/content.md
+- 버프 스택_ 최대 스택 달성 시 발동 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/버프 스택_ 최대 스택 달성 시 발동/content.md
+- 버프 종료 후 효과 부여(연쇄 버프) ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/버프 종료 후 효과 부여(연쇄 버프)/content.md
+- 버프 종료 후 효과 부여(연쇄 버프) ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/버프 종료 후 효과 부여(연쇄 버프)/content.md
+- 사망 시스템 개선 ← packages/confluence-downloader/output/시스템 디자인/전투/사망 시스템 개선/content.md
+- 순간 이동 주문서 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/기반 시스템/이동 편의성/순간 이동 주문서 시스템/content.md
+- 순간 이동 주문서 시스템 ← packages/confluence-downloader/output/시스템 디자인/기반 시스템/이동 편의성/순간 이동 주문서 시스템/content.md
+- 스킬/버프 UI 데이터 참조 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/[작성중] 스킬_버프 UIUX 개선/스킬_버프 UI 데이터 참조/content.md
+- 승천의 인장 UI ← packages/confluence-downloader/output/Design/시스템 디자인/성장 컨텐츠/[개인 성장] 승천의 인장/승천의 인장 UI/content.md
+- 자폭 효과 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/자폭 효과/content.md
+- 자폭 효과 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/자폭 효과/content.md
+- 적 대상의 스탯 비례 보너스 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/적 대상의 스탯 비례 보너스/content.md
+- 적 대상의 스탯 비례 보너스 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/적 대상의 스탯 비례 보너스/content.md
+- 조건부 발동 효과의 쿨타임 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/조건부 발동 효과의 쿨타임/content.md
+- 조건부 발동 효과의 쿨타임 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/조건부 발동 효과의 쿨타임/content.md
+- 조건부 효과 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/조건부 효과/content.md
+- 조건부 효과 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/조건부 효과/content.md
+- 조건부 효과(특정 스킬 사용 시) ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/조건부 효과(특정 스킬 사용 시)/content.md
+- 조건부 효과(특정 스킬 사용 시) ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/조건부 효과(특정 스킬 사용 시)/content.md
+- 패시브 스킬 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 시스템/패시브 스킬 시스템/content.md
+- 패시브 스킬 시스템 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 시스템/패시브 스킬 시스템/content.md
+
+### 디버프 (40)
+- PC FX 연출 정책 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 시스템/PC FX 연출 정책/content.md
+- PC FX 연출 정책 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 시스템/PC FX 연출 정책/content.md
+- [네임드] 소르브 왕: 라그나르 기획 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/몬스터/[네임드] 소르브 왕_ 라그나르 기획/content.md
+- 개요 ← packages/xlsx-extractor/output/8_Contents/PK_변신_만야/개요/_final/content.md
+- 결투장(PvP 컨텐츠) 방향 (작성 예정) ← packages/confluence-downloader/output/Design/시스템 디자인/디자인 방향/작성 중 폴더/결투장(PvP 컨텐츠) 방향 (작성 예정)/content.md
+- 결투장(PvP 컨텐츠) 방향 (작성 예정) ← packages/confluence-downloader/output/시스템 디자인/디자인 방향/작성 중 폴더/결투장(PvP 컨텐츠) 방향 (작성 예정)/content.md
+- 공성전 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/PvP 컨텐츠/공성전/공성전 시스템/content.md
+- 기본 정보 ← packages/xlsx-extractor/output/8_Contents/PK_변신_법사_시아(베이스)/기본 정보/_final/content.md
+- 네임드 몬스터_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_블라이트/네임드 몬스터_전투/_final/content.md
+- 네임드 몬스터_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_요괴/네임드 몬스터_전투/_final/content.md
+- 대상 상태에 따른 추가 효과 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/대상 상태에 따른 추가 효과/content.md
+- 대상 상태에 따른 추가 효과 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/대상 상태에 따른 추가 효과/content.md
+- 데스로드_몬스터_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_블레스네임드/데스로드_몬스터_전투/_final/content.md
+- 래버넌트_몬스터_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_블레스네임드/래버넌트_몬스터_전투/_final/content.md
+- 로바르스 왕_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_왕/로바르스 왕_전투/_final/content.md
+- 버프 ← packages/xlsx-extractor/output/8_Contents/PK_스킬 및 버프 아이콘_요청서/버프/_final/content.md
+- 버프 스택 증감 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/버프 스택 증감/content.md
+- 버프 스택 증감 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/버프 스택 증감/content.md
+- 성향 시스템 ← packages/confluence-downloader/output/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
+- 세부 정보 ← packages/xlsx-extractor/output/8_Contents/PK_변신_궁사_렌(베이스)/세부 정보/_final/content.md
+- 세부 정보 ← packages/xlsx-extractor/output/8_Contents/PK_변신_궁사_예하진/세부 정보/_final/content.md
+- 세부 정보 ← packages/xlsx-extractor/output/8_Contents/PK_변신_만야/세부 정보/_final/content.md
+- 스킬 기본 정보 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 리스트/스킬 기본 정보/content.md
+- 스킬 기본 정보 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 리스트/스킬 기본 정보/content.md
+- 스킬 리스트 - 샤먼 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 리스트/스킬 리스트 - 샤먼/content.md
+- 스킬 리스트 - 샤먼 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 리스트/스킬 리스트 - 샤먼/content.md
+- 아트_UI 리스트 ← packages/xlsx-extractor/output/8_Contents/PK_변신_법사_빙룡의 신녀/아트_UI 리스트/_final/content.md
+- 아트_이펙트 리스트 ← packages/xlsx-extractor/output/8_Contents/PK_변신_검사_유리태A/아트_이펙트 리스트/_final/content.md
+- 아트_이펙트 리스트 ← packages/xlsx-extractor/output/8_Contents/PK_변신_궁사_예하진/아트_이펙트 리스트/_final/content.md
+- 클래스 디자인 - 가디언 ← packages/confluence-downloader/output/Design/시스템 디자인/클래스/클래스 디자인 - 가디언/content.md
+- 클래스 디자인 - 샤먼 ← packages/confluence-downloader/output/Design/시스템 디자인/클래스/클래스 디자인 - 샤먼/content.md
+- 클래스 디자인 - 샤먼 ← packages/confluence-downloader/output/시스템 디자인/클래스/클래스 디자인 - 샤먼/content.md
+- 클래스 스킬 연출 폴리싱 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 리스트/클래스 스킬 연출 폴리싱/content.md
+- 페리안느 여왕_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_왕/페리안느 여왕_전투/_final/content.md
+- 평타 치명타에 경직 효과 추가 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/평타 치명타에 경직 효과 추가/content.md
+- 평타 치명타에 경직 효과 추가 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/평타 치명타에 경직 효과 추가/content.md
+- 플래시골렘(네임드)_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_미분류네임드/플래시골렘(네임드)_전투/_final/content.md
+- 히드라(필드보스) 컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_미분류네임드/히드라(필드보스) 컨셉/_final/content.md
+- 히스토리 ← packages/xlsx-extractor/output/8_Contents/PK_스킬 및 버프 아이콘_요청서/히스토리/_final/content.md
 
 ### 레벨 (40)
 - Beta2 대미지 방향성 정리 ← packages/confluence-downloader/output/시스템 디자인/성장 밸런스/Beta2 대미지 방향성 정리/content.md
@@ -2907,46 +2906,46 @@
 - 필드_포식자의 둥지 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_포식자의 둥지/content.md
 - 필드_풍요의 들판 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_풍요의 들판/content.md
 
-### BuffClass (39)
-- Enum - Buff ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/Enum/Enum - Buff/content.md
-- [개발참고용] 전투력 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/전투/전투력 시스템/[개발참고용] 전투력 시스템/content.md
-- [개발참고용] 전투력 시스템 ← packages/confluence-downloader/output/시스템 디자인/전투/전투력 시스템/[개발참고용] 전투력 시스템/content.md
-- [스킬] InvokeConditionEnum ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 테이블 관련 정보/[스킬] InvokeConditionEnum/content.md
-- [스킬] InvokeConditionEnum ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 테이블 관련 정보/[스킬] InvokeConditionEnum/content.md
-- 군중 제어 정보 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/군중 제어 정보/content.md
-- 군중 제어 정보 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/군중 제어 정보/content.md
-- 대상 상태에 따른 추가 효과 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/대상 상태에 따른 추가 효과/content.md
-- 대상 상태에 따른 추가 효과 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/대상 상태에 따른 추가 효과/content.md
-- 대상의 상태에 따른 조건부 효과 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/대상의 상태에 따른 조건부 효과/content.md
-- 대상의 상태에 따른 조건부 효과 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/대상의 상태에 따른 조건부 효과/content.md
-- 레벨당 스탯 증감 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/레벨당 스탯 증감/content.md
-- 레벨당 스탯 증감 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/레벨당 스탯 증감/content.md
-- 리소스 테이블 - Battle ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Battle/content.md
-- 리소스 테이블 - Buff ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Buff/content.md
-- 무작위 버프 지속 시간 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/무작위 버프 지속 시간/content.md
-- 무작위 버프 지속 시간 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/무작위 버프 지속 시간/content.md
-- 버프 스택 비례 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/버프 스택 비례/content.md
-- 버프 스택 비례 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/버프 스택 비례/content.md
-- 버프 스택: 최대 스택 달성 시 발동 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/버프 스택_ 최대 스택 달성 시 발동/content.md
-- 버프 스택_ 최대 스택 달성 시 발동 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/버프 스택_ 최대 스택 달성 시 발동/content.md
-- 버프 종료 후 효과 부여(연쇄 버프) ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/버프 종료 후 효과 부여(연쇄 버프)/content.md
-- 버프 종료 후 효과 부여(연쇄 버프) ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/버프 종료 후 효과 부여(연쇄 버프)/content.md
-- 사망 시스템 개선 ← packages/confluence-downloader/output/시스템 디자인/전투/사망 시스템 개선/content.md
-- 순간 이동 주문서 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/기반 시스템/이동 편의성/순간 이동 주문서 시스템/content.md
-- 순간 이동 주문서 시스템 ← packages/confluence-downloader/output/시스템 디자인/기반 시스템/이동 편의성/순간 이동 주문서 시스템/content.md
-- 승천의 인장 UI ← packages/confluence-downloader/output/Design/시스템 디자인/성장 컨텐츠/[개인 성장] 승천의 인장/승천의 인장 UI/content.md
-- 자폭 효과 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/자폭 효과/content.md
-- 자폭 효과 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/자폭 효과/content.md
-- 적 대상의 스탯 비례 보너스 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/적 대상의 스탯 비례 보너스/content.md
-- 적 대상의 스탯 비례 보너스 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/적 대상의 스탯 비례 보너스/content.md
-- 조건부 발동 효과의 쿨타임 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/조건부 발동 효과의 쿨타임/content.md
-- 조건부 발동 효과의 쿨타임 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/조건부 발동 효과의 쿨타임/content.md
-- 조건부 효과 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/조건부 효과/content.md
-- 조건부 효과 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/조건부 효과/content.md
-- 조건부 효과(특정 스킬 사용 시) ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/조건부 효과(특정 스킬 사용 시)/content.md
-- 조건부 효과(특정 스킬 사용 시) ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/조건부 효과(특정 스킬 사용 시)/content.md
-- 패시브 스킬 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 시스템/패시브 스킬 시스템/content.md
-- 패시브 스킬 시스템 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 시스템/패시브 스킬 시스템/content.md
+### 높낮이 (39)
+- 마을: 녹시온 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/스켈라/마을_ 녹시온/content.md
+- 마을:테라미르 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/소르브/마을_테라미르/content.md
+- 마을_ 녹시온 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/마을_ 녹시온/content.md
+- 마을_아르칸 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/마을_아르칸/content.md
+- 마을_테라미르 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/마을_테라미르/content.md
+- 사냥터_사그라진성터_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_바리울_사그라진성터/사냥터_사그라진성터_레벨/_final/content.md
+- 필드: 가시나무 숲 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/스켈라/필드_ 가시나무 숲/content.md
+- 필드: 검은 물길 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/스켈라/필드_ 검은 물길/content.md
+- 필드: 안개의 경계 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/스켈라/필드_ 안개의 경계/content.md
+- 필드:거인의 숲 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/동대륙_레벨/필드_거인의 숲/content.md
+- 필드:그림자 무덤가 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/동대륙_레벨/필드_그림자 무덤가/content.md
+- 필드:노을 평야 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/소르브/필드_노을 평야/content.md
+- 필드:배반자들의 소굴 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/셀레탄/필드_배반자들의 소굴/content.md
+- 필드:사그라진 성터 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/동대륙_레벨/필드_사그라진 성터/content.md
+- 필드:숭배의 언덕 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/셀레탄/필드_숭배의 언덕/content.md
+- 필드:적막의 폐허 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/동대륙_레벨/필드_적막의 폐허/content.md
+- 필드:풍요의 들판 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/소르브/필드_풍요의 들판/content.md
+- 필드:환청의 그늘 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/셀레탄/필드_환청의 그늘/content.md
+- 필드_ 가시나무 숲 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_ 가시나무 숲/content.md
+- 필드_ 검은 물길 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_ 검은 물길/content.md
+- 필드_ 안개의 경계 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_ 안개의 경계/content.md
+- 필드_거인의 숲 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/동대륙_레벨/필드_거인의 숲/content.md
+- 필드_검푸른 밀림 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_검푸른 밀림/content.md
+- 필드_그림자 무덤가 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/동대륙_레벨/필드_그림자 무덤가/content.md
+- 필드_금빛 열매 자생지 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_금빛 열매 자생지/content.md
+- 필드_노을 평야 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_노을 평야/content.md
+- 필드_몰락의 협곡 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_몰락의 협곡/content.md
+- 필드_배반자들의 소굴 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_배반자들의 소굴/content.md
+- 필드_비밀 발굴지 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_비밀 발굴지/content.md
+- 필드_사그라진 성터 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/동대륙_레벨/필드_사그라진 성터/content.md
+- 필드_생명의 땅 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_생명의 땅/content.md
+- 필드_성난 폭풍의 평원 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_성난 폭풍의 평원/content.md
+- 필드_숭배의 언덕 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_숭배의 언덕/content.md
+- 필드_울부짖는 숲 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_울부짖는 숲/content.md
+- 필드_적막의 폐허 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/동대륙_레벨/필드_적막의 폐허/content.md
+- 필드_포식자의 둥지 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_포식자의 둥지/content.md
+- 필드_풍요의 들판 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_풍요의 들판/content.md
+- 필드_해오름 언덕 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_해오름 언덕/content.md
+- 필드_환청의 그늘 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_환청의 그늘/content.md
 
 ### 도깨비 (39)
 - Beta3_변신 등급별 FX ← packages/confluence-downloader/output/Design/R&D 및 레퍼런스/변신 관련/Beta3_변신 등급별 FX/content.md
@@ -3044,7 +3043,7 @@
 - [IBT] 5/22 버그 리스트 ← packages/confluence-downloader/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 5_22 버그 리스트/content.md
 - [IBT] 정령의 탑 수호 오브젝트 & 배경 개선 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Beta3 개선 항목/[IBT] 정령의 탑 수호 오브젝트 & 배경 개선/content.md
 - [IBT] 정령의 탑 콘텐츠 내 개선 사항 (IBT 타겟) ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Beta3 개선 항목/[IBT] 정령의 탑 콘텐츠 내 개선 사항 (IBT 타겟)/content.md
-- [IBT] 폴리싱 리스트 ← packages/confluence-downloader/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
+- [IBT] 폴리싱 리스트 ← /home/jacob/proj-k-data/confluence/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
 - [부록] 정령의 탑 개선 ← packages/confluence-downloader/output/Design/시스템 디자인/던전/정령의 탑 시스템/[부록] 정령의 탑 개선/content.md
 - [완료] 1차 버그 리스트 ← packages/confluence-downloader/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[완료] 1차 버그 리스트/content.md
 - 개요 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_던전_정령의 탑/개요/_final/content.md
@@ -3164,7 +3163,7 @@
 - [Beta3] 퀘스트 개선 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Beta3 개선 항목/[Beta3] 퀘스트 개선/content.md
 - [IBT] 정령의 탑 콘텐츠 내 개선 사항 (IBT 타겟) ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Beta3 개선 항목/[IBT] 정령의 탑 콘텐츠 내 개선 사항 (IBT 타겟)/content.md
 - [IBT] 퀘스트 개선 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Beta3 개선 항목/[IBT] 퀘스트 개선/content.md
-- [IBT] 폴리싱 리스트 ← packages/confluence-downloader/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
+- [IBT] 폴리싱 리스트 ← /home/jacob/proj-k-data/confluence/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
 - [부록] 정령의 탑 개선 ← packages/confluence-downloader/output/Design/시스템 디자인/던전/정령의 탑 시스템/[부록] 정령의 탑 개선/content.md
 - [작성중] 스킬/버프 UIUX 개선 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/[작성중] 스킬_버프 UIUX 개선/content.md
 - 공통 팝업 및 모달 UI 시스템 가이드 ← packages/confluence-downloader/output/Design/시스템 디자인/UX UI 규칙/UX 규칙 문서/공통 팝업 및 모달 UI 시스템 가이드/content.md
@@ -3682,6 +3681,39 @@
 - 패시브 스킬 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 시스템/패시브 스킬 시스템/content.md
 - 패시브 스킬 시스템 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 시스템/패시브 스킬 시스템/content.md
 
+### 일반 (32)
+- UI_변신_기본 ← packages/xlsx-extractor/output/PK_변신 및 스킬 시스템/UI_변신_기본/_final/content.md
+- [IBT Spec] 변신 모델링 포트레이트(UI) 발주서 ← packages/confluence-downloader/output/Design/R&D 및 레퍼런스/변신 관련/[IBT Spec] 변신 모델링 포트레이트(UI) 발주서/content.md
+- 근거리_정령 리소스 리스트 ← packages/confluence-downloader/output/Design/시스템 디자인/정령 (기존 _펫_)/정령&도깨비 아트 리소스 정보/근거리_정령 리소스 리스트/content.md
+- 근거리_정령 리소스 리스트 ← packages/confluence-downloader/output/시스템 디자인/정령 (기존 _펫_)/정령&도깨비 아트 리소스 정보/근거리_정령 리소스 리스트/content.md
+- 등급 표시 규칙 ← packages/confluence-downloader/output/Design/시스템 디자인/UX UI 규칙/UX 규칙 문서/등급 표시 규칙/content.md
+- 등급 표시 규칙 ← packages/confluence-downloader/output/시스템 디자인/UX UI 규칙/UX 규칙 문서/등급 표시 규칙/content.md
+- 마법_정령 리소스 리스트 ← packages/confluence-downloader/output/Design/시스템 디자인/정령 (기존 _펫_)/정령&도깨비 아트 리소스 정보/마법_정령 리소스 리스트/content.md
+- 마법_정령 리소스 리스트 ← packages/confluence-downloader/output/시스템 디자인/정령 (기존 _펫_)/정령&도깨비 아트 리소스 정보/마법_정령 리소스 리스트/content.md
+- 몬스터 크기 규격 ← packages/confluence-downloader/output/Design/제작 가이드/몬스터 - 제작 가이드/몬스터 크기 규격/content.md
+- 변신 리소스 현황 및 정리 ← packages/confluence-downloader/output/R&D 및 레퍼런스/변신 관련/변신 리소스 현황 및 정리/content.md
+- 복수의 여정 시스템 ← packages/confluence-downloader/output/시스템 디자인/성장 컨텐츠/복수의 여정 시스템/content.md
+- 사냥터_가시나무숲_몬스터배치 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_스켈라_가시나무숲/사냥터_가시나무숲_몬스터배치/_final/content.md
+- 사냥터_검푸른밀림_몬스터배치 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_로바르스_검푸른밀림/사냥터_검푸른밀림_몬스터배치/_final/content.md
+- 사냥터_칼날바람절벽_몬스터배치_Beta2까지 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_셀레탄_칼날바람절벽/사냥터_칼날바람절벽_몬스터배치_Beta2까지/_final/content.md
+- 성장 밸런스 기본 정보 ← packages/confluence-downloader/output/Design/시스템 디자인/성장 밸런스/성장 밸런스 기본 정보/content.md
+- 성장 밸런스 기본 정보 ← packages/confluence-downloader/output/시스템 디자인/성장 밸런스/성장 밸런스 기본 정보/content.md
+- 성향 시스템 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
+- 스킬 대미지 기조 ← packages/confluence-downloader/output/Design/시스템 디자인/성장 밸런스/스킬 대미지 기조/content.md
+- 스킬 리스트 - 샤먼 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 리스트/스킬 리스트 - 샤먼/content.md
+- 원거리_정령 리소스 리스트 ← packages/confluence-downloader/output/Design/시스템 디자인/정령 (기존 _펫_)/정령&도깨비 아트 리소스 정보/원거리_정령 리소스 리스트/content.md
+- 원거리_정령 리소스 리스트 ← packages/confluence-downloader/output/시스템 디자인/정령 (기존 _펫_)/정령&도깨비 아트 리소스 정보/원거리_정령 리소스 리스트/content.md
+- 장비 아이템 발주 계획 ← packages/confluence-downloader/output/Design/시스템 디자인/아이템/장비 아이템 발주 계획/content.md
+- 장비 아이템 발주 계획 ← packages/confluence-downloader/output/시스템 디자인/아이템/장비 아이템 발주 계획/content.md
+- 정령 아트리소스 등급별 생산계획 ← packages/confluence-downloader/output/Design/시스템 디자인/정령 (기존 _펫_)/정령&도깨비 아트 리소스 정보/정령 아트리소스 등급별 생산계획/content.md
+- 정령 아트리소스 등급별 생산계획 ← packages/confluence-downloader/output/시스템 디자인/정령 (기존 _펫_)/정령&도깨비 아트 리소스 정보/정령 아트리소스 등급별 생산계획/content.md
+- 정령&도깨비 아트 리소스 정보 ← packages/confluence-downloader/output/Design/시스템 디자인/정령 (기존 _펫_)/정령&도깨비 아트 리소스 정보/content.md
+- 정령&도깨비 아트 리소스 정보 ← packages/confluence-downloader/output/시스템 디자인/정령 (기존 _펫_)/정령&도깨비 아트 리소스 정보/content.md
+- 컨텐츠 사운드 요청 ← packages/xlsx-extractor/output/8_Contents/PK_사운드_발주리스트_베타1/컨텐츠 사운드 요청/_final/content.md
+- 퀘스트몬스터리스트 ← packages/xlsx-extractor/output/8_Contents/PK_퀘스트_메인퀘스트/퀘스트몬스터리스트/_final/content.md
+- 퀘스트몬스터리스트 ← packages/xlsx-extractor/output/8_Contents/PK_퀘스트_서브퀘스트/퀘스트몬스터리스트/_final/content.md
+- 포트레이트_펫 ← packages/xlsx-extractor/output/8_Contents/PK_아이템 및 기타 아이콘_요청서/포트레이트_펫/_final/content.md
+
 ### 텔레포트 (32)
 - [Beta1] 월드맵 시스템 개선 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Beta1 개선 항목/[Beta1] 월드맵 시스템 개선/content.md
 - [Beta1] 월드맵 시스템 개선 ← packages/confluence-downloader/output/컨텐츠 디자인/Beta1 개선 항목/[Beta1] 월드맵 시스템 개선/content.md
@@ -3715,6 +3747,39 @@
 - 자동 전투 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/전투/자동 전투 시스템/content.md
 - 중간맵/미니맵 개선 ← packages/confluence-downloader/output/Design/시스템 디자인/맵/중간맵_미니맵 개선/content.md
 - 중간맵_미니맵 개선 ← packages/confluence-downloader/output/시스템 디자인/맵/중간맵_미니맵 개선/content.md
+
+### AttackType (31)
+- Data Set ← packages/xlsx-extractor/output/7_System/PK_스킬 표준 데이터/Data Set/_final/content.md
+- Multiplier & Cooltime ← packages/xlsx-extractor/output/7_System/PK_스킬 표준 데이터/Multiplier & Cooltime/_final/content.md
+- PvE / PvP 스킬 효과 분리 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/PvE _ PvP 스킬 효과 분리/content.md
+- 라자루 진리회 부사제_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_셀레탄_칼날바람절벽/라자루 진리회 부사제_전투/_final/content.md
+- 라자루 진리회 투척꾼_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_셀레탄_배반자들의소굴/라자루 진리회 투척꾼_전투/_final/content.md
+- 라자루 진리회 파괴자_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_셀레탄_배반자들의소굴/라자루 진리회 파괴자_전투/_final/content.md
+- 리소스 테이블 - Companion ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Companion/content.md
+- 리소스 테이블 - Item - Equip ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Item/리소스 테이블 - Item - Equip/content.md
+- 리소스 테이블 - Item ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Item/content.md
+- 리소스 테이블 - Skill - Attack ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Attack/content.md
+- 리소스 테이블 - Skill - Movement ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Movement/content.md
+- 리소스 테이블 - Skill ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/content.md
+- 무덤 해골 사제_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_스켈레톤/무덤 해골 사제_전투/_final/content.md
+- 바람악령_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_셀레탄_칼날바람절벽/바람악령_전투/_final/content.md
+- 성터 요괴 도둑_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_요괴/성터 요괴 도둑_전투/_final/content.md
+- 스켈라 병사_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_인간병사/스켈라 병사_전투/_final/content.md
+- 스켈라 석궁병_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_인간병사/스켈라 석궁병_전투/_final/content.md
+- 스킬/버프 UI 데이터 참조 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/[작성중] 스킬_버프 UIUX 개선/스킬_버프 UI 데이터 참조/content.md
+- 아나디스 변이 수호병_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_블라이트/아나디스 변이 수호병_전투/_final/content.md
+- 일반_멧돼지_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_셀레탄_오염된농장/일반_멧돼지_전투/_final/content.md
+- 일반_여우_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_셀레탄_오염된농장/일반_여우_전투/_final/content.md
+- 일반_웜_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_셀레탄_오스트하펜 남부 해안가/일반_웜_전투/_final/content.md
+- 정령 시스템_UI ← packages/confluence-downloader/output/Design/시스템 디자인/정령 (기존 _펫_)/정령 시스템_UI/content.md
+- 정령 시스템_UI ← packages/confluence-downloader/output/시스템 디자인/정령 (기존 _펫_)/정령 시스템_UI/content.md
+- 진리의 상급기사_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_셀레탄_칼날바람절벽/진리의 상급기사_전투/_final/content.md
+- 폐허 식인귀 주술사_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_오우거/폐허 식인귀 주술사_전투/_final/content.md
+- 폐허 식인귀 포식자_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_오우거/폐허 식인귀 포식자_전투/_final/content.md
+- 폐허의 차사 길잡이_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_그림리퍼/폐허의 차사 길잡이_전투/_final/content.md
+- 폐허의 차사 일꾼_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_그림리퍼/폐허의 차사 일꾼_전투/_final/content.md
+- 폐허의 차사 파수꾼_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_그림리퍼/폐허의 차사 파수꾼_전투/_final/content.md
+- 히스토리 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_셀레탄_배반자들의소굴/히스토리/_final/content.md
 
 ### 가디언 (31)
 - (백업)변신 모델링 포트레이트(UI) 발주서 ← packages/confluence-downloader/output/Design/R&D 및 레퍼런스/변신 관련/(백업)변신 모델링 포트레이트(UI) 발주서/content.md
@@ -3881,38 +3946,6 @@
 - 정령&도깨비 아트 리소스 정보 ← packages/confluence-downloader/output/시스템 디자인/정령 (기존 _펫_)/정령&도깨비 아트 리소스 정보/content.md
 - 포트레이트_펫 ← packages/xlsx-extractor/output/8_Contents/PK_아이템 및 기타 아이콘_요청서/포트레이트_펫/_final/content.md
 
-### 일반 (31)
-- UI_변신_기본 ← packages/xlsx-extractor/output/PK_변신 및 스킬 시스템/UI_변신_기본/_final/content.md
-- [IBT Spec] 변신 모델링 포트레이트(UI) 발주서 ← packages/confluence-downloader/output/Design/R&D 및 레퍼런스/변신 관련/[IBT Spec] 변신 모델링 포트레이트(UI) 발주서/content.md
-- 근거리_정령 리소스 리스트 ← packages/confluence-downloader/output/Design/시스템 디자인/정령 (기존 _펫_)/정령&도깨비 아트 리소스 정보/근거리_정령 리소스 리스트/content.md
-- 근거리_정령 리소스 리스트 ← packages/confluence-downloader/output/시스템 디자인/정령 (기존 _펫_)/정령&도깨비 아트 리소스 정보/근거리_정령 리소스 리스트/content.md
-- 등급 표시 규칙 ← packages/confluence-downloader/output/Design/시스템 디자인/UX UI 규칙/UX 규칙 문서/등급 표시 규칙/content.md
-- 등급 표시 규칙 ← packages/confluence-downloader/output/시스템 디자인/UX UI 규칙/UX 규칙 문서/등급 표시 규칙/content.md
-- 마법_정령 리소스 리스트 ← packages/confluence-downloader/output/Design/시스템 디자인/정령 (기존 _펫_)/정령&도깨비 아트 리소스 정보/마법_정령 리소스 리스트/content.md
-- 마법_정령 리소스 리스트 ← packages/confluence-downloader/output/시스템 디자인/정령 (기존 _펫_)/정령&도깨비 아트 리소스 정보/마법_정령 리소스 리스트/content.md
-- 몬스터 크기 규격 ← packages/confluence-downloader/output/Design/제작 가이드/몬스터 - 제작 가이드/몬스터 크기 규격/content.md
-- 변신 리소스 현황 및 정리 ← packages/confluence-downloader/output/R&D 및 레퍼런스/변신 관련/변신 리소스 현황 및 정리/content.md
-- 복수의 여정 시스템 ← packages/confluence-downloader/output/시스템 디자인/성장 컨텐츠/복수의 여정 시스템/content.md
-- 사냥터_가시나무숲_몬스터배치 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_스켈라_가시나무숲/사냥터_가시나무숲_몬스터배치/_final/content.md
-- 사냥터_검푸른밀림_몬스터배치 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_로바르스_검푸른밀림/사냥터_검푸른밀림_몬스터배치/_final/content.md
-- 사냥터_칼날바람절벽_몬스터배치_Beta2까지 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_셀레탄_칼날바람절벽/사냥터_칼날바람절벽_몬스터배치_Beta2까지/_final/content.md
-- 성장 밸런스 기본 정보 ← packages/confluence-downloader/output/Design/시스템 디자인/성장 밸런스/성장 밸런스 기본 정보/content.md
-- 성장 밸런스 기본 정보 ← packages/confluence-downloader/output/시스템 디자인/성장 밸런스/성장 밸런스 기본 정보/content.md
-- 스킬 대미지 기조 ← packages/confluence-downloader/output/Design/시스템 디자인/성장 밸런스/스킬 대미지 기조/content.md
-- 스킬 리스트 - 샤먼 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 리스트/스킬 리스트 - 샤먼/content.md
-- 원거리_정령 리소스 리스트 ← packages/confluence-downloader/output/Design/시스템 디자인/정령 (기존 _펫_)/정령&도깨비 아트 리소스 정보/원거리_정령 리소스 리스트/content.md
-- 원거리_정령 리소스 리스트 ← packages/confluence-downloader/output/시스템 디자인/정령 (기존 _펫_)/정령&도깨비 아트 리소스 정보/원거리_정령 리소스 리스트/content.md
-- 장비 아이템 발주 계획 ← packages/confluence-downloader/output/Design/시스템 디자인/아이템/장비 아이템 발주 계획/content.md
-- 장비 아이템 발주 계획 ← packages/confluence-downloader/output/시스템 디자인/아이템/장비 아이템 발주 계획/content.md
-- 정령 아트리소스 등급별 생산계획 ← packages/confluence-downloader/output/Design/시스템 디자인/정령 (기존 _펫_)/정령&도깨비 아트 리소스 정보/정령 아트리소스 등급별 생산계획/content.md
-- 정령 아트리소스 등급별 생산계획 ← packages/confluence-downloader/output/시스템 디자인/정령 (기존 _펫_)/정령&도깨비 아트 리소스 정보/정령 아트리소스 등급별 생산계획/content.md
-- 정령&도깨비 아트 리소스 정보 ← packages/confluence-downloader/output/Design/시스템 디자인/정령 (기존 _펫_)/정령&도깨비 아트 리소스 정보/content.md
-- 정령&도깨비 아트 리소스 정보 ← packages/confluence-downloader/output/시스템 디자인/정령 (기존 _펫_)/정령&도깨비 아트 리소스 정보/content.md
-- 컨텐츠 사운드 요청 ← packages/xlsx-extractor/output/8_Contents/PK_사운드_발주리스트_베타1/컨텐츠 사운드 요청/_final/content.md
-- 퀘스트몬스터리스트 ← packages/xlsx-extractor/output/8_Contents/PK_퀘스트_메인퀘스트/퀘스트몬스터리스트/_final/content.md
-- 퀘스트몬스터리스트 ← packages/xlsx-extractor/output/8_Contents/PK_퀘스트_서브퀘스트/퀘스트몬스터리스트/_final/content.md
-- 포트레이트_펫 ← packages/xlsx-extractor/output/8_Contents/PK_아이템 및 기타 아이콘_요청서/포트레이트_펫/_final/content.md
-
 ### 칼날 바람 절벽 (31)
 - IBT 레벨-경험치 밸런스 ← packages/confluence-downloader/output/Design/시스템 디자인/성장 밸런스/(NEW) IBT - 캐릭터 레벨&경험치/IBT 레벨-경험치 밸런스/content.md
 - IBT 레벨-경험치 밸런스 ← packages/confluence-downloader/output/시스템 디자인/성장 밸런스/IBT 레벨-경험치 밸런스/content.md
@@ -3945,38 +3978,6 @@
 - 필드_칼날 바람 절벽 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_칼날 바람 절벽/content.md
 - 히스토리 ← packages/xlsx-extractor/output/8_Contents/PK_퀘스트_메인퀘스트/히스토리/_final/content.md
 - 히스토리 ← packages/xlsx-extractor/output/8_Contents/PK_퀘스트_서브퀘스트/히스토리/_final/content.md
-
-### AttackType (30)
-- Data Set ← packages/xlsx-extractor/output/7_System/PK_스킬 표준 데이터/Data Set/_final/content.md
-- Multiplier & Cooltime ← packages/xlsx-extractor/output/7_System/PK_스킬 표준 데이터/Multiplier & Cooltime/_final/content.md
-- PvE / PvP 스킬 효과 분리 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/PvE _ PvP 스킬 효과 분리/content.md
-- 라자루 진리회 부사제_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_셀레탄_칼날바람절벽/라자루 진리회 부사제_전투/_final/content.md
-- 라자루 진리회 투척꾼_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_셀레탄_배반자들의소굴/라자루 진리회 투척꾼_전투/_final/content.md
-- 라자루 진리회 파괴자_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_셀레탄_배반자들의소굴/라자루 진리회 파괴자_전투/_final/content.md
-- 리소스 테이블 - Companion ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Companion/content.md
-- 리소스 테이블 - Item - Equip ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Item/리소스 테이블 - Item - Equip/content.md
-- 리소스 테이블 - Item ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Item/content.md
-- 리소스 테이블 - Skill - Attack ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Attack/content.md
-- 리소스 테이블 - Skill - Movement ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Movement/content.md
-- 리소스 테이블 - Skill ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/content.md
-- 무덤 해골 사제_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_스켈레톤/무덤 해골 사제_전투/_final/content.md
-- 바람악령_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_셀레탄_칼날바람절벽/바람악령_전투/_final/content.md
-- 성터 요괴 도둑_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_요괴/성터 요괴 도둑_전투/_final/content.md
-- 스켈라 병사_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_인간병사/스켈라 병사_전투/_final/content.md
-- 스켈라 석궁병_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_인간병사/스켈라 석궁병_전투/_final/content.md
-- 아나디스 변이 수호병_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_블라이트/아나디스 변이 수호병_전투/_final/content.md
-- 일반_멧돼지_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_셀레탄_오염된농장/일반_멧돼지_전투/_final/content.md
-- 일반_여우_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_셀레탄_오염된농장/일반_여우_전투/_final/content.md
-- 일반_웜_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_셀레탄_오스트하펜 남부 해안가/일반_웜_전투/_final/content.md
-- 정령 시스템_UI ← packages/confluence-downloader/output/Design/시스템 디자인/정령 (기존 _펫_)/정령 시스템_UI/content.md
-- 정령 시스템_UI ← packages/confluence-downloader/output/시스템 디자인/정령 (기존 _펫_)/정령 시스템_UI/content.md
-- 진리의 상급기사_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_셀레탄_칼날바람절벽/진리의 상급기사_전투/_final/content.md
-- 폐허 식인귀 주술사_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_오우거/폐허 식인귀 주술사_전투/_final/content.md
-- 폐허 식인귀 포식자_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_오우거/폐허 식인귀 포식자_전투/_final/content.md
-- 폐허의 차사 길잡이_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_그림리퍼/폐허의 차사 길잡이_전투/_final/content.md
-- 폐허의 차사 일꾼_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_그림리퍼/폐허의 차사 일꾼_전투/_final/content.md
-- 폐허의 차사 파수꾼_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_그림리퍼/폐허의 차사 파수꾼_전투/_final/content.md
-- 히스토리 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_셀레탄_배반자들의소굴/히스토리/_final/content.md
 
 ### DiceBase (30)
 - 기사단의 개_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_셀레탄_칼날바람절벽/기사단의 개_전투/_final/content.md
@@ -4633,6 +4634,36 @@
 - 필드_숭배의 언덕 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_숭배의 언덕/content.md
 - 히스토리 ← packages/xlsx-extractor/output/8_Contents/PK_퀘스트_메인퀘스트/히스토리/_final/content.md
 
+### 아비시 (28)
+- [Beta2] 컷신 제작 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/컷신/[Beta2] 컷신 제작/content.md
+- [Beta2] 컷신 제작 ← packages/confluence-downloader/output/컨텐츠 디자인/컷신/[Beta2] 컷신 제작/content.md
+- [Beta3] 바리울 컷신 제작 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/컷신/[Beta3] 바리울 컷신 제작/content.md
+- [Beta3] 바리울 컷신 제작 ← packages/confluence-downloader/output/컨텐츠 디자인/컷신/[Beta3] 바리울 컷신 제작/content.md
+- [Beta3] 서대륙 컷신 제작 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/컷신/[Beta3] 서대륙 컷신 제작/content.md
+- [Beta3] 서대륙 컷신 제작 ← packages/confluence-downloader/output/컨텐츠 디자인/컷신/[Beta3] 서대륙 컷신 제작/content.md
+- [Beta3] 인트로 컷신 제작 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/컷신/[Beta3] 인트로 컷신 제작/content.md
+- [Beta3] 인트로 컷신 제작 ← packages/confluence-downloader/output/컨텐츠 디자인/컷신/[Beta3] 인트로 컷신 제작/content.md
+- 바리울 결사대원_보급관 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Npc/퀘스트 NPC 리스트/바리울 결사대원_보급관/content.md
+- 바리울 결사대원_성인 남자 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Npc/퀘스트 NPC 리스트/바리울 결사대원_성인 남자/content.md
+- 바리울 결사대원_성인 여자 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Npc/퀘스트 NPC 리스트/바리울 결사대원_성인 여자/content.md
+- 바리울 결사대원_의무병 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Npc/퀘스트 NPC 리스트/바리울 결사대원_의무병/content.md
+- 바리울 시놉시스 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/시놉시스/바리울 시놉시스/content.md
+- 사냥터_몰락의 협곡_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_소르브_몰락의 협곡/사냥터_몰락의 협곡_컨셉/_final/content.md
+- 사냥터_비밀발굴지_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_로바르스_비밀 발굴지/사냥터_비밀발굴지_컨셉/_final/content.md
+- 사냥터_죽음의은신처_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_스켈라_죽음의 은신처/사냥터_죽음의은신처_컨셉/_final/content.md
+- 사냥터_해오름언덕_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_소르브_해오름언덕/사냥터_해오름언덕_컨셉/_final/content.md
+- 셀레탄 시놉시스 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/시놉시스/셀레탄 시놉시스/content.md
+- 스켈라 시놉시스 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/시놉시스/스켈라 시놉시스/content.md
+- 인트로던전_공통_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_던전_인트로/인트로던전_공통_컨셉/_final/content.md
+- 인트로던전_플레이시나리오 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_던전_인트로/인트로던전_플레이시나리오/_final/content.md
+- 캐릭터 로비 및 플레이 시작 설정 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/퀘스트/캐릭터 로비 및 플레이 시작 설정/content.md
+- 캐릭터 로비 및 플레이 시작 설정 ← packages/confluence-downloader/output/컨텐츠 디자인/퀘스트/캐릭터 로비 및 플레이 시작 설정/content.md
+- 퀘스트맵및볼륨리스트 ← packages/xlsx-extractor/output/8_Contents/PK_퀘스트_메인퀘스트/퀘스트맵및볼륨리스트/_final/content.md
+- 포트레이트_퀘스트 ← packages/xlsx-extractor/output/8_Contents/PK_아이템 및 기타 아이콘_요청서/포트레이트_퀘스트/_final/content.md
+- 필드:해오름 언덕 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/소르브/필드_해오름 언덕/content.md
+- 향후 기획 업무 ← packages/xlsx-extractor/output/7_System/PK_튜토리얼_IBT개선/향후 기획 업무/_final/content.md
+- 홀바르드 시놉시스 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/시놉시스/홀바르드 시놉시스/content.md
+
 ### 지역 콘셉트 (28)
 - PK_레벨_필드_로바르스_검푸른밀림 / 개요 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_로바르스_검푸른밀림/개요/_final/content.md
 - 개요 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_던전_정령의 탑/개요/_final/content.md
@@ -4838,35 +4869,6 @@
 - 콘텐츠 별 재화 비중 ← packages/confluence-downloader/output/시스템 디자인/경제 밸런스/콘텐츠 별 재화 비중/content.md
 - 프로젝트 키 테마 논의 ← packages/confluence-downloader/output/Design/R&D 및 레퍼런스/프로젝트 키 테마 논의/content.md
 - 프로젝트 키 테마 논의 ← packages/confluence-downloader/output/R&D 및 레퍼런스/프로젝트 키 테마 논의/content.md
-
-### 아비시 (27)
-- [Beta2] 컷신 제작 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/컷신/[Beta2] 컷신 제작/content.md
-- [Beta2] 컷신 제작 ← packages/confluence-downloader/output/컨텐츠 디자인/컷신/[Beta2] 컷신 제작/content.md
-- [Beta3] 바리울 컷신 제작 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/컷신/[Beta3] 바리울 컷신 제작/content.md
-- [Beta3] 바리울 컷신 제작 ← packages/confluence-downloader/output/컨텐츠 디자인/컷신/[Beta3] 바리울 컷신 제작/content.md
-- [Beta3] 서대륙 컷신 제작 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/컷신/[Beta3] 서대륙 컷신 제작/content.md
-- [Beta3] 서대륙 컷신 제작 ← packages/confluence-downloader/output/컨텐츠 디자인/컷신/[Beta3] 서대륙 컷신 제작/content.md
-- [Beta3] 인트로 컷신 제작 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/컷신/[Beta3] 인트로 컷신 제작/content.md
-- [Beta3] 인트로 컷신 제작 ← packages/confluence-downloader/output/컨텐츠 디자인/컷신/[Beta3] 인트로 컷신 제작/content.md
-- 바리울 결사대원_보급관 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Npc/퀘스트 NPC 리스트/바리울 결사대원_보급관/content.md
-- 바리울 결사대원_성인 남자 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Npc/퀘스트 NPC 리스트/바리울 결사대원_성인 남자/content.md
-- 바리울 결사대원_성인 여자 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Npc/퀘스트 NPC 리스트/바리울 결사대원_성인 여자/content.md
-- 바리울 결사대원_의무병 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Npc/퀘스트 NPC 리스트/바리울 결사대원_의무병/content.md
-- 바리울 시놉시스 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/시놉시스/바리울 시놉시스/content.md
-- 사냥터_몰락의 협곡_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_소르브_몰락의 협곡/사냥터_몰락의 협곡_컨셉/_final/content.md
-- 사냥터_비밀발굴지_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_로바르스_비밀 발굴지/사냥터_비밀발굴지_컨셉/_final/content.md
-- 사냥터_죽음의은신처_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_스켈라_죽음의 은신처/사냥터_죽음의은신처_컨셉/_final/content.md
-- 사냥터_해오름언덕_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_소르브_해오름언덕/사냥터_해오름언덕_컨셉/_final/content.md
-- 셀레탄 시놉시스 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/시놉시스/셀레탄 시놉시스/content.md
-- 스켈라 시놉시스 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/시놉시스/스켈라 시놉시스/content.md
-- 인트로던전_공통_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_던전_인트로/인트로던전_공통_컨셉/_final/content.md
-- 인트로던전_플레이시나리오 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_던전_인트로/인트로던전_플레이시나리오/_final/content.md
-- 캐릭터 로비 및 플레이 시작 설정 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/퀘스트/캐릭터 로비 및 플레이 시작 설정/content.md
-- 캐릭터 로비 및 플레이 시작 설정 ← packages/confluence-downloader/output/컨텐츠 디자인/퀘스트/캐릭터 로비 및 플레이 시작 설정/content.md
-- 퀘스트맵및볼륨리스트 ← packages/xlsx-extractor/output/8_Contents/PK_퀘스트_메인퀘스트/퀘스트맵및볼륨리스트/_final/content.md
-- 포트레이트_퀘스트 ← packages/xlsx-extractor/output/8_Contents/PK_아이템 및 기타 아이콘_요청서/포트레이트_퀘스트/_final/content.md
-- 향후 기획 업무 ← packages/xlsx-extractor/output/7_System/PK_튜토리얼_IBT개선/향후 기획 업무/_final/content.md
-- 홀바르드 시놉시스 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/시놉시스/홀바르드 시놉시스/content.md
 
 ### 치명타 (27)
 - IBT - 성물 옵션 구성 ← packages/confluence-downloader/output/Design/시스템 디자인/성장 밸런스/IBT - 성물 옵션 구성/content.md
@@ -5127,7 +5129,7 @@
 - [Beta2] 인트로 시스템 ← packages/confluence-downloader/output/컨텐츠 디자인/Beta2 개선 항목/[Beta2] 인트로 시스템/content.md
 - [Beta3] 퀘스트 개선 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Beta3 개선 항목/[Beta3] 퀘스트 개선/content.md
 - [IBT] 5/12 이후 폴리싱 리스트 ← packages/confluence-downloader/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 5_12 이후 폴리싱 리스트/content.md
-- [IBT] 폴리싱 리스트 ← packages/confluence-downloader/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
+- [IBT] 폴리싱 리스트 ← /home/jacob/proj-k-data/confluence/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
 - [완료] 1차 버그 리스트 ← packages/confluence-downloader/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[완료] 1차 버그 리스트/content.md
 - 기타 ← packages/xlsx-extractor/output/8_Contents/PK_아이템 및 기타 아이콘_요청서/기타/_final/content.md
 - 배반자들의 소굴/환청의 그늘 레벨 구성 참고 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/레벨 전체 목록/배반자들의 소굴_환청의 그늘 레벨 구성 참고/content.md
@@ -5353,6 +5355,31 @@
 - 캐릭터 행동 우선순위 ← packages/confluence-downloader/output/Design/시스템 디자인/전투/캐릭터 행동 우선순위/content.md
 - 캐릭터 행동 우선순위 ← packages/confluence-downloader/output/시스템 디자인/전투/캐릭터 행동 우선순위/content.md
 
+### 거인의 머리 (23)
+- [Beta3] 바리울 컷신 제작 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/컷신/[Beta3] 바리울 컷신 제작/content.md
+- [Beta3] 바리울 컷신 제작 ← packages/confluence-downloader/output/컨텐츠 디자인/컷신/[Beta3] 바리울 컷신 제작/content.md
+- 거인의 유산 시스템 ← packages/confluence-downloader/output/시스템 디자인/성장 컨텐츠/거인의 유산 시스템/content.md
+- 거인의 유산 시스템 컨셉 ← packages/confluence-downloader/output/시스템 디자인/성장 컨텐츠/거인의 유산 시스템 컨셉/content.md
+- 동대륙:바리울Bariul ← packages/confluence-downloader/output/Design/컨텐츠 디자인/월드/동대륙_바리울Bariul/content.md
+- 동대륙_바리울Bariul ← packages/confluence-downloader/output/컨텐츠 디자인/월드/동대륙_바리울Bariul/content.md
+- 로바로스 시놉시스 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/시놉시스/로바로스 시놉시스/content.md
+- 바리울 결사대원_보급관 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Npc/퀘스트 NPC 리스트/바리울 결사대원_보급관/content.md
+- 바리울 결사대원_성인 남자 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Npc/퀘스트 NPC 리스트/바리울 결사대원_성인 남자/content.md
+- 바리울 결사대원_성인 여자 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Npc/퀘스트 NPC 리스트/바리울 결사대원_성인 여자/content.md
+- 바리울 결사대원_의무병 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Npc/퀘스트 NPC 리스트/바리울 결사대원_의무병/content.md
+- 바리울 시놉시스 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/시놉시스/바리울 시놉시스/content.md
+- 사냥터_생명의땅_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_로바르스_생명의 땅/사냥터_생명의땅_컨셉/_final/content.md
+- 사냥터_울부짖는숲_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_로바르스_울부짖는숲/사냥터_울부짖는숲_컨셉/_final/content.md
+- 셀레탄 시놉시스 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/시놉시스/셀레탄 시놉시스/content.md
+- 소르브 시놉시스 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/시놉시스/소르브 시놉시스/content.md
+- 조력자 아비시 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Npc/퀘스트 NPC 리스트/조력자 아비시/content.md
+- 캐릭터 로비 및 플레이 시작 설정 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/퀘스트/캐릭터 로비 및 플레이 시작 설정/content.md
+- 캐릭터 로비 및 플레이 시작 설정 ← packages/confluence-downloader/output/컨텐츠 디자인/퀘스트/캐릭터 로비 및 플레이 시작 설정/content.md
+- 필드:거인의 숲 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/동대륙_레벨/필드_거인의 숲/content.md
+- 필드_거인의 숲 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/동대륙_레벨/필드_거인의 숲/content.md
+- 필드_포식자의 둥지 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_포식자의 둥지/content.md
+- 홀바르드 시놉시스 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/시놉시스/홀바르드 시놉시스/content.md
+
 ### 검은 물길 (23)
 - 검은 물길 ← packages/xlsx-extractor/output/8_Contents/PK_퀘스트_서브퀘스트/검은 물길/_final/content.md
 - 검은 물길 레벨 확장 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/스켈라/스켈라 필드 확장/검은 물길 레벨 확장/content.md
@@ -5414,7 +5441,7 @@
 - [Beta2] 퀘스트 개선 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Beta2 개선 항목/[Beta2] 퀘스트 개선/content.md
 - [Beta2] 퀘스트 개선 ← packages/confluence-downloader/output/컨텐츠 디자인/Beta2 개선 항목/[Beta2] 퀘스트 개선/content.md
 - [IBT] 5/12 이후 버그 리스트 ← /home/jacob/proj-k-data/confluence/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 5_12 이후 버그 리스트/content.md
-- [IBT] 폴리싱 리스트 ← packages/confluence-downloader/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
+- [IBT] 폴리싱 리스트 ← /home/jacob/proj-k-data/confluence/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
 - [완료] 6/8 핫픽스 리스트 ← /home/jacob/proj-k-data/confluence/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[완료] 6_8 핫픽스 리스트/content.md
 - 거인의 유산 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/성장 컨텐츠/거인의 유산 시스템/content.md
 - 거인의 유산 시스템 ← packages/confluence-downloader/output/시스템 디자인/성장 컨텐츠/거인의 유산 시스템/content.md
@@ -5425,7 +5452,7 @@
 - 알파2 ← packages/xlsx-extractor/output/8_Contents/PK_퀘스트_서브퀘스트/알파2/_final/content.md
 - 콘텐츠별 밸런스 작업 목록 ← packages/confluence-downloader/output/Design/시스템 디자인/경제 밸런스/콘텐츠별 밸런스 작업 목록/content.md
 - 콘텐츠별 밸런스 작업 목록 ← packages/confluence-downloader/output/시스템 디자인/경제 밸런스/콘텐츠별 밸런스 작업 목록/content.md
-- 퀘스트 구성 정책 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
+- 퀘스트 구성 정책 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
 - 퀘스트 구성 정책 ← packages/confluence-downloader/output/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
 
 ### 물이 할퀸 땅 (23)
@@ -5552,30 +5579,6 @@
 - 시작 플레이 플로우 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/시작 플레이 플로우/content.md
 - 절전 모드 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/기반 시스템/절전 모드 시스템/content.md
 - 정령의 탑 UI ← packages/confluence-downloader/output/Design/시스템 디자인/던전/정령의 탑 UI/content.md
-
-### 거인의 머리 (22)
-- [Beta3] 바리울 컷신 제작 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/컷신/[Beta3] 바리울 컷신 제작/content.md
-- [Beta3] 바리울 컷신 제작 ← packages/confluence-downloader/output/컨텐츠 디자인/컷신/[Beta3] 바리울 컷신 제작/content.md
-- 거인의 유산 시스템 ← packages/confluence-downloader/output/시스템 디자인/성장 컨텐츠/거인의 유산 시스템/content.md
-- 거인의 유산 시스템 컨셉 ← packages/confluence-downloader/output/시스템 디자인/성장 컨텐츠/거인의 유산 시스템 컨셉/content.md
-- 동대륙:바리울Bariul ← packages/confluence-downloader/output/Design/컨텐츠 디자인/월드/동대륙_바리울Bariul/content.md
-- 동대륙_바리울Bariul ← packages/confluence-downloader/output/컨텐츠 디자인/월드/동대륙_바리울Bariul/content.md
-- 로바로스 시놉시스 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/시놉시스/로바로스 시놉시스/content.md
-- 바리울 결사대원_보급관 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Npc/퀘스트 NPC 리스트/바리울 결사대원_보급관/content.md
-- 바리울 결사대원_성인 남자 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Npc/퀘스트 NPC 리스트/바리울 결사대원_성인 남자/content.md
-- 바리울 결사대원_성인 여자 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Npc/퀘스트 NPC 리스트/바리울 결사대원_성인 여자/content.md
-- 바리울 결사대원_의무병 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Npc/퀘스트 NPC 리스트/바리울 결사대원_의무병/content.md
-- 바리울 시놉시스 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/시놉시스/바리울 시놉시스/content.md
-- 사냥터_생명의땅_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_로바르스_생명의 땅/사냥터_생명의땅_컨셉/_final/content.md
-- 사냥터_울부짖는숲_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_로바르스_울부짖는숲/사냥터_울부짖는숲_컨셉/_final/content.md
-- 셀레탄 시놉시스 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/시놉시스/셀레탄 시놉시스/content.md
-- 소르브 시놉시스 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/시놉시스/소르브 시놉시스/content.md
-- 조력자 아비시 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Npc/퀘스트 NPC 리스트/조력자 아비시/content.md
-- 캐릭터 로비 및 플레이 시작 설정 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/퀘스트/캐릭터 로비 및 플레이 시작 설정/content.md
-- 캐릭터 로비 및 플레이 시작 설정 ← packages/confluence-downloader/output/컨텐츠 디자인/퀘스트/캐릭터 로비 및 플레이 시작 설정/content.md
-- 필드:거인의 숲 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/동대륙_레벨/필드_거인의 숲/content.md
-- 필드_거인의 숲 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/동대륙_레벨/필드_거인의 숲/content.md
-- 필드_포식자의 둥지 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_포식자의 둥지/content.md
 
 ### 성물 (22)
 - IBT - 성물 옵션 구성 ← packages/confluence-downloader/output/Design/시스템 디자인/성장 밸런스/IBT - 성물 옵션 구성/content.md
@@ -6042,7 +6045,7 @@
 - [IBT] 5/12 이후 버그 리스트 ← /home/jacob/proj-k-data/confluence/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 5_12 이후 버그 리스트/content.md
 - [IBT] 5/22 버그 리스트 ← packages/confluence-downloader/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 5_22 버그 리스트/content.md
 - [IBT] 도움말 임시 데이터 ← packages/confluence-downloader/output/Design/시스템 디자인/기반 시스템/[IBT] 도움말 임시 데이터/content.md
-- [IBT] 폴리싱 리스트 ← packages/confluence-downloader/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
+- [IBT] 폴리싱 리스트 ← /home/jacob/proj-k-data/confluence/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
 - 수정 데이터 ← packages/xlsx-extractor/output/7_System/PK_튜토리얼_IBT개선/수정 데이터/_final/content.md
 - 스킬 가치 및 획득처 ← packages/confluence-downloader/output/Design/시스템 디자인/경제 밸런스/스킬 가치 및 획득처/content.md
 - 승천의 인장 밸런스 ← packages/confluence-downloader/output/Design/시스템 디자인/경제 밸런스/승천의 인장 밸런스/content.md
@@ -6278,6 +6281,26 @@
 - 진리의 상급기사 아트 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_셀레탄_칼날바람절벽/진리의 상급기사 아트/_final/content.md
 - 폐허 식인귀 포식자_아트 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_오우거/폐허 식인귀 포식자_아트/_final/content.md
 - 폐허의 차사 일꾼_아트 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_그림리퍼/폐허의 차사 일꾼_아트/_final/content.md
+
+### SkillCategory (18)
+- ProjectK 전투 시스템 로직 및 공격 속도 분석 ← packages/confluence-downloader/output/Design/시스템 디자인/전투/ProjectK 전투 시스템 로직 및 공격 속도 분석/content.md
+- PvE / PvP 스킬 효과 분리 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/PvE _ PvP 스킬 효과 분리/content.md
+- PvE _ PvP 스킬 효과 분리 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/PvE _ PvP 스킬 효과 분리/content.md
+- [작성중] 스킬/버프 UIUX 개선 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/[작성중] 스킬_버프 UIUX 개선/content.md
+- 리소스 테이블 - Companion ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Companion/content.md
+- 리소스 테이블 - Monster ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Monster/content.md
+- 리소스 테이블 - Skill - Area ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Area/content.md
+- 리소스 테이블 - Skill - Attack ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Attack/content.md
+- 리소스 테이블 - Skill - Buff ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Buff/content.md
+- 리소스 테이블 - Skill - Composite ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Composite/content.md
+- 리소스 테이블 - Skill - Movement ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Movement/content.md
+- 리소스 테이블 - Skill - Special ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Special/content.md
+- 리소스 테이블 - Skill ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/content.md
+- 세부 정보 ← packages/xlsx-extractor/output/8_Contents/PK_변신_궁사_렌(베이스)/세부 정보/_final/content.md
+- 스킬/버프 UI 데이터 참조 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/[작성중] 스킬_버프 UIUX 개선/스킬_버프 UI 데이터 참조/content.md
+- 퀘스트 오브젝트 상세 ← packages/xlsx-extractor/output/7_System/PK_퀘스트 오브젝트/퀘스트 오브젝트 상세/_final/content.md
+- 패시브 스킬 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 시스템/패시브 스킬 시스템/content.md
+- 패시브 스킬 시스템 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 시스템/패시브 스킬 시스템/content.md
 
 ### 거인 (18)
 - (참고)몬스터속성 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_골렘/(참고)몬스터속성/_final/content.md
@@ -6530,7 +6553,7 @@
 - 인스턴스 중간맵 출력 기능 대응 ← packages/confluence-downloader/output/Design/시스템 디자인/맵/인스턴스 중간맵 출력 기능 대응/content.md
 - 인트로던전_배치 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_던전_인트로/인트로던전_배치/_final/content.md
 - 캐릭터 로비 및 플레이 시작 설정 ← packages/confluence-downloader/output/컨텐츠 디자인/퀘스트/캐릭터 로비 및 플레이 시작 설정/content.md
-- 퀘스트 구성 정책 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
+- 퀘스트 구성 정책 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
 - 퀘스트몬스터리스트 ← packages/xlsx-extractor/output/8_Contents/PK_퀘스트_메인퀘스트/퀘스트몬스터리스트/_final/content.md
 - 퀘스트몬스터리스트 ← packages/xlsx-extractor/output/8_Contents/PK_퀘스트_서브퀘스트/퀘스트몬스터리스트/_final/content.md
 - 필드:비밀 발굴지 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/로바르스/필드_비밀 발굴지/content.md
@@ -6722,24 +6745,6 @@
 - 폐허의 차사 일꾼_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_그림리퍼/폐허의 차사 일꾼_전투/_final/content.md
 - 폐허의 차사 파수꾼_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_그림리퍼/폐허의 차사 파수꾼_전투/_final/content.md
 
-### SkillCategory (16)
-- ProjectK 전투 시스템 로직 및 공격 속도 분석 ← packages/confluence-downloader/output/Design/시스템 디자인/전투/ProjectK 전투 시스템 로직 및 공격 속도 분석/content.md
-- PvE / PvP 스킬 효과 분리 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/PvE _ PvP 스킬 효과 분리/content.md
-- PvE _ PvP 스킬 효과 분리 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/PvE _ PvP 스킬 효과 분리/content.md
-- 리소스 테이블 - Companion ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Companion/content.md
-- 리소스 테이블 - Monster ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Monster/content.md
-- 리소스 테이블 - Skill - Area ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Area/content.md
-- 리소스 테이블 - Skill - Attack ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Attack/content.md
-- 리소스 테이블 - Skill - Buff ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Buff/content.md
-- 리소스 테이블 - Skill - Composite ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Composite/content.md
-- 리소스 테이블 - Skill - Movement ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Movement/content.md
-- 리소스 테이블 - Skill - Special ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Special/content.md
-- 리소스 테이블 - Skill ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/content.md
-- 세부 정보 ← packages/xlsx-extractor/output/8_Contents/PK_변신_궁사_렌(베이스)/세부 정보/_final/content.md
-- 퀘스트 오브젝트 상세 ← packages/xlsx-extractor/output/7_System/PK_퀘스트 오브젝트/퀘스트 오브젝트 상세/_final/content.md
-- 패시브 스킬 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 시스템/패시브 스킬 시스템/content.md
-- 패시브 스킬 시스템 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 시스템/패시브 스킬 시스템/content.md
-
 ### 괴물 (16)
 - (참고)몬스터속성 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_골렘/(참고)몬스터속성/_final/content.md
 - (참고)몬스터속성 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_그림리퍼/(참고)몬스터속성/_final/content.md
@@ -6844,7 +6849,7 @@
 - 신규 오브젝트 리스트 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/오브젝트/신규 오브젝트 리스트/content.md
 - 오브젝트 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/오브젝트/content.md
 - 정령의 탑 구성 기획 ← packages/confluence-downloader/output/시스템 디자인/던전/정령의 탑 구성 기획/content.md
-- 퀘스트 구성 정책 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
+- 퀘스트 구성 정책 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
 - 퀘스트 구성 정책 ← packages/confluence-downloader/output/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
 - 필드:검푸른 밀림 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/로바르스/필드_검푸른 밀림/content.md
 
@@ -6896,7 +6901,7 @@
 - 인스턴스 트리거 기능 추가 개발 ← packages/confluence-downloader/output/시스템 디자인/맵/인스턴스 트리거 기능 추가 개발/content.md
 - 컷신 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/컷신/content.md
 - 컷신 ← packages/confluence-downloader/output/컨텐츠 디자인/컷신/content.md
-- 퀘스트 구성 정책 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
+- 퀘스트 구성 정책 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
 - 퀘스트 구성 정책 ← packages/confluence-downloader/output/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
 - 퀘스트맵및볼륨리스트 ← packages/xlsx-extractor/output/8_Contents/PK_퀘스트_메인퀘스트/퀘스트맵및볼륨리스트/_final/content.md
 - 트리거 기능 추가 ← packages/confluence-downloader/output/Design/시스템 디자인/맵/트리거 기능 추가/content.md
@@ -7043,6 +7048,23 @@
 - 버프 스택 증감 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/버프 스택 증감/content.md
 - 버프 제거 효과 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/Legacy/버프 제거 효과/content.md
 - 버프 제거 효과 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/Legacy/버프 제거 효과/content.md
+
+### ConditionType (15)
+- Enum - Buff ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/Enum/Enum - Buff/content.md
+- [Beta1] 스킬 이펙트 구현 사항 취합 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/[Beta1] 스킬 이펙트 구현 사항 취합/content.md
+- [Beta1] 스킬 이펙트 구현 사항 취합 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/[Beta1] 스킬 이펙트 구현 사항 취합/content.md
+- [스킬] InvokeConditionEnum ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 테이블 관련 정보/[스킬] InvokeConditionEnum/content.md
+- [스킬] InvokeConditionEnum ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 테이블 관련 정보/[스킬] InvokeConditionEnum/content.md
+- 리소스 테이블 - Buff ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Buff/content.md
+- 버프 스택: 최대 스택 달성 시 발동 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/버프 스택_ 최대 스택 달성 시 발동/content.md
+- 버프 스택_ 최대 스택 달성 시 발동 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/버프 스택_ 최대 스택 달성 시 발동/content.md
+- 버프 종료 후 효과 부여(연쇄 버프) ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/버프 종료 후 효과 부여(연쇄 버프)/content.md
+- 버프 종료 후 효과 부여(연쇄 버프) ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/버프 종료 후 효과 부여(연쇄 버프)/content.md
+- 스킬/버프 UI 데이터 참조 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/[작성중] 스킬_버프 UIUX 개선/스킬_버프 UI 데이터 참조/content.md
+- 조건부 효과 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/조건부 효과/content.md
+- 조건부 효과 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/조건부 효과/content.md
+- 컨텐츠 오픈 조건 ← packages/confluence-downloader/output/Design/시스템 디자인/기반 시스템/컨텐츠 오픈 조건/content.md
+- 컨텐츠 오픈 조건 ← packages/confluence-downloader/output/시스템 디자인/기반 시스템/컨텐츠 오픈 조건/content.md
 
 ### CurrencyEnum (15)
 - Enum - Achievement ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/Enum/Enum - Achievement/content.md
@@ -7374,7 +7396,7 @@
 - [25_10_17] 키 테마 관련 논의 ← packages/confluence-downloader/output/R&D 및 레퍼런스/프로젝트 키 테마 논의/[25_10_17] 키 테마 관련 논의/content.md
 - [Beta1] 버그 _ 개선 리스트 ← packages/confluence-downloader/output/일감 관리/[Beta1] 버그 _ 개선 리스트/content.md
 - [IBT] 5/22 버그 리스트 ← packages/confluence-downloader/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 5_22 버그 리스트/content.md
-- [IBT] 폴리싱 리스트 ← packages/confluence-downloader/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
+- [IBT] 폴리싱 리스트 ← /home/jacob/proj-k-data/confluence/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
 - 길드 임무 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/길드/길드 임무 시스템/content.md
 - 길드 임무 시스템 ← packages/confluence-downloader/output/시스템 디자인/길드/길드 임무 시스템/content.md
 - 버그 및 이슈 ← packages/confluence-downloader/output/일감 관리/버그 및 이슈/content.md
@@ -7552,22 +7574,6 @@
 - 진리의 상급기사_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_셀레탄_칼날바람절벽/진리의 상급기사_전투/_final/content.md
 - 폐허의 차사 파수꾼_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_그림리퍼/폐허의 차사 파수꾼_전투/_final/content.md
 
-### ConditionType (14)
-- Enum - Buff ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/Enum/Enum - Buff/content.md
-- [Beta1] 스킬 이펙트 구현 사항 취합 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/[Beta1] 스킬 이펙트 구현 사항 취합/content.md
-- [Beta1] 스킬 이펙트 구현 사항 취합 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/[Beta1] 스킬 이펙트 구현 사항 취합/content.md
-- [스킬] InvokeConditionEnum ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 테이블 관련 정보/[스킬] InvokeConditionEnum/content.md
-- [스킬] InvokeConditionEnum ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 테이블 관련 정보/[스킬] InvokeConditionEnum/content.md
-- 리소스 테이블 - Buff ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Buff/content.md
-- 버프 스택: 최대 스택 달성 시 발동 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/버프 스택_ 최대 스택 달성 시 발동/content.md
-- 버프 스택_ 최대 스택 달성 시 발동 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/버프 스택_ 최대 스택 달성 시 발동/content.md
-- 버프 종료 후 효과 부여(연쇄 버프) ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/버프 종료 후 효과 부여(연쇄 버프)/content.md
-- 버프 종료 후 효과 부여(연쇄 버프) ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/버프 종료 후 효과 부여(연쇄 버프)/content.md
-- 조건부 효과 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/조건부 효과/content.md
-- 조건부 효과 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/조건부 효과/content.md
-- 컨텐츠 오픈 조건 ← packages/confluence-downloader/output/Design/시스템 디자인/기반 시스템/컨텐츠 오픈 조건/content.md
-- 컨텐츠 오픈 조건 ← packages/confluence-downloader/output/시스템 디자인/기반 시스템/컨텐츠 오픈 조건/content.md
-
 ### F_Death (14)
 - 골렘_아트 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_골렘/골렘_아트/_final/content.md
 - 네임드 몬스터_아트 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_오우거/네임드 몬스터_아트/_final/content.md
@@ -7647,6 +7653,22 @@
 - 아이템 분해_규칙 ← packages/confluence-downloader/output/시스템 디자인/아이템/아이템 분해/아이템 분해_규칙/content.md
 - 테이블 구조 ← packages/xlsx-extractor/output/PK_분해 시스템/테이블 구조/_final/content.md
 - 히스토리 ← packages/xlsx-extractor/output/PK_분해 시스템/히스토리/_final/content.md
+
+### SkillType (14)
+- Data Set ← packages/xlsx-extractor/output/7_System/PK_스킬 표준 데이터/Data Set/_final/content.md
+- Multiplier & Cooltime ← packages/xlsx-extractor/output/7_System/PK_스킬 표준 데이터/Multiplier & Cooltime/_final/content.md
+- PvE / PvP 스킬 효과 분리 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/PvE _ PvP 스킬 효과 분리/content.md
+- PvE _ PvP 스킬 효과 분리 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/PvE _ PvP 스킬 효과 분리/content.md
+- UI_스킬 ← packages/xlsx-extractor/output/PK_변신 및 스킬 시스템/UI_스킬/_final/content.md
+- 리소스 테이블 - Companion ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Companion/content.md
+- 리소스 테이블 - Skill - Attack ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Attack/content.md
+- 리소스 테이블 - Skill - Buff ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Buff/content.md
+- 리소스 테이블 - Skill ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/content.md
+- 스킬 자체의 명중 및 크리티컬 확률 제어 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/스킬 자체의 명중 및 크리티컬 확률 제어/content.md
+- 스킬 자체의 명중 및 크리티컬 확률 제어 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/스킬 자체의 명중 및 크리티컬 확률 제어/content.md
+- 스킬/버프 UI 데이터 참조 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/[작성중] 스킬_버프 UIUX 개선/스킬_버프 UI 데이터 참조/content.md
+- 패시브 스킬 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 시스템/패시브 스킬 시스템/content.md
+- 패시브 스킬 시스템 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 시스템/패시브 스킬 시스템/content.md
 
 ### 강화 재료 (14)
 - 경제 디자인 방향 ← packages/confluence-downloader/output/Design/시스템 디자인/디자인 방향/경제 디자인 방향/content.md
@@ -8223,7 +8245,7 @@
 - [Beta3] 퀘스트 개선 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Beta3 개선 항목/[Beta3] 퀘스트 개선/content.md
 - 리소스 테이블 - Quest ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Quest/content.md
 - 리소스 테이블 - Trigger ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Trigger/content.md
-- 퀘스트 구성 정책 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
+- 퀘스트 구성 정책 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
 - 퀘스트 구성 정책 ← packages/confluence-downloader/output/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
 - 퀘스트 인스턴스 제작 ← packages/confluence-downloader/output/Design/제작 가이드/레벨 - 제작 가이드/퀘스트 인스턴스 제작/content.md
 - 퀘스트 인스턴스 제작 ← packages/confluence-downloader/output/제작 가이드/레벨 - 제작 가이드/퀘스트 인스턴스 제작/content.md
@@ -8245,20 +8267,20 @@
 - 보스 스케쥴 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/몬스터/보스 스케쥴 시스템/content.md
 - 보스 스케쥴 시스템 ← packages/confluence-downloader/output/시스템 디자인/몬스터/보스 스케쥴 시스템/content.md
 
-### SkillType (13)
+### Multiplier (13)
 - Data Set ← packages/xlsx-extractor/output/7_System/PK_스킬 표준 데이터/Data Set/_final/content.md
 - Multiplier & Cooltime ← packages/xlsx-extractor/output/7_System/PK_스킬 표준 데이터/Multiplier & Cooltime/_final/content.md
-- PvE / PvP 스킬 효과 분리 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/PvE _ PvP 스킬 효과 분리/content.md
-- PvE _ PvP 스킬 효과 분리 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/PvE _ PvP 스킬 효과 분리/content.md
-- UI_스킬 ← packages/xlsx-extractor/output/PK_변신 및 스킬 시스템/UI_스킬/_final/content.md
-- 리소스 테이블 - Companion ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Companion/content.md
+- ProjectK 전투 시스템 로직 및 공격 속도 분석 ← packages/confluence-downloader/output/Design/시스템 디자인/전투/ProjectK 전투 시스템 로직 및 공격 속도 분석/content.md
+- 리소스 테이블 - Skill - Area ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Area/content.md
 - 리소스 테이블 - Skill - Attack ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Attack/content.md
 - 리소스 테이블 - Skill - Buff ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Buff/content.md
+- 리소스 테이블 - Skill - Composite ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Composite/content.md
+- 리소스 테이블 - Skill - Movement ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Movement/content.md
+- 리소스 테이블 - Skill - Special ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Special/content.md
 - 리소스 테이블 - Skill ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/content.md
-- 스킬 자체의 명중 및 크리티컬 확률 제어 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/스킬 자체의 명중 및 크리티컬 확률 제어/content.md
-- 스킬 자체의 명중 및 크리티컬 확률 제어 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/스킬 자체의 명중 및 크리티컬 확률 제어/content.md
-- 패시브 스킬 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 시스템/패시브 스킬 시스템/content.md
-- 패시브 스킬 시스템 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 시스템/패시브 스킬 시스템/content.md
+- 스킬 대미지 배율 추가 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 시스템/스킬 대미지 배율 추가/content.md
+- 스킬 대미지 배율 추가 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 시스템/스킬 대미지 배율 추가/content.md
+- 스킬/버프 UI 데이터 참조 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/[작성중] 스킬_버프 UIUX 개선/스킬_버프 UI 데이터 참조/content.md
 
 ### Stun (13)
 - Data Set ← packages/xlsx-extractor/output/7_System/PK_스킬 표준 데이터/Data Set/_final/content.md
@@ -8320,21 +8342,6 @@
 - 필드_포식자의 둥지 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_포식자의 둥지/content.md
 - 필드_풍요의 들판 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_풍요의 들판/content.md
 
-### 레벨 구조 (13)
-- 마을:기원의 곶 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/동대륙_레벨/마을_기원의 곶/content.md
-- 마을:오스트하펜 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/셀레탄/마을_오스트하펜/content.md
-- 마을_기원의 곶 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/동대륙_레벨/마을_기원의 곶/content.md
-- 필드: 검은 물길 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/스켈라/필드_ 검은 물길/content.md
-- 필드:남부 해안가 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/셀레탄/필드_남부 해안가/content.md
-- 필드:오염된 농장 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/셀레탄/필드_오염된 농장/content.md
-- 필드:칼날 바람 절벽 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/셀레탄/필드_칼날 바람 절벽/content.md
-- 필드:해오름 언덕 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/소르브/필드_해오름 언덕/content.md
-- 필드_ 돌림병 발원지 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_ 돌림병 발원지/content.md
-- 필드_남부 해안가 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_남부 해안가/content.md
-- 필드_몰락의 협곡 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_몰락의 협곡/content.md
-- 필드_오염된 농장 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_오염된 농장/content.md
-- 필드_해오름 언덕 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_해오름 언덕/content.md
-
 ### 모션 (13)
 - [Beta1] 도적단장 스킬 및 FX 폴리싱 ← packages/confluence-downloader/output/컨텐츠 디자인/Beta1 개선 항목/[Beta1] 도적단장 스킬 및 FX 폴리싱/content.md
 - 거대 식물(필드 보스) 아트 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_미분류네임드/거대 식물(필드 보스) 아트/_final/content.md
@@ -8380,6 +8387,21 @@
 - 전환 UI FLOW 규칙 설정 ← packages/confluence-downloader/output/시스템 디자인/UX UI 규칙/UX 규칙 문서/전환 UI FLOW 규칙 설정/content.md
 - 죽음의 은신처 ← packages/xlsx-extractor/output/8_Contents/PK_퀘스트_서브퀘스트/죽음의 은신처/_final/content.md
 
+### 비밀 발굴지 (13)
+- 로바로스 시놉시스 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/시놉시스/로바로스 시놉시스/content.md
+- 사냥터_비밀발굴지_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_로바르스_비밀 발굴지/사냥터_비밀발굴지_레벨/_final/content.md
+- 사냥터_비밀발굴지_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_로바르스_비밀 발굴지/사냥터_비밀발굴지_컨셉/_final/content.md
+- 사냥터_포식자의둥지_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_로바르스_포식자의둥지/사냥터_포식자의둥지_레벨/_final/content.md
+- 서대륙: 로바르스Lobars ← packages/confluence-downloader/output/Design/컨텐츠 디자인/월드/서대륙_ 로바르스Lobars/content.md
+- 서대륙:레벨 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/content.md
+- 서대륙_ 로바르스Lobars ← packages/confluence-downloader/output/컨텐츠 디자인/월드/서대륙_ 로바르스Lobars/content.md
+- 서대륙_레벨 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/content.md
+- 아르칸_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_도시_로바르스_아르칸/아르칸_레벨/_final/content.md
+- 필드:비밀 발굴지 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/로바르스/필드_비밀 발굴지/content.md
+- 필드:포식자의 둥지 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/로바르스/필드_포식자의 둥지/content.md
+- 필드:해오름 언덕 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/소르브/필드_해오름 언덕/content.md
+- 필드_비밀 발굴지 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_비밀 발굴지/content.md
+
 ### 서브 퀘스트 (13)
 - (NEW) IBT - 캐릭터 레벨&경험치 ← packages/confluence-downloader/output/Design/시스템 디자인/성장 밸런스/(NEW) IBT - 캐릭터 레벨&경험치/content.md
 - IBT 레벨-경험치 밸런스 ← packages/confluence-downloader/output/Design/시스템 디자인/성장 밸런스/(NEW) IBT - 캐릭터 레벨&경험치/IBT 레벨-경험치 밸런스/content.md
@@ -8387,12 +8409,12 @@
 - ID 대역대 정리 ← packages/confluence-downloader/output/Design/제작 가이드/ID 대역대 정리/content.md
 - [Beta2] 퀘스트 개선 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Beta2 개선 항목/[Beta2] 퀘스트 개선/content.md
 - [Beta2] 퀘스트 개선 ← packages/confluence-downloader/output/컨텐츠 디자인/Beta2 개선 항목/[Beta2] 퀘스트 개선/content.md
-- [IBT] 폴리싱 리스트 ← packages/confluence-downloader/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
+- [IBT] 폴리싱 리스트 ← /home/jacob/proj-k-data/confluence/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
 - 가시나무 숲 ← packages/xlsx-extractor/output/8_Contents/PK_퀘스트_서브퀘스트/가시나무 숲/_final/content.md
 - 안개의 경계 ← packages/xlsx-extractor/output/8_Contents/PK_퀘스트_서브퀘스트/안개의 경계/_final/content.md
 - 콘텐츠별 밸런스 작업 목록 ← packages/confluence-downloader/output/Design/시스템 디자인/경제 밸런스/콘텐츠별 밸런스 작업 목록/content.md
 - 콘텐츠별 밸런스 작업 목록 ← packages/confluence-downloader/output/시스템 디자인/경제 밸런스/콘텐츠별 밸런스 작업 목록/content.md
-- 퀘스트 구성 정책 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
+- 퀘스트 구성 정책 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
 - 퀘스트 구성 정책 ← packages/confluence-downloader/output/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
 
 ### 슬롯 (13)
@@ -8614,7 +8636,7 @@
 - 버프 (Buff) 만들기 ← packages/confluence-downloader/output/Design/제작 가이드/전투 - 제작 가이드/버프 (Buff) 만들기/content.md
 - 버프 (Buff) 만들기 ← packages/confluence-downloader/output/제작 가이드/전투 - 제작 가이드/버프 (Buff) 만들기/content.md
 - 사망 시스템 개선 ← packages/confluence-downloader/output/시스템 디자인/전투/사망 시스템 개선/content.md
-- 성향 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
+- 성향 시스템 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
 - 평타 치명타에 경직 효과 추가 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/평타 치명타에 경직 효과 추가/content.md
 - 평타 치명타에 경직 효과 추가 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/평타 치명타에 경직 효과 추가/content.md
 
@@ -8702,20 +8724,6 @@
 - 플레이어 캐릭터 무기 MeshComponent 분리 ← packages/confluence-downloader/output/Design/시스템 디자인/클래스/플레이어 캐릭터 무기 MeshComponent 분리/content.md
 - 플레이어 캐릭터 무기 MeshComponent 분리 ← packages/confluence-downloader/output/시스템 디자인/클래스/플레이어 캐릭터 무기 MeshComponent 분리/content.md
 
-### Multiplier (12)
-- Data Set ← packages/xlsx-extractor/output/7_System/PK_스킬 표준 데이터/Data Set/_final/content.md
-- Multiplier & Cooltime ← packages/xlsx-extractor/output/7_System/PK_스킬 표준 데이터/Multiplier & Cooltime/_final/content.md
-- ProjectK 전투 시스템 로직 및 공격 속도 분석 ← packages/confluence-downloader/output/Design/시스템 디자인/전투/ProjectK 전투 시스템 로직 및 공격 속도 분석/content.md
-- 리소스 테이블 - Skill - Area ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Area/content.md
-- 리소스 테이블 - Skill - Attack ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Attack/content.md
-- 리소스 테이블 - Skill - Buff ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Buff/content.md
-- 리소스 테이블 - Skill - Composite ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Composite/content.md
-- 리소스 테이블 - Skill - Movement ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Movement/content.md
-- 리소스 테이블 - Skill - Special ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Special/content.md
-- 리소스 테이블 - Skill ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/content.md
-- 스킬 대미지 배율 추가 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 시스템/스킬 대미지 배율 추가/content.md
-- 스킬 대미지 배율 추가 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 시스템/스킬 대미지 배율 추가/content.md
-
 ### Pull (12)
 - Data Set ← packages/xlsx-extractor/output/7_System/PK_스킬 표준 데이터/Data Set/_final/content.md
 - Enum - Delay ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/Enum/Enum - Delay/content.md
@@ -8785,6 +8793,19 @@
 - 스킬 기능 리스트 ← packages/xlsx-extractor/output/PK_변신 및 스킬 시스템/스킬 기능 리스트/_final/content.md
 - 장판 효과 (시전자 위치&상태 영향) ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/장판 효과 (시전자 위치&상태 영향)/content.md
 - 장판 효과 (시전자 위치&상태 영향) ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/장판 효과 (시전자 위치&상태 영향)/content.md
+
+### TargetType (12)
+- 리소스 테이블 - Buff ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Buff/content.md
+- 리소스 테이블 - Companion ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Companion/content.md
+- 리소스 테이블 - Skill - Attack ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Attack/content.md
+- 리소스 테이블 - Skill - Buff ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Buff/content.md
+- 리소스 테이블 - Skill - Movement ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Movement/content.md
+- 리소스 테이블 - Skill - Special ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Special/content.md
+- 리소스 테이블 - Skill ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/content.md
+- 세부 정보 ← packages/xlsx-extractor/output/8_Contents/PK_변신_궁사_렌(베이스)/세부 정보/_final/content.md
+- 스킬/버프 UI 데이터 참조 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/[작성중] 스킬_버프 UIUX 개선/스킬_버프 UI 데이터 참조/content.md
+- 패시브 스킬 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 시스템/패시브 스킬 시스템/content.md
+- 패시브 스킬 시스템 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 시스템/패시브 스킬 시스템/content.md
 
 ### Tier (12)
 - UI 표현 데이터 정리 - 아이템 ← packages/confluence-downloader/output/Design/시스템 디자인/아이템/아이템 UIUX 정리_개선/UI 표현 데이터 정리 - 아이템/content.md
@@ -8856,6 +8877,20 @@
 - 콘텐츠별 밸런스 작업 목록 ← packages/confluence-downloader/output/Design/시스템 디자인/경제 밸런스/콘텐츠별 밸런스 작업 목록/content.md
 - 콘텐츠별 밸런스 작업 목록 ← packages/confluence-downloader/output/시스템 디자인/경제 밸런스/콘텐츠별 밸런스 작업 목록/content.md
 
+### 레벨 구조 (12)
+- 마을:기원의 곶 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/동대륙_레벨/마을_기원의 곶/content.md
+- 마을:오스트하펜 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/셀레탄/마을_오스트하펜/content.md
+- 마을_기원의 곶 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/동대륙_레벨/마을_기원의 곶/content.md
+- 필드: 검은 물길 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/스켈라/필드_ 검은 물길/content.md
+- 필드:남부 해안가 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/셀레탄/필드_남부 해안가/content.md
+- 필드:오염된 농장 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/셀레탄/필드_오염된 농장/content.md
+- 필드:칼날 바람 절벽 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/셀레탄/필드_칼날 바람 절벽/content.md
+- 필드_ 돌림병 발원지 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_ 돌림병 발원지/content.md
+- 필드_남부 해안가 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_남부 해안가/content.md
+- 필드_몰락의 협곡 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_몰락의 협곡/content.md
+- 필드_오염된 농장 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_오염된 농장/content.md
+- 필드_해오름 언덕 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_해오름 언덕/content.md
+
 ### 명중 (12)
 - IBT - 성물 옵션 구성 ← packages/confluence-downloader/output/Design/시스템 디자인/성장 밸런스/IBT - 성물 옵션 구성/content.md
 - IBT - 펫 옵션 구성 ← packages/confluence-downloader/output/Design/시스템 디자인/성장 밸런스/IBT - 펫 옵션 구성/content.md
@@ -8911,20 +8946,6 @@
 - 클래스 기본 정보 ← packages/confluence-downloader/output/시스템 디자인/클래스/클래스 기본 정보/content.md
 - 클래스 디자인 - 샤먼 ← packages/confluence-downloader/output/Design/시스템 디자인/클래스/클래스 디자인 - 샤먼/content.md
 - 클래스 디자인 - 샤먼 ← packages/confluence-downloader/output/시스템 디자인/클래스/클래스 디자인 - 샤먼/content.md
-
-### 비밀 발굴지 (12)
-- 로바로스 시놉시스 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/시놉시스/로바로스 시놉시스/content.md
-- 사냥터_비밀발굴지_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_로바르스_비밀 발굴지/사냥터_비밀발굴지_레벨/_final/content.md
-- 사냥터_비밀발굴지_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_로바르스_비밀 발굴지/사냥터_비밀발굴지_컨셉/_final/content.md
-- 사냥터_포식자의둥지_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_로바르스_포식자의둥지/사냥터_포식자의둥지_레벨/_final/content.md
-- 서대륙: 로바르스Lobars ← packages/confluence-downloader/output/Design/컨텐츠 디자인/월드/서대륙_ 로바르스Lobars/content.md
-- 서대륙:레벨 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/content.md
-- 서대륙_ 로바르스Lobars ← packages/confluence-downloader/output/컨텐츠 디자인/월드/서대륙_ 로바르스Lobars/content.md
-- 서대륙_레벨 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/content.md
-- 아르칸_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_도시_로바르스_아르칸/아르칸_레벨/_final/content.md
-- 필드:비밀 발굴지 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/로바르스/필드_비밀 발굴지/content.md
-- 필드:포식자의 둥지 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/로바르스/필드_포식자의 둥지/content.md
-- 필드_비밀 발굴지 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_비밀 발굴지/content.md
 
 ### 빙결 (12)
 - PC FX 연출 정책 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 시스템/PC FX 연출 정책/content.md
@@ -9106,6 +9127,19 @@
 - 필드:사그라진 성터 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/동대륙_레벨/필드_사그라진 성터/content.md
 - 필드_사그라진 성터 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/동대륙_레벨/필드_사그라진 성터/content.md
 
+### AreaShape (11)
+- 리소스 테이블 - Monster ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Monster/content.md
+- 리소스 테이블 - Skill - Area ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Area/content.md
+- 리소스 테이블 - Skill - Attack ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Attack/content.md
+- 리소스 테이블 - Skill - Buff ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Buff/content.md
+- 리소스 테이블 - Skill - Movement ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Movement/content.md
+- 리소스 테이블 - Skill - Special ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Special/content.md
+- 리소스 테이블 - Skill ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/content.md
+- 스킬 범위 시각화 기능 구현 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/몬스터/스킬 범위 시각화 기능 구현/content.md
+- 스킬/버프 UI 데이터 참조 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/[작성중] 스킬_버프 UIUX 개선/스킬_버프 UI 데이터 참조/content.md
+- 장판 효과 (시전자 위치&상태 영향) ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/장판 효과 (시전자 위치&상태 영향)/content.md
+- 장판 효과 (시전자 위치&상태 영향) ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/장판 효과 (시전자 위치&상태 영향)/content.md
+
 ### CC (11)
 - BonusEnum에 있지만 StatClass에 없는 리스트 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/BonusEnum에 있지만 StatClass에 없는 리스트/content.md
 - 군중 제어 정보 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/군중 제어 정보/content.md
@@ -9118,6 +9152,19 @@
 - 클래스 디자인 - 매지션 ← packages/confluence-downloader/output/시스템 디자인/클래스/클래스 디자인 - 매지션/content.md
 - 클래스 디자인 - 샤먼 ← packages/confluence-downloader/output/Design/시스템 디자인/클래스/클래스 디자인 - 샤먼/content.md
 - 클래스 디자인 - 샤먼 ← packages/confluence-downloader/output/시스템 디자인/클래스/클래스 디자인 - 샤먼/content.md
+
+### Duration (11)
+- 리소스 테이블 - Buff ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Buff/content.md
+- 리소스 테이블 - Skill - Movement ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Movement/content.md
+- 무작위 버프 지속 시간 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/무작위 버프 지속 시간/content.md
+- 무작위 버프 지속 시간 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/무작위 버프 지속 시간/content.md
+- 버프 종료 후 효과 부여(연쇄 버프) ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/버프 종료 후 효과 부여(연쇄 버프)/content.md
+- 버프 종료 후 효과 부여(연쇄 버프) ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/버프 종료 후 효과 부여(연쇄 버프)/content.md
+- 스킬/버프 UI 데이터 참조 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/[작성중] 스킬_버프 UIUX 개선/스킬_버프 UI 데이터 참조/content.md
+- 장판 효과 (시전자 위치&상태 영향) ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/장판 효과 (시전자 위치&상태 영향)/content.md
+- 장판 효과 (시전자 위치&상태 영향) ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/장판 효과 (시전자 위치&상태 영향)/content.md
+- 패시브 스킬 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 시스템/패시브 스킬 시스템/content.md
+- 패시브 스킬 시스템 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 시스템/패시브 스킬 시스템/content.md
 
 ### Guild (11)
 - Enum - Content ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/Enum/Enum - Content/content.md
@@ -9220,18 +9267,6 @@
 - 컬렉션_중간 단계 보상 기능(Beta3) ← packages/confluence-downloader/output/Design/시스템 디자인/컬렉션/컬렉션 시스템/컬렉션_중간 단계 보상 기능(Beta3)/content.md
 - 클래스 기반으로 스킬 구조 변경 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 시스템/클래스 기반으로 스킬 구조 변경/content.md
 - 클래스 기반으로 스킬 구조 변경 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 시스템/클래스 기반으로 스킬 구조 변경/content.md
-
-### TargetType (11)
-- 리소스 테이블 - Buff ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Buff/content.md
-- 리소스 테이블 - Companion ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Companion/content.md
-- 리소스 테이블 - Skill - Attack ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Attack/content.md
-- 리소스 테이블 - Skill - Buff ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Buff/content.md
-- 리소스 테이블 - Skill - Movement ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Movement/content.md
-- 리소스 테이블 - Skill - Special ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Special/content.md
-- 리소스 테이블 - Skill ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/content.md
-- 세부 정보 ← packages/xlsx-extractor/output/8_Contents/PK_변신_궁사_렌(베이스)/세부 정보/_final/content.md
-- 패시브 스킬 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 시스템/패시브 스킬 시스템/content.md
-- 패시브 스킬 시스템 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 시스템/패시브 스킬 시스템/content.md
 
 ### Type (11)
 - 대상의 상태에 따른 조건부 효과 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/대상의 상태에 따른 조건부 효과/content.md
@@ -9747,7 +9782,7 @@
 - 마을: 나바론 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/홀바르드/마을_ 나바론/content.md
 - 무기 방어구 상인 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Npc/상인 NPC 리스트/무기 방어구 상인/content.md
 - 사냥터_몰락의 협곡_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_소르브_몰락의 협곡/사냥터_몰락의 협곡_컨셉/_final/content.md
-- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 소르브Sorv/서대륙_ 홀바르드Holbard/content.md
+- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 홀바르드Holbard/content.md
 - 월드 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/월드/content.md
 - 월드 ← packages/confluence-downloader/output/컨텐츠 디자인/월드/content.md
 - 필드_몰락의 협곡 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_몰락의 협곡/content.md
@@ -9814,18 +9849,6 @@
 - 플레이어 캐릭터 무기 MeshComponent 분리 ← packages/confluence-downloader/output/Design/시스템 디자인/클래스/플레이어 캐릭터 무기 MeshComponent 분리/content.md
 - 플레이어 캐릭터 무기 MeshComponent 분리 ← packages/confluence-downloader/output/시스템 디자인/클래스/플레이어 캐릭터 무기 MeshComponent 분리/content.md
 
-### AreaShape (10)
-- 리소스 테이블 - Monster ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Monster/content.md
-- 리소스 테이블 - Skill - Area ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Area/content.md
-- 리소스 테이블 - Skill - Attack ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Attack/content.md
-- 리소스 테이블 - Skill - Buff ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Buff/content.md
-- 리소스 테이블 - Skill - Movement ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Movement/content.md
-- 리소스 테이블 - Skill - Special ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Special/content.md
-- 리소스 테이블 - Skill ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/content.md
-- 스킬 범위 시각화 기능 구현 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/몬스터/스킬 범위 시각화 기능 구현/content.md
-- 장판 효과 (시전자 위치&상태 영향) ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/장판 효과 (시전자 위치&상태 영향)/content.md
-- 장판 효과 (시전자 위치&상태 영향) ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/장판 효과 (시전자 위치&상태 영향)/content.md
-
 ### BuffID (10)
 - [Beta1] 스킬 이펙트 구현 사항 취합 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/[Beta1] 스킬 이펙트 구현 사항 취합/content.md
 - [Beta1] 스킬 이펙트 구현 사항 취합 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/[Beta1] 스킬 이펙트 구현 사항 취합/content.md
@@ -9837,6 +9860,18 @@
 - 버프 스택 증감 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/버프 스택 증감/content.md
 - 버프 스택 증감 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/버프 스택 증감/content.md
 - 버프 제거 효과 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/Legacy/버프 제거 효과/content.md
+
+### CharacterSkillClass (10)
+- UI_스킬 ← packages/xlsx-extractor/output/PK_변신 및 스킬 시스템/UI_스킬/_final/content.md
+- 궁극기 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 시스템/궁극기 시스템/content.md
+- 궁극기 시스템 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 시스템/궁극기 시스템/content.md
+- 돌진 공격 기능 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/돌진 공격 기능/content.md
+- 스킬 자체의 명중 및 크리티컬 확률 제어 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/스킬 자체의 명중 및 크리티컬 확률 제어/content.md
+- 스킬 자체의 명중 및 크리티컬 확률 제어 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/스킬 자체의 명중 및 크리티컬 확률 제어/content.md
+- 스킬/버프 UI 데이터 참조 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/[작성중] 스킬_버프 UIUX 개선/스킬_버프 UI 데이터 참조/content.md
+- 테이블 정보 ← packages/xlsx-extractor/output/PK_변신 및 스킬 시스템/테이블 정보/_final/content.md
+- 패시브 스킬 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 시스템/패시브 스킬 시스템/content.md
+- 패시브 스킬 시스템 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 시스템/패시브 스킬 시스템/content.md
 
 ### Companion (10)
 - Beta3_변신 등급별 FX ← packages/confluence-downloader/output/Design/R&D 및 레퍼런스/변신 관련/Beta3_변신 등급별 FX/content.md
@@ -9861,18 +9896,6 @@
 - 업적 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/보상 시스템/업적 시스템/content.md
 - 업적 시스템 ← packages/confluence-downloader/output/시스템 디자인/보상 시스템/업적 시스템/content.md
 - 재화 정보 UI 개선 ← packages/confluence-downloader/output/Design/시스템 디자인/재화/재화 정보 UI 개선/content.md
-
-### Duration (10)
-- 리소스 테이블 - Buff ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Buff/content.md
-- 리소스 테이블 - Skill - Movement ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Movement/content.md
-- 무작위 버프 지속 시간 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/무작위 버프 지속 시간/content.md
-- 무작위 버프 지속 시간 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/무작위 버프 지속 시간/content.md
-- 버프 종료 후 효과 부여(연쇄 버프) ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/버프 종료 후 효과 부여(연쇄 버프)/content.md
-- 버프 종료 후 효과 부여(연쇄 버프) ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/버프 종료 후 효과 부여(연쇄 버프)/content.md
-- 장판 효과 (시전자 위치&상태 영향) ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/장판 효과 (시전자 위치&상태 영향)/content.md
-- 장판 효과 (시전자 위치&상태 영향) ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/장판 효과 (시전자 위치&상태 영향)/content.md
-- 패시브 스킬 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 시스템/패시브 스킬 시스템/content.md
-- 패시브 스킬 시스템 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 시스템/패시브 스킬 시스템/content.md
 
 ### Enchant (10)
 - 리소스 테이블 - Item - Enchant ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Item/리소스 테이블 - Item - Enchant/content.md
@@ -10378,18 +10401,6 @@
 - 필드 몬스터 요약 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_셀레탄_오스트하펜 남부 해안가/필드 몬스터 요약/_final/content.md
 - 히스토리 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_셀레탄_오스트하펜 남부 해안가/히스토리/_final/content.md
 
-### 우선순위 (10)
-- UI LayerType 규칙 ← packages/confluence-downloader/output/시스템 디자인/UX UI 규칙/UX 규칙 문서/UI LayerType 규칙/content.md
-- [IBT] 폴리싱 리스트 ← packages/confluence-downloader/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
-- 소모성 아이템 사용 우선 순위 및 그룹핑 ← packages/confluence-downloader/output/Design/시스템 디자인/아이템/소모성 아이템 사용 우선 순위 및 그룹핑/content.md
-- 소모성 아이템 사용 우선 순위 및 그룹핑 ← packages/confluence-downloader/output/시스템 디자인/아이템/소모성 아이템 사용 우선 순위 및 그룹핑/content.md
-- 스킬 발동 순서 설정 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 시스템/스킬 발동 순서 설정/content.md
-- 스킬 발동 순서 설정 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 시스템/스킬 발동 순서 설정/content.md
-- 아이템 티어 기능 ← packages/confluence-downloader/output/Design/시스템 디자인/아이템/아이템 티어 기능/content.md
-- 카메라 모드 설정 ← packages/confluence-downloader/output/Design/제작 가이드/레벨 - 제작 가이드/카메라 모드 설정/content.md
-- 카메라 모드 설정 ← packages/confluence-downloader/output/제작 가이드/레벨 - 제작 가이드/카메라 모드 설정/content.md
-- 테리토리 시스템 ← packages/confluence-downloader/output/시스템 디자인/맵/테리토리 시스템/content.md
-
 ### 은신 상태 (10)
 - 서버 이동 컨텐츠 ← packages/confluence-downloader/output/Design/시스템 디자인/PvP 컨텐츠/서버 이동 컨텐츠/content.md
 - 서버 이동 컨텐츠 ← packages/confluence-downloader/output/시스템 디자인/PvP 컨텐츠/서버 이동 컨텐츠/content.md
@@ -10614,17 +10625,6 @@
 - 콘텐츠 별 재화 비중 ← packages/confluence-downloader/output/Design/시스템 디자인/경제 밸런스/콘텐츠 별 재화 비중/content.md
 - 콘텐츠 별 재화 비중 ← packages/confluence-downloader/output/시스템 디자인/경제 밸런스/콘텐츠 별 재화 비중/content.md
 
-### CharacterSkillClass (9)
-- UI_스킬 ← packages/xlsx-extractor/output/PK_변신 및 스킬 시스템/UI_스킬/_final/content.md
-- 궁극기 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 시스템/궁극기 시스템/content.md
-- 궁극기 시스템 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 시스템/궁극기 시스템/content.md
-- 돌진 공격 기능 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/돌진 공격 기능/content.md
-- 스킬 자체의 명중 및 크리티컬 확률 제어 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/스킬 자체의 명중 및 크리티컬 확률 제어/content.md
-- 스킬 자체의 명중 및 크리티컬 확률 제어 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/스킬 자체의 명중 및 크리티컬 확률 제어/content.md
-- 테이블 정보 ← packages/xlsx-extractor/output/PK_변신 및 스킬 시스템/테이블 정보/_final/content.md
-- 패시브 스킬 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 시스템/패시브 스킬 시스템/content.md
-- 패시브 스킬 시스템 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 시스템/패시브 스킬 시스템/content.md
-
 ### Coin (9)
 - Enum - Guild ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/Enum/Enum - Guild/content.md
 - Enum - Reward ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/Enum/Enum - Reward/content.md
@@ -10646,6 +10646,17 @@
 - 재화 정보 UI ← packages/confluence-downloader/output/시스템 디자인/재화/재화 정보 UI/content.md
 - 콘텐츠 별 재화 비중 ← packages/confluence-downloader/output/Design/시스템 디자인/경제 밸런스/콘텐츠 별 재화 비중/content.md
 - 콘텐츠 별 재화 비중 ← packages/confluence-downloader/output/시스템 디자인/경제 밸런스/콘텐츠 별 재화 비중/content.md
+
+### EffectId (9)
+- 레벨당 스탯 증감 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/레벨당 스탯 증감/content.md
+- 레벨당 스탯 증감 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/레벨당 스탯 증감/content.md
+- 리소스 테이블 - Buff ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Buff/content.md
+- 리소스 테이블 - Effect ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Effect/content.md
+- 버프 (Buff) 만들기 ← packages/confluence-downloader/output/Design/제작 가이드/전투 - 제작 가이드/버프 (Buff) 만들기/content.md
+- 버프 (Buff) 만들기 ← packages/confluence-downloader/output/제작 가이드/전투 - 제작 가이드/버프 (Buff) 만들기/content.md
+- 스킬/버프 UI 데이터 참조 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/[작성중] 스킬_버프 UIUX 개선/스킬_버프 UI 데이터 참조/content.md
+- 패시브 스킬 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 시스템/패시브 스킬 시스템/content.md
+- 패시브 스킬 시스템 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 시스템/패시브 스킬 시스템/content.md
 
 ### EffectStatName (9)
 - Enum - Pet ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/Enum/Enum - Pet/content.md
@@ -10712,6 +10723,17 @@
 - 레드닷-컨텐츠 오픈 조건 ← packages/confluence-downloader/output/Design/시스템 디자인/기반 시스템/레드닷 시스템/레드닷 시스템 UIUX 정리_개선/레드닷-컨텐츠 오픈 조건/content.md
 - 레드닷-컬렉션 ← packages/confluence-downloader/output/Design/시스템 디자인/기반 시스템/레드닷 시스템/레드닷 시스템 UIUX 정리_개선/레드닷-컬렉션/content.md
 - 레드닷-퀘스트 ← packages/confluence-downloader/output/Design/시스템 디자인/기반 시스템/레드닷 시스템/레드닷 시스템 UIUX 정리_개선/레드닷-퀘스트/content.md
+
+### IconResource (9)
+- UI 표현 데이터 정리 - 아이템 ← packages/confluence-downloader/output/Design/시스템 디자인/아이템/아이템 UIUX 정리_개선/UI 표현 데이터 정리 - 아이템/content.md
+- 명찰 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/보상 시스템/명찰 시스템/content.md
+- 박스 아이템 UIUX 정리/개선 ← packages/confluence-downloader/output/Design/시스템 디자인/아이템/박스 아이템 UIUX 정리_개선/content.md
+- 스킬/버프 UI 데이터 참조 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/[작성중] 스킬_버프 UIUX 개선/스킬_버프 UI 데이터 참조/content.md
+- 재화 정보 UI 개선 ← packages/confluence-downloader/output/Design/시스템 디자인/재화/재화 정보 UI 개선/content.md
+- 캐릭터 생성 플로우 정리 ← packages/confluence-downloader/output/Design/시스템 디자인/기반 시스템/로그인/캐릭터 생성 플로우 정리/content.md
+- 캐릭터 생성 플로우 정리 ← packages/confluence-downloader/output/시스템 디자인/기반 시스템/로그인/캐릭터 생성 플로우 정리/content.md
+- 패시브 스킬 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 시스템/패시브 스킬 시스템/content.md
+- 패시브 스킬 시스템 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 시스템/패시브 스킬 시스템/content.md
 
 ### InfiniteCoin (9)
 - Enum - Reward ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/Enum/Enum - Reward/content.md
@@ -10805,7 +10827,7 @@
 - Enum - Quest ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/Enum/Enum - Quest/content.md
 - Enum - Trigger ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/Enum/Enum - Trigger/content.md
 - 리소스 테이블 - Quest ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Quest/content.md
-- 퀘스트 구성 정책 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
+- 퀘스트 구성 정책 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
 - 퀘스트 구성 정책 ← packages/confluence-downloader/output/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
 - 퀘스트 인스턴스 제작 ← packages/confluence-downloader/output/Design/제작 가이드/레벨 - 제작 가이드/퀘스트 인스턴스 제작/content.md
 - 퀘스트 인스턴스 제작 ← packages/confluence-downloader/output/제작 가이드/레벨 - 제작 가이드/퀘스트 인스턴스 제작/content.md
@@ -11245,6 +11267,17 @@
 - 필드 몬스터 요약 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_셀레탄_오염된농장/필드 몬스터 요약/_final/content.md
 - 히스토리 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_셀레탄_오염된농장/히스토리/_final/content.md
 
+### 우선순위 (9)
+- UI LayerType 규칙 ← packages/confluence-downloader/output/시스템 디자인/UX UI 규칙/UX 규칙 문서/UI LayerType 규칙/content.md
+- 소모성 아이템 사용 우선 순위 및 그룹핑 ← packages/confluence-downloader/output/Design/시스템 디자인/아이템/소모성 아이템 사용 우선 순위 및 그룹핑/content.md
+- 소모성 아이템 사용 우선 순위 및 그룹핑 ← packages/confluence-downloader/output/시스템 디자인/아이템/소모성 아이템 사용 우선 순위 및 그룹핑/content.md
+- 스킬 발동 순서 설정 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 시스템/스킬 발동 순서 설정/content.md
+- 스킬 발동 순서 설정 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 시스템/스킬 발동 순서 설정/content.md
+- 아이템 티어 기능 ← packages/confluence-downloader/output/Design/시스템 디자인/아이템/아이템 티어 기능/content.md
+- 카메라 모드 설정 ← packages/confluence-downloader/output/Design/제작 가이드/레벨 - 제작 가이드/카메라 모드 설정/content.md
+- 카메라 모드 설정 ← packages/confluence-downloader/output/제작 가이드/레벨 - 제작 가이드/카메라 모드 설정/content.md
+- 테리토리 시스템 ← packages/confluence-downloader/output/시스템 디자인/맵/테리토리 시스템/content.md
+
 ### 원거리 공격 (9)
 - 거대 식물(필드 보스) 전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_미분류네임드/거대 식물(필드 보스) 전투/_final/content.md
 - 네임드 몬스터_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_셀레탄_배반자들의소굴/네임드 몬스터_전투/_final/content.md
@@ -11333,6 +11366,16 @@
 - 아트_이펙트 리스트 ← packages/xlsx-extractor/output/8_Contents/PK_변신_법사_빙룡의 신녀/아트_이펙트 리스트/_final/content.md
 - 아트_이펙트 리스트 ← packages/xlsx-extractor/output/8_Contents/PK_변신_법사_시아(베이스)/아트_이펙트 리스트/_final/content.md
 
+### AffectType (8)
+- 리소스 테이블 - Companion ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Companion/content.md
+- 리소스 테이블 - Skill - Area ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Area/content.md
+- 리소스 테이블 - Skill - Attack ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Attack/content.md
+- 리소스 테이블 - Skill - Buff ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Buff/content.md
+- 리소스 테이블 - Skill - Movement ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Movement/content.md
+- 리소스 테이블 - Skill - Special ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Special/content.md
+- 리소스 테이블 - Skill ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/content.md
+- 스킬/버프 UI 데이터 참조 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/[작성중] 스킬_버프 UIUX 개선/스킬_버프 UI 데이터 참조/content.md
+
 ### AreaSize (8)
 - 리소스 테이블 - Skill - Area ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Area/content.md
 - 리소스 테이블 - Skill - Attack ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Attack/content.md
@@ -11393,16 +11436,6 @@
 - 장비 아이템 발주 계획 ← packages/confluence-downloader/output/Design/시스템 디자인/아이템/장비 아이템 발주 계획/content.md
 - 장비 아이템 발주 계획 ← packages/confluence-downloader/output/시스템 디자인/아이템/장비 아이템 발주 계획/content.md
 
-### EffectId (8)
-- 레벨당 스탯 증감 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/레벨당 스탯 증감/content.md
-- 레벨당 스탯 증감 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/레벨당 스탯 증감/content.md
-- 리소스 테이블 - Buff ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Buff/content.md
-- 리소스 테이블 - Effect ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Effect/content.md
-- 버프 (Buff) 만들기 ← packages/confluence-downloader/output/Design/제작 가이드/전투 - 제작 가이드/버프 (Buff) 만들기/content.md
-- 버프 (Buff) 만들기 ← packages/confluence-downloader/output/제작 가이드/전투 - 제작 가이드/버프 (Buff) 만들기/content.md
-- 패시브 스킬 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 시스템/패시브 스킬 시스템/content.md
-- 패시브 스킬 시스템 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 시스템/패시브 스킬 시스템/content.md
-
 ### ExploreServer (8)
 - Enum - Npc ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/Enum/Enum - Npc/content.md
 - Enum - Quest ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/Enum/Enum - Quest/content.md
@@ -11432,16 +11465,6 @@
 - 재화 종류 및 흐름 ← packages/confluence-downloader/output/Design/시스템 디자인/재화/재화 종류 및 흐름/content.md
 - 콘텐츠 별 재화 비중 ← packages/confluence-downloader/output/Design/시스템 디자인/경제 밸런스/콘텐츠 별 재화 비중/content.md
 - 콘텐츠 별 재화 비중 ← packages/confluence-downloader/output/시스템 디자인/경제 밸런스/콘텐츠 별 재화 비중/content.md
-
-### IconResource (8)
-- UI 표현 데이터 정리 - 아이템 ← packages/confluence-downloader/output/Design/시스템 디자인/아이템/아이템 UIUX 정리_개선/UI 표현 데이터 정리 - 아이템/content.md
-- 명찰 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/보상 시스템/명찰 시스템/content.md
-- 박스 아이템 UIUX 정리/개선 ← packages/confluence-downloader/output/Design/시스템 디자인/아이템/박스 아이템 UIUX 정리_개선/content.md
-- 재화 정보 UI 개선 ← packages/confluence-downloader/output/Design/시스템 디자인/재화/재화 정보 UI 개선/content.md
-- 캐릭터 생성 플로우 정리 ← packages/confluence-downloader/output/Design/시스템 디자인/기반 시스템/로그인/캐릭터 생성 플로우 정리/content.md
-- 캐릭터 생성 플로우 정리 ← packages/confluence-downloader/output/시스템 디자인/기반 시스템/로그인/캐릭터 생성 플로우 정리/content.md
-- 패시브 스킬 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 시스템/패시브 스킬 시스템/content.md
-- 패시브 스킬 시스템 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 시스템/패시브 스킬 시스템/content.md
 
 ### ItemEtcClass (8)
 - UI 표현 데이터 정리 - 아이템 ← packages/confluence-downloader/output/Design/시스템 디자인/아이템/아이템 UIUX 정리_개선/UI 표현 데이터 정리 - 아이템/content.md
@@ -11898,7 +11921,7 @@
 - 사망 시스템 개선 ← packages/confluence-downloader/output/시스템 디자인/전투/사망 시스템 개선/content.md
 - 서버 이동 컨텐츠 ← packages/confluence-downloader/output/Design/시스템 디자인/PvP 컨텐츠/서버 이동 컨텐츠/content.md
 - 서버 이동 컨텐츠 ← packages/confluence-downloader/output/시스템 디자인/PvP 컨텐츠/서버 이동 컨텐츠/content.md
-- 성향 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
+- 성향 시스템 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
 - 성향 시스템 ← packages/confluence-downloader/output/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
 
 ### 수집 (8)
@@ -11906,7 +11929,7 @@
 - 서브퀘스트 구성_바리울 ← packages/xlsx-extractor/output/8_Contents/PK_퀘스트_서브퀘스트/서브퀘스트 구성_바리울/_final/content.md
 - 컨텐츠 디자인 방향 ← packages/confluence-downloader/output/Design/시스템 디자인/디자인 방향/컨텐츠 디자인 방향/content.md
 - 컨텐츠 디자인 방향 ← packages/confluence-downloader/output/시스템 디자인/디자인 방향/컨텐츠 디자인 방향/content.md
-- 퀘스트 구성 정책 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
+- 퀘스트 구성 정책 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
 - 퀘스트 구성 정책 ← packages/confluence-downloader/output/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
 - 횡적 성장 방향 ← packages/confluence-downloader/output/Design/시스템 디자인/디자인 방향/횡적 성장 방향/content.md
 - 횡적 성장 방향 ← packages/confluence-downloader/output/시스템 디자인/디자인 방향/횡적 성장 방향/content.md
@@ -11984,7 +12007,7 @@
 ### 아이템 (8)
 - 레드닷 시스템_인벤토리 ← packages/confluence-downloader/output/Design/시스템 디자인/기반 시스템/레드닷 시스템/레드닷 시스템_인벤토리/content.md
 - 레드닷 시스템_인벤토리 ← packages/confluence-downloader/output/시스템 디자인/기반 시스템/레드닷 시스템/레드닷 시스템_인벤토리/content.md
-- 성향 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
+- 성향 시스템 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
 - 성향 시스템 ← packages/confluence-downloader/output/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
 - 업적 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/보상 시스템/업적 시스템/content.md
 - 업적 시스템 ← packages/confluence-downloader/output/시스템 디자인/보상 시스템/업적 시스템/content.md
@@ -12230,7 +12253,7 @@
 - 버프 (Buff) 만들기 ← packages/confluence-downloader/output/제작 가이드/전투 - 제작 가이드/버프 (Buff) 만들기/content.md
 
 ### 폴리싱 (8)
-- [IBT] 폴리싱 리스트 ← packages/confluence-downloader/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
+- [IBT] 폴리싱 리스트 ← /home/jacob/proj-k-data/confluence/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
 - 가디언 스킬 연출 폴리싱 피드백 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 리스트/클래스 스킬 연출 폴리싱/가디언 스킬 연출 폴리싱 피드백/content.md
 - 매지션 스킬 연출 폴리싱 피드백 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 리스트/클래스 스킬 연출 폴리싱/매지션 스킬 연출 폴리싱 피드백/content.md
 - 샤먼 스킬 연출 폴리싱 피드백 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 리스트/클래스 스킬 연출 폴리싱/샤먼 스킬 연출 폴리싱 피드백/content.md
@@ -12276,7 +12299,7 @@
 - 서대륙:레벨 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/content.md
 - 서대륙_ 소르브Sorv ← packages/confluence-downloader/output/컨텐츠 디자인/월드/서대륙_ 소르브Sorv/content.md
 - 서대륙_레벨 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/content.md
-- 필드:해오름 언덕 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/소르브/필드_해오름 언덕/content.md
+- 필드:해오름 언덕 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/소르브/필드_해오름 언덕/content.md
 - 필드_해오름 언덕 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_해오름 언덕/content.md
 
 ### 핼버드 (8)
@@ -12306,15 +12329,6 @@
 - 리소스 테이블 - Effect ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Effect/content.md
 - 버프 스택 증감 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/버프 스택 증감/content.md
 - 버프 스택 증감 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/버프 스택 증감/content.md
-
-### AffectType (7)
-- 리소스 테이블 - Companion ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Companion/content.md
-- 리소스 테이블 - Skill - Area ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Area/content.md
-- 리소스 테이블 - Skill - Attack ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Attack/content.md
-- 리소스 테이블 - Skill - Buff ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Buff/content.md
-- 리소스 테이블 - Skill - Movement ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Movement/content.md
-- 리소스 테이블 - Skill - Special ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Special/content.md
-- 리소스 테이블 - Skill ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/content.md
 
 ### AllActionDisable (7)
 - 기존 텔레포트 시스템 개편 및 이동 편의성 정책 ← packages/confluence-downloader/output/Design/시스템 디자인/기반 시스템/이동 편의성/기존 텔레포트 시스템 개편 및 이동 편의성 정책/content.md
@@ -12460,11 +12474,20 @@
 - 정령 시스템_합성 ← packages/confluence-downloader/output/Design/시스템 디자인/정령 (기존 _펫_)/정령 시스템_합성/content.md
 - 정령 시스템_합성 ← packages/confluence-downloader/output/시스템 디자인/정령 (기존 _펫_)/정령 시스템_합성/content.md
 
+### ConditionProb (7)
+- Enum - Buff ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/Enum/Enum - Buff/content.md
+- 리소스 테이블 - Buff ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Buff/content.md
+- 버프 스택 조건 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/버프 스택 조건/content.md
+- 버프 스택 조건 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/버프 스택 조건/content.md
+- 스킬/버프 UI 데이터 참조 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/[작성중] 스킬_버프 UIUX 개선/스킬_버프 UI 데이터 참조/content.md
+- 조건부 효과 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/조건부 효과/content.md
+- 조건부 효과 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/조건부 효과/content.md
+
 ### ConsumeTypeEnum (7)
 - Enum - Item ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/Enum/Enum - Item/content.md
 - 물약 사용 불가 효과 (봉쇄) ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/물약 사용 불가 효과 (봉쇄)/content.md
 - 물약 사용 불가 효과 (봉쇄) ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/물약 사용 불가 효과 (봉쇄)/content.md
-- 성향 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
+- 성향 시스템 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
 - 소모성 아이템 사용 우선 순위 및 그룹핑 ← packages/confluence-downloader/output/Design/시스템 디자인/아이템/소모성 아이템 사용 우선 순위 및 그룹핑/content.md
 - 소모성 아이템 사용 우선 순위 및 그룹핑 ← packages/confluence-downloader/output/시스템 디자인/아이템/소모성 아이템 사용 우선 순위 및 그룹핑/content.md
 - 스킬북 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 시스템/스킬북 시스템/content.md
@@ -12509,7 +12532,7 @@
 - HUD UIUX 개선 ← packages/confluence-downloader/output/Design/시스템 디자인/HUD/HUD UIUX 개선/content.md
 - HUD 기능적 레이아웃 구성 ← packages/confluence-downloader/output/Design/시스템 디자인/UX UI 규칙/UX 규칙 문서/HUD 기능적 레이아웃 구성/content.md
 - HUD 기능적 레이아웃 구성 ← packages/confluence-downloader/output/시스템 디자인/UX UI 규칙/UX 규칙 문서/HUD 기능적 레이아웃 구성/content.md
-- [IBT] 폴리싱 리스트 ← packages/confluence-downloader/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
+- [IBT] 폴리싱 리스트 ← /home/jacob/proj-k-data/confluence/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
 - 세이프 영역 설정 규칙 ← packages/confluence-downloader/output/Design/시스템 디자인/UX UI 규칙/UX 규칙 문서/세이프 영역 설정 규칙/content.md
 - 세이프 영역 설정 규칙 ← packages/confluence-downloader/output/시스템 디자인/UX UI 규칙/UX 규칙 문서/세이프 영역 설정 규칙/content.md
 - 재화 정보 UI ← packages/confluence-downloader/output/시스템 디자인/재화/재화 정보 UI/content.md
@@ -12716,7 +12739,7 @@
 - Enum - Quest ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/Enum/Enum - Quest/content.md
 - 개요 ← packages/xlsx-extractor/output/8_Contents/PK_퀘스트_서브퀘스트/개요/_final/content.md
 - 리소스 테이블 - Quest ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Quest/content.md
-- 퀘스트 구성 정책 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
+- 퀘스트 구성 정책 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
 - 퀘스트 구성 정책 ← packages/confluence-downloader/output/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
 - 퀘스트 인스턴스 제작 ← packages/confluence-downloader/output/Design/제작 가이드/레벨 - 제작 가이드/퀘스트 인스턴스 제작/content.md
 - 퀘스트 인스턴스 제작 ← packages/confluence-downloader/output/제작 가이드/레벨 - 제작 가이드/퀘스트 인스턴스 제작/content.md
@@ -13656,7 +13679,7 @@
 - Enum - World ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/Enum/Enum - World/content.md
 - [Beta3] 퀘스트 개선 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Beta3 개선 항목/[Beta3] 퀘스트 개선/content.md
 - 리소스 테이블 - Quest ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Quest/content.md
-- 퀘스트 구성 정책 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
+- 퀘스트 구성 정책 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
 - 퀘스트 구성 정책 ← packages/confluence-downloader/output/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
 
 ### Collection (6)
@@ -13672,14 +13695,6 @@
 - 리소스 테이블 - Buff ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Buff/content.md
 - 버프 스택: 최대 스택 달성 시 발동 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/버프 스택_ 최대 스택 달성 시 발동/content.md
 - 버프 스택_ 최대 스택 달성 시 발동 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/버프 스택_ 최대 스택 달성 시 발동/content.md
-- 조건부 효과 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/조건부 효과/content.md
-- 조건부 효과 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/조건부 효과/content.md
-
-### ConditionProb (6)
-- Enum - Buff ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/Enum/Enum - Buff/content.md
-- 리소스 테이블 - Buff ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Buff/content.md
-- 버프 스택 조건 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/버프 스택 조건/content.md
-- 버프 스택 조건 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/버프 스택 조건/content.md
 - 조건부 효과 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/조건부 효과/content.md
 - 조건부 효과 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/조건부 효과/content.md
 
@@ -14321,6 +14336,14 @@
 - 오프라인 자동 사냥 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/기반 시스템/오프라인 자동 사냥 시스템/content.md
 - 오프라인 자동 사냥 시스템 ← packages/confluence-downloader/output/시스템 디자인/기반 시스템/오프라인 자동 사냥 시스템/content.md
 
+### 메인 동선 (6)
+- 기원의곶_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_마을_바리울_기원의곶/기원의곶_레벨/_final/content.md
+- 사냥터_검은 물길_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_스켈라_검은 물길/사냥터_검은 물길_레벨/_final/content.md
+- 사냥터_그림자무덤가_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_바리울_그림자무덤가/사냥터_그림자무덤가_레벨/_final/content.md
+- 사냥터_사그라진성터_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_바리울_사그라진성터/사냥터_사그라진성터_레벨/_final/content.md
+- 사냥터_포식자의둥지_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_로바르스_포식자의둥지/사냥터_포식자의둥지_레벨/_final/content.md
+- 필드:해오름 언덕 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/소르브/필드_해오름 언덕/content.md
+
 ### 무적 상태 (6)
 - 기존 텔레포트 시스템 개편 및 이동 편의성 정책 ← packages/confluence-downloader/output/Design/시스템 디자인/기반 시스템/이동 편의성/기존 텔레포트 시스템 개편 및 이동 편의성 정책/content.md
 - 기존 텔레포트 시스템 개편 및 이동 편의성 정책 ← packages/confluence-downloader/output/시스템 디자인/기반 시스템/이동 편의성/기존 텔레포트 시스템 개편 및 이동 편의성 정책/content.md
@@ -14655,6 +14678,14 @@
 - 필드 몬스터 요약 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_셀레탄_오염된농장/필드 몬스터 요약/_final/content.md
 - 히스토리 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_셀레탄_오염된농장/히스토리/_final/content.md
 
+### 왕관 (6)
+- 길드 스킬 시스템 UI ← packages/confluence-downloader/output/Design/시스템 디자인/길드/길드 스킬 시스템/길드 스킬 시스템 UI/content.md
+- 길드 스킬 시스템 UI ← packages/confluence-downloader/output/시스템 디자인/길드/길드 스킬 시스템/길드 스킬 시스템 UI/content.md
+- 길드 스킬 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/길드/길드 스킬 시스템/content.md
+- 길드 스킬 시스템 ← packages/confluence-downloader/output/시스템 디자인/길드/길드 스킬 시스템/content.md
+- 길드장 전용 ← packages/xlsx-extractor/output/8_Contents/PK_스킬 및 버프 아이콘_요청서/길드장 전용/_final/content.md
+- 클래스 별 전설 등급 변신 외형 컨셉 자료 2차 ← /home/jacob/proj-k-data/confluence/output/Design/R&D 및 레퍼런스/변신 관련/변신 외형 디자인 자료/클래스 별 전설 등급 변신 외형 컨셉 자료 2차/content.md
+
 ### 외형 분류 (6)
 - (참고)몬스터속성 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_골렘/(참고)몬스터속성/_final/content.md
 - (참고)몬스터속성 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_미분류네임드/(참고)몬스터속성/_final/content.md
@@ -14868,7 +14899,7 @@
 - 가시나무 숲 ← packages/xlsx-extractor/output/8_Contents/PK_퀘스트_서브퀘스트/가시나무 숲/_final/content.md
 - 서브퀘스트 구성_바리울 ← packages/xlsx-extractor/output/8_Contents/PK_퀘스트_서브퀘스트/서브퀘스트 구성_바리울/_final/content.md
 - 안개의 경계 ← packages/xlsx-extractor/output/8_Contents/PK_퀘스트_서브퀘스트/안개의 경계/_final/content.md
-- 퀘스트 구성 정책 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
+- 퀘스트 구성 정책 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
 - 퀘스트 구성 정책 ← packages/confluence-downloader/output/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
 
 ### 최대 HP (6)
@@ -15055,6 +15086,13 @@
 - 군중 제어 정보 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/군중 제어 정보/content.md
 - 리소스 테이블 - Buff ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Buff/content.md
 
+### BuffType (5)
+- [작성중] 스킬/버프 UIUX 개선 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/[작성중] 스킬_버프 UIUX 개선/content.md
+- 리소스 테이블 - Buff ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Buff/content.md
+- 스킬/버프 UI 데이터 참조 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/[작성중] 스킬_버프 UIUX 개선/스킬_버프 UI 데이터 참조/content.md
+- 조건부 효과 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/조건부 효과/content.md
+- 조건부 효과 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/조건부 효과/content.md
+
 ### Cape of prayer (5)
 - 기원의곶_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_마을_바리울_기원의곶/기원의곶_컨셉/_final/content.md
 - 동대륙:바리울Bariul ← packages/confluence-downloader/output/Design/컨텐츠 디자인/월드/동대륙_바리울Bariul/content.md
@@ -15089,6 +15127,13 @@
 - [Beta3] 몬스터 사망 연출 이펙트 개선 ← packages/confluence-downloader/output/컨텐츠 디자인/Beta3 개선 항목/[Beta3] 몬스터 사망 연출 이펙트 개선/content.md
 - 버프 (Buff) 만들기 ← packages/confluence-downloader/output/Design/제작 가이드/전투 - 제작 가이드/버프 (Buff) 만들기/content.md
 - 버프 (Buff) 만들기 ← packages/confluence-downloader/output/제작 가이드/전투 - 제작 가이드/버프 (Buff) 만들기/content.md
+
+### CoolTime (5)
+- ProjectK 전투 시스템 로직 및 공격 속도 분석 ← packages/confluence-downloader/output/Design/시스템 디자인/전투/ProjectK 전투 시스템 로직 및 공격 속도 분석/content.md
+- PvE / PvP 스킬 효과 분리 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/PvE _ PvP 스킬 효과 분리/content.md
+- 리소스 테이블 - Skill - Attack ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Attack/content.md
+- 리소스 테이블 - Skill - Buff ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Buff/content.md
+- 스킬/버프 UI 데이터 참조 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/[작성중] 스킬_버프 UIUX 개선/스킬_버프 UI 데이터 참조/content.md
 
 ### Dash (5)
 - Enum - Skill ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/Enum/Enum - Skill/content.md
@@ -15247,7 +15292,7 @@
 ### Internal Beta Test (5)
 - IBT 타겟_버그 및 이슈 모음 ← packages/confluence-downloader/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/content.md
 - [IBT] 5/12 이후 버그 리스트 ← /home/jacob/proj-k-data/confluence/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 5_12 이후 버그 리스트/content.md
-- [IBT] 폴리싱 리스트 ← packages/confluence-downloader/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
+- [IBT] 폴리싱 리스트 ← /home/jacob/proj-k-data/confluence/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
 - 승천의 인장 밸런스 ← packages/confluence-downloader/output/Design/시스템 디자인/경제 밸런스/승천의 인장 밸런스/content.md
 - 장비 드랍 및 제작 밸런스 ← packages/confluence-downloader/output/시스템 디자인/경제 밸런스/장비 계획/장비 드랍 및 제작 밸런스/content.md
 
@@ -15468,12 +15513,19 @@
 - 변신 개선 시스템 기획 ← packages/confluence-downloader/output/시스템 디자인/변신/변신 개선 시스템 기획/content.md
 - 프로젝트 키 테마 논의 ← packages/confluence-downloader/output/R&D 및 레퍼런스/프로젝트 키 테마 논의/content.md
 
-### SkillLevel (5)
+### SkillGrade (5)
 - Data Set ← packages/xlsx-extractor/output/7_System/PK_스킬 표준 데이터/Data Set/_final/content.md
 - Multiplier & Cooltime ← packages/xlsx-extractor/output/7_System/PK_스킬 표준 데이터/Multiplier & Cooltime/_final/content.md
 - [작성중] 스킬/버프 UIUX 개선 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/[작성중] 스킬_버프 UIUX 개선/content.md
+- 리소스 테이블 - Skill ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/content.md
+- 스킬/버프 UI 데이터 참조 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/[작성중] 스킬_버프 UIUX 개선/스킬_버프 UI 데이터 참조/content.md
+
+### SkillLevel (5)
+- Data Set ← packages/xlsx-extractor/output/7_System/PK_스킬 표준 데이터/Data Set/_final/content.md
+- Multiplier & Cooltime ← packages/xlsx-extractor/output/7_System/PK_스킬 표준 데이터/Multiplier & Cooltime/_final/content.md
 - 리소스 테이블 - Skill - Attack ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Attack/content.md
 - 리소스 테이블 - Skill ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/content.md
+- 스킬/버프 UI 데이터 참조 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/[작성중] 스킬_버프 UIUX 개선/스킬_버프 UI 데이터 참조/content.md
 
 ### SlayerClear (5)
 - Enum - Item ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/Enum/Enum - Item/content.md
@@ -15514,7 +15566,7 @@
 - 사냥터_해오름언덕_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_소르브_해오름언덕/사냥터_해오름언덕_컨셉/_final/content.md
 - 서대륙: 소르브Sorv ← packages/confluence-downloader/output/Design/컨텐츠 디자인/월드/서대륙_ 소르브Sorv/content.md
 - 서대륙_ 소르브Sorv ← packages/confluence-downloader/output/컨텐츠 디자인/월드/서대륙_ 소르브Sorv/content.md
-- 필드:해오름 언덕 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/소르브/필드_해오름 언덕/content.md
+- 필드:해오름 언덕 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/소르브/필드_해오름 언덕/content.md
 - 필드_해오름 언덕 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_해오름 언덕/content.md
 
 ### SwordShield (5)
@@ -15669,13 +15721,6 @@
 - 아이템 티어 기능 ← packages/confluence-downloader/output/Design/시스템 디자인/아이템/아이템 티어 기능/content.md
 - 아이템 티어 기능 ← packages/confluence-downloader/output/시스템 디자인/아이템/아이템 티어 기능/content.md
 - 장비 강화_UI ← packages/confluence-downloader/output/Design/시스템 디자인/아이템/아이템 강화/장비 강화 시스템/장비 강화_UI/content.md
-
-### 거인의 유산 (5)
-- 거인의 유산 시스템 컨셉 ← packages/confluence-downloader/output/Design/시스템 디자인/성장 컨텐츠/거인의 유산 시스템 컨셉/content.md
-- 거인의 유산 시스템 컨셉 ← packages/confluence-downloader/output/시스템 디자인/성장 컨텐츠/거인의 유산 시스템 컨셉/content.md
-- 콘텐츠별 밸런스 작업 목록 ← packages/confluence-downloader/output/Design/시스템 디자인/경제 밸런스/콘텐츠별 밸런스 작업 목록/content.md
-- 콘텐츠별 밸런스 작업 목록 ← packages/confluence-downloader/output/시스템 디자인/경제 밸런스/콘텐츠별 밸런스 작업 목록/content.md
-- 홀바르드 시놉시스 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/시놉시스/홀바르드 시놉시스/content.md
 
 ### 거인의 입 (5)
 - 거인의 유산 시스템 컨셉 ← packages/confluence-downloader/output/시스템 디자인/성장 컨텐츠/거인의 유산 시스템 컨셉/content.md
@@ -15926,7 +15971,7 @@
 - 검은 물길 ← packages/xlsx-extractor/output/8_Contents/PK_퀘스트_서브퀘스트/검은 물길/_final/content.md
 - 서브퀘스트 구성_바리울 ← packages/xlsx-extractor/output/8_Contents/PK_퀘스트_서브퀘스트/서브퀘스트 구성_바리울/_final/content.md
 - 안개의 경계 ← packages/xlsx-extractor/output/8_Contents/PK_퀘스트_서브퀘스트/안개의 경계/_final/content.md
-- 퀘스트 구성 정책 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
+- 퀘스트 구성 정책 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
 - 퀘스트 구성 정책 ← packages/confluence-downloader/output/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
 
 ### 도미니언 로어 (5)
@@ -16041,13 +16086,6 @@
 - 콘텐츠 별 재화 비중 ← packages/confluence-downloader/output/Design/시스템 디자인/경제 밸런스/콘텐츠 별 재화 비중/content.md
 - 콘텐츠 별 재화 비중 ← packages/confluence-downloader/output/시스템 디자인/경제 밸런스/콘텐츠 별 재화 비중/content.md
 
-### 메인 동선 (5)
-- 기원의곶_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_마을_바리울_기원의곶/기원의곶_레벨/_final/content.md
-- 사냥터_검은 물길_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_스켈라_검은 물길/사냥터_검은 물길_레벨/_final/content.md
-- 사냥터_그림자무덤가_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_바리울_그림자무덤가/사냥터_그림자무덤가_레벨/_final/content.md
-- 사냥터_사그라진성터_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_바리울_사그라진성터/사냥터_사그라진성터_레벨/_final/content.md
-- 사냥터_포식자의둥지_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_로바르스_포식자의둥지/사냥터_포식자의둥지_레벨/_final/content.md
-
 ### 모델링 (5)
 - IBT(Beta03) 정령 타입 / 등급 별 외형 정보 ← packages/confluence-downloader/output/Design/시스템 디자인/정령 (기존 _펫_)/정령&도깨비 아트 리소스 정보/IBT(Beta03) 정령 타입 _ 등급 별 외형 정보/content.md
 - [IBT] 정령의 탑 수호 오브젝트 & 배경 개선 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Beta3 개선 항목/[IBT] 정령의 탑 수호 오브젝트 & 배경 개선/content.md
@@ -16096,6 +16134,13 @@
 - 변신 기본 정보 ← packages/confluence-downloader/output/시스템 디자인/변신/변신 기본 정보/content.md
 - 플레이어가 무기를 착용하지 않았을 때 처리 개선 ← packages/confluence-downloader/output/Design/시스템 디자인/성장 밸런스/플레이어가 무기를 착용하지 않았을 때 처리 개선/content.md
 - 플레이어가 무기를 착용하지 않았을 때 처리 개선 ← packages/confluence-downloader/output/시스템 디자인/성장 밸런스/플레이어가 무기를 착용하지 않았을 때 처리 개선/content.md
+
+### 무녀 (5)
+- 개요 ← packages/xlsx-extractor/output/8_Contents/PK_변신_만야/개요/_final/content.md
+- 기본 정보 ← packages/xlsx-extractor/output/8_Contents/PK_변신_법사_시아(베이스)/기본 정보/_final/content.md
+- 바리울 시놉시스 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/시놉시스/바리울 시놉시스/content.md
+- 아트_이펙트 리스트 ← packages/xlsx-extractor/output/8_Contents/PK_변신_법사_시아(베이스)/아트_이펙트 리스트/_final/content.md
+- 포트레이트_변신 ← packages/xlsx-extractor/output/8_Contents/PK_아이템 및 기타 아이콘_요청서/포트레이트_변신/_final/content.md
 
 ### 물약 사용 불가 (5)
 - 대미지 0일 때 판정 처리 개선 ← packages/confluence-downloader/output/Design/시스템 디자인/성장 밸런스/대미지 0일 때 판정 처리 개선/content.md
@@ -16322,7 +16367,7 @@
 
 ### 성향 (5)
 - 사망 시스템 개선 ← packages/confluence-downloader/output/Design/시스템 디자인/전투/사망 시스템 개선/content.md
-- 성향 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
+- 성향 시스템 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
 - 성향 시스템 ← packages/confluence-downloader/output/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
 - 콘텐츠별 밸런스 작업 목록 ← packages/confluence-downloader/output/Design/시스템 디자인/경제 밸런스/콘텐츠별 밸런스 작업 목록/content.md
 - 콘텐츠별 밸런스 작업 목록 ← packages/confluence-downloader/output/시스템 디자인/경제 밸런스/콘텐츠별 밸런스 작업 목록/content.md
@@ -16381,6 +16426,13 @@
 - 몬스터 배치 정책 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/배치 정책/몬스터 배치 정책/content.md
 - 셀레탄 왕_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_왕/셀레탄 왕_전투/_final/content.md
 - 페리안느 여왕_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_왕/페리안느 여왕_전투/_final/content.md
+
+### 시즈 모드 (5)
+- [IBT] 폴리싱 리스트 ← /home/jacob/proj-k-data/confluence/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
+- 스킬 리스트 - 아발리스터 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 리스트/스킬 리스트 - 아발리스터/content.md
+- 스킬 리스트 - 아발리스터 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 리스트/스킬 리스트 - 아발리스터/content.md
+- 클래스 디자인 - 아발리스터 ← packages/confluence-downloader/output/Design/시스템 디자인/클래스/클래스 디자인 - 아발리스터/content.md
+- 클래스 디자인 - 아발리스터 ← packages/confluence-downloader/output/시스템 디자인/클래스/클래스 디자인 - 아발리스터/content.md
 
 ### 실린더 (5)
 - 길드 레이드 보스_샌드웜 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/몬스터 디자인/길드 레이드 보스_샌드웜/content.md
@@ -16451,20 +16503,6 @@
 - 참고_몬스터 구성 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_셀레탄_오염된농장/참고_몬스터 구성/_final/content.md
 - 필드 몬스터 요약 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_셀레탄_오염된농장/필드 몬스터 요약/_final/content.md
 - 히스토리 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_셀레탄_오염된농장/히스토리/_final/content.md
-
-### 왕관 (5)
-- 길드 스킬 시스템 UI ← packages/confluence-downloader/output/Design/시스템 디자인/길드/길드 스킬 시스템/길드 스킬 시스템 UI/content.md
-- 길드 스킬 시스템 UI ← packages/confluence-downloader/output/시스템 디자인/길드/길드 스킬 시스템/길드 스킬 시스템 UI/content.md
-- 길드 스킬 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/길드/길드 스킬 시스템/content.md
-- 길드 스킬 시스템 ← packages/confluence-downloader/output/시스템 디자인/길드/길드 스킬 시스템/content.md
-- 길드장 전용 ← packages/xlsx-extractor/output/8_Contents/PK_스킬 및 버프 아이콘_요청서/길드장 전용/_final/content.md
-
-### 요괴 소굴 (5)
-- 사냥터_물이할퀸땅_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_스켈라_물이할퀸땅/사냥터_물이할퀸땅_레벨/_final/content.md
-- 사냥터_물이할퀸땅_몬스터배치 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_스켈라_물이할퀸땅/사냥터_물이할퀸땅_몬스터배치/_final/content.md
-- 서대륙: 스켈라Skela ← packages/confluence-downloader/output/Design/컨텐츠 디자인/월드/서대륙_ 스켈라Skela/content.md
-- 필드:해오름 언덕 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/소르브/필드_해오름 언덕/content.md
-- 필드_해오름 언덕 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_해오름 언덕/content.md
 
 ### 용병 (5)
 - 공성전 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/PvP 컨텐츠/공성전/공성전 시스템/content.md
@@ -16697,6 +16735,13 @@
 - 목표 및 개요 ← packages/xlsx-extractor/output/7_System/PK_퀘스트 오브젝트/목표 및 개요/_final/content.md
 - 인트로던전_배치 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_던전_인트로/인트로던전_배치/_final/content.md
 
+### 클래스 정체성 (5)
+- 변신 개선 시스템 기획 ← packages/confluence-downloader/output/Design/시스템 디자인/변신/변신 개선 시스템 기획/content.md
+- 변신 개선 시스템 기획 ← packages/confluence-downloader/output/시스템 디자인/변신/변신 개선 시스템 기획/content.md
+- 변신 개선 컨셉 기획 ← packages/confluence-downloader/output/Design/시스템 디자인/변신/변신 개선 컨셉 기획/content.md
+- 클래스 별 전설 등급 변신 외형 컨셉 자료 1차 ← /home/jacob/proj-k-data/confluence/output/Design/R&D 및 레퍼런스/변신 관련/변신 외형 디자인 자료/클래스 별 전설 등급 변신 외형 컨셉 자료 1차/content.md
+- 클래스 별 전설 등급 변신 외형 컨셉 자료 2차 ← /home/jacob/proj-k-data/confluence/output/Design/R&D 및 레퍼런스/변신 관련/변신 외형 디자인 자료/클래스 별 전설 등급 변신 외형 컨셉 자료 2차/content.md
+
 ### 클래스명_스킬 타입_스킬명 (5)
 - 가디언 ← packages/xlsx-extractor/output/8_Contents/PK_스킬 및 버프 아이콘_요청서/가디언/_final/content.md
 - 공통 ← packages/xlsx-extractor/output/8_Contents/PK_스킬 및 버프 아이콘_요청서/공통/_final/content.md
@@ -16886,6 +16931,13 @@
 - 클래스 심볼 ← packages/xlsx-extractor/output/8_Contents/PK_아이템 및 기타 아이콘_요청서/클래스 심볼/_final/content.md
 - 활 ← packages/xlsx-extractor/output/8_Contents/PK_변신_공격 모션 취합/활/_final/content.md
 
+### 화살통 (5)
+- PK_변신_궁사_예하진 개요 ← packages/xlsx-extractor/output/8_Contents/PK_변신_궁사_예하진/개요/_final/content.md
+- 숲 요괴 궁수_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_요괴/숲 요괴 궁수_전투/_final/content.md
+- 숲 요괴 궁수_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_요괴/숲 요괴 궁수_컨셉/_final/content.md
+- 클래스 별 전설 등급 변신 외형 컨셉 자료 1차 ← /home/jacob/proj-k-data/confluence/output/Design/R&D 및 레퍼런스/변신 관련/변신 외형 디자인 자료/클래스 별 전설 등급 변신 외형 컨셉 자료 1차/content.md
+- 클래스 별 전설 등급 변신 외형 컨셉 자료 2차 ← /home/jacob/proj-k-data/confluence/output/Design/R&D 및 레퍼런스/변신 관련/변신 외형 디자인 자료/클래스 별 전설 등급 변신 외형 컨셉 자료 2차/content.md
+
 ### 회전 (5)
 - 시아 보주 무기 컨셉 설정 ← packages/confluence-downloader/output/시스템 디자인/클래스/클래스 디자인 - 샤먼/시아 보주 무기 컨셉 설정/content.md
 - 제스처 기능 ← packages/confluence-downloader/output/Design/시스템 디자인/UX UI 규칙/UX 규칙 문서/제스처 기능/content.md
@@ -17032,12 +17084,6 @@
 - 리소스 테이블 - Effect - Buff-interaction ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Effect/리소스 테이블 - Effect - Buff-interaction/content.md
 - 버프 강화 효과 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/버프 강화 효과/content.md
 - 버프 강화 효과 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/버프 강화 효과/content.md
-
-### BuffType (4)
-- [작성중] 스킬/버프 UIUX 개선 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/[작성중] 스킬_버프 UIUX 개선/content.md
-- 리소스 테이블 - Buff ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Buff/content.md
-- 조건부 효과 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/조건부 효과/content.md
-- 조건부 효과 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/조건부 효과/content.md
 
 ### C.C (4)
 - 이동 관련 기존 기획 및 레퍼런스 ← packages/confluence-downloader/output/Design/시스템 디자인/전투/이동 명령 처리 관련 개선/이동 관련 기존 기획 및 레퍼런스/content.md
@@ -17201,12 +17247,6 @@
 - 소모성 아이템 사용 우선 순위 및 그룹핑 ← packages/confluence-downloader/output/Design/시스템 디자인/아이템/소모성 아이템 사용 우선 순위 및 그룹핑/content.md
 - 소모성 아이템 사용 우선 순위 및 그룹핑 ← packages/confluence-downloader/output/시스템 디자인/아이템/소모성 아이템 사용 우선 순위 및 그룹핑/content.md
 
-### CoolTime (4)
-- ProjectK 전투 시스템 로직 및 공격 속도 분석 ← packages/confluence-downloader/output/Design/시스템 디자인/전투/ProjectK 전투 시스템 로직 및 공격 속도 분석/content.md
-- PvE / PvP 스킬 효과 분리 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/PvE _ PvP 스킬 효과 분리/content.md
-- 리소스 테이블 - Skill - Attack ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Attack/content.md
-- 리소스 테이블 - Skill - Buff ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Buff/content.md
-
 ### CrossWorldGuard (4)
 - Enum - Battle ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/Enum/Enum - Battle/content.md
 - Enum - Monster ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/Enum/Enum - Monster/content.md
@@ -17248,12 +17288,6 @@
 - Enum - Quest ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/Enum/Enum - Quest/content.md
 - Enum - Reward ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/Enum/Enum - Reward/content.md
 - [Beta2] 퀘스트 개선 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Beta2 개선 항목/[Beta2] 퀘스트 개선/content.md
-
-### Debuff (4)
-- [작성중] 스킬/버프 UIUX 개선 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/[작성중] 스킬_버프 UIUX 개선/content.md
-- 군중 제어 정보 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/군중 제어 정보/content.md
-- 군중 제어 정보 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/군중 제어 정보/content.md
-- 버프 ← packages/xlsx-extractor/output/8_Contents/PK_스킬 및 버프 아이콘_요청서/버프/_final/content.md
 
 ### DefaultGameData (4)
 - [Beta3] 캐릭터 주변 탐색 연출 개선 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Beta3 개선 항목/[Beta3] 캐릭터 주변 탐색 연출 개선/content.md
@@ -17976,12 +18010,6 @@
 - 적 대상의 스탯 비례 보너스 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/적 대상의 스탯 비례 보너스/content.md
 - 적 대상의 스탯 비례 보너스 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/적 대상의 스탯 비례 보너스/content.md
 
-### SkillGrade (4)
-- Data Set ← packages/xlsx-extractor/output/7_System/PK_스킬 표준 데이터/Data Set/_final/content.md
-- Multiplier & Cooltime ← packages/xlsx-extractor/output/7_System/PK_스킬 표준 데이터/Multiplier & Cooltime/_final/content.md
-- [작성중] 스킬/버프 UIUX 개선 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/[작성중] 스킬_버프 UIUX 개선/content.md
-- 리소스 테이블 - Skill ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/content.md
-
 ### Skill_03 (4)
 - 네임드 몬스터_아트 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_셀레탄_오스트하펜 남부 해안가/네임드 몬스터_아트/_final/content.md
 - 보스_아트 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_셀레탄_오염된농장/보스_아트/_final/content.md
@@ -18215,6 +18243,12 @@
 - [Beta2] 컷신 제작 ← packages/confluence-downloader/output/컨텐츠 디자인/컷신/[Beta2] 컷신 제작/content.md
 - 필드:환청의 그늘 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/셀레탄/필드_환청의 그늘/content.md
 - 필드_환청의 그늘 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_환청의 그늘/content.md
+
+### 거인의 유산 (4)
+- 거인의 유산 시스템 컨셉 ← packages/confluence-downloader/output/Design/시스템 디자인/성장 컨텐츠/거인의 유산 시스템 컨셉/content.md
+- 거인의 유산 시스템 컨셉 ← packages/confluence-downloader/output/시스템 디자인/성장 컨텐츠/거인의 유산 시스템 컨셉/content.md
+- 콘텐츠별 밸런스 작업 목록 ← packages/confluence-downloader/output/Design/시스템 디자인/경제 밸런스/콘텐츠별 밸런스 작업 목록/content.md
+- 콘텐츠별 밸런스 작업 목록 ← packages/confluence-downloader/output/시스템 디자인/경제 밸런스/콘텐츠별 밸런스 작업 목록/content.md
 
 ### 거점전 (4)
 - 공성전 ← packages/confluence-downloader/output/Design/시스템 디자인/PvP 컨텐츠/공성전/content.md
@@ -18778,12 +18812,6 @@
 - 사냥터_사그라진성터_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_바리울_사그라진성터/사냥터_사그라진성터_컨셉/_final/content.md
 - 인트로던전_공통_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_던전_인트로/인트로던전_공통_컨셉/_final/content.md
 
-### 무녀 (4)
-- 개요 ← packages/xlsx-extractor/output/8_Contents/PK_변신_만야/개요/_final/content.md
-- 기본 정보 ← packages/xlsx-extractor/output/8_Contents/PK_변신_법사_시아(베이스)/기본 정보/_final/content.md
-- 아트_이펙트 리스트 ← packages/xlsx-extractor/output/8_Contents/PK_변신_법사_시아(베이스)/아트_이펙트 리스트/_final/content.md
-- 포트레이트_변신 ← packages/xlsx-extractor/output/8_Contents/PK_아이템 및 기타 아이콘_요청서/포트레이트_변신/_final/content.md
-
 ### 무장 조직 (4)
 - 바리울 결사대원_보급관 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Npc/퀘스트 NPC 리스트/바리울 결사대원_보급관/content.md
 - 바리울 결사대원_성인 남자 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Npc/퀘스트 NPC 리스트/바리울 결사대원_성인 남자/content.md
@@ -18828,7 +18856,7 @@
 ### 바리울 자치촌 (4)
 - 사냥터_해오름언덕_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_소르브_해오름언덕/사냥터_해오름언덕_레벨/_final/content.md
 - 사냥터_해오름언덕_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_소르브_해오름언덕/사냥터_해오름언덕_컨셉/_final/content.md
-- 필드:해오름 언덕 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/소르브/필드_해오름 언덕/content.md
+- 필드:해오름 언덕 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/소르브/필드_해오름 언덕/content.md
 - 필드_해오름 언덕 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_해오름 언덕/content.md
 
 ### 바리울-사그라진 성터 (4)
@@ -19329,12 +19357,6 @@
 - 공통 팝업 및 모달 UI 시스템 가이드 ← packages/confluence-downloader/output/Design/시스템 디자인/UX UI 규칙/UX 규칙 문서/공통 팝업 및 모달 UI 시스템 가이드/content.md
 - 공통 팝업 및 모달 UI 시스템 가이드 ← packages/confluence-downloader/output/시스템 디자인/UX UI 규칙/UX 규칙 문서/공통 팝업 및 모달 UI 시스템 가이드/content.md
 
-### 시즈 모드 (4)
-- 스킬 리스트 - 아발리스터 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 리스트/스킬 리스트 - 아발리스터/content.md
-- 스킬 리스트 - 아발리스터 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 리스트/스킬 리스트 - 아발리스터/content.md
-- 클래스 디자인 - 아발리스터 ← packages/confluence-downloader/output/Design/시스템 디자인/클래스/클래스 디자인 - 아발리스터/content.md
-- 클래스 디자인 - 아발리스터 ← packages/confluence-downloader/output/시스템 디자인/클래스/클래스 디자인 - 아발리스터/content.md
-
 ### 시즌 (4)
 - 리소스 테이블 - Dungeon ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Dungeon/content.md
 - 무한의 탑 UI ← packages/confluence-downloader/output/시스템 디자인/던전/무한의 탑 UI/content.md
@@ -19549,6 +19571,12 @@
 - 데스로드_몬스터_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_블레스네임드/데스로드_몬스터_컨셉/_final/content.md
 - 발록 몬스터_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_블레스네임드/발록 몬스터_컨셉/_final/content.md
 
+### 요괴 소굴 (4)
+- 사냥터_물이할퀸땅_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_스켈라_물이할퀸땅/사냥터_물이할퀸땅_레벨/_final/content.md
+- 사냥터_물이할퀸땅_몬스터배치 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_스켈라_물이할퀸땅/사냥터_물이할퀸땅_몬스터배치/_final/content.md
+- 서대륙: 스켈라Skela ← packages/confluence-downloader/output/Design/컨텐츠 디자인/월드/서대륙_ 스켈라Skela/content.md
+- 필드_해오름 언덕 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_해오름 언덕/content.md
+
 ### 우편 내용 (4)
 - 다른 시스템/컨텐츠에서 우편 연결 ← packages/confluence-downloader/output/Design/시스템 디자인/기반 시스템/우편/다른 시스템_컨텐츠에서 우편 연결/content.md
 - 다른 시스템_컨텐츠에서 우편 연결 ← packages/confluence-downloader/output/시스템 디자인/기반 시스템/우편/다른 시스템_컨텐츠에서 우편 연결/content.md
@@ -19617,7 +19645,7 @@
 
 ### 이동 (4)
 - 원거리_정령 리소스 리스트 ← packages/confluence-downloader/output/Design/시스템 디자인/정령 (기존 _펫_)/정령&도깨비 아트 리소스 정보/원거리_정령 리소스 리스트/content.md
-- 퀘스트 구성 정책 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
+- 퀘스트 구성 정책 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
 - 퀘스트 구성 정책 ← packages/confluence-downloader/output/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
 - 히스토리 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_토벌보스_어스드래곤/히스토리/_final/content.md
 
@@ -19690,7 +19718,7 @@
 ### 일간 퀘스트 (4)
 - (NEW) IBT - 캐릭터 레벨&경험치 ← packages/confluence-downloader/output/Design/시스템 디자인/성장 밸런스/(NEW) IBT - 캐릭터 레벨&경험치/content.md
 - ID 대역대 정리 ← packages/confluence-downloader/output/Design/제작 가이드/ID 대역대 정리/content.md
-- 퀘스트 구성 정책 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
+- 퀘스트 구성 정책 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
 - 퀘스트 구성 정책 ← packages/confluence-downloader/output/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
 
 ### 일괄 삭제 (4)
@@ -20100,12 +20128,6 @@
 - 캐릭터 생성 / 선택 ← packages/confluence-downloader/output/Design/시스템 디자인/기반 시스템/로그인/캐릭터 생성 _ 선택/content.md
 - 캐릭터 생성 _ 선택 ← packages/confluence-downloader/output/시스템 디자인/기반 시스템/로그인/캐릭터 생성 _ 선택/content.md
 
-### 클래스 정체성 (4)
-- 변신 개선 시스템 기획 ← packages/confluence-downloader/output/Design/시스템 디자인/변신/변신 개선 시스템 기획/content.md
-- 변신 개선 시스템 기획 ← packages/confluence-downloader/output/시스템 디자인/변신/변신 개선 시스템 기획/content.md
-- 변신 개선 컨셉 기획 ← packages/confluence-downloader/output/Design/시스템 디자인/변신/변신 개선 컨셉 기획/content.md
-- 클래스 별 전설 등급 변신 외형 컨셉 자료 1차 ← /home/jacob/proj-k-data/confluence/output/Design/R&D 및 레퍼런스/변신 관련/변신 외형 디자인 자료/클래스 별 전설 등급 변신 외형 컨셉 자료 1차/content.md
-
 ### 클래스 제한 (4)
 - [Beta1] 퀘스트 보상 개선 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Beta1 개선 항목/[Beta1] 퀘스트 보상 개선/content.md
 - [Beta1] 퀘스트 보상 개선 ← packages/confluence-downloader/output/컨텐츠 디자인/Beta1 개선 항목/[Beta1] 퀘스트 보상 개선/content.md
@@ -20346,12 +20368,6 @@
 - 인터서버 던전 고도화(UI/UX 및 던전 기능) 관련 - 컨셉 ← packages/confluence-downloader/output/Design/시스템 디자인/던전/인터서버 던전 고도화(UI_UX 및 던전 기능) 관련 - 컨셉/content.md
 - 인터서버 던전 고도화(UI_UX 및 던전 기능) 관련 - 컨셉 ← packages/confluence-downloader/output/시스템 디자인/던전/인터서버 던전 고도화(UI_UX 및 던전 기능) 관련 - 컨셉/content.md
 
-### 학살 상태 (4)
-- 발자국 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/전투/전투 연출/발자국 시스템/content.md
-- 발자국 시스템 ← packages/confluence-downloader/output/시스템 디자인/전투/전투 연출/발자국 시스템/content.md
-- 성향 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
-- 성향 시스템 ← packages/confluence-downloader/output/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
-
 ### 한손검 & 방패 (4)
 - 클래스 기본 정보 ← packages/confluence-downloader/output/Design/시스템 디자인/클래스/클래스 기본 정보/content.md
 - 클래스 기본 정보 ← packages/confluence-downloader/output/시스템 디자인/클래스/클래스 기본 정보/content.md
@@ -20381,12 +20397,6 @@
 - 마법_도깨비 리소스 리스트 ← packages/confluence-downloader/output/Design/시스템 디자인/정령 (기존 _펫_)/정령&도깨비 아트 리소스 정보/마법_도깨비 리소스 리스트/content.md
 - 마법_도깨비 리소스 리스트 ← packages/confluence-downloader/output/시스템 디자인/정령 (기존 _펫_)/정령&도깨비 아트 리소스 정보/마법_도깨비 리소스 리스트/content.md
 - 원거리_도깨비 리소스 리스트 ← packages/confluence-downloader/output/Design/시스템 디자인/정령 (기존 _펫_)/정령&도깨비 아트 리소스 정보/원거리_도깨비 리소스 리스트/content.md
-
-### 화살통 (4)
-- PK_변신_궁사_예하진 개요 ← packages/xlsx-extractor/output/8_Contents/PK_변신_궁사_예하진/개요/_final/content.md
-- 숲 요괴 궁수_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_요괴/숲 요괴 궁수_전투/_final/content.md
-- 숲 요괴 궁수_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_요괴/숲 요괴 궁수_컨셉/_final/content.md
-- 클래스 별 전설 등급 변신 외형 컨셉 자료 1차 ← /home/jacob/proj-k-data/confluence/output/Design/R&D 및 레퍼런스/변신 관련/변신 외형 디자인 자료/클래스 별 전설 등급 변신 외형 컨셉 자료 1차/content.md
 
 ### 훈장 (4)
 - 서대륙_귀족 남성 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Npc/퀘스트 NPC 리스트/서대륙_귀족 남성/content.md
@@ -20746,6 +20756,11 @@
 - 시아 애니메이션 리뉴얼 목록 정리 ← packages/confluence-downloader/output/시스템 디자인/클래스/클래스 디자인 - 샤먼/시아 애니메이션 리뉴얼 목록 정리/content.md
 - 클래스(PC) 데이터 어셋 등록 ← packages/confluence-downloader/output/제작 가이드/전투 - 제작 가이드/클래스(PC) 데이터 어셋 등록/content.md
 
+### Debuff (3)
+- 군중 제어 정보 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/군중 제어 정보/content.md
+- 군중 제어 정보 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/군중 제어 정보/content.md
+- 버프 ← packages/xlsx-extractor/output/8_Contents/PK_스킬 및 버프 아이콘_요청서/버프/_final/content.md
+
 ### Despawn (3)
 - (임시) 캐릭터 스폰디스폰/텔레포트 연출 설정 ← packages/confluence-downloader/output/Design/제작 가이드/레벨 - 제작 가이드/(임시) 캐릭터 스폰디스폰_텔레포트 연출 설정/content.md
 - (임시) 캐릭터 스폰디스폰_텔레포트 연출 설정 ← packages/confluence-downloader/output/제작 가이드/레벨 - 제작 가이드/(임시) 캐릭터 스폰디스폰_텔레포트 연출 설정/content.md
@@ -20937,7 +20952,7 @@
 - 클래스 디자인 - 가디언 ← packages/confluence-downloader/output/Design/시스템 디자인/클래스/클래스 디자인 - 가디언/content.md
 
 ### Holbard (3)
-- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 소르브Sorv/서대륙_ 홀바르드Holbard/content.md
+- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 홀바르드Holbard/content.md
 - 월드 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/월드/content.md
 - 월드 ← packages/confluence-downloader/output/컨텐츠 디자인/월드/content.md
 
@@ -21171,6 +21186,11 @@
 - [버프] 경직 상태 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/[버프] 경직 상태/content.md
 - 퀘스트 오브젝트 상세 ← packages/xlsx-extractor/output/7_System/PK_퀘스트 오브젝트/퀘스트 오브젝트 상세/_final/content.md
 
+### MpCost (3)
+- 리소스 테이블 - Skill - Attack ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Attack/content.md
+- 리소스 테이블 - Skill - Buff ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Buff/content.md
+- 스킬/버프 UI 데이터 참조 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/[작성중] 스킬_버프 UIUX 개선/스킬_버프 UI 데이터 참조/content.md
+
 ### NECKLACE (3)
 - 장비 아이템 발주 계획 ← packages/confluence-downloader/output/Design/시스템 디자인/아이템/장비 아이템 발주 계획/content.md
 - 장비 아이템 발주 계획 ← packages/confluence-downloader/output/시스템 디자인/아이템/장비 아이템 발주 계획/content.md
@@ -21272,7 +21292,7 @@
 - [Beta3] 바리울 컷신 제작 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/컷신/[Beta3] 바리울 컷신 제작/content.md
 
 ### PK (3)
-- 성향 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
+- 성향 시스템 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
 - 성향 시스템 ← packages/confluence-downloader/output/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
 - 정령 공성전 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/PvP 컨텐츠/정령 공성전 시스템/content.md
 
@@ -21436,6 +21456,11 @@
 - 이벤트 스케줄러 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/월드 이벤트/이벤트 스케줄러 시스템/content.md
 - 이벤트 스케줄러 시스템 ← packages/confluence-downloader/output/시스템 디자인/월드 이벤트/이벤트 스케줄러 시스템/content.md
 
+### ShowIcon (3)
+- 스킬/버프 UI 데이터 참조 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/[작성중] 스킬_버프 UIUX 개선/스킬_버프 UI 데이터 참조/content.md
+- 패시브 스킬 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 시스템/패시브 스킬 시스템/content.md
+- 패시브 스킬 시스템 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 시스템/패시브 스킬 시스템/content.md
+
 ### Skill01~08 (3)
 - Enum - Metamorph ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/Enum/Enum - Metamorph/content.md
 - 리소스 테이블 - Metamorph - Base ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Metamorph/리소스 테이블 - Metamorph - Base/content.md
@@ -21535,6 +21560,11 @@
 - 관련 테이블 구성 ← packages/xlsx-extractor/output/7_System/PK_퀘스트 오브젝트/관련 테이블 구성/_final/content.md
 - 퀘스트 오브젝트 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/퀘스트/퀘스트 오브젝트/content.md
 - 퀘스트 오브젝트 상세 ← packages/xlsx-extractor/output/7_System/PK_퀘스트 오브젝트/퀘스트 오브젝트 상세/_final/content.md
+
+### TextkeyTitle (3)
+- 스킬/버프 UI 데이터 참조 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/[작성중] 스킬_버프 UIUX 개선/스킬_버프 UI 데이터 참조/content.md
+- 재화 정보 UI ← packages/confluence-downloader/output/Design/시스템 디자인/재화/재화 정보 UI/content.md
+- 재화 정보 UI ← packages/confluence-downloader/output/시스템 디자인/재화/재화 정보 UI/content.md
 
 ### The Azure Wilds (3)
 - 사냥터_검푸른밀림_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_로바르스_검푸른밀림/사냥터_검푸른밀림_컨셉/_final/content.md
@@ -21826,6 +21856,11 @@
 - 아이템 분해_UI ← packages/confluence-downloader/output/Design/시스템 디자인/아이템/아이템 분해/아이템 분해_UI/content.md
 - 아이템 분해_UI ← packages/confluence-downloader/output/시스템 디자인/아이템/아이템 분해/아이템 분해_UI/content.md
 
+### 거인의 피 (3)
+- 거인의 유산 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/성장 컨텐츠/거인의 유산 시스템/content.md
+- 거인의 유산 시스템 ← packages/confluence-downloader/output/시스템 디자인/성장 컨텐츠/거인의 유산 시스템/content.md
+- 바리울 시놉시스 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/시놉시스/바리울 시놉시스/content.md
+
 ### 거인의숲 (3)
 - 사냥터_거인의숲_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_바리울_거인의숲/사냥터_거인의숲_레벨/_final/content.md
 - 사냥터_거인의숲_지역 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_바리울_거인의숲/사냥터_거인의숲_지역/_final/content.md
@@ -22092,7 +22127,7 @@
 - 히스토리 ← packages/xlsx-extractor/output/8_Contents/PK_스킬 및 버프 아이콘_요청서/히스토리/_final/content.md
 
 ### 길드 시스템 (3)
-- [IBT] 폴리싱 리스트 ← packages/confluence-downloader/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
+- [IBT] 폴리싱 리스트 ← /home/jacob/proj-k-data/confluence/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
 - 길드 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/길드/길드 시스템/content.md
 - 다른 시스템_컨텐츠에서 우편 연결 ← packages/confluence-downloader/output/시스템 디자인/기반 시스템/우편/다른 시스템_컨텐츠에서 우편 연결/content.md
 
@@ -22271,6 +22306,11 @@
 - PK_마우스 이벤트 처리 ← packages/xlsx-extractor/output/7_System/PK_마우스 이벤트 처리/내용/_final/content.md
 - 제스처 기능 ← packages/confluence-downloader/output/Design/시스템 디자인/UX UI 규칙/UX 규칙 문서/제스처 기능/content.md
 - 제스처 기능 ← packages/confluence-downloader/output/시스템 디자인/UX UI 규칙/UX 규칙 문서/제스처 기능/content.md
+
+### 드루이드 (3)
+- 종족 설정 아이디어 ← packages/confluence-downloader/output/Design/R&D 및 레퍼런스/종족 설정 아이디어/content.md
+- 종족 설정 아이디어 ← packages/confluence-downloader/output/R&D 및 레퍼런스/종족 설정 아이디어/content.md
+- 클래스 별 전설 등급 변신 외형 컨셉 자료 2차 ← /home/jacob/proj-k-data/confluence/output/Design/R&D 및 레퍼런스/변신 관련/변신 외형 디자인 자료/클래스 별 전설 등급 변신 외형 컨셉 자료 2차/content.md
 
 ### 디버퍼 (3)
 - 기본 정보 ← packages/xlsx-extractor/output/8_Contents/PK_변신_궁사_렌(베이스)/기본 정보/_final/content.md
@@ -22863,7 +22903,7 @@
 - 자폭 효과 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/자폭 효과/content.md
 
 ### 사망 페널티 (3)
-- [IBT] 폴리싱 리스트 ← packages/confluence-downloader/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
+- [IBT] 폴리싱 리스트 ← /home/jacob/proj-k-data/confluence/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
 - 시간 던전 시스템 ← packages/confluence-downloader/output/시스템 디자인/던전/시간 던전 시스템/content.md
 - 테리토리 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/맵/테리토리 시스템/content.md
 
@@ -22991,6 +23031,11 @@
 - [개인 성장4] 점성술 시스템 컨셉 ← packages/confluence-downloader/output/Design/시스템 디자인/성장 컨텐츠/[개인 성장4] 점성술 시스템 컨셉/content.md
 - [개인 성장4] 점성술 시스템 컨셉 ← packages/confluence-downloader/output/시스템 디자인/성장 컨텐츠/[개인 성장4] 점성술 시스템 컨셉/content.md
 - 점성술 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/성장 컨텐츠/점성술 시스템/content.md
+
+### 세계관 (3)
+- 신화 변신 방향성 ← packages/confluence-downloader/output/Design/R&D 및 레퍼런스/변신 관련/신화 변신 방향성/content.md
+- 신화 변신 방향성 ← packages/confluence-downloader/output/R&D 및 레퍼런스/변신 관련/신화 변신 방향성/content.md
+- 클래스 별 전설 등급 변신 외형 컨셉 자료 2차 ← /home/jacob/proj-k-data/confluence/output/Design/R&D 및 레퍼런스/변신 관련/변신 외형 디자인 자료/클래스 별 전설 등급 변신 외형 컨셉 자료 2차/content.md
 
 ### 세계관 컨셉 (3)
 - 거인의 유산 시스템 컨셉 ← packages/confluence-downloader/output/Design/시스템 디자인/성장 컨텐츠/거인의 유산 시스템 컨셉/content.md
@@ -23750,11 +23795,6 @@
 - 아이템 UIUX 정리/개선 ← packages/confluence-downloader/output/Design/시스템 디자인/아이템/아이템 UIUX 정리_개선/content.md
 - 아이템 툴팁 정보 ← packages/confluence-downloader/output/Design/시스템 디자인/아이템/아이템 툴팁 정보/content.md
 
-### 장비 손실 (3)
-- 사망 시스템 개선 ← packages/confluence-downloader/output/Design/시스템 디자인/전투/사망 시스템 개선/content.md
-- 사망 시스템 개선 ← packages/confluence-downloader/output/시스템 디자인/전투/사망 시스템 개선/content.md
-- 성향 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
-
 ### 장비 파괴 (3)
 - 강화 실패 재료 환원 ← packages/confluence-downloader/output/Design/시스템 디자인/아이템/아이템 강화/강화 실패 재료 환원/content.md
 - 강화 실패 재료 환원 ← packages/confluence-downloader/output/시스템 디자인/아이템/아이템 강화/강화 실패 재료 환원/content.md
@@ -23932,7 +23972,7 @@
 
 ### 채팅 UI (3)
 - [Beta2] 인트로 시스템 ← packages/confluence-downloader/output/컨텐츠 디자인/Beta2 개선 항목/[Beta2] 인트로 시스템/content.md
-- [IBT] 폴리싱 리스트 ← packages/confluence-downloader/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
+- [IBT] 폴리싱 리스트 ← /home/jacob/proj-k-data/confluence/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
 - 시스템 ← packages/xlsx-extractor/output/PK_레벨업 연출 1차/시스템/_final/content.md
 
 ### 채팅창 (3)
@@ -24013,7 +24053,7 @@
 ### 카메라 줌인 (3)
 - DOF (Depth of Field) 임시 변경방법 ← packages/confluence-downloader/output/Design/기획자 개발 팁/DOF (Depth of Field) 임시 변경방법/content.md
 - DOF (Depth of Field) 임시 변경방법 ← packages/confluence-downloader/output/기획자 개발 팁/DOF (Depth of Field) 임시 변경방법/content.md
-- [IBT] 폴리싱 리스트 ← packages/confluence-downloader/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
+- [IBT] 폴리싱 리스트 ← /home/jacob/proj-k-data/confluence/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
 
 ### 칼바람 FX (3)
 - [Beta1] 도적단장 스킬 및 FX 폴리싱 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Beta1 개선 항목/[Beta1] 도적단장 스킬 및 FX 폴리싱/content.md
@@ -24071,7 +24111,7 @@
 - 장비 강화_UI ← packages/confluence-downloader/output/시스템 디자인/아이템/아이템 강화/장비 강화 시스템/장비 강화_UI/content.md
 
 ### 컬렉션 시스템 (3)
-- [IBT] 폴리싱 리스트 ← packages/confluence-downloader/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
+- [IBT] 폴리싱 리스트 ← /home/jacob/proj-k-data/confluence/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
 - 컬렉션_현황조사 ← packages/confluence-downloader/output/Design/R&D 및 레퍼런스/컬렉션_현황조사/content.md
 - 컬렉션_현황조사 ← packages/confluence-downloader/output/R&D 및 레퍼런스/컬렉션_현황조사/content.md
 
@@ -24384,6 +24424,11 @@
 - 장비 아이템 발주 계획 ← packages/confluence-downloader/output/Design/시스템 디자인/아이템/장비 아이템 발주 계획/content.md
 - 장비 아이템 발주 계획 ← packages/confluence-downloader/output/시스템 디자인/아이템/장비 아이템 발주 계획/content.md
 - 참고 ← packages/xlsx-extractor/output/8_Contents/PK_아이템 및 기타 아이콘_요청서/참고/_final/content.md
+
+### 학살 상태 (3)
+- 발자국 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/전투/전투 연출/발자국 시스템/content.md
+- 발자국 시스템 ← packages/confluence-downloader/output/시스템 디자인/전투/전투 연출/발자국 시스템/content.md
+- 성향 시스템 ← packages/confluence-downloader/output/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
 
 ### 학살 성향 (3)
 - IBT 성향 시스템의 Buff, DeathPenaltyBuff 밸런스 ← packages/confluence-downloader/output/Design/시스템 디자인/성장 밸런스/IBT 성향 시스템의 Buff, DeathPenaltyBuff 밸런스/content.md
@@ -24896,6 +24941,10 @@
 ### AttackerStat (2)
 - 명중률 공식 개선 ← packages/confluence-downloader/output/Design/시스템 디자인/성장 밸런스/명중률 공식 개선/content.md
 - 명중률 공식 개선 ← packages/confluence-downloader/output/시스템 디자인/성장 밸런스/명중률 공식 개선/content.md
+
+### Aura (2)
+- 클래스 별 전설 등급 변신 외형 컨셉 자료 2차 ← /home/jacob/proj-k-data/confluence/output/Design/R&D 및 레퍼런스/변신 관련/변신 외형 디자인 자료/클래스 별 전설 등급 변신 외형 컨셉 자료 2차/content.md
+- 클래스 스킬 연출 폴리싱 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 리스트/클래스 스킬 연출 폴리싱/content.md
 
 ### Auto 버튼 (2)
 - [Beta3] 캐릭터 주변 탐색 연출 개선 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Beta3 개선 항목/[Beta3] 캐릭터 주변 탐색 연출 개선/content.md
@@ -25756,10 +25805,6 @@
 ### Dania (2)
 - NPC정보_상인 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_마을_셀레탄_동부_오스트하펜/NPC정보_상인/_final/content.md
 - 스킬북 상인 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Npc/상인 NPC 리스트/스킬북 상인/content.md
-
-### Dark Steel (2)
-- 클래스 별 전설 등급 변신 외형 컨셉 자료 1차 ← /home/jacob/proj-k-data/confluence/output/Design/R&D 및 레퍼런스/변신 관련/변신 외형 디자인 자료/클래스 별 전설 등급 변신 외형 컨셉 자료 1차/content.md
-- 클래스 별 전설 등급 변신 외형 컨셉 자료 2차 ← /home/jacob/proj-k-data/confluence/output/Design/R&D 및 레퍼런스/변신 관련/변신 외형 디자인 자료/클래스 별 전설 등급 변신 외형 컨셉 자료 2차/content.md
 
 ### Day of Month (2)
 - 크론 표현식 (cron expression) ← packages/confluence-downloader/output/Design/기획자 개발 팁/크론 표현식 (cron expression)/content.md
@@ -27381,10 +27426,6 @@
 - 스탯 리스트 ← packages/confluence-downloader/output/Design/시스템 디자인/성장 밸런스/스탯 리스트/content.md
 - 스탯 리스트 ← packages/confluence-downloader/output/시스템 디자인/성장 밸런스/스탯 리스트/content.md
 
-### MpCost (2)
-- 리소스 테이블 - Skill - Attack ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Attack/content.md
-- 리소스 테이블 - Skill - Buff ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/리소스 테이블 - Skill - Buff/content.md
-
 ### Multiplicative (2)
 - 스탯 분류 및 추가 스탯 디자인 ← packages/confluence-downloader/output/Design/시스템 디자인/성장 밸런스/스탯 분류 및 추가 스탯 디자인/content.md
 - 스탯 분류 및 추가 스탯 디자인 ← packages/confluence-downloader/output/시스템 디자인/성장 밸런스/스탯 분류 및 추가 스탯 디자인/content.md
@@ -27542,7 +27583,7 @@
 - 정령의 탑 기믹전 기획 ← packages/confluence-downloader/output/시스템 디자인/던전/정령의 탑 기믹전 기획/content.md
 
 ### Objective (2)
-- 퀘스트 구성 정책 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
+- 퀘스트 구성 정책 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
 - 퀘스트 구성 정책 ← packages/confluence-downloader/output/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
 
 ### Obstacle (2)
@@ -27722,7 +27763,7 @@
 - 던전 종류 및 리소스 제작 방향성 ← packages/confluence-downloader/output/시스템 디자인/던전/던전 종류 및 리소스 제작 방향성/content.md
 
 ### PK 모드 (2)
-- [IBT] 폴리싱 리스트 ← packages/confluence-downloader/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
+- [IBT] 폴리싱 리스트 ← /home/jacob/proj-k-data/confluence/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
 - 테리토리 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/맵/테리토리 시스템/content.md
 
 ### PK 보호 시간 (2)
@@ -28489,10 +28530,6 @@
 - 일반_거대 소라게_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_셀레탄_오스트하펜 남부 해안가/일반_거대 소라게_전투/_final/content.md
 - 일반_거대 소라게_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_셀레탄_오스트하펜 남부 해안가/일반_거대 소라게_컨셉/_final/content.md
 
-### ShowIcon (2)
-- 패시브 스킬 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 시스템/패시브 스킬 시스템/content.md
-- 패시브 스킬 시스템 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 시스템/패시브 스킬 시스템/content.md
-
 ### ShowMeTheMoney (2)
 - [양식] 스킬 효과 문서 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/[양식] 스킬 효과 문서/content.md
 - [양식] 스킬 효과 문서 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/[양식] 스킬 효과 문서/content.md
@@ -28864,10 +28901,6 @@
 ### TerritoryCollisionEnum (2)
 - Enum - Land ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/Enum/Enum - Land/content.md
 - 리소스 테이블 - Land ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Land/content.md
-
-### TextkeyTitle (2)
-- 재화 정보 UI ← packages/confluence-downloader/output/Design/시스템 디자인/재화/재화 정보 UI/content.md
-- 재화 정보 UI ← packages/confluence-downloader/output/시스템 디자인/재화/재화 정보 UI/content.md
 
 ### The Ebon Waterway (2)
 - 서대륙: 스켈라Skela ← packages/confluence-downloader/output/Design/컨텐츠 디자인/월드/서대륙_ 스켈라Skela/content.md
@@ -29845,9 +29878,9 @@
 - 무한 던전 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/던전/던전 설정/무한 던전/content.md
 - 무한 던전 ← packages/confluence-downloader/output/컨텐츠 디자인/세계관/던전 리스트/무한 던전/content.md
 
-### 거인의 피 (2)
-- 거인의 유산 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/성장 컨텐츠/거인의 유산 시스템/content.md
-- 거인의 유산 시스템 ← packages/confluence-downloader/output/시스템 디자인/성장 컨텐츠/거인의 유산 시스템/content.md
+### 거인의 코 (2)
+- 거인의 유산 시스템 컨셉 ← packages/confluence-downloader/output/시스템 디자인/성장 컨텐츠/거인의 유산 시스템 컨셉/content.md
+- 홀바르드 시놉시스 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/시놉시스/홀바르드 시놉시스/content.md
 
 ### 거인의 힘 (2)
 - 사냥터_가시나무숲_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_스켈라_가시나무숲/사냥터_가시나무숲_컨셉/_final/content.md
@@ -30360,6 +30393,10 @@
 - 월드맵 개선 ← packages/confluence-downloader/output/Design/시스템 디자인/맵/월드맵 개선/content.md
 - 월드맵 개선 ← packages/confluence-downloader/output/시스템 디자인/맵/월드맵 개선/content.md
 
+### 국경 수비대 (2)
+- 사냥터_해오름언덕_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_소르브_해오름언덕/사냥터_해오름언덕_레벨/_final/content.md
+- 필드:해오름 언덕 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/소르브/필드_해오름 언덕/content.md
+
 ### 국민 레벨대 (2)
 - 골드 밸런스 ← packages/confluence-downloader/output/Design/시스템 디자인/경제 밸런스/콘텐츠 별 재화 비중/골드 밸런스/content.md
 - 골드 밸런스 ← packages/confluence-downloader/output/시스템 디자인/경제 밸런스/콘텐츠 별 재화 비중/골드 밸런스/content.md
@@ -30820,6 +30857,10 @@
 - 아나디스 변이 보초병_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_블라이트/아나디스 변이 보초병_컨셉/_final/content.md
 - 아나디스 변이 척후병_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_블라이트/아나디스 변이 척후병_컨셉/_final/content.md
 
+### 나바론 (2)
+- 마을: 나바론 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/홀바르드/마을_ 나바론/content.md
+- 홀바르드 시놉시스 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/시놉시스/홀바르드 시놉시스/content.md
+
 ### 나이아가라 (2)
 - [Beta3] 사망 연출 개선 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Beta3 개선 항목/[Beta3] 사망 연출 개선/content.md
 - [Beta3] 사망 연출 개선 ← packages/confluence-downloader/output/컨텐츠 디자인/Beta3 개선 항목/[Beta3] 사망 연출 개선/content.md
@@ -30947,10 +30988,6 @@
 ### 네임태그 (2)
 - 가디언 스킬 연출 폴리싱 피드백 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 리스트/클래스 스킬 연출 폴리싱/가디언 스킬 연출 폴리싱 피드백/content.md
 - 명찰 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/보상 시스템/명찰 시스템/content.md
-
-### 네임태그 색상 (2)
-- 성향 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
-- 성향 시스템 ← packages/confluence-downloader/output/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
 
 ### 네타냐 (2)
 - NPC정보_상인 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_마을_셀레탄_동부_오스트하펜/NPC정보_상인/_final/content.md
@@ -31592,10 +31629,6 @@
 - 절전 모드 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/기반 시스템/절전 모드 시스템/content.md
 - 절전 모드 시스템 ← packages/confluence-downloader/output/시스템 디자인/기반 시스템/절전 모드 시스템/content.md
 
-### 드루이드 (2)
-- 종족 설정 아이디어 ← packages/confluence-downloader/output/Design/R&D 및 레퍼런스/종족 설정 아이디어/content.md
-- 종족 설정 아이디어 ← packages/confluence-downloader/output/R&D 및 레퍼런스/종족 설정 아이디어/content.md
-
 ### 득템 (2)
 - [25/10/17] 키 테마 관련 논의 ← packages/confluence-downloader/output/Design/R&D 및 레퍼런스/프로젝트 키 테마 논의/[25_10_17] 키 테마 관련 논의/content.md
 - [25_10_17] 키 테마 관련 논의 ← packages/confluence-downloader/output/R&D 및 레퍼런스/프로젝트 키 테마 논의/[25_10_17] 키 테마 관련 논의/content.md
@@ -31679,10 +31712,6 @@
 ### 또아리 틀기 (2)
 - 레이드 보스_블루 드래곤 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/몬스터 디자인/레이드 보스_블루 드래곤/content.md
 - 레이드 보스_블루 드래곤 ← packages/confluence-downloader/output/컨텐츠 디자인/몬스터 디자인/레이드 보스_블루 드래곤/content.md
-
-### 라두스 검문소 (2)
-- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 소르브Sorv/서대륙_ 홀바르드Holbard/content.md
-- 홀바르드 시놉시스 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/시놉시스/홀바르드 시놉시스/content.md
 
 ### 라이브 서비스 (2)
 - 전투력 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/전투/전투력 시스템/content.md
@@ -31829,7 +31858,7 @@
 - 필드_부서진 유적 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_부서진 유적/content.md
 
 ### 레벨차 계수 (2)
-- 성향 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
+- 성향 시스템 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
 - 성향 시스템 ← packages/confluence-downloader/output/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
 
 ### 레이더 UI (2)
@@ -31881,7 +31910,7 @@
 - UI LayerType 규칙 ← packages/confluence-downloader/output/Design/시스템 디자인/UX UI 규칙/UX 규칙 문서/UI LayerType 규칙/content.md
 
 ### 레일라 (2)
-- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 소르브Sorv/서대륙_ 홀바르드Holbard/content.md
+- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 홀바르드Holbard/content.md
 - 홀바르드 시놉시스 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/시놉시스/홀바르드 시놉시스/content.md
 
 ### 레질리언스 (2)
@@ -32163,10 +32192,6 @@
 - 회피 무시 명중 효과 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/회피 무시 명중 효과/content.md
 - 회피 무시 명중 효과 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/회피 무시 명중 효과/content.md
 
-### 마법/천(로브) 그룹 (2)
-- 클래스 별 전설 등급 변신 외형 컨셉 자료 1차 ← /home/jacob/proj-k-data/confluence/output/Design/R&D 및 레퍼런스/변신 관련/변신 외형 디자인 자료/클래스 별 전설 등급 변신 외형 컨셉 자료 1차/content.md
-- 클래스 별 전설 등급 변신 외형 컨셉 자료 2차 ← /home/jacob/proj-k-data/confluence/output/Design/R&D 및 레퍼런스/변신 관련/변신 외형 디자인 자료/클래스 별 전설 등급 변신 외형 컨셉 자료 2차/content.md
-
 ### 마법_도깨비 (2)
 - 마법_도깨비 리소스 리스트 ← packages/confluence-downloader/output/Design/시스템 디자인/정령 (기존 _펫_)/정령&도깨비 아트 리소스 정보/마법_도깨비 리소스 리스트/content.md
 - 마법_도깨비 리소스 리스트 ← packages/confluence-downloader/output/시스템 디자인/정령 (기존 _펫_)/정령&도깨비 아트 리소스 정보/마법_도깨비 리소스 리스트/content.md
@@ -32419,13 +32444,13 @@
 - [Beta3] 캐릭터 주변 탐색 연출 개선 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Beta3 개선 항목/[Beta3] 캐릭터 주변 탐색 연출 개선/content.md
 - [Beta3] 캐릭터 주변 탐색 연출 개선 ← packages/confluence-downloader/output/컨텐츠 디자인/Beta3 개선 항목/[Beta3] 캐릭터 주변 탐색 연출 개선/content.md
 
+### 모범 (2)
+- 사망 시스템 개선 ← packages/confluence-downloader/output/Design/시스템 디자인/전투/사망 시스템 개선/content.md
+- 성향 시스템 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
+
 ### 모범 성향 (2)
 - IBT 성향 시스템의 Buff, DeathPenaltyBuff 밸런스 ← packages/confluence-downloader/output/Design/시스템 디자인/성장 밸런스/IBT 성향 시스템의 Buff, DeathPenaltyBuff 밸런스/content.md
 - 사망 시스템 개선 ← packages/confluence-downloader/output/시스템 디자인/전투/사망 시스템 개선/content.md
-
-### 모범, 선량, 일반, 타락, 무법, 학살 (2)
-- 성향 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
-- 성향 시스템 ← packages/confluence-downloader/output/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
 
 ### 모사 PC 개체 (2)
 - [Beta2] 시네마틱 컷신 개선 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Beta2 개선 항목/[Beta2] 시네마틱 컷신 개선/content.md
@@ -32468,7 +32493,7 @@
 - 기획서 템플릿 ← packages/confluence-downloader/output/제작 가이드/기획서 템플릿/content.md
 
 ### 목표 (2)
-- 퀘스트 구성 정책 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
+- 퀘스트 구성 정책 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
 - 퀘스트 구성 정책 ← packages/confluence-downloader/output/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
 
 ### 목표 강화 단계 (2)
@@ -32623,6 +32648,10 @@
 - 재화 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/재화/재화 시스템/content.md
 - 재화 시스템 ← packages/confluence-downloader/output/시스템 디자인/재화/재화 시스템/content.md
 
+### 무법 (2)
+- 사망 시스템 개선 ← packages/confluence-downloader/output/Design/시스템 디자인/전투/사망 시스템 개선/content.md
+- 성향 시스템 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
+
 ### 무법 성향 (2)
 - IBT 성향 시스템의 Buff, DeathPenaltyBuff 밸런스 ← packages/confluence-downloader/output/Design/시스템 디자인/성장 밸런스/IBT 성향 시스템의 Buff, DeathPenaltyBuff 밸런스/content.md
 - 사망 시스템 개선 ← packages/confluence-downloader/output/시스템 디자인/전투/사망 시스템 개선/content.md
@@ -32640,7 +32669,7 @@
 - 성주 던전 ← packages/confluence-downloader/output/컨텐츠 디자인/세계관/던전 리스트/성주 던전/content.md
 
 ### 무자비한 평원 (2)
-- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 소르브Sorv/서대륙_ 홀바르드Holbard/content.md
+- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 홀바르드Holbard/content.md
 - 홀바르드 시놉시스 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/시놉시스/홀바르드 시놉시스/content.md
 
 ### 무작위 좌표 (2)
@@ -32802,6 +32831,10 @@
 ### 바리울 왕성 (2)
 - [Beta3] 인트로 컷신 제작 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/컷신/[Beta3] 인트로 컷신 제작/content.md
 - [Beta3] 인트로 컷신 제작 ← packages/confluence-downloader/output/컨텐츠 디자인/컷신/[Beta3] 인트로 컷신 제작/content.md
+
+### 바리울 유물 (2)
+- PVP 재화 잡화 상인 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Npc/상인 NPC 리스트/PVP 재화 잡화 상인/content.md
+- 홀바르드 시놉시스 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/시놉시스/홀바르드 시놉시스/content.md
 
 ### 바리울 유민 리타 (2)
 - 서브퀘스트배치위치 ← packages/xlsx-extractor/output/8_Contents/PK_퀘스트_메인퀘스트/서브퀘스트배치위치/_final/content.md
@@ -33236,7 +33269,7 @@
 
 ### 벨리안 (2)
 - 레벨 전체 목록 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/레벨/레벨 전체 목록/content.md
-- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 소르브Sorv/서대륙_ 홀바르드Holbard/content.md
+- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 홀바르드Holbard/content.md
 
 ### 벨벳 (2)
 - 서대륙_귀족 남성 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Npc/퀘스트 NPC 리스트/서대륙_귀족 남성/content.md
@@ -33355,7 +33388,7 @@
 - 장비 아이템 위상 및 재료 획득처 ← packages/confluence-downloader/output/시스템 디자인/경제 밸런스/장비 계획/장비 아이템 위상 및 재료 획득처/content.md
 
 ### 보라색 닉네임 (2)
-- 성향 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
+- 성향 시스템 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
 - 성향 시스템 ← packages/confluence-downloader/output/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
 
 ### 보라색, 노란색, 빨강색 (2)
@@ -34118,10 +34151,6 @@
 - 클래스 디자인 - 가디언 ← packages/confluence-downloader/output/Design/시스템 디자인/클래스/클래스 디자인 - 가디언/content.md
 - 클래스 디자인 - 가디언 ← packages/confluence-downloader/output/시스템 디자인/클래스/클래스 디자인 - 가디언/content.md
 
-### 샤하르트 (2)
-- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 소르브Sorv/서대륙_ 홀바르드Holbard/content.md
-- 홀바르드 시놉시스 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/시놉시스/홀바르드 시놉시스/content.md
-
 ### 서대륙_귀족 남성 (2)
 - NPC 신규 제작 리스트 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Npc/NPC 신규 제작 리스트/content.md
 - 서대륙_귀족 남성 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Npc/퀘스트 NPC 리스트/서대륙_귀족 남성/content.md
@@ -34402,10 +34431,6 @@
 - 사냥터_생명의땅_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_로바르스_생명의 땅/사냥터_생명의땅_컨셉/_final/content.md
 - 필드:생명의 땅 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/로바르스/필드_생명의 땅/content.md
 
-### 세계관 (2)
-- 신화 변신 방향성 ← packages/confluence-downloader/output/Design/R&D 및 레퍼런스/변신 관련/신화 변신 방향성/content.md
-- 신화 변신 방향성 ← packages/confluence-downloader/output/R&D 및 레퍼런스/변신 관련/신화 변신 방향성/content.md
-
 ### 세계관 리뉴얼 (2)
 - 컨텐츠 디자인 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/content.md
 - 컨텐츠 디자인 ← packages/confluence-downloader/output/컨텐츠 디자인/content.md
@@ -34545,10 +34570,6 @@
 ### 속성 아이콘 (2)
 - [컴포넌트] 아이템 아이콘 위젯 컴포넌트 구조 설계 ← packages/confluence-downloader/output/Design/시스템 디자인/UX UI 규칙/UX 규칙 문서/[컴포넌트] 아이템 아이콘 위젯 컴포넌트 구조 설계/content.md
 - [컴포넌트] 아이템 아이콘 위젯 컴포넌트 구조 설계 ← packages/confluence-downloader/output/시스템 디자인/UX UI 규칙/UX 규칙 문서/[컴포넌트] 아이템 아이콘 위젯 컴포넌트 구조 설계/content.md
-
-### 속죄의 기운 (2)
-- 성향 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
-- 성향 시스템 ← packages/confluence-downloader/output/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
 
 ### 손익분기점 (2)
 - MMORPG 쌀먹 생태계 조사 ← packages/confluence-downloader/output/Design/R&D 및 레퍼런스/MMORPG 쌀먹 생태계 조사/content.md
@@ -34715,7 +34736,7 @@
 - 공통 팝업 및 모달 UI 시스템 가이드 ← packages/confluence-downloader/output/시스템 디자인/UX UI 규칙/UX 규칙 문서/공통 팝업 및 모달 UI 시스템 가이드/content.md
 
 ### 스러져가는 절벽 (2)
-- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 소르브Sorv/서대륙_ 홀바르드Holbard/content.md
+- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 홀바르드Holbard/content.md
 - 홀바르드 시놉시스 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/시놉시스/홀바르드 시놉시스/content.md
 
 ### 스매시 (2)
@@ -34877,10 +34898,6 @@
 ### 스킬 사용 불가 상태이상 (2)
 - 액션 예약 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 시스템/액션 예약 시스템/content.md
 - 액션 예약 시스템 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 시스템/액션 예약 시스템/content.md
-
-### 스킬 사용 설정 (2)
-- [작성중] 스킬/버프 UIUX 개선 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/[작성중] 스킬_버프 UIUX 개선/content.md
-- 스킬 자동 사용 및 주기 설정 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 시스템/스킬 자동 사용 및 주기 설정/content.md
 
 ### 스킬 사용 설정 버튼 (2)
 - 스킬 발동 순서 설정 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 시스템/스킬 발동 순서 설정/content.md
@@ -35053,10 +35070,6 @@
 ### 스티그마 (2)
 - 아이온2 레퍼런스 리뷰 ← packages/confluence-downloader/output/Design/R&D 및 레퍼런스/아이온2 레퍼런스 리뷰/content.md
 - 아이온2 레퍼런스 리뷰 ← packages/confluence-downloader/output/R&D 및 레퍼런스/아이온2 레퍼런스 리뷰/content.md
-
-### 스티그마 캠프 (2)
-- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 소르브Sorv/서대륙_ 홀바르드Holbard/content.md
-- 홀바르드 시놉시스 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/시놉시스/홀바르드 시놉시스/content.md
 
 ### 스팟 포인트 (2)
 - [네임드] 소르브 왕: 라그나르 기획 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/몬스터/[네임드] 소르브 왕_ 라그나르 기획/content.md
@@ -35322,17 +35335,9 @@
 - 보상 공통 ← packages/confluence-downloader/output/Design/시스템 디자인/보상 시스템/보상 공통/content.md
 - 보상 공통 ← packages/confluence-downloader/output/시스템 디자인/보상 시스템/보상 공통/content.md
 
-### 실버 아머 (2)
-- 클래스 별 전설 등급 변신 외형 컨셉 자료 1차 ← /home/jacob/proj-k-data/confluence/output/Design/R&D 및 레퍼런스/변신 관련/변신 외형 디자인 자료/클래스 별 전설 등급 변신 외형 컨셉 자료 1차/content.md
-- 클래스 별 전설 등급 변신 외형 컨셉 자료 2차 ← /home/jacob/proj-k-data/confluence/output/Design/R&D 및 레퍼런스/변신 관련/변신 외형 디자인 자료/클래스 별 전설 등급 변신 외형 컨셉 자료 2차/content.md
-
 ### 실시간 클릭 이동 (2)
 - 이동 관련 기존 기획 및 레퍼런스 ← packages/confluence-downloader/output/Design/시스템 디자인/전투/이동 명령 처리 관련 개선/이동 관련 기존 기획 및 레퍼런스/content.md
 - 이동 관련 기존 기획 및 레퍼런스 ← packages/confluence-downloader/output/시스템 디자인/전투/이동 명령 처리 관련 개선/이동 관련 기존 기획 및 레퍼런스/content.md
-
-### 실크 질감 (2)
-- 클래스 별 전설 등급 변신 외형 컨셉 자료 1차 ← /home/jacob/proj-k-data/confluence/output/Design/R&D 및 레퍼런스/변신 관련/변신 외형 디자인 자료/클래스 별 전설 등급 변신 외형 컨셉 자료 1차/content.md
-- 클래스 별 전설 등급 변신 외형 컨셉 자료 2차 ← /home/jacob/proj-k-data/confluence/output/Design/R&D 및 레퍼런스/변신 관련/변신 외형 디자인 자료/클래스 별 전설 등급 변신 외형 컨셉 자료 2차/content.md
 
 ### 실프의 축복 (2)
 - 샤먼 ← packages/xlsx-extractor/output/8_Contents/PK_스킬 및 버프 아이콘_요청서/샤먼/_final/content.md
@@ -35849,10 +35854,6 @@
 ### 에러 메시지 (2)
 - [Beta1] 퀘스트 보상 개선 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Beta1 개선 항목/[Beta1] 퀘스트 보상 개선/content.md
 - [Beta1] 퀘스트 보상 개선 ← packages/confluence-downloader/output/컨텐츠 디자인/Beta1 개선 항목/[Beta1] 퀘스트 보상 개선/content.md
-
-### 에메랄드빛 (2)
-- 클래스 별 전설 등급 변신 외형 컨셉 자료 1차 ← /home/jacob/proj-k-data/confluence/output/Design/R&D 및 레퍼런스/변신 관련/변신 외형 디자인 자료/클래스 별 전설 등급 변신 외형 컨셉 자료 1차/content.md
-- 클래스 별 전설 등급 변신 외형 컨셉 자료 2차 ← /home/jacob/proj-k-data/confluence/output/Design/R&D 및 레퍼런스/변신 관련/변신 외형 디자인 자료/클래스 별 전설 등급 변신 외형 컨셉 자료 2차/content.md
 
 ### 에버그로우스 (2)
 - 샤먼 ← packages/xlsx-extractor/output/8_Contents/PK_스킬 및 버프 아이콘_요청서/샤먼/_final/content.md
@@ -36429,6 +36430,10 @@
 ### 위로 베기 (2)
 - 셀레탄 왕_아트 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_왕/셀레탄 왕_아트/_final/content.md
 - 셀레탄 왕_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_왕/셀레탄 왕_전투/_final/content.md
+
+### 위압감 (2)
+- 클래스 별 전설 등급 변신 외형 컨셉 자료 1차 ← /home/jacob/proj-k-data/confluence/output/Design/R&D 및 레퍼런스/변신 관련/변신 외형 디자인 자료/클래스 별 전설 등급 변신 외형 컨셉 자료 1차/content.md
+- 클래스 별 전설 등급 변신 외형 컨셉 자료 2차 ← /home/jacob/proj-k-data/confluence/output/Design/R&D 및 레퍼런스/변신 관련/변신 외형 디자인 자료/클래스 별 전설 등급 변신 외형 컨셉 자료 2차/content.md
 
 ### 위인 (2)
 - [25/10/01] 키 테마 관련 논의 ← packages/confluence-downloader/output/Design/R&D 및 레퍼런스/프로젝트 키 테마 논의/[25_10_01] 키 테마 관련 논의/content.md
@@ -37100,6 +37105,10 @@
 - 스탯 분류 및 추가 스탯 디자인 ← packages/confluence-downloader/output/Design/시스템 디자인/성장 밸런스/스탯 분류 및 추가 스탯 디자인/content.md
 - 스탯 분류 및 추가 스탯 디자인 ← packages/confluence-downloader/output/시스템 디자인/성장 밸런스/스탯 분류 및 추가 스탯 디자인/content.md
 
+### 장비 손실 (2)
+- 사망 시스템 개선 ← packages/confluence-downloader/output/Design/시스템 디자인/전투/사망 시스템 개선/content.md
+- 사망 시스템 개선 ← packages/confluence-downloader/output/시스템 디자인/전투/사망 시스템 개선/content.md
+
 ### 장비 자동 생성 (2)
 - 아이템 등급 차별화 기조 ← packages/confluence-downloader/output/Design/시스템 디자인/성장 밸런스/아이템 등급 차별화 기조/content.md
 - 아이템 등급 차별화 기조 ← packages/confluence-downloader/output/시스템 디자인/성장 밸런스/아이템 등급 차별화 기조/content.md
@@ -37533,7 +37542,7 @@
 - 아이템 ID 그룹화 기능 ← packages/confluence-downloader/output/시스템 디자인/아이템/아이템 ID 그룹화 기능/content.md
 
 ### 정당 방위 (2)
-- 성향 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
+- 성향 시스템 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
 - 성향 시스템 ← packages/confluence-downloader/output/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
 
 ### 정렬 방식 (2)
@@ -38213,7 +38222,7 @@
 - [개인 성장4] 점성술 시스템 컨셉 ← packages/confluence-downloader/output/시스템 디자인/성장 컨텐츠/[개인 성장4] 점성술 시스템 컨셉/content.md
 
 ### 철벽 관문 (2)
-- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 소르브Sorv/서대륙_ 홀바르드Holbard/content.md
+- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 홀바르드Holbard/content.md
 - 홀바르드 시놉시스 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/시놉시스/홀바르드 시놉시스/content.md
 
 ### 첨부물 지급 UI (2)
@@ -38473,7 +38482,7 @@
 - [25_10_01] 키 테마 관련 논의 ← packages/confluence-downloader/output/R&D 및 레퍼런스/프로젝트 키 테마 논의/[25_10_01] 키 테마 관련 논의/content.md
 
 ### 침묵 협곡 (2)
-- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 소르브Sorv/서대륙_ 홀바르드Holbard/content.md
+- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 홀바르드Holbard/content.md
 - 홀바르드 시놉시스 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/시놉시스/홀바르드 시놉시스/content.md
 
 ### 칭호 (2)
@@ -39048,6 +39057,10 @@
 - [Beta3] 캐릭터 주변 탐색 연출 개선 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Beta3 개선 항목/[Beta3] 캐릭터 주변 탐색 연출 개선/content.md
 - [Beta3] 캐릭터 주변 탐색 연출 개선 ← packages/confluence-downloader/output/컨텐츠 디자인/Beta3 개선 항목/[Beta3] 캐릭터 주변 탐색 연출 개선/content.md
 
+### 타락 (2)
+- 사망 시스템 개선 ← packages/confluence-downloader/output/Design/시스템 디자인/전투/사망 시스템 개선/content.md
+- 성향 시스템 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
+
 ### 타락 성향 (2)
 - IBT 성향 시스템의 Buff, DeathPenaltyBuff 밸런스 ← packages/confluence-downloader/output/Design/시스템 디자인/성장 밸런스/IBT 성향 시스템의 Buff, DeathPenaltyBuff 밸런스/content.md
 - 사망 시스템 개선 ← packages/confluence-downloader/output/시스템 디자인/전투/사망 시스템 개선/content.md
@@ -39472,6 +39485,10 @@
 - 사냥터_울부짖는숲_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_로바르스_울부짖는숲/사냥터_울부짖는숲_레벨/_final/content.md
 - 필드:울부짖는 숲 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/로바르스/필드_울부짖는 숲/content.md
 
+### 판금 갑옷 (2)
+- 진리의 상급기사_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_셀레탄_칼날바람절벽/진리의 상급기사_컨셉/_final/content.md
+- 클래스 별 전설 등급 변신 외형 컨셉 자료 2차 ← /home/jacob/proj-k-data/confluence/output/Design/R&D 및 레퍼런스/변신 관련/변신 외형 디자인 자료/클래스 별 전설 등급 변신 외형 컨셉 자료 2차/content.md
+
 ### 판금, 가죽, 천 (2)
 - 참고 ← packages/xlsx-extractor/output/8_Contents/PK_스킬 및 버프 아이콘_요청서/참고/_final/content.md
 - 참고 ← packages/xlsx-extractor/output/8_Contents/PK_아이템 및 기타 아이콘_요청서/참고/_final/content.md
@@ -39717,7 +39734,7 @@
 - 아트_이펙트 리스트 ← packages/xlsx-extractor/output/8_Contents/PK_변신_궁사_해리/아트_이펙트 리스트/_final/content.md
 
 ### 폭풍의 무덤 (2)
-- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 소르브Sorv/서대륙_ 홀바르드Holbard/content.md
+- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 홀바르드Holbard/content.md
 - 홀바르드 시놉시스 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/시놉시스/홀바르드 시놉시스/content.md
 
 ### 폰트 (2)
@@ -39837,7 +39854,7 @@
 - [Beta2] 인트로 시스템 ← packages/confluence-downloader/output/컨텐츠 디자인/Beta2 개선 항목/[Beta2] 인트로 시스템/content.md
 
 ### 플레이어 킬 (2)
-- 성향 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
+- 성향 시스템 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
 - 정령 공성전 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/PvP 컨텐츠/정령 공성전 시스템/content.md
 
 ### 플레이어 표시 인원 제한 (2)
@@ -39877,7 +39894,7 @@
 - [25_10_01] 키 테마 관련 논의 ← packages/confluence-downloader/output/R&D 및 레퍼런스/프로젝트 키 테마 논의/[25_10_01] 키 테마 관련 논의/content.md
 
 ### 피의 낙인 (2)
-- 성향 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
+- 성향 시스템 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
 - 성향 시스템 ← packages/confluence-downloader/output/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
 
 ### 피조물 (2)
@@ -39913,7 +39930,7 @@
 - 스킬 리스트 - 가디언 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 리스트/스킬 리스트 - 가디언/content.md
 
 ### 피해자 성향치 계수 (2)
-- 성향 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
+- 성향 시스템 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
 - 성향 시스템 ← packages/confluence-downloader/output/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
 
 ### 픽토그램 (2)
@@ -40121,7 +40138,7 @@
 - [25_10_21] 키 테마 관련 논의 ← packages/confluence-downloader/output/R&D 및 레퍼런스/프로젝트 키 테마 논의/[25_10_21] 키 테마 관련 논의/content.md
 
 ### 해방의 기운 (2)
-- 성향 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
+- 성향 시스템 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
 - 성향 시스템 ← packages/confluence-downloader/output/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
 
 ### 해안가 (2)
@@ -40260,10 +40277,6 @@
 - Legacy_스킬 ← packages/xlsx-extractor/output/8_Contents/PK_스킬 및 버프 아이콘_요청서/Legacy_스킬/_final/content.md
 - 세부 정보 ← packages/xlsx-extractor/output/8_Contents/PK_변신_검사_유리태A/세부 정보/_final/content.md
 
-### 화이트 골드 판금 갑옷 (2)
-- 클래스 별 전설 등급 변신 외형 컨셉 자료 1차 ← /home/jacob/proj-k-data/confluence/output/Design/R&D 및 레퍼런스/변신 관련/변신 외형 디자인 자료/클래스 별 전설 등급 변신 외형 컨셉 자료 1차/content.md
-- 클래스 별 전설 등급 변신 외형 컨셉 자료 2차 ← /home/jacob/proj-k-data/confluence/output/Design/R&D 및 레퍼런스/변신 관련/변신 외형 디자인 자료/클래스 별 전설 등급 변신 외형 컨셉 자료 2차/content.md
-
 ### 화폐 아이템 (2)
 - 참고 ← packages/xlsx-extractor/output/8_Contents/PK_스킬 및 버프 아이콘_요청서/참고/_final/content.md
 - 참고 ← packages/xlsx-extractor/output/8_Contents/PK_아이템 및 기타 아이콘_요청서/참고/_final/content.md
@@ -40361,7 +40374,11 @@
 - 정령 포트레이트(UI) 발주서 ← packages/confluence-downloader/output/Design/시스템 디자인/정령 (기존 _펫_)/정령&도깨비 아트 리소스 정보/정령 포트레이트(UI) 발주서/content.md
 
 ### 황혼 사막 (2)
-- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 소르브Sorv/서대륙_ 홀바르드Holbard/content.md
+- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 홀바르드Holbard/content.md
+- 홀바르드 시놉시스 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/시놉시스/홀바르드 시놉시스/content.md
+
+### 황혼의 망치단 (2)
+- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 홀바르드Holbard/content.md
 - 홀바르드 시놉시스 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/시놉시스/홀바르드 시놉시스/content.md
 
 ### 회귀 기능 (2)
@@ -40464,10 +40481,6 @@
 - 장비 드랍 및 제작 밸런스 ← packages/confluence-downloader/output/Design/시스템 디자인/경제 밸런스/장비 계획/장비 드랍 및 제작 밸런스/content.md
 - 장비 드랍 및 제작 밸런스 ← packages/confluence-downloader/output/시스템 디자인/경제 밸런스/장비 계획/장비 드랍 및 제작 밸런스/content.md
 
-### 흑철 (2)
-- 클래스 별 전설 등급 변신 외형 컨셉 자료 1차 ← /home/jacob/proj-k-data/confluence/output/Design/R&D 및 레퍼런스/변신 관련/변신 외형 디자인 자료/클래스 별 전설 등급 변신 외형 컨셉 자료 1차/content.md
-- 클래스 별 전설 등급 변신 외형 컨셉 자료 2차 ← /home/jacob/proj-k-data/confluence/output/Design/R&D 및 레퍼런스/변신 관련/변신 외형 디자인 자료/클래스 별 전설 등급 변신 외형 컨셉 자료 2차/content.md
-
 ### 흙먼지 (2)
 - [Beta3] 연출 컷신 제작 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/컷신/[Beta3] 연출 컷신 제작/content.md
 - [Beta3] 연출 컷신 제작 ← packages/confluence-downloader/output/컨텐츠 디자인/컷신/[Beta3] 연출 컷신 제작/content.md
@@ -40521,7 +40534,7 @@
 - 은신 시스템 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/은신 시스템/content.md
 
 ### 힘의 제전 (2)
-- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 소르브Sorv/서대륙_ 홀바르드Holbard/content.md
+- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 홀바르드Holbard/content.md
 - 홀바르드 시놉시스 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/시놉시스/홀바르드 시놉시스/content.md
 
 ### "안" 자 돌림 (1)
@@ -40539,11 +40552,26 @@
 ### +7, +8… (1)
 - 아이템 툴팁 정보 ← packages/confluence-downloader/output/시스템 디자인/아이템/아이템 툴팁 정보/content.md
 
+### -10000 초과 (1)
+- 성향 시스템 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
+
+### -1~-5000 (1)
+- 성향 시스템 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
+
+### -5001~-10000 (1)
+- 성향 시스템 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
+
 ### /DataAsset/PawnData/PC/ (1)
 - [부록] 변신 외형 선택 시 출력되는 VFX 경로 변경 ← packages/confluence-downloader/output/Design/시스템 디자인/변신/변신창 조작 및 기능 대응/[부록] 변신 외형 선택 시 출력되는 VFX 경로 변경/content.md
 
+### 0~5000 (1)
+- 성향 시스템 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
+
 ### 1, 2, 3, 4 (1)
 - 사냥터_안개의경계_몬스터배치 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_스켈라_안개의 경계/사냥터_안개의경계_몬스터배치/_final/content.md
+
+### 1, 2, 3, 4, 5 (1)
+- [IBT] 폴리싱 리스트 ← /home/jacob/proj-k-data/confluence/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
 
 ### 1-1, 1-2, 1-3, 2-1, 2-2, 3-1, 4-1, 4-2, 4-3 (1)
 - 사냥터_숭배의언덕_몬스터배치 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_셀레탄_숭배의 언덕/사냥터_숭배의언덕_몬스터배치/_final/content.md
@@ -40674,6 +40702,9 @@
 ### 4족 보행 몬스터 (1)
 - 피직 어셋 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/전투/전투 연출/피직 어셋 시스템/content.md
 
+### 5001~7500 (1)
+- 성향 시스템 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
+
 ### 50단계 (1)
 - [개인 성장] 승천의 인장 ← packages/confluence-downloader/output/Design/시스템 디자인/성장 컨텐츠/[개인 성장] 승천의 인장/content.md
 
@@ -40694,6 +40725,9 @@
 
 ### 6개의 팔 (1)
 - 로바르스 왕_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_왕/로바르스 왕_전투/_final/content.md
+
+### 7501~10000 (1)
+- 성향 시스템 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
 
 ### 7일, 14일, 21일 (1)
 - 월드 이벤트 미니게임 타입 추가 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/월드 이벤트/월드 이벤트 시스템/월드 이벤트 미니게임 타입 추가/content.md
@@ -40971,9 +41005,6 @@
 ### AttackTypeEnum (1)
 - Enum - Skill ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/Enum/Enum - Skill/content.md
 
-### Aura (1)
-- 클래스 스킬 연출 폴리싱 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 리스트/클래스 스킬 연출 폴리싱/content.md
-
 ### Auto Equip (1)
 - 성물 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/아이템/성물 시스템/content.md
 
@@ -41195,6 +41226,9 @@
 
 ### Beta2 개선 (1)
 - 몬스터 보상 ← packages/confluence-downloader/output/Design/시스템 디자인/보상 시스템/몬스터 보상/content.md
+
+### Beta4 (1)
+- [IBT] 폴리싱 리스트 ← /home/jacob/proj-k-data/confluence/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
 
 ### Bind (1)
 - 클래스 디자인 - 아처 ← packages/confluence-downloader/output/Design/시스템 디자인/클래스/클래스 디자인 - 아처/content.md
@@ -42063,6 +42097,9 @@
 ### Dark Fantasy (1)
 - 프로젝트 키 테마 논의 ← packages/confluence-downloader/output/Design/R&D 및 레퍼런스/프로젝트 키 테마 논의/content.md
 
+### Dark Steel (1)
+- 클래스 별 전설 등급 변신 외형 컨셉 자료 1차 ← /home/jacob/proj-k-data/confluence/output/Design/R&D 및 레퍼런스/변신 관련/변신 외형 디자인 자료/클래스 별 전설 등급 변신 외형 컨셉 자료 1차/content.md
+
 ### DarkAttack (1)
 - 스킬 기능 리스트 ← packages/xlsx-extractor/output/PK_변신 및 스킬 시스템/스킬 기능 리스트/_final/content.md
 
@@ -42314,6 +42351,9 @@
 
 ### Effect/Value (1)
 - Enum - Effect ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/Enum/Enum - Effect/content.md
+
+### Effect1, Effect2, Effect3, Effect4, Effect5 (1)
+- 스킬/버프 UI 데이터 참조 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/[작성중] 스킬_버프 UIUX 개선/스킬_버프 UI 데이터 참조/content.md
 
 ### Effect1~5 컬럼 (1)
 - 버프 (Buff) 만들기 ← packages/confluence-downloader/output/제작 가이드/전투 - 제작 가이드/버프 (Buff) 만들기/content.md
@@ -42677,6 +42717,9 @@
 
 ### Game Override (1)
 - 가레벨 세팅 방법 (Landscape Pre Mapping) ← packages/confluence-downloader/output/제작 가이드/레벨 - 제작 가이드/가레벨 세팅 방법 (Landscape Pre Mapping)/content.md
+
+### Gauge (1)
+- 성향 시스템 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
 
 ### General Death Animation (1)
 - [Beta3] 몬스터 사망 연출 이펙트 개선 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Beta3 개선 항목/[Beta3] 몬스터 사망 연출 이펙트 개선/content.md
@@ -43434,11 +43477,14 @@
 ### KS X 1001 완성형 (1)
 - 이름 생성 규칙 ← packages/confluence-downloader/output/Design/시스템 디자인/기반 시스템/이름 생성 규칙/content.md
 
+### Karma (1)
+- 성향 시스템 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
+
 ### Karma 시트 (1)
 - 리소스 테이블 - Karma ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Karma/content.md
 
 ### Karma 테이블 (1)
-- 성향 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
+- 성향 시스템 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
 
 ### Keypad (1)
 - Common Widget ← packages/confluence-downloader/output/Design/시스템 디자인/UX UI 규칙/UX 규칙 문서/Common Widget/content.md
@@ -45699,6 +45745,9 @@
 ### TextKeyName (1)
 - 컬렉션 UI ← packages/confluence-downloader/output/Design/시스템 디자인/컬렉션/컬렉션 UI/content.md
 
+### TextkeyDesc (1)
+- 스킬/버프 UI 데이터 참조 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/[작성중] 스킬_버프 UIUX 개선/스킬_버프 UI 데이터 참조/content.md
+
 ### The Valut of Sealed (1)
 - 일일 던전 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/던전/던전 설정/일일 던전/content.md
 
@@ -45949,7 +45998,7 @@
 - 클래스 디자인 - 가디언 ← packages/confluence-downloader/output/Design/시스템 디자인/클래스/클래스 디자인 - 가디언/content.md
 
 ### Velian (1)
-- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 소르브Sorv/서대륙_ 홀바르드Holbard/content.md
+- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 홀바르드Holbard/content.md
 
 ### VengeanceQuestAwakening (1)
 - 리소스 테이블 - Vengeance_quest ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Vengeance_quest/content.md
@@ -46836,9 +46885,6 @@
 ### 거건인 제비 (1)
 - 죽음의 은신처 ← packages/xlsx-extractor/output/8_Contents/PK_퀘스트_서브퀘스트/죽음의 은신처/_final/content.md
 
-### 거대 모래 괴물 (1)
-- 홀바르드 시놉시스 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/시놉시스/홀바르드 시놉시스/content.md
-
 ### 거대 식물형 몬스터 (1)
 - 거대 식물(필드 보스) 컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_미분류네임드/거대 식물(필드 보스) 컨셉/_final/content.md
 
@@ -46946,9 +46992,6 @@
 
 ### 거인의 부위 (1)
 - 거인의 유산 시스템 ← packages/confluence-downloader/output/시스템 디자인/성장 컨텐츠/거인의 유산 시스템/content.md
-
-### 거인의 코 (1)
-- 거인의 유산 시스템 컨셉 ← packages/confluence-downloader/output/시스템 디자인/성장 컨텐츠/거인의 유산 시스템 컨셉/content.md
 
 ### 거점 캠프 (1)
 - 사냥터_검푸른밀림_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_로바르스_검푸른밀림/사냥터_검푸른밀림_레벨/_final/content.md
@@ -47121,6 +47164,9 @@
 ### 결과의 석판 (1)
 - 로바로스 시놉시스 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/시놉시스/로바로스 시놉시스/content.md
 
+### 결사대 부대장 (1)
+- 바리울 시놉시스 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/시놉시스/바리울 시놉시스/content.md
+
 ### 결사대원 시현 (1)
 - 서브퀘스트배치위치 ← packages/xlsx-extractor/output/8_Contents/PK_퀘스트_메인퀘스트/서브퀘스트배치위치/_final/content.md
 
@@ -47159,6 +47205,12 @@
 
 ### 경비대 (1)
 - 마을_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_마을_셀레탄_동부_오스트하펜/마을_컨셉/_final/content.md
+
+### 경비대 감시탑 (1)
+- 필드:해오름 언덕 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/소르브/필드_해오름 언덕/content.md
+
+### 경비대 임시초소 (1)
+- 필드:해오름 언덕 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/소르브/필드_해오름 언덕/content.md
 
 ### 경비병 시스템 (1)
 - to 시스템팀 문의 사항 ← packages/xlsx-extractor/output/8_Contents/PK_서버탐험,침공 컨텐츠 정책/to 시스템팀 문의 사항/_final/content.md
@@ -47204,9 +47256,6 @@
 
 ### 경험치 성장용 정령 (1)
 - 정령 시스템_UI ← packages/confluence-downloader/output/Design/시스템 디자인/정령 (기존 _펫_)/정령 시스템_UI/content.md
-
-### 경험치 손실 복구 (1)
-- 성향 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
 
 ### 경험치 아이템 (1)
 - 소모품 아이템 ← packages/xlsx-extractor/output/8_Contents/PK_아이템 컨텐츠 기조/소모품 아이템/_final/content.md
@@ -47335,7 +47384,10 @@
 - 네임드 몬스터_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_셀레탄_오스트하펜 남부 해안가/네임드 몬스터_컨셉/_final/content.md
 
 ### 고온 건조 (1)
-- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 소르브Sorv/서대륙_ 홀바르드Holbard/content.md
+- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 홀바르드Holbard/content.md
+
+### 고요의 언덕 (1)
+- 필드:해오름 언덕 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/소르브/필드_해오름 언덕/content.md
 
 ### 고요의 초소 (1)
 - 사냥터_숭배의언덕_지역 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_셀레탄_숭배의 언덕/사냥터_숭배의언덕_지역/_final/content.md
@@ -47377,7 +47429,7 @@
 - 거대 식물(필드 보스) 전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_미분류네임드/거대 식물(필드 보스) 전투/_final/content.md
 
 ### 고지대 협곡 (1)
-- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 소르브Sorv/서대륙_ 홀바르드Holbard/content.md
+- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 홀바르드Holbard/content.md
 
 ### 곡선형 확률 모델 (1)
 - 명중률 공식 개선 ← packages/confluence-downloader/output/시스템 디자인/성장 밸런스/명중률 공식 개선/content.md
@@ -47709,9 +47761,6 @@
 ### 광원 이펙트 (1)
 - VS. 로드나인 ← packages/confluence-downloader/output/R&D 및 레퍼런스/VS. 로드나인/content.md
 
-### 광전사 무리 (1)
-- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 소르브Sorv/서대륙_ 홀바르드Holbard/content.md
-
 ### 괴물화 된 까마귀 (1)
 - 사냥터_오염된농장_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_셀레탄_오염된농장/사냥터_오염된농장_컨셉/_final/content.md
 
@@ -47732,6 +47781,9 @@
 
 ### 구릉지 (1)
 - 사냥터_해오름언덕_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_소르브_해오름언덕/사냥터_해오름언덕_레벨/_final/content.md
+
+### 구릉지 요괴 서식지 (1)
+- 필드:해오름 언덕 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/소르브/필드_해오름 언덕/content.md
 
 ### 구릉지 펑거스 (1)
 - 사냥터_해오름언덕_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_소르브_해오름언덕/사냥터_해오름언덕_컨셉/_final/content.md
@@ -47808,8 +47860,8 @@
 ### 국경 감시 초소 (1)
 - 사냥터_몰락의_협곡_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_소르브_몰락의 협곡/사냥터_몰락의 협곡_레벨/_final/content.md
 
-### 국경 수비대 (1)
-- 사냥터_해오름언덕_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_소르브_해오름언덕/사냥터_해오름언덕_레벨/_final/content.md
+### 국경 경비대 (1)
+- 필드:해오름 언덕 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/소르브/필드_해오름 언덕/content.md
 
 ### 국경 수비대 기사 (1)
 - 스켈라 병사_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_인간병사/스켈라 병사_컨셉/_final/content.md
@@ -47819,6 +47871,9 @@
 
 ### 국경 수비대 석궁병 (1)
 - 스켈라 석궁병_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_인간병사/스켈라 석궁병_컨셉/_final/content.md
+
+### 국경 안내용 철책 (1)
+- 필드:해오름 언덕 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/소르브/필드_해오름 언덕/content.md
 
 ### 국경 폐쇄 (1)
 - 사냥터_해오름언덕_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_소르브_해오름언덕/사냥터_해오름언덕_컨셉/_final/content.md
@@ -48346,7 +48401,7 @@
 - 기획팀 구성 ← packages/confluence-downloader/output/Design/운영/기획팀 구성/content.md
 
 ### 기후 (1)
-- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 소르브Sorv/서대륙_ 홀바르드Holbard/content.md
+- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 홀바르드Holbard/content.md
 
 ### 긴 머리카락 (1)
 - 일반_유민_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_셀레탄_오염된농장/일반_유민_컨셉/_final/content.md
@@ -48687,9 +48742,6 @@
 ### 나뭇잎 (1)
 - 아나디스 변이 마법사_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_블라이트/아나디스 변이 마법사_컨셉/_final/content.md
 
-### 나바론 (1)
-- 마을: 나바론 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/홀바르드/마을_ 나바론/content.md
-
 ### 나바의 샘 (1)
 - 마을: 나바론 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/홀바르드/마을_ 나바론/content.md
 
@@ -48905,6 +48957,9 @@
 
 ### 네임드 포함 리전 (1)
 - 퀘스트 구성 정책 ← packages/confluence-downloader/output/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
+
+### 네임태그 색상 (1)
+- 성향 시스템 ← packages/confluence-downloader/output/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
 
 ### 네임테그 (1)
 - 클래스(PC) 데이터 어셋 등록 ← packages/confluence-downloader/output/제작 가이드/전투 - 제작 가이드/클래스(PC) 데이터 어셋 등록/content.md
@@ -49161,9 +49216,6 @@
 ### 다친 셀레탄 주민_A/B (1)
 - NPC정보_상인외 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_마을_셀레탄_동부_오스트하펜/NPC정보_상인외/_final/content.md
 
-### 다크 크롬 (1)
-- 클래스 별 전설 등급 변신 외형 컨셉 자료 2차 ← /home/jacob/proj-k-data/confluence/output/Design/R&D 및 레퍼런스/변신 관련/변신 외형 디자인 자료/클래스 별 전설 등급 변신 외형 컨셉 자료 2차/content.md
-
 ### 다크판타지 톤 (1)
 - 프로젝트 중간 검토 ← packages/confluence-downloader/output/Design/프로젝트 중간 검토/content.md
 
@@ -49210,7 +49262,7 @@
 - 스킬 리스트 - 가디언 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 리스트/스킬 리스트 - 가디언/content.md
 
 ### 단축키 시스템 (1)
-- [IBT] 폴리싱 리스트 ← packages/confluence-downloader/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
+- [IBT] 폴리싱 리스트 ← /home/jacob/proj-k-data/confluence/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
 
 ### 달궈진 쇠 (1)
 - 클래스 디자인 - 워리어 ← packages/confluence-downloader/output/Design/시스템 디자인/클래스/클래스 디자인 - 워리어/content.md
@@ -49309,7 +49361,7 @@
 - 알파2 ← packages/xlsx-extractor/output/8_Contents/PK_퀘스트_서브퀘스트/알파2/_final/content.md
 
 ### 대상 HP UI (1)
-- [IBT] 폴리싱 리스트 ← packages/confluence-downloader/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
+- [IBT] 폴리싱 리스트 ← /home/jacob/proj-k-data/confluence/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
 
 ### 대상 서치 (1)
 - [Beta1] 자동 진행_퀘스트 자동 진행 개선 ← packages/confluence-downloader/output/컨텐츠 디자인/Beta1 개선 항목/[Beta1] 자동 진행_퀘스트 자동 진행 개선/content.md
@@ -49407,9 +49459,6 @@
 ### 던전 이동 (1)
 - 텔레포트 불가 효과 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/텔레포트 불가 효과/content.md
 
-### 던전 입장 불가 (1)
-- 성향 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
-
 ### 던전 입장료 (1)
 - 콘텐츠 별 재화 비중 ← packages/confluence-downloader/output/Design/시스템 디자인/경제 밸런스/콘텐츠 별 재화 비중/content.md
 
@@ -49505,6 +49554,9 @@
 
 ### 도발 메시지 (1)
 - PVP 기록 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/PvP 컨텐츠/PVP 기록 시스템/content.md
+
+### 도시 및 마을 (1)
+- 퀘스트 구성 정책 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
 
 ### 도시 아르칸 (1)
 - 사냥터_생명의땅_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_로바르스_생명의 땅/사냥터_생명의땅_레벨/_final/content.md
@@ -49965,6 +50017,9 @@
 ### 라그나르의 가면 (1)
 - 성물 설정 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/세계관/콘텐츠 설정/성물 설정/content.md
 
+### 라두스 검문소 (1)
+- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 홀바르드Holbard/content.md
+
 ### 라이즈 오브 킹덤즈 (1)
 - [25/10/01] 키 테마 관련 논의 ← packages/confluence-downloader/output/Design/R&D 및 레퍼런스/프로젝트 키 테마 논의/[25_10_01] 키 테마 관련 논의/content.md
 
@@ -50148,6 +50203,9 @@
 ### 레벨 컨셉 (1)
 - 개요 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_던전_로컬 공성전_셀레탄 스켈라/개요/_final/content.md
 
+### 레벨 표시 (1)
+- [작성중] 스킬/버프 UIUX 개선 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/[작성중] 스킬_버프 UIUX 개선/content.md
+
 ### 레벨-지역 기획안 (1)
 - 바리울 지역 제작 중 셀레탄 지역 밸런스 처리 방안 논의 ← packages/confluence-downloader/output/Design/시스템 디자인/성장 밸런스/바리울 지역 제작 중 셀레탄 지역 밸런스 처리 방안 논의/content.md
 
@@ -50173,7 +50231,7 @@
 - 바리울_중년 여성 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Npc/퀘스트 NPC 리스트/바리울_중년 여성/content.md
 
 ### 레일라파 (1)
-- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 소르브Sorv/서대륙_ 홀바르드Holbard/content.md
+- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 홀바르드Holbard/content.md
 
 ### 레퍼런스 게임 (1)
 - 프로젝트 중간 검토 ← packages/confluence-downloader/output/Design/프로젝트 중간 검토/content.md
@@ -50577,6 +50635,12 @@
 ### 마법 타입 심볼 (1)
 - 기타 ← packages/xlsx-extractor/output/8_Contents/PK_아이템 및 기타 아이콘_요청서/기타/_final/content.md
 
+### 마법/천 그룹 (1)
+- 클래스 별 전설 등급 변신 외형 컨셉 자료 2차 ← /home/jacob/proj-k-data/confluence/output/Design/R&D 및 레퍼런스/변신 관련/변신 외형 디자인 자료/클래스 별 전설 등급 변신 외형 컨셉 자료 2차/content.md
+
+### 마법/천(로브) 그룹 (1)
+- 클래스 별 전설 등급 변신 외형 컨셉 자료 1차 ← /home/jacob/proj-k-data/confluence/output/Design/R&D 및 레퍼런스/변신 관련/변신 외형 디자인 자료/클래스 별 전설 등급 변신 외형 컨셉 자료 1차/content.md
+
 ### 마법공학 (1)
 - 사냥터_검푸른밀림_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_로바르스_검푸른밀림/사냥터_검푸른밀림_컨셉/_final/content.md
 
@@ -50769,14 +50833,11 @@
 ### 망루 (1)
 - 사냥터_사그라진성터_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_바리울_사그라진성터/사냥터_사그라진성터_레벨/_final/content.md
 
-### 망자 (1)
-- 바리울 시놉시스 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/시놉시스/바리울 시놉시스/content.md
-
 ### 망치 내려치기 (1)
 - 라자루 진리회 파괴자_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_셀레탄_배반자들의소굴/라자루 진리회 파괴자_전투/_final/content.md
 
 ### 망치파 (1)
-- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 소르브Sorv/서대륙_ 홀바르드Holbard/content.md
+- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 홀바르드Holbard/content.md
 
 ### 망토 강화 (1)
 - [컨셉] 길드 디자인 ← packages/confluence-downloader/output/시스템 디자인/길드/[컨셉] 길드 디자인/content.md
@@ -51055,10 +51116,10 @@
 - 전투 디자인 방향 ← packages/confluence-downloader/output/Design/시스템 디자인/디자인 방향/전투 디자인 방향/content.md
 
 ### 모래 괴물 (1)
-- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 소르브Sorv/서대륙_ 홀바르드Holbard/content.md
+- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 홀바르드Holbard/content.md
 
 ### 모래 폭풍 (1)
-- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 소르브Sorv/서대륙_ 홀바르드Holbard/content.md
+- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 홀바르드Holbard/content.md
 
 ### 모리온 (1)
 - [컨셉] 길드 디자인 ← packages/confluence-downloader/output/시스템 디자인/길드/[컨셉] 길드 디자인/content.md
@@ -51078,8 +51139,8 @@
 ### 모바일봇 (1)
 - 안개의 경계 ← packages/xlsx-extractor/output/8_Contents/PK_퀘스트_서브퀘스트/안개의 경계/_final/content.md
 
-### 모범 (1)
-- 사망 시스템 개선 ← packages/confluence-downloader/output/Design/시스템 디자인/전투/사망 시스템 개선/content.md
+### 모범, 선량, 일반, 타락, 무법, 학살 (1)
+- 성향 시스템 ← packages/confluence-downloader/output/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
 
 ### 모션 대칭 (1)
 - 지팡이 ← packages/xlsx-extractor/output/8_Contents/PK_변신_공격 모션 취합/지팡이/_final/content.md
@@ -51345,6 +51406,9 @@
 ### 무너진 바리울 성터 (1)
 - 캐릭터 로비 및 플레이 시작 설정 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/퀘스트/캐릭터 로비 및 플레이 시작 설정/content.md
 
+### 무너진 바리울 자치촌 (1)
+- 필드:해오름 언덕 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/소르브/필드_해오름 언덕/content.md
+
 ### 무너진 발굴지 (1)
 - 사냥터_비밀발굴지_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_로바르스_비밀 발굴지/사냥터_비밀발굴지_레벨/_final/content.md
 
@@ -51401,12 +51465,6 @@
 
 ### 무리 행동 (1)
 - 일반_여우_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_셀레탄_오염된농장/일반_여우_컨셉/_final/content.md
-
-### 무법 (1)
-- 사망 시스템 개선 ← packages/confluence-downloader/output/Design/시스템 디자인/전투/사망 시스템 개선/content.md
-
-### 무법자 (1)
-- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 소르브Sorv/서대륙_ 홀바르드Holbard/content.md
 
 ### 무빙샷 (1)
 - 히스토리 ← packages/xlsx-extractor/output/8_Contents/PK_변신_궁사_예하진/히스토리/_final/content.md
@@ -51774,14 +51832,8 @@
 ### 바리울 여자 노예_B (1)
 - 바리울노예_성인여자 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Npc/퀘스트 NPC 리스트/바리울노예_성인여자/content.md
 
-### 바리울 왕가 (1)
-- 홀바르드 시놉시스 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/시놉시스/홀바르드 시놉시스/content.md
-
 ### 바리울 왕족 (1)
 - 조력자 아비시 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Npc/퀘스트 NPC 리스트/조력자 아비시/content.md
-
-### 바리울 유물 (1)
-- PVP 재화 잡화 상인 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Npc/상인 NPC 리스트/PVP 재화 잡화 상인/content.md
 
 ### 바리울 유민 리언 (1)
 - 서브퀘스트배치위치 ← packages/xlsx-extractor/output/8_Contents/PK_퀘스트_메인퀘스트/서브퀘스트배치위치/_final/content.md
@@ -52062,6 +52114,9 @@
 ### 배부른 (1)
 - 사냥터_안개의경계_몬스터배치 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_스켈라_안개의 경계/사냥터_안개의경계_몬스터배치/_final/content.md
 
+### 배신자 주술사 (1)
+- 바리울 시놉시스 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/시놉시스/바리울 시놉시스/content.md
+
 ### 배신자들의 소굴 (1)
 - 사냥터_환청의그늘_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_셀레탄_환청의그늘/사냥터_환청의그늘_레벨/_final/content.md
 
@@ -52315,7 +52370,7 @@
 - 홀바르드 시놉시스 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/시놉시스/홀바르드 시놉시스/content.md
 
 ### 벨리안2세 (1)
-- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 소르브Sorv/서대륙_ 홀바르드Holbard/content.md
+- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 홀바르드Holbard/content.md
 
 ### 벨리안의 와인잔 (1)
 - 성물 설정 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/세계관/콘텐츠 설정/성물 설정/content.md
@@ -52960,7 +53015,7 @@
 - 페허의 차사 전령_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_그림리퍼/페허의 차사 전령_전투/_final/content.md
 
 ### 붉은 사막 (1)
-- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 소르브Sorv/서대륙_ 홀바르드Holbard/content.md
+- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 홀바르드Holbard/content.md
 
 ### 붉은 상처/혈흔 (1)
 - 아나디스 변이 보초병_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_블라이트/아나디스 변이 보초병_전투/_final/content.md
@@ -53673,6 +53728,9 @@
 ### 상호작용 거리 (1)
 - 리소스 테이블 - Npc - Storage ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Npc/리소스 테이블 - Npc - Storage/content.md
 
+### 새로운 바리울 자치촌 (1)
+- 필드:해오름 언덕 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/소르브/필드_해오름 언덕/content.md
+
 ### 새로운 왕국 건설 (1)
 - 캐릭터 로비 및 플레이 시작 설정 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/퀘스트/캐릭터 로비 및 플레이 시작 설정/content.md
 
@@ -53708,6 +53766,9 @@
 
 ### 샤먼 스킬 강화석 (1)
 - 재료 ← packages/xlsx-extractor/output/8_Contents/PK_아이템 및 기타 아이콘_요청서/재료/_final/content.md
+
+### 샤하르트 (1)
+- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 홀바르드Holbard/content.md
 
 ### 서고 (1)
 - 도시_테라미르_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_도시_소르브_테라미르/도시_테라미르_레벨/_final/content.md
@@ -53918,6 +53979,9 @@
 
 ### 선교 캠프 천막 (1)
 - 사냥터_배반자들의소굴_지역 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_셀레탄_배반자들의소굴/사냥터_배반자들의소굴_지역/_final/content.md
+
+### 선량 (1)
+- 성향 시스템 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
 
 ### 선량 성향 (1)
 - IBT 성향 시스템의 Buff, DeathPenaltyBuff 밸런스 ← packages/confluence-downloader/output/Design/시스템 디자인/성장 밸런스/IBT 성향 시스템의 Buff, DeathPenaltyBuff 밸런스/content.md
@@ -54136,7 +54200,7 @@
 - 성향 시스템 ← packages/confluence-downloader/output/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
 
 ### 성향치 감소 공식 (1)
-- 성향 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
+- 성향 시스템 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
 
 ### 성향치 네임 컬러 (1)
 - 캐릭터 헤드 & 태그 디스플레이 ← packages/confluence-downloader/output/Design/시스템 디자인/기반 시스템/캐릭터 헤드 & 태그 디스플레이/content.md
@@ -54146,9 +54210,6 @@
 
 ### 세계관 내 에너지 요소 (1)
 - Beta3_변신 등급별 FX ← packages/confluence-downloader/output/R&D 및 레퍼런스/변신 관련/Beta3_변신 등급별 FX/content.md
-
-### 세계관 일관성 (1)
-- 클래스 별 전설 등급 변신 외형 컨셉 자료 2차 ← /home/jacob/proj-k-data/confluence/output/Design/R&D 및 레퍼런스/변신 관련/변신 외형 디자인 자료/클래스 별 전설 등급 변신 외형 컨셉 자료 2차/content.md
 
 ### 세금 징수 (1)
 - [컨셉] 서버 탐험 보강 - 월드 공성전 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/PvP 컨텐츠/서버 이동 컨텐츠/[컨셉] 서버 탐험 보강 - 월드 공성전 시스템/content.md
@@ -54501,6 +54562,12 @@
 ### 속성 피해 강화 (1)
 - 세부 정보 ← packages/xlsx-extractor/output/8_Contents/PK_변신_법사_빙룡의 신녀/세부 정보/_final/content.md
 
+### 속죄의 기운 (1)
+- 성향 시스템 ← packages/confluence-downloader/output/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
+
+### 속죄의 성수 (1)
+- 성향 시스템 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
+
 ### 손발톱 (1)
 - 네임드 몬스터_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_요괴/네임드 몬스터_컨셉/_final/content.md
 
@@ -54515,6 +54582,9 @@
 
 ### 쇠가 박힌 몽둥이 (1)
 - 폐허 식인귀 전사_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_오우거/폐허 식인귀 전사_컨셉/_final/content.md
+
+### 쇠뇌살 통 (1)
+- 클래스 별 전설 등급 변신 외형 컨셉 자료 2차 ← /home/jacob/proj-k-data/confluence/output/Design/R&D 및 레퍼런스/변신 관련/변신 외형 디자인 자료/클래스 별 전설 등급 변신 외형 컨셉 자료 2차/content.md
 
 ### 쇠로 된 무기 (1)
 - 폐허의 차사 일꾼_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_그림리퍼/폐허의 차사 일꾼_컨셉/_final/content.md
@@ -54532,7 +54602,7 @@
 - [25/10/17] 키 테마 관련 논의 ← packages/confluence-downloader/output/Design/R&D 및 레퍼런스/프로젝트 키 테마 논의/[25_10_17] 키 테마 관련 논의/content.md
 
 ### 수도 (1)
-- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 소르브Sorv/서대륙_ 홀바르드Holbard/content.md
+- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 홀바르드Holbard/content.md
 
 ### 수동 상승 (1)
 - Enum - Karma ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/Enum/Enum - Karma/content.md
@@ -54737,9 +54807,6 @@
 
 ### 순변현 (1)
 - 숭배의언덕 ← packages/xlsx-extractor/output/8_Contents/PK_퀘스트_서브퀘스트/숭배의언덕/_final/content.md
-
-### 순서 설정 (1)
-- [작성중] 스킬/버프 UIUX 개선 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/[작성중] 스킬_버프 UIUX 개선/content.md
 
 ### 순수 기부 (1)
 - IBT - 길드 성장 밸런스 ← packages/confluence-downloader/output/Design/시스템 디자인/성장 밸런스/IBT - 길드 성장 밸런스/content.md
@@ -54948,9 +55015,6 @@
 ### 스킬 디자인 (1)
 - PK_몬스터_인간병사 / 히스토리 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_인간병사/히스토리/_final/content.md
 
-### 스킬 레벨 (1)
-- [작성중] 스킬/버프 UIUX 개선 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/[작성중] 스킬_버프 UIUX 개선/content.md
-
 ### 스킬 메뉴 (1)
 - UI_스킬 ← packages/xlsx-extractor/output/PK_변신 및 스킬 시스템/UI_스킬/_final/content.md
 
@@ -54972,6 +55036,9 @@
 ### 스킬 사용 불가 (1)
 - 클래스 디자인 - 가디언 ← packages/confluence-downloader/output/Design/시스템 디자인/클래스/클래스 디자인 - 가디언/content.md
 
+### 스킬 사용 설정 (1)
+- 스킬 자동 사용 및 주기 설정 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 시스템/스킬 자동 사용 및 주기 설정/content.md
+
 ### 스킬 사용 설정 팝업 (1)
 - 스킬 자동 사용 및 주기 설정 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 시스템/스킬 자동 사용 및 주기 설정/content.md
 
@@ -54989,6 +55056,9 @@
 
 ### 스킬 순서 설정 (1)
 - 스킬 자동 사용 및 주기 설정 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 시스템/스킬 자동 사용 및 주기 설정/content.md
+
+### 스킬 순서 설정 팝업 (1)
+- [작성중] 스킬/버프 UIUX 개선 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/[작성중] 스킬_버프 UIUX 개선/content.md
 
 ### 스킬 습득 안내 (1)
 - 스킬북 시스템 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 시스템/스킬북 시스템/content.md
@@ -55026,6 +55096,9 @@
 ### 스킬 제어 (1)
 - BonusEnum에 있지만 StatClass에 없는 리스트 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/BonusEnum에 있지만 StatClass에 없는 리스트/content.md
 
+### 스킬 주기 설정 팝업 (1)
+- [작성중] 스킬/버프 UIUX 개선 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/[작성중] 스킬_버프 UIUX 개선/content.md
+
 ### 스킬 카테고리 (1)
 - 몬스터 소환 ← packages/confluence-downloader/output/Design/시스템 디자인/몬스터/몬스터 소환/content.md
 
@@ -55049,9 +55122,6 @@
 
 ### 스킬 획득 (1)
 - 스킬 슬롯 시스템 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 시스템/스킬 슬롯 시스템/content.md
-
-### 스킬 획득 UI (1)
-- [IBT] 폴리싱 리스트 ← packages/confluence-downloader/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
 
 ### 스킬-버프 정보 (1)
 - [작성중] 스킬/버프 UIUX 개선 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/[작성중] 스킬_버프 UIUX 개선/content.md
@@ -55202,6 +55272,9 @@
 
 ### 스트링 (1)
 - [Beta2] 빌드 테스트 이슈 취합 ← packages/confluence-downloader/output/Design/일감 관리/[Beta2] 빌드 테스트 이슈 취합/content.md
+
+### 스티그마 캠프 (1)
+- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 홀바르드Holbard/content.md
 
 ### 스틸, 루인, 리퍼, 제퍼, 루나, 팬텀, 루멘, 노바, 오멘 (1)
 - 정령 네이밍 리스트 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/정령/정령 네이밍 리스트/content.md
@@ -55617,6 +55690,9 @@
 ### 실마한 (1)
 - 알파2 ← packages/xlsx-extractor/output/8_Contents/PK_퀘스트_서브퀘스트/알파2/_final/content.md
 
+### 실버 아머 (1)
+- 클래스 별 전설 등급 변신 외형 컨셉 자료 1차 ← /home/jacob/proj-k-data/confluence/output/Design/R&D 및 레퍼런스/변신 관련/변신 외형 디자인 자료/클래스 별 전설 등급 변신 외형 컨셉 자료 1차/content.md
+
 ### 실시간 체크 (1)
 - 버프 스택 비례 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/버프 스택 비례/content.md
 
@@ -55634,6 +55710,9 @@
 
 ### 실체화 (1)
 - 무한 던전 ← packages/confluence-downloader/output/컨텐츠 디자인/세계관/던전 리스트/무한 던전/content.md
+
+### 실크 질감 (1)
+- 클래스 별 전설 등급 변신 외형 컨셉 자료 1차 ← /home/jacob/proj-k-data/confluence/output/Design/R&D 및 레퍼런스/변신 관련/변신 외형 디자인 자료/클래스 별 전설 등급 변신 외형 컨셉 자료 1차/content.md
 
 ### 실패감안 누적소모 (1)
 - 승천의 인장 밸런스 ← packages/confluence-downloader/output/Design/시스템 디자인/경제 밸런스/승천의 인장 밸런스/content.md
@@ -55765,7 +55844,7 @@
 - 전투 디자인 방향 ← packages/confluence-downloader/output/Design/시스템 디자인/디자인 방향/전투 디자인 방향/content.md
 
 ### 아발리스터 스킬 시스템 (1)
-- [IBT] 폴리싱 리스트 ← packages/confluence-downloader/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
+- [IBT] 폴리싱 리스트 ← /home/jacob/proj-k-data/confluence/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
 
 ### 아비시1 (1)
 - 퀘스트NPC리스트 ← packages/xlsx-extractor/output/8_Contents/PK_퀘스트_메인퀘스트/퀘스트NPC리스트/_final/content.md
@@ -56145,6 +56224,9 @@
 ### 약탈한 보물 주머니 (1)
 - 성터 요괴 도둑_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_요괴/성터 요괴 도둑_컨셉/_final/content.md
 
+### 양각 조형 (1)
+- 클래스 별 전설 등급 변신 외형 컨셉 자료 2차 ← /home/jacob/proj-k-data/confluence/output/Design/R&D 및 레퍼런스/변신 관련/변신 외형 디자인 자료/클래스 별 전설 등급 변신 외형 컨셉 자료 2차/content.md
+
 ### 양산검A (1)
 - 정령 아트리소스 등급별 생산계획 ← packages/confluence-downloader/output/Design/시스템 디자인/정령 (기존 _펫_)/정령&도깨비 아트 리소스 정보/정령 아트리소스 등급별 생산계획/content.md
 
@@ -56274,9 +56356,6 @@
 ### 에드머스 (1)
 - 홀바르드 시놉시스 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/시놉시스/홀바르드 시놉시스/content.md
 
-### 에드먼 (1)
-- 홀바르드 시놉시스 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/시놉시스/홀바르드 시놉시스/content.md
-
 ### 에디터 환경 (1)
 - 스킬 범위 시각화 기능 구현 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/몬스터/스킬 범위 시각화 기능 구현/content.md
 
@@ -56285,6 +56364,9 @@
 
 ### 에러메시지 (1)
 - [Beta3] 신규 상인 타입 및 인터렉션 조건 추가 ← packages/confluence-downloader/output/컨텐츠 디자인/Beta3 개선 항목/[Beta3] 신규 상인 타입 및 인터렉션 조건 추가/content.md
+
+### 에메랄드빛 (1)
+- 클래스 별 전설 등급 변신 외형 컨셉 자료 1차 ← /home/jacob/proj-k-data/confluence/output/Design/R&D 및 레퍼런스/변신 관련/변신 외형 디자인 자료/클래스 별 전설 등급 변신 외형 컨셉 자료 1차/content.md
 
 ### 에셋 정보 (1)
 - [Beta2] 몬스터 및 몬스터 스킬 테이블 개편안 정리 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Beta2 개선 항목/[Beta2] 몬스터 및 몬스터 스킬 테이블 개편안 정리/content.md
@@ -56836,7 +56918,7 @@
 - 사냥터_비밀발굴지_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_로바르스_비밀 발굴지/사냥터_비밀발굴지_컨셉/_final/content.md
 
 ### 왕의 친아들 (1)
-- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 소르브Sorv/서대륙_ 홀바르드Holbard/content.md
+- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 홀바르드Holbard/content.md
 
 ### 외곽 장식 (1)
 - 시아 보주 무기 컨셉 설정 ← packages/confluence-downloader/output/Design/시스템 디자인/클래스/클래스 디자인 - 샤먼/시아 보주 무기 컨셉 설정/content.md
@@ -56913,6 +56995,9 @@
 ### 요괴 몬스터 (1)
 - 히스토리 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_요괴/히스토리/_final/content.md
 
+### 요괴 서식지 벽 (1)
+- 필드:해오름 언덕 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/소르브/필드_해오름 언덕/content.md
+
 ### 요괴 약탈꾼/궁수 (1)
 - 사냥터_몰락의 협곡_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_소르브_몰락의 협곡/사냥터_몰락의 협곡_컨셉/_final/content.md
 
@@ -56984,6 +57069,9 @@
 
 ### 우물 (1)
 - 퀘스트 오브젝트 리스트 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/오브젝트/퀘스트 오브젝트 리스트/content.md
+
+### 우선 순위 (1)
+- [IBT] 폴리싱 리스트 ← /home/jacob/proj-k-data/confluence/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
 
 ### 우선순위 정렬 (1)
 - 사운드 구조 관련 방향성 ← packages/confluence-downloader/output/R&D 및 레퍼런스/사운드 관련/사운드 구조 관련 방향성/content.md
@@ -57102,6 +57190,9 @@
 ### 원격 자동 보관 (1)
 - 창고 자동 보관 ← packages/confluence-downloader/output/Design/시스템 디자인/아이템/창고 자동 보관/content.md
 
+### 원소 에너지 (1)
+- 클래스 별 전설 등급 변신 외형 컨셉 자료 2차 ← /home/jacob/proj-k-data/confluence/output/Design/R&D 및 레퍼런스/변신 관련/변신 외형 디자인 자료/클래스 별 전설 등급 변신 외형 컨셉 자료 2차/content.md
+
 ### 원소 에너지 Aura (1)
 - 클래스 별 전설 등급 변신 외형 컨셉 자료 1차 ← /home/jacob/proj-k-data/confluence/output/Design/R&D 및 레퍼런스/변신 관련/변신 외형 디자인 자료/클래스 별 전설 등급 변신 외형 컨셉 자료 1차/content.md
 
@@ -57198,9 +57289,6 @@
 ### 월드맵 버튼 (1)
 - 인스턴스 중간맵 출력 기능 대응 ← packages/confluence-downloader/output/Design/시스템 디자인/맵/인스턴스 중간맵 출력 기능 대응/content.md
 
-### 월드맵 빠른 이동 불가 (1)
-- 성향 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
-
 ### 월드맵 시스템 (1)
 - 인스턴스 중간맵 출력 기능 대응 ← packages/confluence-downloader/output/Design/시스템 디자인/맵/인스턴스 중간맵 출력 기능 대응/content.md
 
@@ -57230,9 +57318,6 @@
 
 ### 위아래 각도 (1)
 - 인게임 카메라 시스템 ← packages/confluence-downloader/output/시스템 디자인/전투/인게임 카메라 시스템/content.md
-
-### 위압감 (1)
-- 클래스 별 전설 등급 변신 외형 컨셉 자료 1차 ← /home/jacob/proj-k-data/confluence/output/Design/R&D 및 레퍼런스/변신 관련/변신 외형 디자인 자료/클래스 별 전설 등급 변신 외형 컨셉 자료 1차/content.md
 
 ### 위장 중인 바리울 결사대원 (1)
 - 서브퀘스트구성 ← packages/xlsx-extractor/output/8_Contents/PK_퀘스트_메인퀘스트/서브퀘스트구성/_final/content.md
@@ -57274,7 +57359,7 @@
 - 사망 시스템 개선 ← packages/confluence-downloader/output/Design/시스템 디자인/전투/사망 시스템 개선/content.md
 
 ### 유리태의 딸, 왕의 양녀 (1)
-- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 소르브Sorv/서대륙_ 홀바르드Holbard/content.md
+- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 홀바르드Holbard/content.md
 
 ### 유목 (1)
 - 사냥터_오스트하펜 남부 해안가_설정 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_셀레탄_남부 해안가/사냥터_오스트하펜 남부 해안가_설정/_final/content.md
@@ -57304,7 +57389,7 @@
 - 월드맵 리스트 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/레벨 전체 목록/월드맵 리스트/content.md
 
 ### 유황 섞인 강물 (1)
-- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 소르브Sorv/서대륙_ 홀바르드Holbard/content.md
+- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 홀바르드Holbard/content.md
 
 ### 유효 장비 (1)
 - [Beta1] 퀘스트 보상 개선 ← packages/confluence-downloader/output/컨텐츠 디자인/Beta1 개선 항목/[Beta1] 퀘스트 보상 개선/content.md
@@ -57925,7 +58010,7 @@
 - 성향 시스템 ← packages/confluence-downloader/output/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
 
 ### 일일 연속킬 계수 (1)
-- 성향 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
+- 성향 시스템 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
 
 ### 일일 획득 경험치 (1)
 - IBT - 길드 성장 밸런스 ← packages/confluence-downloader/output/Design/시스템 디자인/성장 밸런스/IBT - 길드 성장 밸런스/content.md
@@ -58708,7 +58793,7 @@
 - HUD UIUX 개선 ← packages/confluence-downloader/output/Design/시스템 디자인/HUD/HUD UIUX 개선/content.md
 
 ### 전투력 증가 팝업 (1)
-- [IBT] 폴리싱 리스트 ← packages/confluence-downloader/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
+- [IBT] 폴리싱 리스트 ← /home/jacob/proj-k-data/confluence/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
 
 ### 전투력(CP) 비율 (1)
 - 공허의 틈새(인터서버던전) 시스템 고도화 ← packages/confluence-downloader/output/Design/시스템 디자인/던전/공허의 틈새(인터서버던전) 시스템 고도화/content.md
@@ -59441,6 +59526,9 @@
 
 ### 지진 (1)
 - 필드:비밀 발굴지 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/로바르스/필드_비밀 발굴지/content.md
+
+### 지진의 흔적 (1)
+- 필드:해오름 언덕 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/소르브/필드_해오름 언덕/content.md
 
 ### 지팡이 강화 (1)
 - 아키텍트 직업, 스킬 관련 기록 (작성 중) ← packages/confluence-downloader/output/Design/R&D 및 레퍼런스/아키텍트 직업, 스킬 관련 기록 (작성 중)/content.md
@@ -60445,7 +60533,7 @@
 - 기사단의 개_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_셀레탄_칼날바람절벽/기사단의 개_컨셉/_final/content.md
 
 ### 켄타우로스의 미로 (1)
-- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 소르브Sorv/서대륙_ 홀바르드Holbard/content.md
+- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 홀바르드Holbard/content.md
 
 ### 코베르스_급빛 열따계산지 (1)
 - 폐허 식인귀 투척꾼_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_오우거/폐허 식인귀 투척꾼_전투/_final/content.md
@@ -60861,9 +60949,6 @@
 ### 타깃 지정 (1)
 - IBT 필수 단축키 개발 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/기반 시스템/IBT 필수 단축키 개발/content.md
 
-### 타락 (1)
-- 사망 시스템 개선 ← packages/confluence-downloader/output/Design/시스템 디자인/전투/사망 시스템 개선/content.md
-
 ### 타르시스의 마도서 (1)
 - 성물 설정 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/세계관/콘텐츠 설정/성물 설정/content.md
 
@@ -60872,6 +60957,9 @@
 
 ### 타이즈 (1)
 - 네임드 몬스터_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_셀레탄_오스트하펜 남부 해안가/네임드 몬스터_컨셉/_final/content.md
+
+### 타이트 소재 (1)
+- 클래스 별 전설 등급 변신 외형 컨셉 자료 2차 ← /home/jacob/proj-k-data/confluence/output/Design/R&D 및 레퍼런스/변신 관련/변신 외형 디자인 자료/클래스 별 전설 등급 변신 외형 컨셉 자료 2차/content.md
 
 ### 타이틀 영역 (1)
 - 장비 다중 강화_UI ← packages/confluence-downloader/output/Design/시스템 디자인/아이템/아이템 강화/장비 다중 강화/장비 다중 강화_UI/content.md
@@ -60989,9 +61077,6 @@
 
 ### 텍스트 툴팁 (1)
 - Layer Type 이슈 모음 ← packages/confluence-downloader/output/Design/시스템 디자인/UX UI 규칙/UX 규칙 문서/UI LayerType 규칙 (변경)/Layer Type 이슈 모음/content.md
-
-### 텔레포트 불가 (1)
-- 성향 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
 
 ### 텔레포트 스톤 (1)
 - 마을_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_마을_셀레탄_동부_오스트하펜/마을_컨셉/_final/content.md
@@ -61120,7 +61205,7 @@
 - 기본 정보 ← packages/xlsx-extractor/output/8_Contents/PK_변신_법사_시아(베이스)/기본 정보/_final/content.md
 
 ### 튜토리얼 형태 목표 (1)
-- 퀘스트 구성 정책 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
+- 퀘스트 구성 정책 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
 
 ### 튜토리얼형 퀘스트 (1)
 - 퀘스트 구성 정책 ← packages/confluence-downloader/output/컨텐츠 디자인/퀘스트/퀘스트 구성 정책/content.md
@@ -61325,9 +61410,6 @@
 
 ### 판금 (1)
 - 장비_방어구 ← packages/xlsx-extractor/output/8_Contents/PK_아이템 및 기타 아이콘_요청서/장비_방어구/_final/content.md
-
-### 판금 갑옷 (1)
-- 진리의 상급기사_컨셉 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_셀레탄_칼날바람절벽/진리의 상급기사_컨셉/_final/content.md
 
 ### 판금 재질 (1)
 - 장비 아이템 ← packages/xlsx-extractor/output/8_Contents/PK_아이템 컨텐츠 기조/장비 아이템/_final/content.md
@@ -62058,8 +62140,11 @@
 ### 학도 (1)
 - 돌림병 발원지 ← packages/xlsx-extractor/output/8_Contents/PK_퀘스트_서브퀘스트/돌림병 발원지/_final/content.md
 
-### 학살 전용 PK 패널티 (1)
-- 성향 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
+### 학살 (1)
+- 성향 시스템 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
+
+### 학살 전용 디버프 (1)
+- 성향 시스템 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
 
 ### 학자 집안 (1)
 - 스킬북 상인 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Npc/상인 NPC 리스트/스킬북 상인/content.md
@@ -62565,6 +62650,9 @@
 ### 화염속성 (1)
 - 데스로드_몬스터_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_블레스네임드/데스로드_몬스터_전투/_final/content.md
 
+### 화이트 골드 판금 갑옷 (1)
+- 클래스 별 전설 등급 변신 외형 컨셉 자료 1차 ← /home/jacob/proj-k-data/confluence/output/Design/R&D 및 레퍼런스/변신 관련/변신 외형 디자인 자료/클래스 별 전설 등급 변신 외형 컨셉 자료 1차/content.md
+
 ### 화이트 아웃 (1)
 - [Beta3] 연출 컷신 제작 ← packages/confluence-downloader/output/컨텐츠 디자인/컷신/[Beta3] 연출 컷신 제작/content.md
 
@@ -62703,12 +62791,6 @@
 ### 황색 천 (1)
 - 무덤 해골 병사_전투 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_스켈레톤/무덤 해골 병사_전투/_final/content.md
 
-### 황혼 망치단 (1)
-- 홀바르드 시놉시스 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/시놉시스/홀바르드 시놉시스/content.md
-
-### 황혼의 망치단 (1)
-- 서대륙: 홀바르드Holbard ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/월드/서대륙_ 소르브Sorv/서대륙_ 홀바르드Holbard/content.md
-
 ### 회귀의 법칙 (1)
 - 무한의탑_컨셉 및 레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_던전_정령의 탑/무한의탑_컨셉 및 레벨/_final/content.md
 
@@ -62841,6 +62923,9 @@
 ### 흑염적 (1)
 - 아트_애니 리스트 ← packages/xlsx-extractor/output/8_Contents/PK_변신_만야/아트_애니 리스트/_final/content.md
 
+### 흑철 (1)
+- 클래스 별 전설 등급 변신 외형 컨셉 자료 1차 ← /home/jacob/proj-k-data/confluence/output/Design/R&D 및 레퍼런스/변신 관련/변신 외형 디자인 자료/클래스 별 전설 등급 변신 외형 컨셉 자료 1차/content.md
+
 ### 흔들리는 땅 (1)
 - 필드:비밀 발굴지 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/로바르스/필드_비밀 발굴지/content.md
 
@@ -62916,7 +63001,7 @@
 ### PK_스킬 및 버프 아이콘_요청서.xlsx (28)
 - 물약 사용 불가 효과 (봉쇄) ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 이펙트/물약 사용 불가 효과 (봉쇄)/content.md
 - 물약 사용 불가 효과 (봉쇄) ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 이펙트/물약 사용 불가 효과 (봉쇄)/content.md
-- 성향 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
+- 성향 시스템 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
 - 성향 시스템 ← packages/confluence-downloader/output/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
 - 스킬 리스트 - 도깨비 전체 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 리스트/스킬 리스트 - 도깨비 전체/content.md
 - 스킬 리스트 - 도깨비 전체 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 리스트/스킬 리스트 - 도깨비 전체/content.md
@@ -62970,7 +63055,7 @@
 - RegenHP 스탯의 현재 상태 검토 및 신규 방향성 제안 ← packages/confluence-downloader/output/시스템 디자인/성장 밸런스/RegenHP 스탯의 현재 상태 검토 및 신규 방향성 제안/content.md
 - [Beta3] 몬스터 사망 연출 이펙트 개선 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/Beta3 개선 항목/[Beta3] 몬스터 사망 연출 이펙트 개선/content.md
 - [Beta3] 몬스터 사망 연출 이펙트 개선 ← packages/confluence-downloader/output/컨텐츠 디자인/Beta3 개선 항목/[Beta3] 몬스터 사망 연출 이펙트 개선/content.md
-- [IBT] 폴리싱 리스트 ← packages/confluence-downloader/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
+- [IBT] 폴리싱 리스트 ← /home/jacob/proj-k-data/confluence/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
 - [작성중] 멀티 캐릭터 시스템 UI 폴리싱 제안 ← packages/confluence-downloader/output/시스템 디자인/기반 시스템/멀티 캐릭터 시스템/[작성중] 멀티 캐릭터 시스템 UI 폴리싱 제안/content.md
 - 길드 금고 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/길드/길드 금고 시스템/content.md
 - 길드 금고 시스템 ← packages/confluence-downloader/output/시스템 디자인/길드/길드 금고 시스템/content.md
@@ -64280,7 +64365,7 @@
 - 점성술 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/성장 컨텐츠/점성술 시스템/content.md
 
 ### ContentPrerequisite.xlsx (2)
-- [IBT] 폴리싱 리스트 ← packages/confluence-downloader/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
+- [IBT] 폴리싱 리스트 ← /home/jacob/proj-k-data/confluence/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
 - 리소스 테이블 - Content ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Content/content.md
 
 ### CurrencyClass (2)
@@ -64624,7 +64709,7 @@
 - 필드_몰락의 협곡 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_몰락의 협곡/content.md
 
 ### PK_레벨_필드_소르브_해오름언덕.xlsx (2)
-- 필드:해오름 언덕 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/소르브/필드_해오름 언덕/content.md
+- 필드:해오름 언덕 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/소르브/필드_해오름 언덕/content.md
 - 필드_해오름 언덕 ← packages/confluence-downloader/output/컨텐츠 디자인/레벨/서대륙_레벨/필드_해오름 언덕/content.md
 
 ### PK_레벨_필드_스켈라_가시나무숲.xlsx (2)
@@ -65084,7 +65169,7 @@
 - 죽음의 은신처 레벨 확장 ← packages/confluence-downloader/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/스켈라/스켈라 필드 확장/죽음의 은신처 레벨 확장/content.md
 
 ### 발자국 시스템 (2)
-- 성향 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
+- 성향 시스템 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
 - 성향 시스템 ← packages/confluence-downloader/output/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
 
 ### 베타1 (2)
@@ -65116,7 +65201,7 @@
 - 사냥터_적막의폐허_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_바리울_적막의폐허/사냥터_적막의폐허_레벨/_final/content.md
 
 ### 사망 시스템 개선 (2)
-- 성향 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
+- 성향 시스템 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
 - 성향 시스템 ← packages/confluence-downloader/output/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
 
 ### 상점 시스템 (2)
@@ -65448,9 +65533,6 @@
 ### /All/Game/Dev/Cheat/CheatCombineClass.uasset (1)
 - 치트 매크로 작성/사용 방법 ← packages/confluence-downloader/output/Design/기획자 개발 팁/치트 매크로 작성_사용 방법/content.md
 
-### 1차 전설 변신 외형 자료 (1)
-- 클래스 별 전설 등급 변신 외형 컨셉 자료 2차 ← /home/jacob/proj-k-data/confluence/output/Design/R&D 및 레퍼런스/변신 관련/변신 외형 디자인 자료/클래스 별 전설 등급 변신 외형 컨셉 자료 2차/content.md
-
 ### AS_CorruptedBariulSlave_A_F_Death (1)
 - 일반_도적 난민_아트 ← packages/xlsx-extractor/output/8_Contents/PK_몬스터_셀레탄_오스트하펜 남부 해안가/일반_도적 난민_아트/_final/content.md
 
@@ -65592,6 +65674,9 @@
 ### BuffId 테이블 (1)
 - Enum - Item ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/Enum/Enum - Item/content.md
 
+### BuffType 참조 (1)
+- [작성중] 스킬/버프 UIUX 개선 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/[작성중] 스킬_버프 UIUX 개선/content.md
+
 ### CanAuction (1)
 - 장비 강화_UI ← packages/confluence-downloader/output/시스템 디자인/아이템/아이템 강화/장비 강화 시스템/장비 강화_UI/content.md
 
@@ -65602,7 +65687,7 @@
 - 장비 강화_UI ← packages/confluence-downloader/output/시스템 디자인/아이템/아이템 강화/장비 강화 시스템/장비 강화_UI/content.md
 
 ### CategoryGroup 테이블 (1)
-- [IBT] 폴리싱 리스트 ← packages/confluence-downloader/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
+- [IBT] 폴리싱 리스트 ← /home/jacob/proj-k-data/confluence/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
 
 ### CcEnum (1)
 - 스킬 강화 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 시스템/스킬 강화 시스템/content.md
@@ -66002,6 +66087,9 @@
 
 ### GuildMission 시트 (1)
 - Enum - Guild ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/Enum/Enum - Guild/content.md
+
+### GuildOpenLevel (1)
+- [IBT] 폴리싱 리스트 ← /home/jacob/proj-k-data/confluence/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
 
 ### GuildPresentLevel 테이블 (1)
 - 길드 컨텐츠 ← packages/confluence-downloader/output/시스템 디자인/길드/길드 컨텐츠/content.md
@@ -66840,6 +66928,9 @@
 ### Skill.xlsm (CharacterSkillClass, SkillEnchant, SkillEnchantItem 시트) (1)
 - 리소스 테이블 - Skill ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/리소스 테이블 - Skill/content.md
 
+### SkillCategory 참조 (1)
+- [작성중] 스킬/버프 UIUX 개선 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/[작성중] 스킬_버프 UIUX 개선/content.md
+
 ### SkillCategoryEnum (1)
 - 스킬 강화 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 시스템/스킬 강화 시스템/content.md
 
@@ -66860,6 +66951,12 @@
 
 ### SkillEnhanceByBuffStack 관련 페이지 (1)
 - [스킬] EffectCategoryEnum 설명서 ← packages/confluence-downloader/output/Design/시스템 디자인/스킬/스킬 테이블 관련 정보/[스킬] EffectCategoryEnum 설명서/content.md
+
+### SkillGrade 참조 (1)
+- [작성중] 스킬/버프 UIUX 개선 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/[작성중] 스킬_버프 UIUX 개선/content.md
+
+### SkillType 참조 (1)
+- [작성중] 스킬/버프 UIUX 개선 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/[작성중] 스킬_버프 UIUX 개선/content.md
 
 ### SkillTypeEnum 시트 (1)
 - 스킬 강화 시스템 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 시스템/스킬 강화 시스템/content.md
@@ -66893,9 +66990,6 @@
 
 ### SupportModeTimeDungeon (1)
 - Enum - Shared ← packages/confluence-downloader/output/Design/Resource Table 가이드/리소스 테이블 문서/Enum/Enum - Shared/content.md
-
-### TEXTKEY (다국어 키) (1)
-- [작성중] 스킬/버프 UIUX 개선 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/UX UI 규칙/UXUI 개선/[작성중] 스킬_버프 UIUX 개선/content.md
 
 ### TargetTypeEnum 시트 (1)
 - 스킬 강화 시스템 ← packages/confluence-downloader/output/시스템 디자인/스킬/스킬 시스템/스킬 강화 시스템/content.md
@@ -67257,6 +67351,9 @@
 ### 감옥 시스템 (1)
 - 성향 시스템 ← packages/confluence-downloader/output/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
 
+### 감옥 시스템 (파생 시스템, 본 문서에서 미다룸) (1)
+- 성향 시스템 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
+
 ### 개발 명령어 (섹션 참조) (1)
 - 치트 매크로 작성_사용 방법 ← packages/confluence-downloader/output/기획자 개발 팁/치트 매크로 작성_사용 방법/content.md
 
@@ -67357,7 +67454,7 @@
 - 길드 레이드 시스템 ← packages/confluence-downloader/output/시스템 디자인/길드/길드 레이드 시스템/content.md
 
 ### 길드 시스템 (기획 문서) (1)
-- [IBT] 폴리싱 리스트 ← packages/confluence-downloader/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
+- [IBT] 폴리싱 리스트 ← /home/jacob/proj-k-data/confluence/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
 
 ### 길드 시스템 (보스 몬스터 및 레벨 정보 페이지) (1)
 - 길드 레이드 시스템 ← packages/confluence-downloader/output/시스템 디자인/길드/길드 레이드 시스템/content.md
@@ -67485,9 +67582,6 @@
 ### 로한2 (1)
 - MMORPG 쌀먹 생태계 조사 ← packages/confluence-downloader/output/Design/R&D 및 레퍼런스/MMORPG 쌀먹 생태계 조사/content.md
 
-### 리니지 시리즈 (참고 사례) (1)
-- 성향 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
-
 ### 리니지W (1)
 - [Beta1] 자동 진행_퀘스트 자동 진행 개선 ← packages/confluence-downloader/output/컨텐츠 디자인/Beta1 개선 항목/[Beta1] 자동 진행_퀘스트 자동 진행 개선/content.md
 
@@ -67526,6 +67620,9 @@
 
 ### 무법자 시스템 (1)
 - 성향 시스템 ← packages/confluence-downloader/output/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
+
+### 무법자 시스템 (파생 시스템, 본 문서에서 미다룸) (1)
+- 성향 시스템 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
 
 ### 문명 (1)
 - [25_10_01] 키 테마 관련 논의 ← packages/confluence-downloader/output/R&D 및 레퍼런스/프로젝트 키 테마 논의/[25_10_01] 키 테마 관련 논의/content.md
@@ -67693,7 +67790,7 @@
 - 사냥터_환청의그늘_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_셀레탄_환청의그늘/사냥터_환청의그늘_레벨/_final/content.md
 
 ### 사망 시스템 개선 (기획 문서) (1)
-- [IBT] 폴리싱 리스트 ← packages/confluence-downloader/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
+- [IBT] 폴리싱 리스트 ← /home/jacob/proj-k-data/confluence/output/Design/일감 관리/IBT 타겟_버그 및 이슈 모음/[IBT] 폴리싱 리스트/content.md
 
 ### 생명의 땅 필드 (1)
 - 사냥터_금빛열매자생지_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_필드_로바르스_금빛열매자생지/사냥터_금빛열매자생지_레벨/_final/content.md
@@ -67910,9 +68007,6 @@
 
 ### 유료 재화 시스템 (다이아 관련) (1)
 - 거래소 시스템 ← packages/confluence-downloader/output/Design/시스템 디자인/거래소/거래소 시스템/content.md
-
-### 유리태 캐릭터 설정 (1)
-- 클래스 별 전설 등급 변신 외형 컨셉 자료 2차 ← /home/jacob/proj-k-data/confluence/output/Design/R&D 및 레퍼런스/변신 관련/변신 외형 디자인 자료/클래스 별 전설 등급 변신 외형 컨셉 자료 2차/content.md
 
 ### 유리태(베이스) (1)
 - 히스토리 ← packages/xlsx-extractor/output/8_Contents/PK_변신_궁사_렌(베이스)/히스토리/_final/content.md
@@ -68144,6 +68238,9 @@
 
 ### 해오름 언덕 (1)
 - 필드:부서진 유적 ← /home/jacob/proj-k-data/confluence/output/Design/컨텐츠 디자인/레벨/서대륙_레벨/소르브/필드_부서진 유적/content.md
+
+### 현상금 시스템 (예시) (1)
+- 성향 시스템 ← /home/jacob/proj-k-data/confluence/output/Design/시스템 디자인/PvP 컨텐츠/성향 시스템/content.md
 
 ### 홀바르드 (1)
 - 도시_테라미르_레벨 ← packages/xlsx-extractor/output/8_Contents/PK_레벨_도시_소르브_테라미르/도시_테라미르_레벨/_final/content.md
